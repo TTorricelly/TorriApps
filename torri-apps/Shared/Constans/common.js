@@ -1,0 +1,15 @@
+export const COMMON_CONSTANTS = {
+  PAGINATION: {
+    DEFAULT_PAGE_SIZE: 20,
+    MAX_PAGE_SIZE: 100
+  },
+  DATE_FORMATS: {
+    DISPLAY: 'MM/DD/YYYY',
+    API: 'YYYY-MM-DD'
+  },
+  VALIDATION: {
+    MIN_PASSWORD_LENGTH: 8,
+    MAX_NAME_LENGTH: 50
+  }
+};
+

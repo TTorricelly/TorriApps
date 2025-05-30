@@ -1,0 +1,11 @@
+app_identifier("{{BUNDLE_ID}}")
+username("{{APPLE_ID}}")
+
+price_tier(0)
+app_review_information(
+  first_name: "{{FIRST_NAME}}",
+  last_name: "{{LAST_NAME}}",
+  phone_number: "{{PHONE_NUMBER}}",
+  email_address: "{{EMAIL}}"
+)
+

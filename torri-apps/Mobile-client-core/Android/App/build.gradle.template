@@ -1,0 +1,11 @@
+android {
+    compileSdkVersion {{COMPILE_SDK_VERSION}}
+    defaultConfig {
+        applicationId "{{PACKAGE_NAME}}"
+        minSdkVersion {{MIN_SDK_VERSION}}
+        targetSdkVersion {{TARGET_SDK_VERSION}}
+        versionCode {{VERSION_CODE}}
+        versionName "{{VERSION_NAME}}"
+    }
+}
+

@@ -1,0 +1,5 @@
+{
+  "android": {{ANDROID_CONFIG}},
+  "ios": {{IOS_CONFIG}}
+}
+

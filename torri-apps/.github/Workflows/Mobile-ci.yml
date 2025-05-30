@@ -1,0 +1,39 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'Mobile-client-core/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'Mobile-client-core/**' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Mobile-client-core/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd Mobile-client-core
+        npm ci
+    
+    - name: Run tests
+      run: |
+        cd Mobile-client-core
+        npm test -- --coverage --watchAll=false
+    
+    - name: Run linting
+      run: |
+        cd Mobile-client-core
+        npm run lint
+

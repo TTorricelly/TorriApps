@@ -1,0 +1,6 @@
+{
+  "iosDeploymentTarget": "12.0",
+  "bundleId": "com.salon.luxe-salon",
+  "teamId": "YOUR_TEAM_ID"
+}
+

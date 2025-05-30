@@ -1,0 +1,14 @@
+app_identifier("{{BUNDLE_ID}}")
+apple_id("{{APPLE_ID}}")
+team_id("{{TEAM_ID}}")
+
+for_platform :ios do
+  for_lane :deploy do
+    app_store_connect_api_key(
+      key_id: "{{KEY_ID}}",
+      issuer_id: "{{ISSUER_ID}}",
+      key_filepath: "{{KEY_FILEPATH}}"
+    )
+  end
+end
+

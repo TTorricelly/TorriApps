@@ -1,0 +1,6 @@
+{
+  "name": "{{APP_NAME}}",
+  "displayName": "{{DISPLAY_NAME}}",
+  "version": "{{VERSION}}"
+}
+

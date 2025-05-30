@@ -1,0 +1,13 @@
+#!/bin/bash
+
+BRAND=$1
+
+if [ -z "$BRAND" ]; then
+  echo "Usage: ./deploy-android.sh <brand-name>"
+  exit 1
+fi
+
+echo "Deploying Android app for $BRAND..."
+cd "Mobile-client-configs/Brands/$BRAND"
+fastlane android deploy
+

@@ -1,0 +1,10 @@
+{
+  "defaultApiTimeout": 5000,
+  "supportedLanguages": ["en", "es", "fr"],
+  "features": {
+    "appointments": true,
+    "payments": true,
+    "notifications": true
+  }
+}
+

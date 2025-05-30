@@ -1,0 +1,53 @@
+name: White-label Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: 'Brand to deploy'
+        required: true
+        type: choice
+        options:
+        - luxe-salon
+        - beauty-hub
+        - glamour-studio
+        - urban-salon
+      platform:
+        description: 'Platform to deploy'
+        required: true
+        type: choice
+        options:
+        - ios
+        - android
+        - both
+
+jobs:
+  deploy:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0'
+        bundler-cache: true
+    
+    - name: Install Fastlane
+      run: gem install fastlane
+    
+    - name: Deploy white-label app
+      run: |
+        chmod +x Infrastructure/Scripts/White-label-deploy.sh
+        ./Infrastructure/Scripts/White-label-deploy.sh ${{ github.event.inputs.brand }} ${{ github.event.inputs.platform }}
+      env:
+        FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+        FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+        MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+
