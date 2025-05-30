@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+Icon?
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# System files
+*.swp
+*.bak
+*.tmp
+
+# Ignore everything in node_modules across the project
+**/node_modules/
+
+# Ignore envs globally (as backup)
+**/env/
+**/venv/
+**/.venv/
