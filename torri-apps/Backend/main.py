@@ -1,11 +1,14 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
+
 # Using relative imports assuming main.py is in torri-apps/Backend/
 from .Core.Middleware.TenantMiddleware import TenantMiddleware
 from .Core.Auth.Routes import router as auth_router
 from .Modules.Users.routes import router as users_router
 from .Modules.Services.routes import categories_router, services_router
 from .Modules.Availability.routes import router as availability_router
-from .Modules.Appointments.routes import router as appointments_router # Import new appointments router
+from .Modules.Appointments.routes import router as appointments_router
+from .Core.Utils.exception_handlers import add_exception_handlers # Import the function
 # Placeholder for other routers:
 # from .Modules.Tenants.routes import router as tenants_router
 # from .Modules.AdminMaster.routes import router as admin_master_router
@@ -20,9 +23,33 @@ app = FastAPI(
     # redoc_url="/api/v1/redoc",
 )
 
-# --- Middleware Registration ---
-# TenantMiddleware must be registered early to process requests for tenant context.
+# --- CORS Middleware ---
+# TODO: Move origins to settings.py or .env for production/staging environments
+origins = [
+    "http://localhost",       # Common for local development
+    "http://localhost:3000",  # React default
+    "http://localhost:8080",  # Vue default
+    "http://localhost:8081",  # Often used for Vue/Angular
+    "http://localhost:4200",  # Angular default
+    # Add any other frontend origins used for development or deployed environments
+    # e.g., "https://your-frontend-domain.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True, # Allow cookies and authorization headers
+    allow_methods=["*"],    # Allow all common HTTP methods
+    allow_headers=["*"],    # Allow all headers
+)
+
+# --- Custom Middlewares Registration ---
+# TenantMiddleware must be registered early, but typically after CORS.
 app.add_middleware(TenantMiddleware)
+
+# --- Exception Handlers ---
+# Add custom exception handlers to the app.
+add_exception_handlers(app)
 
 # --- API Routers ---
 # The routers are defined with their own prefixes (e.g., /auth, /users).

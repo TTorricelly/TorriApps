@@ -27,6 +27,7 @@ from Backend.Modules.Availability.constants import DayOfWeek, AvailabilityBlockT
 # Auth & Config
 from Backend.Core.Auth.constants import UserRole
 from Backend.Config.Settings import settings
+from Backend.Core.Audit import log_audit, AuditLogEvent # Import audit logging
 
 
 # --- Helper Functions ---
@@ -274,6 +275,20 @@ def create_appointment(
         selectinload(Appointment.service)
     )
     refreshed_appointment_with_relations = db.execute(stmt_for_response).scalar_one()
+
+    log_audit(
+        event_type=AuditLogEvent.APPOINTMENT_CREATED,
+        requesting_user_id=requesting_user.id,
+        tenant_id=tenant_id,
+        entity_id=refreshed_appointment_with_relations.id,
+        details={
+            "client_id": str(refreshed_appointment_with_relations.client_id),
+            "professional_id": str(refreshed_appointment_with_relations.professional_id),
+            "service_id": str(refreshed_appointment_with_relations.service_id),
+            "date": refreshed_appointment_with_relations.appointment_date.isoformat(),
+            "start_time": refreshed_appointment_with_relations.start_time.isoformat()
+        }
+    )
     return refreshed_appointment_with_relations
 
 
@@ -482,6 +497,10 @@ def cancel_appointment(
         )
 
     appointment.status = AppointmentStatus.CANCELLED
+    original_professional_id = appointment.professional_id # For logging
+    original_client_id = appointment.client_id # For logging
+    original_date = appointment.appointment_date # For logging
+
     if reason: # Log reason
         note = f"Cancelled by {requesting_user.role.value} ({requesting_user.email}): {reason}."
         if appointment.notes_by_professional: appointment.notes_by_professional += f"\n{note}"
@@ -489,6 +508,19 @@ def cancel_appointment(
 
     db.commit()
     db.refresh(appointment)
+
+    log_audit(
+        event_type=AuditLogEvent.APPOINTMENT_CANCELLED,
+        requesting_user_id=requesting_user.id,
+        tenant_id=tenant_id,
+        entity_id=appointment.id,
+        details={
+            "reason": reason,
+            "original_professional_id": str(original_professional_id),
+            "original_client_id": str(original_client_id),
+            "original_date": original_date.isoformat()
+        }
+    )
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user) # Re-fetch with relations
 
 
@@ -504,7 +536,10 @@ def reschedule_appointment(
 
     appointment = _get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
 
-    if appointment.status not in [AppointmentStatus.SCHEDULED, AppointmentStatus.CANCELLED]:
+    original_date = appointment.appointment_date
+    original_start_time = appointment.start_time
+
+    if appointment.status not in [AppointmentStatus.SCHEDULED, AppointmentStatus.CANCELLED]: # Allow rescheduling a cancelled appt
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Appointment cannot be rescheduled in its current state ('{appointment.status.value}')."
@@ -548,7 +583,7 @@ def reschedule_appointment(
     appointment.appointment_date = new_date
     appointment.start_time = new_start_time
     appointment.end_time = new_end_time
-    appointment.status = AppointmentStatus.SCHEDULED
+    appointment.status = AppointmentStatus.SCHEDULED # Rescheduling implies it's active again
 
     if reason:
         note = f"Rescheduled by {requesting_user.role.value} ({requesting_user.email}): {reason}."
@@ -557,6 +592,20 @@ def reschedule_appointment(
 
     db.commit()
     db.refresh(appointment)
+
+    log_audit(
+        event_type=AuditLogEvent.APPOINTMENT_RESCHEDULED,
+        requesting_user_id=requesting_user.id,
+        tenant_id=tenant_id,
+        entity_id=appointment.id,
+        details={
+            "reason": reason,
+            "original_date": original_date.isoformat(),
+            "original_start_time": original_start_time.isoformat(),
+            "new_date": new_date.isoformat(),
+            "new_start_time": new_start_time.isoformat()
+        }
+    )
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
 
 
@@ -584,6 +633,13 @@ def complete_appointment(
                                      # This field might need more context in a real payment flow.
     db.commit()
     db.refresh(appointment)
+
+    log_audit(
+        event_type=AuditLogEvent.APPOINTMENT_COMPLETED,
+        requesting_user_id=requesting_user.id,
+        tenant_id=tenant_id,
+        entity_id=appointment.id
+    )
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
 
 
@@ -609,4 +665,11 @@ def mark_appointment_as_no_show(
     appointment.status = AppointmentStatus.NOSHOW
     db.commit()
     db.refresh(appointment)
+
+    log_audit(
+        event_type=AuditLogEvent.APPOINTMENT_NOSHOW,
+        requesting_user_id=requesting_user.id,
+        tenant_id=tenant_id,
+        entity_id=appointment.id
+    )
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)

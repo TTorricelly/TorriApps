@@ -10,6 +10,7 @@ from Backend.Core.Security.hashing import verify_password
 # from Backend.Core.Security.jwt import create_access_token
 # HTTPException is typically raised in routes, services usually return data or None/False
 # from fastapi import HTTPException
+from Backend.Core.Audit import log_audit, AuditLogEvent # Import audit logging utilities
 
 def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -> UserTenant | None:
     """
@@ -33,11 +34,30 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
     ).first()
 
     if not user:
+        log_audit(
+            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+            requesting_user_email=email, # email is known from input
+            tenant_id=tenant_id, # tenant_id is known from input
+            details={"reason": f"User with email {email} not found in tenant {tenant_id}."}
+        )
         return None  # User not found for this tenant and email
 
     if not verify_password(password, user.hashed_password):
+        log_audit(
+            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+            requesting_user_id=user.id, # user object is available here
+            requesting_user_email=user.email,
+            tenant_id=user.tenant_id,
+            details={"reason": "Incorrect password."}
+        )
         return None  # Incorrect password
 
+    log_audit(
+        event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
+        requesting_user_id=user.id,
+        requesting_user_email=user.email,
+        tenant_id=user.tenant_id
+    )
     return user
 
 # (Opcional, para depois) Criar função `create_user_tenant(db: Session, user: UserTenantCreate, tenant_id: UUID) -> UserTenant`:
