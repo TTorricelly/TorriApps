@@ -299,4 +299,95 @@ def get_service_availability_for_professional(
     except ValueError: # Invalid date, e.g., month out of range (already handled by Pydantic for req)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month/year for availability check.")
 
-    return [] # Placeholder
+    # This function needs to be fully implemented
+    # It should iterate through all days in the req.month and req.year
+    # For each day, call get_daily_time_slots_for_professional
+    # Then, process these tenant-block-sized slots to find contiguous blocks
+    # that can fit the service_duration.
+
+    # Example structure:
+    results: List[DailyServiceAvailabilityResponse] = []
+    year = req.year
+    month = req.month
+
+    # Determine the number of days in the given month and year
+    import calendar
+    num_days = calendar.monthrange(year, month)[1]
+
+    for day_num in range(1, num_days + 1):
+        current_date = date(year, month, day_num)
+
+        # Get the fine-grained slots (based on tenant's block_size_minutes)
+        daily_availability_raw = get_daily_time_slots_for_professional(db, req.professional_id, current_date, tenant_id)
+
+        available_service_slots: List[DatedTimeSlot] = []
+
+        # Iterate through the raw slots to find continuous blocks for the service duration
+        raw_slots = daily_availability_raw.slots
+        i = 0
+        while i < len(raw_slots):
+            # Check if the current raw_slot is available
+            if raw_slots[i].is_available:
+                # Try to form a continuous block of service_duration
+
+                # Calculate how many tenant_block_size slots are needed for the service
+                # block_size_minutes = _get_tenant_block_size(db, tenant_id) # Already fetched in get_daily_time_slots...
+                # For simplicity, assume block_size_minutes is accessible or re-fetch if state not passed
+                # This part of the logic might be better if get_daily_time_slots_for_professional also returns block_size or it's passed
+                # For now, let's assume a fixed block_size for calculation or re-fetch.
+                # This is inefficient if _get_tenant_block_size hits DB each time.
+                # Consider passing block_size_minutes into this function or fetching once.
+                # For this pass, let's assume block_size_minutes is known or default.
+                # This is a simplification for now:
+                # num_mini_slots_needed = service_duration / block_size_minutes (approx, handle rounding)
+                # This logic is complex and needs careful implementation of how many mini-slots
+                # constitute the service duration.
+
+                # Simplified: if a slot starts and is available, and the service fits before any non-available slot or end of work.
+                # This current placeholder doesn't correctly check for *contiguous* available mini-slots
+                # that sum up to service_duration. It just returns the start of available mini-slots.
+                # A full implementation would check raw_slots[i] to raw_slots[i + num_mini_slots_needed -1].
+
+                # Placeholder: For now, let's assume each available raw_slot *could* be a start of a service
+                # if the service duration is equal to the block_size. This is NOT correct for variable durations.
+                # A more robust solution is needed here.
+                # This is a simplified example that does not correctly check for contiguous available slots.
+                # The logic below assumes that if a slot is available, the service can start there
+                # and magically fits. This is a placeholder for the actual complex logic.
+                if raw_slots[i].is_available: # This check is redundant given outer if
+                    service_start_time = raw_slots[i].start_time
+                    service_end_time = _calculate_end_time(service_start_time, service_duration)
+
+                    # Further check: ensure service_end_time doesn't exceed working hours for this slot segment
+                    # And doesn't run into another booked/unavailable slot *within its duration*.
+                    # This requires checking all constituent mini-slots.
+
+                    # For now, let's just add it if the first mini-slot is available
+                    # This is a placeholder and needs significant refinement.
+                    can_fit = True # Assume it can fit for now
+
+                    # Rough check for contiguous availability (needs to be precise with block_size_minutes)
+                    # Example: if service is 60 min, block_size is 30 min, need 2 consecutive available slots
+                    # This simplified loop does not correctly do that.
+                    temp_end_dt = datetime.combine(current_date, service_start_time) + timedelta(minutes=service_duration)
+
+                    k = i
+                    current_slot_end_dt = datetime.combine(current_date, raw_slots[k].start_time) + timedelta(minutes=_get_tenant_block_size(db,tenant_id)) # Inefficient
+
+                    while current_slot_end_dt < temp_end_dt:
+                        k += 1
+                        if k >= len(raw_slots) or not raw_slots[k].is_available or raw_slots[k].start_time != current_slot_end_dt.time():
+                            can_fit = False
+                            break
+                        current_slot_end_dt += timedelta(minutes=_get_tenant_block_size(db,tenant_id)) # Inefficient
+
+                    if can_fit:
+                         available_service_slots.append(
+                            DatedTimeSlot(date=current_date, start_time=service_start_time, end_time=service_end_time)
+                         )
+            i += 1 # Move to the next raw slot
+
+        if available_service_slots:
+            results.append(DailyServiceAvailabilityResponse(date=current_date, available_slots=available_service_slots))
+
+    return results

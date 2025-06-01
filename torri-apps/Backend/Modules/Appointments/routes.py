@@ -14,8 +14,11 @@ from . import services as appointments_services # Alias
 from .schemas import (
     AppointmentSchema, AppointmentCreate,
     ProfessionalDailyAvailabilityResponse, AvailabilityRequest,
-    # DailyServiceAvailabilityResponse # For the more detailed service availability
+    DailyServiceAvailabilityResponse, # For the more detailed service availability
+    AppointmentUpdate # For future use
 )
+from .constants import AppointmentStatus # For status query param
+
 # Models are not directly used in routes but good for context if needed
 # from .models import Appointment
 # from Backend.Modules.Availability.models import ...
@@ -103,18 +106,65 @@ def create_new_appointment_endpoint(
     )
     return created_appointment
 
-# Future Endpoints for Appointments (GET list, GET by ID, PUT update, PATCH status change, DELETE)
-# @router.get("", response_model=List[AppointmentSchema], summary="List appointments.")
-# def list_appointments_endpoint(...): ...
 
-# @router.get("/{appointment_id}", response_model=AppointmentSchema, summary="Get a specific appointment.")
-# def get_appointment_endpoint(...): ...
+# --- Appointment Listing and Retrieval Endpoints ---
+@router.get(
+    "", # Relative to /api/v1/appointments, so this is GET /api/v1/appointments
+    response_model=List[AppointmentSchema],
+    summary="List appointments for the tenant based on filters and user role."
+)
+def list_appointments_endpoint(
+    professional_id: Optional[UUID] = Query(None, description="Filter by professional ID."),
+    client_id: Optional[UUID] = Query(None, description="Filter by client ID."),
+    date_from: Optional[date] = Query(None, description="Filter by start date (YYYY-MM-DD)."),
+    date_to: Optional[date] = Query(None, description="Filter by end date (YYYY-MM-DD)."),
+    status: Optional[AppointmentStatus] = Query(None, description="Filter by appointment status."),
+    skip: int = Query(0, ge=0, description="Number of items to skip."),
+    limit: int = Query(100, ge=1, le=200, description="Number of items to return."),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    # The service function get_appointments handles role-based filtering internally.
+    appointments = appointments_services.get_appointments(
+        db=db,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user,
+        professional_id=professional_id,
+        client_id=client_id,
+        date_from=date_from,
+        date_to=date_to,
+        status=status,
+        skip=skip,
+        limit=limit
+    )
+    return appointments
 
+@router.get(
+    "/{appointment_id}",
+    response_model=AppointmentSchema,
+    summary="Get a specific appointment by its ID."
+)
+def get_appointment_by_id_endpoint(
+    appointment_id: UUID = Path(..., description="ID of the appointment to retrieve."),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    appointment = appointments_services.get_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user
+    )
+    if not appointment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or access denied.")
+    return appointment
+
+# Placeholder for Future Endpoints (Update, Status Change, Delete)
 # @router.put("/{appointment_id}", response_model=AppointmentSchema, summary="Update an appointment.")
-# def update_appointment_endpoint(...): ...
+# def update_appointment_endpoint(appointment_id: UUID, appointment_data: AppointmentUpdate, ...): ...
 
 # @router.patch("/{appointment_id}/status", response_model=AppointmentSchema, summary="Update appointment status.")
-# def update_appointment_status_endpoint(...): ...
+# def update_appointment_status_endpoint(appointment_id: UUID, status_update: AppointmentStatusUpdateSchema, ...): ...
 
 # @router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an appointment.")
-# def delete_appointment_endpoint(...): ...
+# def delete_appointment_endpoint(appointment_id: UUID, ...): ...
