@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, UUID
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
+from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship # Added for relationships
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
@@ -13,14 +14,14 @@ from .constants import UserRole
 class UserTenant(Base):
     __tablename__ = 'users_tenant'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id = Column(UUID(as_uuid=True),
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    tenant_id = Column(CHAR(36),
                        ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
                        nullable=False,
                        index=True)
     
     email = Column(String(120), index=True, nullable=False) # Uniqueness per tenant handled by UniqueConstraint
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)

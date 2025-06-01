@@ -11,3 +11,4 @@ redis==5.0.1
 celery==5.3.4
 mysql-connector-python
 pydantic-settings
+click==8.1.7

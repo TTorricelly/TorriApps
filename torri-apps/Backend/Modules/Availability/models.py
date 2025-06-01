@@ -1,5 +1,6 @@
 from uuid import uuid4
-from sqlalchemy import Column, String, Integer, Enum, Date, Time, ForeignKey, UniqueConstraint, UUID
+from sqlalchemy import Column, String, Integer, Enum, Date, Time, ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 
 from Config.Database import Base # Base for tenant-specific models
@@ -13,9 +14,9 @@ class ProfessionalAvailability(Base):
     __tablename__ = "professional_availabilities"
     # This table stores recurring weekly availability for professionals.
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
-    tenant_id = Column(UUID(as_uuid=True), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(CHAR(36), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
 
     day_of_week = Column(Enum(DayOfWeek), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
@@ -36,9 +37,9 @@ class ProfessionalBreak(Base):
     __tablename__ = "professional_breaks"
     # This table stores recurring breaks within a professional's availability.
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
-    tenant_id = Column(UUID(as_uuid=True), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(CHAR(36), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
 
     day_of_week = Column(Enum(DayOfWeek), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
@@ -60,9 +61,9 @@ class ProfessionalBlockedTime(Base):
     __tablename__ = "professional_blocked_times"
     # This table stores specific one-off blocked times or entire days off for professionals.
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
-    tenant_id = Column(UUID(as_uuid=True), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(CHAR(36), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
 
     block_date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=True) # Nullable if block_type is DAY_OFF
