@@ -109,3 +109,19 @@ class DatedTimeSlot(BaseModel):
 class DailyServiceAvailabilityResponse(BaseModel):
     date: date
     available_slots: List[DatedTimeSlot] = []
+
+
+# --- Schemas for Modifying Appointments ---
+class AppointmentReschedulePayload(BaseModel):
+    new_date: date = Field(..., description="The new date for the appointment.")
+    new_start_time: time = Field(..., description="The new start time for the appointment.")
+    reason: Optional[str] = Field(None, max_length=255, description="Optional reason for rescheduling.")
+
+class AppointmentCancelPayload(BaseModel):
+    reason: Optional[str] = Field(None, max_length=255, description="Optional reason for cancellation.")
+
+# Schema for updating appointment status internally or by specific privileged actions
+# Not typically exposed directly as a generic update payload for status.
+# class AppointmentStatusUpdate(BaseModel):
+#     status: AppointmentStatus
+#     # reason: Optional[str] = None # Could be part of this if status change needs a reason

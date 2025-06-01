@@ -14,10 +14,11 @@ from . import services as appointments_services # Alias
 from .schemas import (
     AppointmentSchema, AppointmentCreate,
     ProfessionalDailyAvailabilityResponse, AvailabilityRequest,
-    DailyServiceAvailabilityResponse, # For the more detailed service availability
-    AppointmentUpdate # For future use
+    DailyServiceAvailabilityResponse,
+    AppointmentUpdate, # For future generic update, if needed
+    AppointmentReschedulePayload, AppointmentCancelPayload # New schemas for specific actions
 )
-from .constants import AppointmentStatus # For status query param
+from .constants import AppointmentStatus
 
 # Models are not directly used in routes but good for context if needed
 # from .models import Appointment
@@ -159,12 +160,103 @@ def get_appointment_by_id_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or access denied.")
     return appointment
 
-# Placeholder for Future Endpoints (Update, Status Change, Delete)
-# @router.put("/{appointment_id}", response_model=AppointmentSchema, summary="Update an appointment.")
-# def update_appointment_endpoint(appointment_id: UUID, appointment_data: AppointmentUpdate, ...): ...
 
-# @router.patch("/{appointment_id}/status", response_model=AppointmentSchema, summary="Update appointment status.")
-# def update_appointment_status_endpoint(appointment_id: UUID, status_update: AppointmentStatusUpdateSchema, ...): ...
+# --- Appointment Modification Endpoints ---
+@router.patch(
+    "/{appointment_id}/cancel",
+    response_model=AppointmentSchema,
+    summary="Cancel an appointment."
+)
+def cancel_appointment_endpoint(
+    appointment_id: UUID = Path(..., description="ID of the appointment to cancel."),
+    payload: Optional[AppointmentCancelPayload] = Body(None, description="Optional reason for cancellation."),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    reason = payload.reason if payload else None
+    updated_appointment = appointments_services.cancel_appointment(
+        db=db,
+        appointment_id=appointment_id,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user,
+        reason=reason
+    )
+    return updated_appointment
 
-# @router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an appointment.")
-# def delete_appointment_endpoint(appointment_id: UUID, ...): ...
+@router.patch(
+    "/{appointment_id}/reschedule",
+    response_model=AppointmentSchema,
+    summary="Reschedule an appointment."
+)
+def reschedule_appointment_endpoint(
+    appointment_id: UUID = Path(..., description="ID of the appointment to reschedule."),
+    payload: AppointmentReschedulePayload = Body(...),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    updated_appointment = appointments_services.reschedule_appointment(
+        db=db,
+        appointment_id=appointment_id,
+        new_date=payload.new_date,
+        new_start_time=payload.new_start_time,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user,
+        reason=payload.reason
+    )
+    return updated_appointment
+
+@router.patch(
+    "/{appointment_id}/complete",
+    response_model=AppointmentSchema,
+    summary="Mark an appointment as completed."
+)
+def complete_appointment_endpoint(
+    appointment_id: UUID = Path(..., description="ID of the appointment to mark as completed."),
+    # This dependency ensures only specified roles can attempt this. Service layer does finer checks.
+    requesting_user: Annotated[UserTenant, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))],
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    updated_appointment = appointments_services.complete_appointment(
+        db=db,
+        appointment_id=appointment_id,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user
+    )
+    return updated_appointment
+
+@router.patch(
+    "/{appointment_id}/no-show",
+    response_model=AppointmentSchema,
+    summary="Mark an appointment as No Show."
+)
+def mark_appointment_as_no_show_endpoint(
+    appointment_id: UUID = Path(..., description="ID of the appointment to mark as No Show."),
+    requesting_user: Annotated[UserTenant, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))],
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    updated_appointment = appointments_services.mark_appointment_as_no_show(
+        db=db,
+        appointment_id=appointment_id,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user
+    )
+    return updated_appointment
+
+
+# Placeholder for general Update Endpoint (if different from specific actions like reschedule)
+# @router.put("/{appointment_id}", response_model=AppointmentSchema, summary="Update appointment details (e.g., notes).")
+# def update_appointment_details_endpoint(
+#     appointment_id: UUID = Path(..., description="ID of the appointment to update."),
+#     update_data: AppointmentUpdate = Body(...), # Generic update schema
+#     requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+#     db: Annotated[Session, Depends(get_db)]
+# ):
+#     # This would call a generic update service:
+#     # updated_appointment = appointments_services.update_appointment_details(
+#     #     db, appointment_id, update_data, requesting_user.tenant_id, requesting_user
+#     # )
+#     # if not updated_appointment:
+#     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or update failed.")
+#     # return updated_appointment
+
+# Delete endpoint is intentionally omitted as per subtask notes (cancellation is logical deletion).

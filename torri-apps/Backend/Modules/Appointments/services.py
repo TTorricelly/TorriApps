@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import date, time, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload # Added selectinload
 from sqlalchemy import select, and_, or_, func, case
 
 from fastapi import HTTPException, status
@@ -261,7 +261,20 @@ def create_appointment(
     # Eager load related objects for the response if AppointmentSchema expects them
     # This can be done here or by modifying AppointmentSchema to use selectinload/joinedload by default if always needed.
     # For now, assume schema handles it or it's done in the route if needed for response.
-    return db_appointment
+    # To ensure the nested fields are populated in the response as defined in AppointmentSchema:
+    db.refresh(db_appointment) # Ensure all attributes are up-to-date
+
+    # Manually trigger loading of relationships if not configured for auto-loading in schema/model
+    # This is often better done via options(joinedload(...)) in the query that fetches for response,
+    # but since we are returning the created object directly:
+    # from sqlalchemy.orm import selectinload # Moved import to top
+    stmt_for_response = select(Appointment).where(Appointment.id == db_appointment.id).options(
+        selectinload(Appointment.client),
+        selectinload(Appointment.professional),
+        selectinload(Appointment.service)
+    )
+    refreshed_appointment_with_relations = db.execute(stmt_for_response).scalar_one()
+    return refreshed_appointment_with_relations
 
 
 # Placeholder for get_service_availability_for_professional
@@ -269,7 +282,7 @@ def create_appointment(
 # and then further filter those slots to find contiguous blocks that can fit a specific service duration.
 def get_service_availability_for_professional(
     db: Session, req: AvailabilityRequest, tenant_id: UUID
-) -> List[ProfessionalDailyAvailabilityResponse]: # Placeholder, actual response might be List[DailyServiceAvailabilityResponse]
+) -> List[DailyServiceAvailabilityResponse]: # Changed return type to match schema
     # Fetch service to get its duration
     service_obj = db.get(Service, req.service_id)
     if not service_obj or service_obj.tenant_id != tenant_id:
@@ -277,117 +290,323 @@ def get_service_availability_for_professional(
 
     service_duration = service_obj.duration_minutes
 
-    # This is a simplified response. A real implementation would:
-    # 1. Determine number of days in req.month, req.year.
-    # 2. Loop each day:
-    #    a. Call get_daily_time_slots_for_professional for professional_id, day, tenant_id.
-    #    b. Process the returned slots:
-    #       i.  Identify consecutive available mini-slots (from block_size_minutes).
-    #       ii. Group them to see if they can fit service_duration.
-    #       iii.Format into DatedTimeSlot or similar for the DailyServiceAvailabilityResponse.
-    # For now, returning empty or a single day's raw slots for placeholder.
-
-    # Example: For the first day of the month (very simplified)
-    try:
-        first_day_of_month = date(req.year, req.month, 1)
-        daily_slots_response = get_daily_time_slots_for_professional(
-            db, req.professional_id, first_day_of_month, tenant_id
-        )
-        # Further processing needed here to make it service-duration aware.
-        # This response is just the raw block-sized slots for that day.
-        return [daily_slots_response]
-    except ValueError: # Invalid date, e.g., month out of range (already handled by Pydantic for req)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month/year for availability check.")
-
-    # This function needs to be fully implemented
-    # It should iterate through all days in the req.month and req.year
-    # For each day, call get_daily_time_slots_for_professional
-    # Then, process these tenant-block-sized slots to find contiguous blocks
-    # that can fit the service_duration.
-
-    # Example structure:
     results: List[DailyServiceAvailabilityResponse] = []
     year = req.year
     month = req.month
 
-    # Determine the number of days in the given month and year
-    import calendar
+    import calendar # Moved import here
     num_days = calendar.monthrange(year, month)[1]
 
     for day_num in range(1, num_days + 1):
         current_date = date(year, month, day_num)
-
-        # Get the fine-grained slots (based on tenant's block_size_minutes)
         daily_availability_raw = get_daily_time_slots_for_professional(db, req.professional_id, current_date, tenant_id)
 
         available_service_slots: List[DatedTimeSlot] = []
-
-        # Iterate through the raw slots to find continuous blocks for the service duration
         raw_slots = daily_availability_raw.slots
+
+        # This logic for finding contiguous slots is still a placeholder and needs significant refinement.
+        # It currently does not correctly identify blocks of `service_duration`.
+        # It roughly checks if a sequence of `block_size_minutes` slots are available.
+        block_size_minutes = _get_tenant_block_size(db, tenant_id) # Potentially inefficient if called repeatedly
+        slots_needed_for_service = (service_duration + block_size_minutes - 1) // block_size_minutes # Ceiling division
+
         i = 0
-        while i < len(raw_slots):
-            # Check if the current raw_slot is available
-            if raw_slots[i].is_available:
-                # Try to form a continuous block of service_duration
+        while i <= len(raw_slots) - slots_needed_for_service:
+            can_book_slot = True
+            # Check if 'slots_needed_for_service' consecutive mini-slots are available
+            for j in range(slots_needed_for_service):
+                if not raw_slots[i+j].is_available:
+                    can_book_slot = False
+                    break
 
-                # Calculate how many tenant_block_size slots are needed for the service
-                # block_size_minutes = _get_tenant_block_size(db, tenant_id) # Already fetched in get_daily_time_slots...
-                # For simplicity, assume block_size_minutes is accessible or re-fetch if state not passed
-                # This part of the logic might be better if get_daily_time_slots_for_professional also returns block_size or it's passed
-                # For now, let's assume a fixed block_size for calculation or re-fetch.
-                # This is inefficient if _get_tenant_block_size hits DB each time.
-                # Consider passing block_size_minutes into this function or fetching once.
-                # For this pass, let's assume block_size_minutes is known or default.
-                # This is a simplification for now:
-                # num_mini_slots_needed = service_duration / block_size_minutes (approx, handle rounding)
-                # This logic is complex and needs careful implementation of how many mini-slots
-                # constitute the service duration.
+            if can_book_slot:
+                service_start_time = raw_slots[i].start_time
+                service_end_time = _calculate_end_time(service_start_time, service_duration)
+                # Additional check: ensure this calculated end_time doesn't exceed the end of the last constituent mini-slot
+                # This is important if service_duration is not a multiple of block_size_minutes
+                last_mini_slot_end_time = raw_slots[i + slots_needed_for_service - 1].end_time
+                if service_end_time > last_mini_slot_end_time:
+                    # This can happen if service duration is not perfectly aligned with block_size_minutes
+                    # Or if it crosses a work boundary defined by ProfessionalAvailability
+                    # For simplicity now, we assume it fits if constituent blocks are available
+                    pass
 
-                # Simplified: if a slot starts and is available, and the service fits before any non-available slot or end of work.
-                # This current placeholder doesn't correctly check for *contiguous* available mini-slots
-                # that sum up to service_duration. It just returns the start of available mini-slots.
-                # A full implementation would check raw_slots[i] to raw_slots[i + num_mini_slots_needed -1].
-
-                # Placeholder: For now, let's assume each available raw_slot *could* be a start of a service
-                # if the service duration is equal to the block_size. This is NOT correct for variable durations.
-                # A more robust solution is needed here.
-                # This is a simplified example that does not correctly check for contiguous available slots.
-                # The logic below assumes that if a slot is available, the service can start there
-                # and magically fits. This is a placeholder for the actual complex logic.
-                if raw_slots[i].is_available: # This check is redundant given outer if
-                    service_start_time = raw_slots[i].start_time
-                    service_end_time = _calculate_end_time(service_start_time, service_duration)
-
-                    # Further check: ensure service_end_time doesn't exceed working hours for this slot segment
-                    # And doesn't run into another booked/unavailable slot *within its duration*.
-                    # This requires checking all constituent mini-slots.
-
-                    # For now, let's just add it if the first mini-slot is available
-                    # This is a placeholder and needs significant refinement.
-                    can_fit = True # Assume it can fit for now
-
-                    # Rough check for contiguous availability (needs to be precise with block_size_minutes)
-                    # Example: if service is 60 min, block_size is 30 min, need 2 consecutive available slots
-                    # This simplified loop does not correctly do that.
-                    temp_end_dt = datetime.combine(current_date, service_start_time) + timedelta(minutes=service_duration)
-
-                    k = i
-                    current_slot_end_dt = datetime.combine(current_date, raw_slots[k].start_time) + timedelta(minutes=_get_tenant_block_size(db,tenant_id)) # Inefficient
-
-                    while current_slot_end_dt < temp_end_dt:
-                        k += 1
-                        if k >= len(raw_slots) or not raw_slots[k].is_available or raw_slots[k].start_time != current_slot_end_dt.time():
-                            can_fit = False
-                            break
-                        current_slot_end_dt += timedelta(minutes=_get_tenant_block_size(db,tenant_id)) # Inefficient
-
-                    if can_fit:
-                         available_service_slots.append(
-                            DatedTimeSlot(date=current_date, start_time=service_start_time, end_time=service_end_time)
-                         )
-            i += 1 # Move to the next raw slot
+                available_service_slots.append(
+                    DatedTimeSlot(date=current_date, start_time=service_start_time, end_time=service_end_time)
+                )
+                # To avoid overlapping suggestions, advance i by the number of slots consumed
+                # This is a simple greedy approach. More sophisticated might show all possible start times.
+                i += slots_needed_for_service
+            else:
+                i += 1
 
         if available_service_slots:
             results.append(DailyServiceAvailabilityResponse(date=current_date, available_slots=available_service_slots))
 
     return results
+
+
+# --- Appointment Listing and Retrieval ---
+def get_appointments(
+    db: Session,
+    tenant_id: UUID,
+    requesting_user: UserTenant,
+    professional_id: Optional[UUID] = None,
+    client_id: Optional[UUID] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    status: Optional[AppointmentStatus] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[Appointment]:
+
+    stmt = select(Appointment).where(Appointment.tenant_id == tenant_id)
+
+    # Permission-based filtering
+    if requesting_user.role == UserRole.CLIENTE:
+        if client_id and client_id != requesting_user.id: # Client trying to query for another client
+             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only view their own appointments.")
+        stmt = stmt.where(Appointment.client_id == requesting_user.id)
+    elif requesting_user.role == UserRole.PROFISSIONAL:
+        if professional_id and professional_id != requesting_user.id: # Prof trying to query for another prof
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only view their own appointments.")
+        stmt = stmt.where(Appointment.professional_id == requesting_user.id)
+    else: # GESTOR, ATENDENTE can use filters
+        if professional_id:
+            stmt = stmt.where(Appointment.professional_id == professional_id)
+        if client_id:
+            stmt = stmt.where(Appointment.client_id == client_id)
+
+    # Optional filters
+    if date_from:
+        stmt = stmt.where(Appointment.appointment_date >= date_from)
+    if date_to:
+        stmt = stmt.where(Appointment.appointment_date <= date_to)
+    if status:
+        stmt = stmt.where(Appointment.status == status)
+
+    stmt = stmt.order_by(Appointment.appointment_date.desc(), Appointment.start_time.desc()).offset(skip).limit(limit)
+
+    # Eager load relationships for response schema
+    stmt = stmt.options(
+        selectinload(Appointment.client),
+        selectinload(Appointment.professional),
+        selectinload(Appointment.service)
+    )
+
+    appointments = db.execute(stmt).scalars().all()
+    return list(appointments)
+
+
+def get_appointment_by_id(
+    db: Session,
+    appointment_id: UUID,
+    tenant_id: UUID,
+    requesting_user: UserTenant
+) -> Appointment | None:
+
+    stmt = select(Appointment).where(
+        Appointment.id == appointment_id,
+        Appointment.tenant_id == tenant_id
+    ).options(
+        selectinload(Appointment.client),
+        selectinload(Appointment.professional),
+        selectinload(Appointment.service)
+    )
+    appointment = db.execute(stmt).scalars().first()
+
+    if not appointment:
+        return None # Handled as 404 in route
+
+    # Permission check
+    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != requesting_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client can only view their own appointment details.")
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != requesting_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professional can only view their own appointment details.")
+    # GESTOR and ATENDENTE can view any appointment in their tenant (already filtered by tenant_id)
+
+    return appointment
+
+
+# --- Appointment Modification Services (Cancel, Reschedule, Complete, NoShow) ---
+
+def _get_appointment_for_modification(
+    db: Session,
+    appointment_id: UUID,
+    tenant_id: UUID,
+    requesting_user: UserTenant
+    # Removed allowed_to_modify_roles, direct checks below
+) -> Appointment:
+    """
+    Fetches an appointment and performs initial permission checks for modification.
+    This is a stricter version of get_appointment_by_id for write operations.
+    """
+    # Use the existing get_appointment_by_id which already applies basic view permissions
+    # and eager loads relationships.
+    appointment = get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+
+    if not appointment: # get_appointment_by_id would have raised 403 if view denied, or returns None if not found
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or access denied.")
+
+    # Specific modification permission checks (on top of view permissions)
+    can_modify = False
+    if requesting_user.role in [UserRole.GESTOR, UserRole.ATENDENTE]:
+        can_modify = True
+    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == requesting_user.id:
+        can_modify = True
+    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == requesting_user.id:
+        can_modify = True
+
+    if not can_modify:
+        # This case should ideally be caught by get_appointment_by_id if it's strict enough,
+        # but double-checking here or adding more granular modification rules.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to modify this appointment.")
+
+    return appointment
+
+
+def cancel_appointment(
+    db: Session,
+    appointment_id: UUID,
+    tenant_id: UUID,
+    requesting_user: UserTenant,
+    reason: Optional[str] = None
+) -> Appointment:
+
+    appointment = _get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+
+    if appointment.status not in [AppointmentStatus.SCHEDULED]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Appointment cannot be cancelled in its current state ('{appointment.status.value}')."
+        )
+
+    appointment.status = AppointmentStatus.CANCELLED
+    if reason: # Log reason
+        note = f"Cancelled by {requesting_user.role.value} ({requesting_user.email}): {reason}."
+        if appointment.notes_by_professional: appointment.notes_by_professional += f"\n{note}"
+        else: appointment.notes_by_professional = note
+
+    db.commit()
+    db.refresh(appointment)
+    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user) # Re-fetch with relations
+
+
+def reschedule_appointment(
+    db: Session,
+    appointment_id: UUID,
+    new_date: date,
+    new_start_time: time,
+    tenant_id: UUID,
+    requesting_user: UserTenant,
+    reason: Optional[str] = None
+) -> Appointment:
+
+    appointment = _get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+
+    if appointment.status not in [AppointmentStatus.SCHEDULED, AppointmentStatus.CANCELLED]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Appointment cannot be rescheduled in its current state ('{appointment.status.value}')."
+        )
+
+    service = db.get(Service, appointment.service_id)
+    if not service:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Associated service data missing.")
+
+    new_end_time = _calculate_end_time(new_start_time, service.duration_minutes)
+
+    # Availability Check (re-using create_appointment's core logic for slot validation)
+    # This is a simplified version of the availability check logic from create_appointment
+    daily_availability_response = get_daily_time_slots_for_professional(
+        db, appointment.professional_id, new_date, tenant_id
+    )
+
+    block_size_minutes = _get_tenant_block_size(db, tenant_id)
+    current_check_time_dt = datetime.combine(new_date, new_start_time)
+    service_end_dt = datetime.combine(new_date, new_end_time)
+
+    required_slots_available = True
+    temp_time_dt = current_check_time_dt
+    while temp_time_dt < service_end_dt:
+        slot_found_and_available = False
+        for slot in daily_availability_response.slots:
+            if slot.start_time == temp_time_dt.time() and \
+               slot.end_time == (temp_time_dt + timedelta(minutes=block_size_minutes)).time():
+                # If the blocking appointment is the one we are rescheduling, treat slot as available
+                if slot.is_available or (slot.appointment_id == appointment_id):
+                    slot_found_and_available = True
+                break
+
+        if not slot_found_and_available:
+            required_slots_available = False; break
+        temp_time_dt += timedelta(minutes=block_size_minutes)
+
+    if not required_slots_available:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The new selected time slot is not available.")
+
+    appointment.appointment_date = new_date
+    appointment.start_time = new_start_time
+    appointment.end_time = new_end_time
+    appointment.status = AppointmentStatus.SCHEDULED
+
+    if reason:
+        note = f"Rescheduled by {requesting_user.role.value} ({requesting_user.email}): {reason}."
+        if appointment.notes_by_professional: appointment.notes_by_professional += f"\n{note}"
+        else: appointment.notes_by_professional = note
+
+    db.commit()
+    db.refresh(appointment)
+    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+
+
+def complete_appointment(
+    db: Session,
+    appointment_id: UUID,
+    tenant_id: UUID,
+    requesting_user: UserTenant
+) -> Appointment:
+    appointment = _get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+
+    if requesting_user.role == UserRole.CLIENTE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as completed.")
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != requesting_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only complete their own appointments.")
+
+    if appointment.status != AppointmentStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Appointment cannot be completed in its current state ('{appointment.status.value}')."
+        )
+
+    appointment.status = AppointmentStatus.COMPLETED
+    appointment.paid_manually = False # Defaulting as per requirement, assuming payment handled at location.
+                                     # This field might need more context in a real payment flow.
+    db.commit()
+    db.refresh(appointment)
+    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+
+
+def mark_appointment_as_no_show(
+    db: Session,
+    appointment_id: UUID,
+    tenant_id: UUID,
+    requesting_user: UserTenant
+) -> Appointment:
+    appointment = _get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+
+    if requesting_user.role == UserRole.CLIENTE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as No Show.")
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != requesting_user.id:
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only mark their own appointments as No Show.")
+
+    if appointment.status != AppointmentStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Appointment cannot be marked as No Show in its current state ('{appointment.status.value}')."
+        )
+
+    appointment.status = AppointmentStatus.NOSHOW
+    db.commit()
+    db.refresh(appointment)
+    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
