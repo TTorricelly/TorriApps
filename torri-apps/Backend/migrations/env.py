@@ -1,20 +1,17 @@
 from logging.config import fileConfig
-import sys
-import os
-import sqlalchemy as sa
-import alembic # For alembic.__version__
-
-import mysql.connector
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from sqlalchemy import create_engine # Add if not present or used differently
-from Config.Settings import settings
-from Config.Database import BasePublic, Base # Corrected path, Added Base for tenant models
-from Modules.Tenants.models import Tenant # To query tenant schemas
-from Modules.AdminMaster import models as admin_master_models_for_metadata_registration # New line
+# sqlalchemy.create_engine is not directly used in the new version.
+# Specific model imports (Tenant, AdminMasterUser) are removed.
+# sys, os, alembic (for version), mysql.connector, sqlalchemy as sa are removed.
+# Config.Settings is removed as settings object is not directly used in this new env.py.
 
 from alembic import context
+
+# This import is crucial for the dual-metadata setup.
+# It's assumed that Config.Database imports all models that contribute to Base and BasePublic.
+from Config.Database import Base, BasePublic
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -25,37 +22,26 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-SQLALCHEMY_URL = "mysql+mysqlconnector://root:@localhost:3306/torri_app_public"
-target_metadata = BasePublic.metadata
-# --- Start Diagnostic Prints ---
-print("="*50)
-print("DEBUG: env.py - METADATA INSPECTION FOR AUTOGENERATE")
-print(f"DEBUG: Python version: {sys.version}") # Requires import sys
-print(f"DEBUG: Alembic version: {alembic.__version__}") # Requires import alembic
-print(f"DEBUG: SQLAlchemy version: {sa.__version__}") # Requires import sqlalchemy as sa
-print(f"DEBUG: Current working directory: {os.getcwd()}") # Requires import os
-
-print(f"DEBUG: BasePublic.metadata object ID: {id(BasePublic.metadata)}")
-print(f"DEBUG: Tables in BasePublic.metadata: {list(BasePublic.metadata.tables.keys())}")
-for table_name, table_obj in BasePublic.metadata.tables.items():
-    print(f"DEBUG:   Table: {table_name}, Columns: {[c.name for c in table_obj.columns]}")
-
-print(f"DEBUG: Global target_metadata object ID: {id(target_metadata)}")
-if target_metadata is not None:
-    print(f"DEBUG: Tables in global target_metadata: {list(target_metadata.tables.keys())}")
+# Determine which metadata to use based on a command-line or .ini option.
+# The default is "tenant" if "metadata_choice" is not provided.
+# To generate a migration for the public schema, you would run:
+# alembic -x metadata_choice=public revision -m "create_public_tables"
+# To generate a migration for the tenant schema, you would run:
+# alembic -x metadata_choice=tenant revision -m "create_tenant_tables"
+# or simply: alembic revision -m "create_tenant_tables" (as tenant is default)
+which_metadata = config.get_main_option("metadata_choice", "tenant")
+if which_metadata == "public":
+    print("INFO: Using PUBLIC metadata for Alembic operations.")
+    target_metadata = BasePublic.metadata
 else:
-    print("DEBUG: Global target_metadata is None.")
-print("="*50)
-# --- End Diagnostic Prints ---
+    print("INFO: Using TENANT metadata for Alembic operations.")
+    target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# For autogenerate to detect changes, all model files that define tables
+# in EITHER Base.metadata or BasePublic.metadata must have been imported
+# by the time these metadata objects are constructed and used.
+# This is typically achieved by ensuring that __init__.py files in your models
+# directories (or the Config.Database module itself) import all relevant models.
 
 
 def run_migrations_offline() -> None:
@@ -70,18 +56,25 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    # url = config.get_main_option("sqlalchemy.url") # Commented out or remove
-    current_target_metadata_for_offline = BasePublic.metadata
-    print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(current_target_metadata_for_offline.tables.keys())}")
+    url = config.get_main_option("sqlalchemy.url")
+    # version_table_schema can be passed via -x version_table_schema=my_schema
+    # or set in alembic.ini. If None, Alembic uses its default behavior.
+    vts = config.get_main_option("version_table_schema")
+
+    print(f"DEBUG: run_migrations_offline(): sqlalchemy.url={url}")
+    print(f"DEBUG: run_migrations_offline(): metadata_choice={which_metadata}")
+    print(f"DEBUG: run_migrations_offline(): version_table_schema={vts}")
+    print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+
     context.configure(
-        url=SQLALCHEMY_URL,  # Use the defined URL
-        target_metadata=current_target_metadata_for_offline,
+        url=url,
+        target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema=None,  # Changed
         include_schemas=True,
-        compare_type=True,             # Added
-        compare_server_default=True    # Added
+        version_table_schema=vts,
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -95,84 +88,41 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # connectable = engine_from_config(
-    #     config.get_section(config.config_ini_section, {}),
-    #     prefix="sqlalchemy.",
-    #     poolclass=pool.NullPool,
-    # )
-    # Connect to the 'public' schema / main database
-    # This part is largely the same as before for public schema migrations
-    public_engine = create_engine(SQLALCHEMY_URL) # SQLALCHEMY_URL points to torri_app_public
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
-    with public_engine.connect() as public_connection:
-        print(f"INFO: Configuring Alembic for public schema ({SQLALCHEMY_URL})...")
+    with connectable.connect() as connection:
+        # version_table_schema can be passed via -x version_table_schema=my_schema
+        # or set in alembic.ini. If None, Alembic uses its default behavior.
+        vts = config.get_main_option("version_table_schema")
+
+        print(f"DEBUG: run_migrations_online(): metadata_choice={which_metadata}")
+        print(f"DEBUG: run_migrations_online(): version_table_schema={vts}")
+        print(f"DEBUG: run_migrations_online(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+
         context.configure(
-            connection=public_connection,
-            target_metadata=BasePublic.metadata, # For public schema tables
-            version_table_schema=None, # As torri_app_public is the default DB for this engine
-            include_schemas=True
+            connection=connection,
+            target_metadata=target_metadata,
+            include_schemas=True, # Important for schema-based multi-tenancy if version table is in a shared schema
+            version_table_schema=vts
+            # compare_type and compare_server_default are not explicitly set here by user spec for online,
+            # but can be added if needed for autogenerate consistency when running 'online' checks.
         )
 
         with context.begin_transaction():
-            print("INFO: Running migrations for public schema...")
             context.run_migrations()
-        print("INFO: Public schema migrations complete.")
 
-    # --- Tenant Schema Migrations ---
-    # Check if the command is 'revision', if so, skip tenant logic
-    is_revision_command = context.config.cmd_opts and context.config.cmd_opts.cmdname == "revision"
-
-    if not is_revision_command:
-        print("\nINFO: Starting tenant schema migrations...")
-        from sqlalchemy.orm import sessionmaker
-        PublicSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=public_engine)
-        db_public = PublicSessionLocal()
-
-        tenants = []
-        try:
-            tenants = db_public.query(Tenant).all()
-            if not tenants:
-                print("INFO: No tenants found to migrate.")
-        finally:
-            db_public.close()
-
-        for tenant in tenants:
-            tenant_schema_name = tenant.db_schema_name
-            print(f"\nINFO: Processing migrations for tenant schema: {tenant_schema_name}")
-
-            # Construct database URL for the specific tenant schema
-            # This assumes each tenant schema can be addressed as a database in the connection string
-            tenant_db_url = f"mysql+mysqlconnector://root:@localhost:3306/{tenant_schema_name}"
-
-            print(f"INFO: Connecting to tenant schema {tenant_schema_name} using URL: {tenant_db_url}")
-            tenant_engine = create_engine(tenant_db_url)
-
-            with tenant_engine.connect() as tenant_connection:
-                context.configure(
-                    connection=tenant_connection,
-                    target_metadata=Base.metadata,  # For tenant-specific tables
-                    version_table_schema=None,  # Alembic version table will be in the tenant's schema (default for this connection)
-                    include_schemas=True
-                    # render_as_batch=True # Consider adding if using SQLite for tests and have complex constraints
-                )
-
-                with context.begin_transaction():
-                    print(f"INFO: Running migrations for schema: {tenant_schema_name}...")
-                    context.run_migrations()
-                print(f"INFO: Migrations for schema {tenant_schema_name} complete.")
-
-            tenant_engine.dispose() # Dispose of the engine after use
-
-        print("\nINFO: All tenant schema migrations processed.")
-    else:
-        print("\nINFO: Skipping tenant schema migrations during 'revision' command.")
-
-    public_engine.dispose() # This should be outside the conditional block if public_engine is always created.
-                            # Or, ensure it's only disposed if created.
-                            # Given the current structure, public_engine is always created.
+    # Dispose of the engine after use
+    if connectable:
+        connectable.dispose()
 
 
 if context.is_offline_mode():
+    print("INFO: Running migrations in OFFLINE mode.")
     run_migrations_offline()
 else:
+    print("INFO: Running migrations in ONLINE mode.")
     run_migrations_online()
