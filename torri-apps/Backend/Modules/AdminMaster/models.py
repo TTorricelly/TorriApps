@@ -9,7 +9,7 @@ class AdminMasterRole(enum.Enum):
 
 class AdminMasterUser(BasePublic):
     __tablename__ = "admin_master_users"
-    __table_args__ = {"schema": settings.default_schema_name}
+    # __table_args__ = {"schema": settings.default_schema_name} # Removed
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     email = Column(String(120), unique=True, nullable=False, index=True)

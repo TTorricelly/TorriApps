@@ -6,7 +6,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from sqlalchemy import create_engine # Add if not present or used differently
 from Config.Settings import settings
-from Config.Database import BasePublic # Corrected path
+from Config.Database import BasePublic, Base # Corrected path, Added Base for tenant models
+from Backend.Modules.Tenants.models import Tenant # To query tenant schemas
+from Backend.Modules.AdminMaster import models as admin_master_models_for_metadata_registration # New line
 
 from alembic import context
 
@@ -70,19 +72,69 @@ def run_migrations_online() -> None:
     #     prefix="sqlalchemy.",
     #     poolclass=pool.NullPool,
     # )
-    connectable = create_engine(SQLALCHEMY_URL)
+    # Connect to the 'public' schema / main database
+    # This part is largely the same as before for public schema migrations
+    public_engine = create_engine(SQLALCHEMY_URL) # SQLALCHEMY_URL points to torri_app_public
 
-    with connectable.connect() as connection:
+    with public_engine.connect() as public_connection:
+        print(f"INFO: Configuring Alembic for public schema ({SQLALCHEMY_URL})...")
         context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            version_table_schema=None,  # Changed
+            connection=public_connection,
+            target_metadata=BasePublic.metadata, # For public schema tables
+            version_table_schema=None, # As torri_app_public is the default DB for this engine
             include_schemas=True
-            # any other existing options like render_as_batch might be needed depending on DB
         )
 
         with context.begin_transaction():
+            print("INFO: Running migrations for public schema...")
             context.run_migrations()
+        print("INFO: Public schema migrations complete.")
+
+    # --- Tenant Schema Migrations ---
+    print("\nINFO: Starting tenant schema migrations...")
+    # Use the public_engine to query the tenants table
+    # No, create a new session from public_engine to avoid issues with transaction state
+    from sqlalchemy.orm import sessionmaker
+    PublicSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=public_engine)
+    db_public = PublicSessionLocal()
+
+    tenants = [] # Initialize tenants to an empty list
+    try:
+        tenants = db_public.query(Tenant).all()
+        if not tenants:
+            print("INFO: No tenants found to migrate.")
+    finally:
+        db_public.close() # Ensure session is closed
+
+    for tenant in tenants:
+        tenant_schema_name = tenant.db_schema_name
+        print(f"\nINFO: Processing migrations for tenant schema: {tenant_schema_name}")
+
+        # Construct database URL for the specific tenant schema
+        # This assumes each tenant schema can be addressed as a database in the connection string
+        tenant_db_url = f"mysql+mysqlconnector://root:@localhost:3306/{tenant_schema_name}"
+
+        print(f"INFO: Connecting to tenant schema {tenant_schema_name} using URL: {tenant_db_url}")
+        tenant_engine = create_engine(tenant_db_url)
+
+        with tenant_engine.connect() as tenant_connection:
+            context.configure(
+                connection=tenant_connection,
+                target_metadata=Base.metadata,  # For tenant-specific tables
+                version_table_schema=None,  # Alembic version table will be in the tenant's schema (default for this connection)
+                include_schemas=True
+                # render_as_batch=True # Consider adding if using SQLite for tests and have complex constraints
+            )
+
+            with context.begin_transaction():
+                print(f"INFO: Running migrations for schema: {tenant_schema_name}...")
+                context.run_migrations()
+            print(f"INFO: Migrations for schema {tenant_schema_name} complete.")
+
+        tenant_engine.dispose() # Dispose of the engine after use
+
+    print("\nINFO: All tenant schema migrations processed.")
+    public_engine.dispose() # Dispose of the public engine at the very end
 
 
 if context.is_offline_mode():

@@ -5,10 +5,7 @@ from Backend.Config.Settings import settings
 
 class Tenant(BasePublic):
     __tablename__ = "tenants"
-    # Especificar o schema diretamente nos __table_args__
-    # Alembic precisará ser configurado para reconhecer múltiplos schemas,
-    # mas para a definição do modelo, isso deve funcionar.
-    __table_args__ = {"schema": settings.default_schema_name}
+    # __table_args__ = {"schema": settings.default_schema_name} # Removed
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String(120), nullable=False)
