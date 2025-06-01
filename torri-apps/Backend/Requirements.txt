@@ -9,4 +9,5 @@ python-multipart==0.0.6
 psycopg2-binary==2.9.9
 redis==5.0.1
 celery==5.3.4
-
+mysql-connector-python
+pydantic-settings
