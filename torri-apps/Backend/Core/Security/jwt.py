@@ -1,0 +1,68 @@
+import warnings
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+
+from jose import JWTError, jwt
+from pydantic import ValidationError # For handling potential errors in token data
+
+from Backend.Config.Settings import settings # Adjusted import path
+from Backend.Core.Auth.constants import UserRole # Adjusted import path
+
+ALGORITHM = "HS256"
+# ACCESS_TOKEN_EXPIRE_MINUTES is already available via settings.access_token_expire_minutes
+
+# Schema for the data within the JWT token (payload)
+# This can be expanded as needed.
+# Using a Pydantic model for this helps with validation when decoding.
+from pydantic import BaseModel, EmailStr
+
+class TokenPayload(BaseModel):
+    sub: EmailStr # Subject (standard claim for user identifier)
+    tenant_id: str # Changed to str, as UUID is not directly JSON serializable for JWT standard fields
+    role: UserRole
+    exp: datetime # Expiration time (standard claim)
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode.update({"exp": expire})
+
+    # Ensure all data is serializable (e.g., convert UUID to str if present in 'data' before this point)
+    # For common fields like 'sub', 'tenant_id', 'role', ensure they are basic types.
+    # Example: if data contains UUID, convert it: to_encode["some_uuid_field"] = str(to_encode["some_uuid_field"])
+
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def decode_access_token(token: str) -> TokenPayload | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+
+        # Validate the payload structure using Pydantic model
+        token_data = TokenPayload(**payload)
+
+        # Check if the token is expired (though jwt.decode should handle 'exp' claim)
+        # Pydantic model for 'exp' will also validate it's a datetime
+        if token_data.exp < datetime.now(timezone.utc):
+            # This check is somewhat redundant if jwt.decode already validated 'exp',
+            # but can be kept for explicitness or if not using jwt.decode's built-in exp check.
+            # Consider removing if jwt.decode's 'ExpiredSignatureError' is handled.
+            warnings.warn("Token has expired (checked after decoding).", UserWarning) # Or raise HTTPException
+            return None # Or raise specific exception for expired token
+
+        return token_data
+    except JWTError as e: # Covers various issues like invalid signature, malformed token
+        # Log the error e for debugging
+        print(f"JWTError during token decoding: {e}") # Replace with proper logging
+        return None # Or raise HTTPException(status_code=401, detail="Invalid token")
+    except ValidationError as e: # Pydantic validation error for payload
+        # Log the error e for debugging
+        print(f"Token payload validation error: {e}") # Replace with proper logging
+        return None # Or raise HTTPException(status_code=401, detail="Invalid token data")
+    except Exception as e: # Catch any other unexpected errors
+        # Log the error e
+        print(f"Unexpected error during token decoding: {e}") # Replace with proper logging
+        return None

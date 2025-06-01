@@ -1,12 +1,48 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from ..Database.base import Base
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID as SQLAlchemyUUIDColumn
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy.orm import relationship # Added for relationships
+from uuid import uuid4
+from Backend.Config.Database import Base # Adjusted import path
+from Backend.Config.Settings import settings # Adjusted import path
+from .constants import UserRole
+# To prevent circular imports with type hinting, we can use string references for relationship models
+# or forward references if needed, but for `secondary` argument, the table object itself might be needed
+# or its string name "fully.qualified.path:table_object" or just "table_name" if in same metadata.
+# from Backend.Modules.Services.models import service_professionals_association (This would be circular)
 
-class User(Base):
-    __tablename__ = 'users'
+class UserTenant(Base):
+    __tablename__ = 'users_tenant'
+
+    id = Column(SQLAlchemyUUIDColumn(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id = Column(SQLAlchemyUUIDColumn(as_uuid=True),
+                       ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
+                       nullable=False,
+                       index=True)
     
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    email = Column(String(120), index=True, nullable=False) # Uniqueness per tenant handled by UniqueConstraint
+    hashed_password = Column(String, nullable=False)
+    role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+    full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
 
+    __table_args__ = (UniqueConstraint('tenant_id', 'email', name='uq_user_tenant_email'),)
+
+    # Relationship to services offered by this professional
+    # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model
+    # The string "service_professionals_association" refers to the table name defined in Services.models
+    # It's crucial that SQLAlchemy can find this table when initializing.
+    # This might require the table to be imported or defined before this model is fully processed,
+    # or for metadata to be shared/ordered correctly.
+    # Using a string for `secondary` assumes it's in the same `Base.metadata`.
+    services_offered = relationship(
+        "Service", # Forward reference to Service model in another module
+        secondary="service_professionals_association", # Name of the association table
+        back_populates="professionals", # Matches `professionals` in Service model
+        # primaryjoin="UserTenant.id == service_professionals_association.c.professional_user_id", # Optional: clarify join if needed
+        # secondaryjoin="Service.id == service_professionals_association.c.service_id", # Optional: clarify join if needed
+        # foreign_keys="[service_professionals_association.c.professional_user_id]" # Also helps clarify
+    )
+
+    def __repr__(self):
+        return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
