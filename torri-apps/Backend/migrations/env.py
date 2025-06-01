@@ -11,10 +11,8 @@ from sqlalchemy import pool
 from sqlalchemy import create_engine # Add if not present or used differently
 from Config.Settings import settings
 from Config.Database import BasePublic, Base # Corrected path, Added Base for tenant models
-# Import ALL model modules to ensure metadata registration
-from Modules.Tenants import models as tenant_models_for_metadata_registration
-from Modules.AdminMaster import models as admin_master_models_for_metadata_registration
 from Modules.Tenants.models import Tenant # To query tenant schemas
+from Modules.AdminMaster import models as admin_master_models_for_metadata_registration # New line
 
 from alembic import context
 
@@ -54,29 +52,6 @@ else:
 print("="*50)
 # --- End Diagnostic Prints ---
 
-def include_object(object, name, type_, reflected, compare_to):
-    """
-    Filter function to include only tables we want in migrations.
-    This prevents Alembic from detecting system schemas and other databases.
-    """
-    if type_ == "table":
-        # Only include tables that are in our target metadata
-        if target_metadata is not None:
-            return name in target_metadata.tables
-        # For public schema, only include our specific tables
-        return name in ['tenants', 'admin_master_users', 'alembic_version']
-    elif type_ == "index":
-        # Only include indexes for our tables
-        if target_metadata is not None:
-            # Check if the index belongs to any of our tables
-            for table_name, table in target_metadata.tables.items():
-                if hasattr(table, 'indexes'):
-                    for index in table.indexes:
-                        if index.name == name:
-                            return True
-        return name.startswith('ix_admin_master_users_') or name.startswith('ix_tenants_')
-    return True
-
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -104,11 +79,9 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table_schema=None,  # Changed
-        include_schemas=False,         # Changed to False to avoid cross-schema issues
+        include_schemas=True,
         compare_type=True,             # Added
-        compare_server_default=True,   # Added
-        render_as_batch=False,         # Set to True if using SQLite
-        include_object=include_object  # Added filtering function
+        compare_server_default=True    # Added
     )
 
     with context.begin_transaction():
@@ -137,8 +110,7 @@ def run_migrations_online() -> None:
             connection=public_connection,
             target_metadata=BasePublic.metadata, # For public schema tables
             version_table_schema=None, # As torri_app_public is the default DB for this engine
-            include_schemas=False,     # Avoid cross-schema issues
-            include_object=include_object  # Filter out system tables
+            include_schemas=True
         )
 
         with context.begin_transaction():
@@ -148,8 +120,7 @@ def run_migrations_online() -> None:
 
     # --- Tenant Schema Migrations ---
     # Check if the command is 'revision', if so, skip tenant logic
-    import sys
-    is_revision_command = len(sys.argv) > 1 and sys.argv[1] == 'revision'
+    is_revision_command = context.config.cmd_opts and context.config.cmd_opts.cmdname == "revision"
 
     if not is_revision_command:
         print("\nINFO: Starting tenant schema migrations...")
