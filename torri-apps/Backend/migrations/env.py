@@ -53,7 +53,9 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table_schema=None,  # Changed
-        include_schemas=True
+        include_schemas=True,
+        compare_type=True,             # Added
+        compare_server_default=True    # Added
     )
 
     with context.begin_transaction():
