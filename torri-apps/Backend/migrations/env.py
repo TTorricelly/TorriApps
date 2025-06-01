@@ -1,4 +1,8 @@
 from logging.config import fileConfig
+import sys
+import os
+import sqlalchemy as sa
+import alembic # For alembic.__version__
 
 import mysql.connector
 
@@ -27,6 +31,26 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 SQLALCHEMY_URL = "mysql+mysqlconnector://root:@localhost:3306/torri_app_public"
 target_metadata = BasePublic.metadata
+# --- Start Diagnostic Prints ---
+print("="*50)
+print("DEBUG: env.py - METADATA INSPECTION FOR AUTOGENERATE")
+print(f"DEBUG: Python version: {sys.version}") # Requires import sys
+print(f"DEBUG: Alembic version: {alembic.__version__}") # Requires import alembic
+print(f"DEBUG: SQLAlchemy version: {sa.__version__}") # Requires import sqlalchemy as sa
+print(f"DEBUG: Current working directory: {os.getcwd()}") # Requires import os
+
+print(f"DEBUG: BasePublic.metadata object ID: {id(BasePublic.metadata)}")
+print(f"DEBUG: Tables in BasePublic.metadata: {list(BasePublic.metadata.tables.keys())}")
+for table_name, table_obj in BasePublic.metadata.tables.items():
+    print(f"DEBUG:   Table: {table_name}, Columns: {[c.name for c in table_obj.columns]}")
+
+print(f"DEBUG: Global target_metadata object ID: {id(target_metadata)}")
+if target_metadata is not None:
+    print(f"DEBUG: Tables in global target_metadata: {list(target_metadata.tables.keys())}")
+else:
+    print("DEBUG: Global target_metadata is None.")
+print("="*50)
+# --- End Diagnostic Prints ---
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
