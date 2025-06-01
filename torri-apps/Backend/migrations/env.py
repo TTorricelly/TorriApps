@@ -117,50 +117,57 @@ def run_migrations_online() -> None:
         print("INFO: Public schema migrations complete.")
 
     # --- Tenant Schema Migrations ---
-    print("\nINFO: Starting tenant schema migrations...")
-    # Use the public_engine to query the tenants table
-    # No, create a new session from public_engine to avoid issues with transaction state
-    from sqlalchemy.orm import sessionmaker
-    PublicSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=public_engine)
-    db_public = PublicSessionLocal()
+    # Check if the command is 'revision', if so, skip tenant logic
+    is_revision_command = context.config.cmd_opts and context.config.cmd_opts.cmdname == "revision"
 
-    tenants = [] # Initialize tenants to an empty list
-    try:
-        tenants = db_public.query(Tenant).all()
-        if not tenants:
-            print("INFO: No tenants found to migrate.")
-    finally:
-        db_public.close() # Ensure session is closed
+    if not is_revision_command:
+        print("\nINFO: Starting tenant schema migrations...")
+        from sqlalchemy.orm import sessionmaker
+        PublicSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=public_engine)
+        db_public = PublicSessionLocal()
 
-    for tenant in tenants:
-        tenant_schema_name = tenant.db_schema_name
-        print(f"\nINFO: Processing migrations for tenant schema: {tenant_schema_name}")
+        tenants = []
+        try:
+            tenants = db_public.query(Tenant).all()
+            if not tenants:
+                print("INFO: No tenants found to migrate.")
+        finally:
+            db_public.close()
 
-        # Construct database URL for the specific tenant schema
-        # This assumes each tenant schema can be addressed as a database in the connection string
-        tenant_db_url = f"mysql+mysqlconnector://root:@localhost:3306/{tenant_schema_name}"
+        for tenant in tenants:
+            tenant_schema_name = tenant.db_schema_name
+            print(f"\nINFO: Processing migrations for tenant schema: {tenant_schema_name}")
 
-        print(f"INFO: Connecting to tenant schema {tenant_schema_name} using URL: {tenant_db_url}")
-        tenant_engine = create_engine(tenant_db_url)
+            # Construct database URL for the specific tenant schema
+            # This assumes each tenant schema can be addressed as a database in the connection string
+            tenant_db_url = f"mysql+mysqlconnector://root:@localhost:3306/{tenant_schema_name}"
 
-        with tenant_engine.connect() as tenant_connection:
-            context.configure(
-                connection=tenant_connection,
-                target_metadata=Base.metadata,  # For tenant-specific tables
-                version_table_schema=None,  # Alembic version table will be in the tenant's schema (default for this connection)
-                include_schemas=True
-                # render_as_batch=True # Consider adding if using SQLite for tests and have complex constraints
-            )
+            print(f"INFO: Connecting to tenant schema {tenant_schema_name} using URL: {tenant_db_url}")
+            tenant_engine = create_engine(tenant_db_url)
 
-            with context.begin_transaction():
-                print(f"INFO: Running migrations for schema: {tenant_schema_name}...")
-                context.run_migrations()
-            print(f"INFO: Migrations for schema {tenant_schema_name} complete.")
+            with tenant_engine.connect() as tenant_connection:
+                context.configure(
+                    connection=tenant_connection,
+                    target_metadata=Base.metadata,  # For tenant-specific tables
+                    version_table_schema=None,  # Alembic version table will be in the tenant's schema (default for this connection)
+                    include_schemas=True
+                    # render_as_batch=True # Consider adding if using SQLite for tests and have complex constraints
+                )
 
-        tenant_engine.dispose() # Dispose of the engine after use
+                with context.begin_transaction():
+                    print(f"INFO: Running migrations for schema: {tenant_schema_name}...")
+                    context.run_migrations()
+                print(f"INFO: Migrations for schema {tenant_schema_name} complete.")
 
-    print("\nINFO: All tenant schema migrations processed.")
-    public_engine.dispose() # Dispose of the public engine at the very end
+            tenant_engine.dispose() # Dispose of the engine after use
+
+        print("\nINFO: All tenant schema migrations processed.")
+    else:
+        print("\nINFO: Skipping tenant schema migrations during 'revision' command.")
+
+    public_engine.dispose() # This should be outside the conditional block if public_engine is always created.
+                            # Or, ensure it's only disposed if created.
+                            # Given the current structure, public_engine is always created.
 
 
 if context.is_offline_mode():
