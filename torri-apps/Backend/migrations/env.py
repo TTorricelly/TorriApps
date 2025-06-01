@@ -71,9 +71,11 @@ def run_migrations_offline() -> None:
 
     """
     # url = config.get_main_option("sqlalchemy.url") # Commented out or remove
+    current_target_metadata_for_offline = BasePublic.metadata
+    print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(current_target_metadata_for_offline.tables.keys())}")
     context.configure(
         url=SQLALCHEMY_URL,  # Use the defined URL
-        target_metadata=target_metadata,
+        target_metadata=current_target_metadata_for_offline,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table_schema=None,  # Changed
