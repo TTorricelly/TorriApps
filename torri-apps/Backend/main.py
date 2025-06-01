@@ -4,7 +4,8 @@ from .Core.Middleware.TenantMiddleware import TenantMiddleware
 from .Core.Auth.Routes import router as auth_router
 from .Modules.Users.routes import router as users_router
 from .Modules.Services.routes import categories_router, services_router
-from .Modules.Availability.routes import router as availability_router # Import new availability router
+from .Modules.Availability.routes import router as availability_router
+from .Modules.Appointments.routes import router as appointments_router # Import new appointments router
 # Placeholder for other routers:
 # from .Modules.Tenants.routes import router as tenants_router
 # from .Modules.AdminMaster.routes import router as admin_master_router
@@ -37,6 +38,7 @@ app.include_router(users_router, prefix=API_V1_PREFIX, tags=["Users Management (
 app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags=["Service Categories (Tenant)"])
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
+app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
 # app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenants (Public Admin)"]) # When ready
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
