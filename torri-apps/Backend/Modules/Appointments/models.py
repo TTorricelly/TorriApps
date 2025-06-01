@@ -3,11 +3,11 @@ from sqlalchemy import (
     Column, String, Integer, Numeric, Date, Time, ForeignKey, Enum, Boolean,
     CheckConstraint, UniqueConstraint
 )
+from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID as SQLAlchemyUUIDColumn # Assuming PostgreSQL
 
-from Backend.Config.Database import Base # Base for tenant-specific models
-from Backend.Config.Settings import settings
+from Config.Database import Base # Base for tenant-specific models
+from Config.Settings import settings
 from .constants import AppointmentStatus
 # UserTenant and Service models are needed for ForeignKey relationships.
 # Using string for relationship model names to avoid direct imports if they cause circularity issues,
@@ -20,16 +20,16 @@ class Appointment(Base):
     __tablename__ = "appointments"
     # This table will reside in the tenant's schema.
 
-    id = Column(SQLAlchemyUUIDColumn(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id = Column(SQLAlchemyUUIDColumn(as_uuid=True),
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    tenant_id = Column(CHAR(36),
                        ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
                        nullable=False,
                        index=True)
 
     # ForeignKeys point to users_tenant.id for both client and professional
-    client_id = Column(SQLAlchemyUUIDColumn(as_uuid=True), ForeignKey("users_tenant.id"), nullable=False, index=True)
-    professional_id = Column(SQLAlchemyUUIDColumn(as_uuid=True), ForeignKey("users_tenant.id"), nullable=False, index=True)
-    service_id = Column(SQLAlchemyUUIDColumn(as_uuid=True), ForeignKey("services.id"), nullable=False, index=True)
+    client_id = Column(CHAR(36), ForeignKey("users_tenant.id"), nullable=False, index=True)
+    professional_id = Column(CHAR(36), ForeignKey("users_tenant.id"), nullable=False, index=True)
+    service_id = Column(CHAR(36), ForeignKey("services.id"), nullable=False, index=True)
 
     appointment_date = Column(Date, nullable=False, index=True)
     start_time = Column(Time, nullable=False, index=True) # Indexed for quick lookups

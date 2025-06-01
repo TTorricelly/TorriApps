@@ -1,19 +1,20 @@
 import enum
-from sqlalchemy import Column, String, Boolean, Enum as SAEnum, UUID
+from sqlalchemy import Column, String, Boolean, Enum as SAEnum
+from sqlalchemy.dialects.mysql import CHAR
 from uuid import uuid4
-from Backend.Config.Database import BasePublic  # Corrected import path
-from Backend.Config.Settings import settings    # Corrected import path
+from Config.Database import BasePublic  # Corrected import path
+from Config.Settings import settings    # Corrected import path
 
 class AdminMasterRole(enum.Enum):
     ADMIN_MASTER = "ADMIN_MASTER"
 
 class AdminMasterUser(BasePublic):
     __tablename__ = "admin_master_users"
-    __table_args__ = {"schema": settings.default_schema_name}
+    # __table_args__ = {"schema": settings.default_schema_name} # Removed
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     email = Column(String(120), unique=True, nullable=False, index=True)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
     role = Column(SAEnum(AdminMasterRole), nullable=False, default=AdminMasterRole.ADMIN_MASTER)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)

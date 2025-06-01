@@ -16,3 +16,7 @@ Base = declarative_base()
 # Simplesmente criar outra base pode ser suficiente e o schema é definido no modelo.
 BasePublic = declarative_base()
 
+# Note: Model imports are handled in migrations/env.py to avoid circular imports
+# The models are imported there to ensure Base.metadata and BasePublic.metadata are populated
+# when running Alembic operations
+

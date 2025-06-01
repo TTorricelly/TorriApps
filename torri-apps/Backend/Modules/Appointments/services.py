@@ -13,7 +13,7 @@ from .models import Appointment
 from Backend.Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
 from Backend.Modules.Services.models import Service
 from Backend.Core.Auth.models import UserTenant
-from Backend.Config.models import Tenant # Assuming Tenant model is in Config.models or similar
+from Backend.Modules.Tenants.models import Tenant
 
 # Schemas
 from .schemas import (
@@ -292,73 +292,147 @@ def create_appointment(
     return refreshed_appointment_with_relations
 
 
-# Placeholder for get_service_availability_for_professional
-# This function would iterate through days in a month, call get_daily_time_slots_for_professional,
-# and then further filter those slots to find contiguous blocks that can fit a specific service duration.
 def get_service_availability_for_professional(
     db: Session, req: AvailabilityRequest, tenant_id: UUID
-) -> List[DailyServiceAvailabilityResponse]: # Changed return type to match schema
-    # Fetch service to get its duration
+) -> List[DailyServiceAvailabilityResponse]:
+    """
+    Finds available time slots that can accommodate a service of specific duration.
+    This function identifies contiguous available slots that can fit the entire service duration.
+    
+    Args:
+        db: Database session
+        req: Availability request containing service_id, professional_id, year, month
+        tenant_id: Tenant context
+        
+    Returns:
+        List of daily availability responses with slots that can accommodate the service
+    """
     service_obj = db.get(Service, req.service_id)
     if not service_obj or service_obj.tenant_id != tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
 
     service_duration = service_obj.duration_minutes
+    if service_duration <= 0:
+        return []
+
+    block_size_minutes = _get_tenant_block_size(db, tenant_id)
+    if block_size_minutes <= 0:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Tenant block size not configured correctly.")
 
     results: List[DailyServiceAvailabilityResponse] = []
     year = req.year
     month = req.month
 
-    import calendar # Moved import here
+    import calendar
     num_days = calendar.monthrange(year, month)[1]
 
     for day_num in range(1, num_days + 1):
         current_date = date(year, month, day_num)
         daily_availability_raw = get_daily_time_slots_for_professional(db, req.professional_id, current_date, tenant_id)
 
-        available_service_slots: List[DatedTimeSlot] = []
         raw_slots = daily_availability_raw.slots
+        available_service_slots_for_day: List[DatedTimeSlot] = []
 
-        # This logic for finding contiguous slots is still a placeholder and needs significant refinement.
-        # It currently does not correctly identify blocks of `service_duration`.
-        # It roughly checks if a sequence of `block_size_minutes` slots are available.
-        block_size_minutes = _get_tenant_block_size(db, tenant_id) # Potentially inefficient if called repeatedly
-        slots_needed_for_service = (service_duration + block_size_minutes - 1) // block_size_minutes # Ceiling division
+        if not raw_slots:
+            continue
 
-        i = 0
-        while i <= len(raw_slots) - slots_needed_for_service:
-            can_book_slot = True
-            # Check if 'slots_needed_for_service' consecutive mini-slots are available
-            for j in range(slots_needed_for_service):
-                if not raw_slots[i+j].is_available:
-                    can_book_slot = False
-                    break
+        # Calculate number of consecutive slots needed for the service
+        slots_needed_for_service = (service_duration + block_size_minutes - 1) // block_size_minutes
 
-            if can_book_slot:
-                service_start_time = raw_slots[i].start_time
-                service_end_time = _calculate_end_time(service_start_time, service_duration)
-                # Additional check: ensure this calculated end_time doesn't exceed the end of the last constituent mini-slot
-                # This is important if service_duration is not a multiple of block_size_minutes
-                last_mini_slot_end_time = raw_slots[i + slots_needed_for_service - 1].end_time
-                if service_end_time > last_mini_slot_end_time:
-                    # This can happen if service duration is not perfectly aligned with block_size_minutes
-                    # Or if it crosses a work boundary defined by ProfessionalAvailability
-                    # For simplicity now, we assume it fits if constituent blocks are available
-                    pass
+        if slots_needed_for_service <= 0:
+            continue
 
-                available_service_slots.append(
-                    DatedTimeSlot(date=current_date, start_time=service_start_time, end_time=service_end_time)
-                )
-                # To avoid overlapping suggestions, advance i by the number of slots consumed
-                # This is a simple greedy approach. More sophisticated might show all possible start times.
-                i += slots_needed_for_service
-            else:
-                i += 1
+        # Find contiguous available slots
+        available_service_slots_for_day = _find_contiguous_available_slots(
+            raw_slots, service_duration, block_size_minutes, current_date
+        )
 
-        if available_service_slots:
-            results.append(DailyServiceAvailabilityResponse(date=current_date, available_slots=available_service_slots))
+        if available_service_slots_for_day:
+            results.append(DailyServiceAvailabilityResponse(date=current_date, available_slots=available_service_slots_for_day))
 
     return results
+
+
+def _find_contiguous_available_slots(
+    raw_slots: List[TimeSlot], 
+    service_duration: int, 
+    block_size_minutes: int,
+    current_date: date
+) -> List[DatedTimeSlot]:
+    """
+    Finds all possible contiguous time slots that can accommodate a service duration.
+    
+    This function implements a more robust algorithm that:
+    1. Validates that slots are truly contiguous (no gaps in time)
+    2. Handles edge cases where slots might not be perfectly aligned
+    3. Ensures the entire service duration fits within available slots
+    
+    Args:
+        raw_slots: List of available/unavailable time slots for the day
+        service_duration: Duration of service in minutes
+        block_size_minutes: Size of each time block in minutes
+        current_date: Date for the slots
+        
+    Returns:
+        List of DatedTimeSlot that can accommodate the service
+    """
+    available_service_slots: List[DatedTimeSlot] = []
+    
+    if not raw_slots:
+        return available_service_slots
+    
+    slots_needed_for_service = (service_duration + block_size_minutes - 1) // block_size_minutes
+    
+    i = 0
+    while i <= len(raw_slots) - slots_needed_for_service:
+        # Check if we have enough consecutive available slots starting at position i
+        can_accommodate_service = True
+        consecutive_slots = []
+        
+        for j in range(slots_needed_for_service):
+            current_slot_index = i + j
+            
+            if current_slot_index >= len(raw_slots):
+                can_accommodate_service = False
+                break
+                
+            current_slot = raw_slots[current_slot_index]
+            
+            # Check if slot is available
+            if not current_slot.is_available:
+                can_accommodate_service = False
+                break
+            
+            consecutive_slots.append(current_slot)
+            
+            # Verify slots are truly contiguous (no time gaps)
+            if j > 0:
+                previous_slot = consecutive_slots[j - 1]
+                if current_slot.start_time != previous_slot.end_time:
+                    # There's a gap between slots - not truly contiguous
+                    can_accommodate_service = False
+                    break
+        
+        if can_accommodate_service and consecutive_slots:
+            # Create a service slot using the first slot's start time and calculated end time
+            service_start_time = consecutive_slots[0].start_time
+            service_end_time = _calculate_end_time(service_start_time, service_duration)
+            
+            # Verify the calculated end time doesn't exceed the last available slot
+            last_slot = consecutive_slots[-1]
+            if service_end_time <= last_slot.end_time:
+                available_service_slots.append(
+                    DatedTimeSlot(
+                        date=current_date,
+                        start_time=service_start_time,
+                        end_time=service_end_time
+                    )
+                )
+        
+        # Move to next potential starting position
+        i += 1
+    
+    return available_service_slots
 
 
 # --- Appointment Listing and Retrieval ---

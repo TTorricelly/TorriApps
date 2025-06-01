@@ -1,10 +1,10 @@
 from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID as SQLAlchemyUUIDColumn
-from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import Enum as SAEnum # Changed alias for consistency
+from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship # Added for relationships
 from uuid import uuid4
-from Backend.Config.Database import Base # Adjusted import path
-from Backend.Config.Settings import settings # Adjusted import path
+from Config.Database import Base # Adjusted import path
+from Config.Settings import settings # Adjusted import path
 from .constants import UserRole
 # To prevent circular imports with type hinting, we can use string references for relationship models
 # or forward references if needed, but for `secondary` argument, the table object itself might be needed
@@ -14,15 +14,15 @@ from .constants import UserRole
 class UserTenant(Base):
     __tablename__ = 'users_tenant'
 
-    id = Column(SQLAlchemyUUIDColumn(as_uuid=True), primary_key=True, default=uuid4)
-    tenant_id = Column(SQLAlchemyUUIDColumn(as_uuid=True),
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    tenant_id = Column(CHAR(36),
                        ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
                        nullable=False,
                        index=True)
     
     email = Column(String(120), index=True, nullable=False) # Uniqueness per tenant handled by UniqueConstraint
-    hashed_password = Column(String, nullable=False)
-    role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
 
