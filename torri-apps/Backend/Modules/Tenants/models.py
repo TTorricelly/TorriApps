@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, UUID
 from uuid import uuid4
-from Backend.Config.Database import BasePublic
-from Backend.Config.Settings import settings
+from Config.Database import BasePublic
+from Config.Settings import settings
 
 class Tenant(BasePublic):
     __tablename__ = "tenants"

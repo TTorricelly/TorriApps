@@ -1,8 +1,8 @@
 import enum
 from sqlalchemy import Column, String, Boolean, Enum as SAEnum, UUID
 from uuid import uuid4
-from Backend.Config.Database import BasePublic  # Corrected import path
-from Backend.Config.Settings import settings    # Corrected import path
+from Config.Database import BasePublic  # Corrected import path
+from Config.Settings import settings    # Corrected import path
 
 class AdminMasterRole(enum.Enum):
     ADMIN_MASTER = "ADMIN_MASTER"
