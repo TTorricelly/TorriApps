@@ -11,8 +11,8 @@ from sqlalchemy import pool
 from sqlalchemy import create_engine # Add if not present or used differently
 from Config.Settings import settings
 from Config.Database import BasePublic, Base # Corrected path, Added Base for tenant models
-from Backend.Modules.Tenants.models import Tenant # To query tenant schemas
-from Backend.Modules.AdminMaster import models as admin_master_models_for_metadata_registration # New line
+from Modules.Tenants.models import Tenant # To query tenant schemas
+from Modules.AdminMaster import models as admin_master_models_for_metadata_registration # New line
 
 from alembic import context
 
