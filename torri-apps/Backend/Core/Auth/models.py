@@ -44,5 +44,22 @@ class UserTenant(Base):
         # foreign_keys="[service_professionals_association.c.professional_user_id]" # Also helps clarify
     )
 
+    # Relationships to Appointments
+    # For UserTenant as a client
+    client_appointments = relationship(
+        "Appointment",
+        foreign_keys="[Appointment.client_id]", # String reference to Appointment model + foreign key column
+        back_populates="client",
+        cascade="all, delete-orphan" # If user is deleted, their appointments as client are removed
+    )
+
+    # For UserTenant as a professional
+    professional_appointments = relationship(
+        "Appointment",
+        foreign_keys="[Appointment.professional_id]", # String reference to Appointment model + foreign key column
+        back_populates="professional",
+        cascade="all, delete-orphan" # If user is deleted, their appointments as professional are removed
+    )
+
     def __repr__(self):
         return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
