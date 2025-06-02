@@ -4,13 +4,13 @@ from uuid import UUID, uuid4
 import pytest
 from datetime import time, date, timedelta
 
-from Backend.Config.Settings import settings as app_settings
-from Backend.Core.Auth.constants import UserRole
-from Backend.Modules.Tenants.models import Tenant as TenantModel
-from Backend.Core.Auth.models import UserTenant as UserTenantModel
-from Backend.Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
-from Backend.Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
-from Backend.Core.Security.hashing import get_password_hash
+from Config.Settings import settings as app_settings
+from Core.Auth.constants import UserRole
+from Modules.Tenants.models import Tenant as TenantModel
+from Core.Auth.models import UserTenant as UserTenantModel
+from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
+from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
+from Core.Security.hashing import get_password_hash
 
 
 @pytest.fixture(scope="function")

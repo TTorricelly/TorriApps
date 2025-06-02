@@ -1,7 +1,7 @@
 from fastapi import Request, HTTPException, status
 from sqlalchemy import text
-from Backend.Config.Database import SessionLocal
-from Backend.Config.Settings import settings # To potentially reset to a default public schema if needed
+from Config.Database import SessionLocal
+from Config.Settings import settings # To potentially reset to a default public schema if needed
 
 def get_db(request: Request): # Add request: Request parameter
     db = SessionLocal()

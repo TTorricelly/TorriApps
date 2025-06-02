@@ -10,10 +10,10 @@ from fastapi import HTTPException, status
 
 # Models
 from .models import Appointment
-from Backend.Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
-from Backend.Modules.Services.models import Service
-from Backend.Core.Auth.models import UserTenant
-from Backend.Modules.Tenants.models import Tenant
+from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
+from Modules.Services.models import Service
+from Core.Auth.models import UserTenant
+from Modules.Tenants.models import Tenant
 
 # Schemas
 from .schemas import (
@@ -22,12 +22,12 @@ from .schemas import (
     DailyServiceAvailabilityResponse, DatedTimeSlot # For future use
 )
 from .constants import AppointmentStatus
-from Backend.Modules.Availability.constants import DayOfWeek, AvailabilityBlockType # Corrected import path
+from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType # Corrected import path
 
 # Auth & Config
-from Backend.Core.Auth.constants import UserRole
-from Backend.Config.Settings import settings
-from Backend.Core.Audit import log_audit, AuditLogEvent # Import audit logging
+from Core.Auth.constants import UserRole
+from Config.Settings import settings
+from Core.Audit import log_audit, AuditLogEvent # Import audit logging
 
 
 # --- Helper Functions ---

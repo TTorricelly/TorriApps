@@ -1,18 +1,18 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from Backend.Core.Auth.models import UserTenant # Adjusted import path
-from Backend.Modules.Tenants.models import Tenant
+from Core.Auth.models import UserTenant # Adjusted import path
+from Modules.Tenants.models import Tenant
 # Schemas will be used for type hinting and response models, but UserTenantCreate is not directly used here
-# from Backend.Core.Auth.Schemas import UserTenantCreate
-from Backend.Core.Security.hashing import verify_password
+# from Core.Auth.Schemas import UserTenantCreate
+from Core.Security.hashing import verify_password
 # settings might be used for other auth-related configurations in the future
-# from Backend.Config.Settings import settings
+# from Config.Settings import settings
 # create_access_token is used in routes, not directly in this service function for authentication logic
-# from Backend.Core.Security.jwt import create_access_token
+# from Core.Security.jwt import create_access_token
 # HTTPException is typically raised in routes, services usually return data or None/False
 # from fastapi import HTTPException
-from Backend.Core.Audit import log_audit, AuditLogEvent # Import audit logging utilities
+from Core.Audit import log_audit, AuditLogEvent # Import audit logging utilities
 
 def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -> UserTenant | None:
     """

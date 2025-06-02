@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from jose import JWTError # For catching JWT specific errors
 
 # Adjust relative paths based on actual execution context if needed
-from Backend.Core.Security.jwt import decode_access_token, TokenPayload # Assuming TokenPayload is in jwt.py
-from Backend.Core.Auth.Schemas import TokenData # TokenData might be redundant if TokenPayload is used from jwt.py
-from Backend.Core.Auth.models import UserTenant
+from Core.Security.jwt import decode_access_token, TokenPayload # Assuming TokenPayload is in jwt.py
+from Core.Auth.Schemas import TokenData # TokenData might be redundant if TokenPayload is used from jwt.py
+from Core.Auth.models import UserTenant
 # The service to fetch user by email and tenant_id
-from Backend.Modules.Users.services import get_user_by_email_and_tenant
-from Backend.Core.Database.dependencies import get_db
-from Backend.Core.Auth.constants import UserRole
+from Modules.Users.services import get_user_by_email_and_tenant
+from Core.Database.dependencies import get_db
+from Core.Auth.constants import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login") # Corrected path as per previous setup
 

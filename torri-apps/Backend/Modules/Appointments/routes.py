@@ -22,7 +22,7 @@ from .constants import AppointmentStatus
 
 # Models are not directly used in routes but good for context if needed
 # from .models import Appointment
-# from Backend.Modules.Availability.models import ...
+# from Modules.Availability.models import ...
 
 router = APIRouter(
     # No prefix here, will be added in main.py (e.g., /api/v1/appointments)

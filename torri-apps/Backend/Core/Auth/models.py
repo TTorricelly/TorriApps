@@ -9,7 +9,7 @@ from .constants import UserRole
 # To prevent circular imports with type hinting, we can use string references for relationship models
 # or forward references if needed, but for `secondary` argument, the table object itself might be needed
 # or its string name "fully.qualified.path:table_object" or just "table_name" if in same metadata.
-# from Backend.Modules.Services.models import service_professionals_association (This would be circular)
+# from Modules.Services.models import service_professionals_association (This would be circular)
 
 class UserTenant(Base):
     __tablename__ = 'users_tenant'

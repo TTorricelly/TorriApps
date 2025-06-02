@@ -7,8 +7,8 @@ from fastapi import HTTPException, status
 
 from .models import Category, Service, service_professionals_association
 from .schemas import CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdate, CategorySchema, ServiceSchema
-from Backend.Core.Auth.models import UserTenant
-from Backend.Core.Auth.constants import UserRole
+from Core.Auth.models import UserTenant
+from Core.Auth.constants import UserRole
 
 # --- Helper Functions ---
 def _validate_professionals(db: Session, professional_ids: List[UUID], tenant_id: UUID) -> List[UserTenant]:

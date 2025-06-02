@@ -6,13 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Header, status
 from fastapi.security import OAuth2PasswordRequestForm # Example if using form data, but we'll use JSON body
 from sqlalchemy.orm import Session
 
-from Backend.Core.Database.dependencies import get_db # Adjusted import path
-from Backend.Core.Auth import Schemas # Contains Token, TokenData, LoginRequest
-from Backend.Core.Auth import services as auth_services # Alias to avoid name clash
-from Backend.Core.Security.jwt import create_access_token
-from Backend.Config.Settings import settings # For access_token_expire_minutes
+from Core.Database.dependencies import get_db # Adjusted import path
+from Core.Auth import Schemas # Contains Token, TokenData, LoginRequest
+from Core.Auth import services as auth_services # Alias to avoid name clash
+from Core.Security.jwt import create_access_token
+from Config.Settings import settings # For access_token_expire_minutes
 # UserTenant schema might be needed if returning user details post-login, but Token is the primary response
-# from Backend.Core.Auth.Schemas import UserTenant
+# from Core.Auth.Schemas import UserTenant
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 
