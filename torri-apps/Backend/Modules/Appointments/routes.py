@@ -5,10 +5,10 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from sqlalchemy.orm import Session
 
-from Backend.Core.Database.dependencies import get_db
-from Backend.Core.Auth.dependencies import get_current_user_tenant, require_role
-from Backend.Core.Auth.models import UserTenant # For current_user type hint
-from Backend.Core.Auth.constants import UserRole
+from Core.Database.dependencies import get_db
+from Core.Auth.dependencies import get_current_user_tenant, require_role
+from Core.Auth.models import UserTenant # For current_user type hint
+from Core.Auth.constants import UserRole
 
 from . import services as appointments_services # Alias
 from .schemas import (
@@ -115,15 +115,15 @@ def create_new_appointment_endpoint(
     summary="List appointments for the tenant based on filters and user role."
 )
 def list_appointments_endpoint(
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+    db: Annotated[Session, Depends(get_db)],
     professional_id: Optional[UUID] = Query(None, description="Filter by professional ID."),
     client_id: Optional[UUID] = Query(None, description="Filter by client ID."),
     date_from: Optional[date] = Query(None, description="Filter by start date (YYYY-MM-DD)."),
     date_to: Optional[date] = Query(None, description="Filter by end date (YYYY-MM-DD)."),
     status: Optional[AppointmentStatus] = Query(None, description="Filter by appointment status."),
     skip: int = Query(0, ge=0, description="Number of items to skip."),
-    limit: int = Query(100, ge=1, le=200, description="Number of items to return."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
-    db: Annotated[Session, Depends(get_db)]
+    limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
 ):
     # The service function get_appointments handles role-based filtering internally.
     appointments = appointments_services.get_appointments(
@@ -146,9 +146,9 @@ def list_appointments_endpoint(
     summary="Get a specific appointment by its ID."
 )
 def get_appointment_by_id_endpoint(
-    appointment_id: UUID = Path(..., description="ID of the appointment to retrieve."),
     requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
-    db: Annotated[Session, Depends(get_db)]
+    db: Annotated[Session, Depends(get_db)],
+    appointment_id: UUID = Path(..., description="ID of the appointment to retrieve.")
 ):
     appointment = appointments_services.get_appointment_by_id(
         db=db,
@@ -168,10 +168,10 @@ def get_appointment_by_id_endpoint(
     summary="Cancel an appointment."
 )
 def cancel_appointment_endpoint(
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+    db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to cancel."),
-    payload: Optional[AppointmentCancelPayload] = Body(None, description="Optional reason for cancellation."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    payload: Optional[AppointmentCancelPayload] = Body(None, description="Optional reason for cancellation.")
 ):
     reason = payload.reason if payload else None
     updated_appointment = appointments_services.cancel_appointment(
@@ -189,10 +189,10 @@ def cancel_appointment_endpoint(
     summary="Reschedule an appointment."
 )
 def reschedule_appointment_endpoint(
-    appointment_id: UUID = Path(..., description="ID of the appointment to reschedule."),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
+    db: Annotated[Session, Depends(get_db)],
     payload: AppointmentReschedulePayload = Body(...),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    appointment_id: UUID = Path(..., description="ID of the appointment to reschedule.")
 ):
     updated_appointment = appointments_services.reschedule_appointment(
         db=db,
@@ -211,10 +211,10 @@ def reschedule_appointment_endpoint(
     summary="Mark an appointment as completed."
 )
 def complete_appointment_endpoint(
-    appointment_id: UUID = Path(..., description="ID of the appointment to mark as completed."),
     # This dependency ensures only specified roles can attempt this. Service layer does finer checks.
     requesting_user: Annotated[UserTenant, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))],
-    db: Annotated[Session, Depends(get_db)] = None
+    db: Annotated[Session, Depends(get_db)],
+    appointment_id: UUID = Path(..., description="ID of the appointment to mark as completed.")
 ):
     updated_appointment = appointments_services.complete_appointment(
         db=db,
@@ -230,9 +230,9 @@ def complete_appointment_endpoint(
     summary="Mark an appointment as No Show."
 )
 def mark_appointment_as_no_show_endpoint(
-    appointment_id: UUID = Path(..., description="ID of the appointment to mark as No Show."),
     requesting_user: Annotated[UserTenant, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))],
-    db: Annotated[Session, Depends(get_db)] = None
+    db: Annotated[Session, Depends(get_db)],
+    appointment_id: UUID = Path(..., description="ID of the appointment to mark as No Show.")
 ):
     updated_appointment = appointments_services.mark_appointment_as_no_show(
         db=db,

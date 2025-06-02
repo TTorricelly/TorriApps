@@ -16,9 +16,8 @@ class UserTenant(Base):
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     tenant_id = Column(CHAR(36),
-                       ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
                        nullable=False,
-                       index=True)
+                       index=True)  # FK removed: cross-schema reference handled at application level
     
     email = Column(String(120), index=True, nullable=False) # Uniqueness per tenant handled by UniqueConstraint
     hashed_password = Column(String(255), nullable=False)

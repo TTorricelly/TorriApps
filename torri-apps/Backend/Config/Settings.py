@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     default_schema_name: str = "public" # Nova adição
     access_token_expire_minutes: int = 60 # Default to 60 minutes
     jwt_algorithm: str = "HS256" # Algorithm for JWT encoding/decoding
+    testing: bool = False  # Add testing mode flag
+    API_V1_PREFIX: str = "/api/v1"  # API version prefix for tests
     
     # Tenant Migration Settings
     public_database_url: str = "mysql+mysqlconnector://root:@localhost:3306/torri_app_public"

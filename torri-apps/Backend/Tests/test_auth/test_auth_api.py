@@ -1,13 +1,18 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session as SQLAlchemySession # Use an alias if Session is used elsewhere
 from jose import jwt
-from uuid import UUID
+from uuid import UUID, uuid4
 
-# Assuming Backend.Config.settings refers to your application's settings
-from Backend.Config.Settings import settings as app_settings
-from Backend.Core.Auth.constants import UserRole
-from Backend.Modules.Tenants.models import Tenant as TenantModel
-from Backend.Core.Auth.models import UserTenant as UserTenantModel
+import sys
+import os
+
+# Add the Backend directory to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from Config.Settings import settings as app_settings
+from Core.Auth.constants import UserRole
+from Modules.Tenants.models import Tenant as TenantModel
+from Core.Auth.models import UserTenant as UserTenantModel
 
 
 def test_login_success(
@@ -39,7 +44,7 @@ def test_login_success(
         algorithms=[app_settings.jwt_algorithm]
     )
     assert decoded_token["sub"] == gestor_user_test.email
-    assert UUID(decoded_token["tenant_id"]) == default_tenant_test.id
+    assert decoded_token["tenant_id"] == str(default_tenant_test.id)  # Compare as strings since our IDs are strings in SQLite
     assert decoded_token["role"] == UserRole.GESTOR.value
     assert "exp" in decoded_token # Check for expiration claim
 
@@ -106,7 +111,7 @@ def test_login_failure_wrong_tenant_id_for_user(
 ):
     """Test login failure when X-Tenant-ID points to a tenant where the user does not exist."""
     # Create a second, different tenant
-    other_tenant_id = uuid4()
+    other_tenant_id = str(uuid4())  # Convert to string for SQLite
     other_tenant = TenantModel(
         id=other_tenant_id,
         name="Other Test Tenant",
@@ -122,7 +127,7 @@ def test_login_failure_wrong_tenant_id_for_user(
         "password": "testpassword"
     }
     headers = {
-        "X-Tenant-ID": str(other_tenant_id) # Header points to the 'other_tenant'
+        "X-Tenant-ID": other_tenant_id # Header points to the 'other_tenant' (already a string)
     }
 
     response = test_client.post(f"{app_settings.API_V1_PREFIX}/auth/login", data=login_data, headers=headers)

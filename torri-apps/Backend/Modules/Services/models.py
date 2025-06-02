@@ -29,16 +29,11 @@ class Category(Base):
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(100), nullable=False)
     # tenant_id here links to the public.tenants table, establishing ownership.
-    # This is important if categories were ever to be managed centrally but applied to tenants,
-    # but for per-tenant categories, this explicit FK to public.tenants might be redundant IF
-    # the entire schema is already tenant-specific.
-    # However, if we want a clear link for potential future cross-tenant analysis (by superadmin), it's useful.
-    # Let's assume for now that since 'Base' models go into tenant schemas, this FK is for logical clarity
-    # or future admin features, rather than for schema separation itself (which is handled by middleware).
-    tenant_id = Column(CHAR(36),
-                       ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
-                       nullable=False,
-                       index=True)
+    # For testing with SQLite, we skip FK constraints to avoid resolution issues
+    if settings.testing:
+        tenant_id = Column(CHAR(36), nullable=False, index=True)  # No FK constraint in testing
+    else:
+        tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
@@ -63,10 +58,11 @@ class Service(Base):
 
     category_id = Column(CHAR(36), ForeignKey("service_categories.id"), nullable=False, index=True)
     # Similar to Category.tenant_id, this establishes a clear ownership link to the public.tenants table.
-    tenant_id = Column(CHAR(36),
-                       ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"),
-                       nullable=False,
-                       index=True)
+    # For testing with SQLite, we skip FK constraints to avoid resolution issues
+    if settings.testing:
+        tenant_id = Column(CHAR(36), nullable=False, index=True)  # No FK constraint in testing
+    else:
+        tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
 
     category = relationship("Category", back_populates="services")
 
