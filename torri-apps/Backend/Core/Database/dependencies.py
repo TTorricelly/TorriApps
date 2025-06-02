@@ -72,3 +72,31 @@ def get_db(request: Request): # Add request: Request parameter
                  # Log this error, as it might affect connection reuse.
                  print(f"Warning: Could not reset schema to '{settings.default_schema_name}' for connection. Error: {e}")
         db.close()
+
+def get_public_db():
+    """
+    Get a database session specifically for public schema operations.
+    This is used for accessing tenant metadata and other public schema tables.
+    """
+    db = SessionLocal()
+    try:
+        # For multi-tenant setup, ensure we're using the public schema
+        # Only do this if we're not already connected to the right database
+        if settings.default_schema_name and settings.default_schema_name != "public":
+            try:
+                db.execute(text(f"USE `{settings.default_schema_name}`;"))
+            except Exception as use_error:
+                print(f"Warning: Could not switch to schema {settings.default_schema_name}: {use_error}")
+                # Continue without schema switch - might already be on correct schema
+        
+        yield db
+    except Exception as e:
+        db.rollback()
+        db.close()
+        print(f"Error in get_public_db: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection error"
+        )
+    finally:
+        db.close()

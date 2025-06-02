@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     secret_key: str
     redis_url: str  # Added field
     debug: bool = False
-    default_schema_name: str = "public" # Nova adição
+    default_schema_name: str = "torri_app_public" # Schema público para tenants e admin
     access_token_expire_minutes: int = 60 # Default to 60 minutes
     jwt_algorithm: str = "HS256" # Algorithm for JWT encoding/decoding
     testing: bool = False  # Add testing mode flag

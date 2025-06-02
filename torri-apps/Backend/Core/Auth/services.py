@@ -14,7 +14,7 @@ from Core.Security.hashing import verify_password
 # from fastapi import HTTPException
 from Core.Audit import log_audit, AuditLogEvent # Import audit logging utilities
 
-def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -> UserTenant | None:
+def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -> tuple[UserTenant | None, str | None]:
     """
     Authenticates a user by email and password for a specific tenant.
 
@@ -25,7 +25,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
         password: User's plain text password.
 
     Returns:
-        The authenticated UserTenant object or None if authentication fails.
+        Tuple of (UserTenant object or None, tenant_schema_name or None).
     """
     try:
         # First, get the tenant's schema name from the public tenants table
@@ -45,7 +45,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
                     tenant_id=tenant_id,
                     details={"reason": f"Tenant {tenant_id} not found."}
                 )
-                return None
+                return None, None
         else:
             schema_name = tenant.db_schema_name
         
@@ -62,7 +62,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
                 tenant_id=tenant_id,
                 details={"reason": f"User with email {email} not found in tenant {tenant_id}."}
             )
-            return None
+            return None, None
         
         # Verify password
         if not verify_password(password, result[3]):  # hashed_password is at index 3
@@ -72,7 +72,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
                 tenant_id=tenant_id,
                 details={"reason": "Incorrect password."}
             )
-            return None
+            return None, None
         
         # Create UserTenant object from raw result
         from Core.Auth.constants import UserRole
@@ -91,7 +91,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
             requesting_user_email=user.email,
             tenant_id=user.tenant_id
         )
-        return user
+        return user, schema_name
         
     except Exception as e:
         log_audit(
@@ -100,7 +100,7 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
             tenant_id=tenant_id,
             details={"reason": f"Database error: {str(e)}"}
         )
-        return None
+        return None, None
 
 def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
     """
@@ -158,7 +158,7 @@ def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
         )
         return []
 
-def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id: UUID | None = None) -> tuple[UserTenant | None, str | None]:
+def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id: UUID | None = None) -> tuple[UserTenant | None, str | None, str | None]:
     """
     Enhanced authentication that can discover tenant by email if tenant_id is not provided.
     
@@ -169,17 +169,17 @@ def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id
         tenant_id: Optional tenant_id. If not provided, will search for email across tenants.
     
     Returns:
-        Tuple of (UserTenant object or None, error_message or None)
-        - Success: (UserTenant, None)
-        - Failure: (None, error_message)
+        Tuple of (UserTenant object or None, error_message or None, tenant_schema_name or None)
+        - Success: (UserTenant, None, schema_name)
+        - Failure: (None, error_message, None)
     """
     # If tenant_id is provided, use the existing authentication method
     if tenant_id:
-        user = authenticate_user(db, tenant_id, email, password)
+        user, schema_name = authenticate_user(db, tenant_id, email, password)
         if user:
-            return user, None
+            return user, None, schema_name
         else:
-            return None, "Incorrect email or password for the specified tenant."
+            return None, "Incorrect email or password for the specified tenant.", None
     
     # Tenant discovery flow
     found_tenant_ids = discover_tenant_by_email(db, email)
@@ -190,7 +190,7 @@ def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id
             requesting_user_email=email,
             details={"reason": "Email not found in any tenant."}
         )
-        return None, "Email not found."
+        return None, "Email not found.", None
     
     if len(found_tenant_ids) > 1:
         log_audit(
@@ -198,11 +198,11 @@ def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id
             requesting_user_email=email,
             details={"reason": f"Email found in {len(found_tenant_ids)} tenants. Tenant ID required."}
         )
-        return None, "Email found in multiple tenants. Please specify your tenant."
+        return None, "Email found in multiple tenants. Please specify your tenant.", None
     
     # Exactly one tenant found - proceed with authentication
     discovered_tenant_id = found_tenant_ids[0]
-    user = authenticate_user(db, discovered_tenant_id, email, password)
+    user, schema_name = authenticate_user(db, discovered_tenant_id, email, password)
     
     if user:
         log_audit(
@@ -212,9 +212,9 @@ def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id
             tenant_id=user.tenant_id,
             details={"method": "enhanced_login_with_tenant_discovery"}
         )
-        return user, None
+        return user, None, schema_name
     else:
-        return None, "Incorrect password."
+        return None, "Incorrect password.", None
 
 # (Opcional, para depois) Criar função `create_user_tenant(db: Session, user: UserTenantCreate, tenant_id: UUID) -> UserTenant`:
 # *   Esta função será mais apropriada no `Modules/Users/services.py`. Por enquanto, o foco do `Auth/services.py` é autenticação.

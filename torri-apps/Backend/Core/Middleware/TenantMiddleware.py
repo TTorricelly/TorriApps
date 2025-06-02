@@ -9,6 +9,7 @@ from sqlalchemy import text # For executing raw SQL if necessary for schema swit
 from Config.Database import SessionLocal # For creating a DB session to query public tenant table
 from Config.Settings import settings
 from Modules.Tenants.models import Tenant as TenantModel # To query for db_schema_name
+from Core.Security.jwt import decode_access_token # For JWT token decoding
 
 # Define public route prefixes that do not require X-Tenant-ID or schema switching
 # These routes will use the default public schema.
@@ -19,13 +20,13 @@ PUBLIC_ROUTE_PREFIXES = [
     "/docs",                        # FastAPI's default OpenAPI docs UI
     "/openapi.json",                # FastAPI's default OpenAPI schema
     "/health",                      # Health check endpoint defined in main.py at root
-    # TODO: Confirm if root_health_check "/" is also needed here if it's not caught by docs
+    "/",                            # Root health check
     "/api/v1/auth/login",           # Login route is public; tenant context from X-Tenant-ID
     "/api/v1/auth/enhanced-login",  # Enhanced login route that doesn't require tenant ID
+    "/api/v1/tenants/me",           # Get current tenant from JWT token
     # Add other public API prefixes under /api/v1 as needed:
     # e.g., "/api/v1/tenants" (if Tenant CRUD is public/admin)
     # e.g., "/api/v1/adminmaster/"
-    # For now, keeping it minimal. If /tenants CRUD is added and public, its prefix needs to be here.
 ]
 # It's important that these prefixes accurately reflect the final URL structure.
 
@@ -45,58 +46,39 @@ class TenantMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
 
-        # If not a public route, it's a tenant-specific route. X-Tenant-ID is required.
-        x_tenant_id_str = request.headers.get("X-Tenant-ID")
+        # If not a public route, it's a tenant-specific route. JWT token is required.
+        authorization = request.headers.get("Authorization")
 
-        if not x_tenant_id_str:
-            # Using JSONResponse for JSON error response
+        if not authorization or not authorization.startswith("Bearer "):
             return JSONResponse(
-                content={"detail": "X-Tenant-ID header is required for this route."},
-                status_code=400
+                content={"detail": "Authorization header with Bearer token is required for this route."},
+                status_code=401
             )
 
+        token = authorization.split(" ")[1]  # Extract token after "Bearer "
+        
         try:
-            tenant_uuid = UUID(x_tenant_id_str)
-        except ValueError:
-            return JSONResponse(
-                content={"detail": "Invalid X-Tenant-ID format. Must be a valid UUID."},
-                status_code=400
-            )
-
-        # Fetch tenant's db_schema_name from the public 'tenants' table.
-        # This requires a database session that is guaranteed to be on the public schema.
-        db_public: Session = SessionLocal() # Create a new session for this lookup
-
-        # Ensure this session uses the public schema.
-        # If engine URL includes a DB, and it's the public one, this is fine.
-        # If engine URL does not include a DB, we might need to `USE public_db` or rely on models
-        # having schema defined for cross-schema query to work.
-        # The TenantModel is defined in BasePublic and has `__table_args__ = {"schema": settings.default_schema_name}`
-        # This should make SQLAlchemy query `public.tenants`.
-
-        try:
-            tenant_info = db_public.query(TenantModel.db_schema_name).filter(TenantModel.id == tenant_uuid).first()
+            payload = decode_access_token(token)
+            if not payload:
+                return JSONResponse(
+                    content={"detail": "Invalid or expired token."},
+                    status_code=401
+                )
+            
+            tenant_uuid = UUID(payload.tenant_id)
+            tenant_schema = payload.tenant_schema
+            
         except Exception as e:
-            # Log the exception e
-            db_public.close()
             return JSONResponse(
-                content={"detail": f"Error querying tenant information: {str(e)}"},
-                status_code=500 # Internal Server Error
-            )
-        finally:
-            db_public.close() # Always close the session used for this lookup
-
-        if not tenant_info:
-            return JSONResponse(
-                content={"detail": f"Tenant with ID '{tenant_uuid}' not found or has no schema configured."},
-                status_code=404 # Not Found
+                content={"detail": "Invalid token format or content."},
+                status_code=401
             )
 
-        db_schema_name_for_tenant = tenant_info.db_schema_name
+        # Schema name is now directly available from JWT token - no database lookup needed!
 
         # Store tenant info in request state for get_db and other dependencies to use
         request.state.tenant_id = tenant_uuid
-        request.state.tenant_schema_name = db_schema_name_for_tenant
+        request.state.tenant_schema_name = tenant_schema
         request.state.use_public_schema = False # Explicitly false for tenant routes
 
         # The actual schema switching (e.g., "USE tenant_xyz;") will be handled in get_db

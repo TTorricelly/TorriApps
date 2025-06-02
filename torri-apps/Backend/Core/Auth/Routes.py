@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, status
 from fastapi.security import OAuth2PasswordRequestForm # Example if using form data, but we'll use JSON body
 from sqlalchemy.orm import Session
 
-from Core.Database.dependencies import get_db # Adjusted import path
+from Core.Database.dependencies import get_db, get_public_db # Adjusted import path
 from Core.Auth import Schemas # Contains Token, TokenData, LoginRequest
 from Core.Auth import services as auth_services # Alias to avoid name clash
 from Core.Security.jwt import create_access_token
@@ -22,27 +22,28 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 @router.post("/login", response_model=Schemas.Token)
 async def login_for_access_token(
     login_request: Schemas.LoginRequest, # Using Pydantic model for request body
-    x_tenant_id: Annotated[UUID | None, Header(alias="X-Tenant-ID")] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_public_db)  # Use public DB for login
 ):
-    if x_tenant_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="X-Tenant-ID header is required for login."
-        )
 
-    user = auth_services.authenticate_user(
+    user, error_message, tenant_schema = auth_services.enhanced_authenticate_user(
         db,
-        tenant_id=x_tenant_id,
         email=login_request.email,
-        password=login_request.password
+        password=login_request.password,
+        tenant_id=getattr(login_request, 'tenant_id', None)  # Use tenant_id from request if provided
     )
 
     if not user:
+        # Determine appropriate status code based on error message
+        status_code = status.HTTP_401_UNAUTHORIZED
+        if error_message and "multiple tenants" in error_message.lower():
+            status_code = status.HTTP_400_BAD_REQUEST
+        elif error_message and "not found" in error_message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+            
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password for the specified tenant.",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status_code,
+            detail=error_message or "Authentication failed.",
+            headers={"WWW-Authenticate": "Bearer"} if status_code == status.HTTP_401_UNAUTHORIZED else None,
         )
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
@@ -52,6 +53,7 @@ async def login_for_access_token(
     token_data = {
         "sub": user.email,
         "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
+        "tenant_schema": tenant_schema, # Include schema name for direct access
         "role": user.role.value # Convert Enum to string value for JWT
     }
 
@@ -64,7 +66,7 @@ async def login_for_access_token(
 @router.post("/enhanced-login", response_model=Schemas.EnhancedToken)
 async def enhanced_login_for_access_token(
     login_request: Schemas.EnhancedLoginRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_public_db)  # Use public DB for login
 ):
     """
     Enhanced login endpoint that can discover tenant by email.
@@ -79,7 +81,7 @@ async def enhanced_login_for_access_token(
     - All attempts are logged for auditing
     - Note: Searches all tenant schemas (no artificial limit)
     """
-    user, error_message = auth_services.enhanced_authenticate_user(
+    user, error_message, tenant_schema = auth_services.enhanced_authenticate_user(
         db,
         email=login_request.email,
         password=login_request.password,
@@ -107,6 +109,7 @@ async def enhanced_login_for_access_token(
     token_data = {
         "sub": user.email,
         "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
+        "tenant_schema": tenant_schema, # Include schema name for direct access
         "role": user.role.value # Convert Enum to string value for JWT
     }
 

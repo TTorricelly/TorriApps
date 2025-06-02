@@ -7,9 +7,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../../Hooks/useTenant';
 
 export default function TopBar() {
-  const { userEmail, clearAuth } = useAuthStore();
+  const { userEmail, clearAuth, tenantId, isAuthenticated } = useAuthStore();
   const { tenantName } = useTenantStore();
   const navigate = useNavigate();
+  
   
   // Fetch tenant data
   const { data: tenantData, isLoading: tenantLoading, error: tenantError } = useTenant();
@@ -17,7 +18,7 @@ export default function TopBar() {
   // Display tenant name with loading state
   const displayTenantName = () => {
     if (tenantLoading) return "•••";
-    if (tenantError) return "Tenant";
+    if (tenantError) return "Erro";
     if (tenantName) return tenantName;
     if (tenantData?.name) return tenantData.name;
     return "Demo Salon"; // Fallback

@@ -12,81 +12,87 @@ from Core.Auth.Schemas import TokenData # TokenData might be redundant if TokenP
 from Core.Auth.models import UserTenant
 # The service to fetch user by email and tenant_id
 from Modules.Users.services import get_user_by_email_and_tenant
-from Core.Database.dependencies import get_db
+from Core.Database.dependencies import get_db, get_public_db
 from Core.Auth.constants import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login") # Corrected path as per previous setup
 
-def get_current_user_tenant(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[Session, Depends(get_db)],
-    # X-Tenant-ID is crucial for context, ensuring the user is operating within the intended tenant.
-    x_tenant_id: Annotated[UUID | None, Header(alias="X-Tenant-ID")] = None
+def get_current_user_from_token(
+    token: Annotated[str, Depends(oauth2_scheme)]
 ) -> UserTenant:
+    """
+    Get current user from JWT token only, without requiring X-Tenant-ID header.
+    Uses tenant_schema from JWT token for direct access.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    tenant_id_mismatch_exception = HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Tenant ID mismatch between header and token. Access denied.",
-    )
-    invalid_tenant_in_token_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or missing tenant ID in token.",
-    )
-    header_tenant_id_required_exception = HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="X-Tenant-ID header is required for this operation.",
-    )
-
-    if x_tenant_id is None:
-        raise header_tenant_id_required_exception
 
     try:
-        payload: TokenPayload | None = decode_access_token(token) # Expecting TokenPayload from decode
-        if payload is None or not isinstance(payload, TokenPayload): # Check if decode failed or returned unexpected type
+        payload: TokenPayload | None = decode_access_token(token)
+        if payload is None or not isinstance(payload, TokenPayload):
             raise credentials_exception
 
         email: str | None = payload.sub
         token_tenant_id_str: str | None = payload.tenant_id
-        # role_str: UserRole | None = payload.role # Role is already UserRole type due to TokenPayload
+        tenant_schema: str | None = payload.tenant_schema
 
-        if email is None:
+        if email is None or token_tenant_id_str is None or tenant_schema is None:
             raise credentials_exception
-        if token_tenant_id_str is None:
-            raise invalid_tenant_in_token_exception
 
         try:
             token_tenant_id = UUID(token_tenant_id_str)
         except ValueError:
-            raise invalid_tenant_in_token_exception
+            raise credentials_exception
 
-        # Critical Check: Ensure header X-Tenant-ID matches the tenant_id in the token
-        if token_tenant_id != x_tenant_id:
-            raise tenant_id_mismatch_exception
-
-    except JWTError: # Catch errors from jwt.decode specifically
+    except JWTError:
         raise credentials_exception
-    # Catch Pydantic validation error if TokenPayload was invalid from decode_access_token
-    except Exception as e: # Catch any other error during payload processing
-        # Log e for server-side diagnostics
-        print(f"Unexpected error in get_current_user_tenant: {e}")
+    except Exception as e:
+        print(f"Unexpected error in get_current_user_from_token: {e}")
         raise credentials_exception
 
-    # Fetch user from DB based on email from token and tenant_id from token (which matched header)
-    user = get_user_by_email_and_tenant(db, email=email, tenant_id=token_tenant_id)
+    # Create a temporary DB session to fetch user data
+    # We now have tenant_schema directly from JWT token - no need to construct it!
+    from Config.Database import SessionLocal
+    from sqlalchemy import text
+    
+    db_temp = SessionLocal()
+    try:
+        # Switch to the user's tenant schema using schema name from JWT
+        db_temp.execute(text(f"USE `{tenant_schema}`;"))
+        
+        # Fetch user from the tenant schema
+        user = get_user_by_email_and_tenant(db_temp, email=email, tenant_id=token_tenant_id)
+        
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found for the provided token.",
+            )
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
 
-    if user is None:
+        return user
+        
+    except Exception as e:
+        print(f"Error fetching user from token: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, # Changed to 404 as user for token not found
-            detail="User not found for the provided token and tenant.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not validate user credentials"
         )
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+    finally:
+        db_temp.close()
 
-    return user
+def get_current_user_tenant(
+    current_user: Annotated[UserTenant, Depends(get_current_user_from_token)]
+) -> UserTenant:
+    """
+    Wrapper for get_current_user_from_token for backwards compatibility.
+    Now both functions work identically using JWT token optimization.
+    """
+    return current_user
 
 def require_role(required_roles: List[UserRole]):
     """
