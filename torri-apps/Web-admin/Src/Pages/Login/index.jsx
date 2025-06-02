@@ -35,17 +35,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-bg-primary p-m font-sans">
       {/* Logo TorriApps */}
       <img
-        src={logoUrl} // Use imported logo URL
+        src={logoUrl}
         alt="TorriApps Logo"
-        className="max-w-xs w-48 mb-8" // As per requirements (w-48 is approx 192px)
+        className="max-w-xs w-48 mb-xl"
       />
 
       {/* Card de Login */}
-      <div className="bg-white rounded-2xl shadow-lg p-8 sm:p-10 max-w-md w-full">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+      <div className="bg-bg-secondary rounded-card shadow-card-hover border border-bg-tertiary p-xl max-w-md w-full">
+        <h1 className="text-h2 font-semibold text-text-primary mb-l text-center">
           Bem-vindo ao Web Admin
         </h1>
         <LoginForm />

@@ -45,16 +45,16 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-l">
       {errorMsg && (
-        <div role="alert" className="text-sm text-red-600 p-2 bg-red-100 rounded-md">
+        <div role="alert" className="text-small text-status-error p-s bg-bg-tertiary border border-status-error rounded-button">
           {errorMsg}
         </div>
       )}
       
       {/* Global error from mutation if not handled by specific field errors */}
       {loginMutation.isError && !errorMsg && (
-         <div role="alert" className="text-sm text-red-600 p-2 bg-red-100 rounded-md">
+         <div role="alert" className="text-small text-status-error p-s bg-bg-tertiary border border-status-error rounded-button">
            Ocorreu um erro ao tentar fazer login. Tente novamente.
          </div>
       )}
@@ -63,7 +63,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-small font-medium text-text-primary mb-xs"
         >
           E-mail
         </label>
@@ -74,14 +74,13 @@ export default function LoginForm() {
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
-            setErrorMsg(null); // Clear error when user types
+            setErrorMsg(null);
           }}
-          className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
+          className="input-field w-full"
           autoComplete="email"
-          // `required` HTML attribute can be used, but custom validation provides better UX
         />
         {!isEmailValid(email) && email.length > 0 && (
-          <p className="mt-1 text-xs text-red-500">Formato de e-mail inválido.</p>
+          <p className="mt-xs text-xs text-status-error">Formato de e-mail inválido.</p>
         )}
       </div>
 
@@ -89,7 +88,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-small font-medium text-text-primary mb-xs"
         >
           Senha
         </label>
@@ -100,11 +99,10 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
-            setErrorMsg(null); // Clear error when user types
+            setErrorMsg(null);
           }}
-          className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
+          className="input-field w-full"
           autoComplete="current-password"
-          // `required`
         />
       </div>
 
@@ -113,15 +111,15 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={!isFormValid || loginMutation.isLoading}
-          className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
+          className={`w-full flex justify-center font-medium transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
             isFormValid && !loginMutation.isLoading
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-blue-300 cursor-not-allowed"
+              ? "btn-primary"
+              : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
           }`}
         >
           {loginMutation.isLoading ? (
             <svg
-              className="animate-spin h-5 w-5 text-white"
+              className="animate-spin h-5 w-5 text-current"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -137,7 +135,7 @@ export default function LoginForm() {
               <path
                 className="opacity-75"
                 fill="currentColor"
-                d="M4 12a8 8 0 018-8V8H4z" // Corrected spinner path for better visuals
+                d="M4 12a8 8 0 018-8V8H4z"
               ></path>
             </svg>
           ) : (

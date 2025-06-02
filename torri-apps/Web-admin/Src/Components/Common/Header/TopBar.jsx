@@ -4,17 +4,30 @@ import { ChevronDownIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIc
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
 import { useNavigate } from 'react-router-dom';
+import { useTenant } from '../../../Hooks/useTenant';
 
 export default function TopBar() {
   const { userEmail, clearAuth } = useAuthStore();
   const { tenantName } = useTenantStore();
   const navigate = useNavigate();
   
-  // Default tenant name if not set
-  const displayTenantName = tenantName || "Salão Exemplo";
+  // Fetch tenant data
+  const { data: tenantData, isLoading: tenantLoading, error: tenantError } = useTenant();
+  
+  // Display tenant name with loading state
+  const displayTenantName = () => {
+    if (tenantLoading) return "•••";
+    if (tenantError) return "Tenant";
+    if (tenantName) return tenantName;
+    if (tenantData?.name) return tenantData.name;
+    return "Demo Salon"; // Fallback
+  };
 
   const handleLogout = () => {
     clearAuth();
+    // Clear tenant data on logout
+    const { clearTenant } = useTenantStore.getState();
+    clearTenant();
     navigate('/login');
   };
 
@@ -34,7 +47,7 @@ export default function TopBar() {
         <div className="flex items-center space-x-m">
           {/* Tenant Name */}
           <div className="hidden md:block text-small text-text-secondary">
-            <span className="font-medium text-text-primary">{displayTenantName}</span>
+            <span className="font-medium text-text-primary">{displayTenantName()}</span>
           </div>
 
           {/* User Dropdown */}
