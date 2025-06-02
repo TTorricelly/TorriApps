@@ -15,7 +15,8 @@ import api from "./api"; // Imports the configured Axios instance
 
 export async function loginRequest(credentials) {
   // credentials should be an object like { email: "user@example.com", password: "password123" }
-  const response = await api.post("/api/auth/login", credentials);
+  // Using enhanced-login which doesn't require tenant ID and returns it
+  const response = await api.post("/api/v1/auth/enhanced-login", credentials);
   return response.data; // Axios automatically wraps the response in a data object
 }
 
