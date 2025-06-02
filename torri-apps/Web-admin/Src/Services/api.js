@@ -1,11 +1,25 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import axios from "axios";
+import { useAuthStore } from "../stores/auth"; // Corrected path if store is in auth.js
 
-export const apiClient = {
-  get: (endpoint) => fetch(`${API_BASE_URL}${endpoint}`),
-  post: (endpoint, data) => fetch(`${API_BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  })
-};
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL, // Vite uses import.meta.env
+});
 
+api.interceptors.request.use(
+  (config) => {
+    const { accessToken, tenantId } = useAuthStore.getState();
+    if (accessToken && tenantId) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${accessToken}`,
+        "X-Tenant-ID": tenantId,
+      };
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export default api;
