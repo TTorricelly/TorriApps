@@ -1,0 +1,8 @@
+{
+  "appName": "Beauty-hub",
+  "packageName": "com.salon.beauty-hub",
+  "displayName": "Beauty hub",
+  "version": "1.0.0",
+  "apiUrl": "https://api.beauty-hub.com"
+}
+

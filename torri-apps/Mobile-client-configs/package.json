@@ -1,0 +1,14 @@
+{
+  "name": "@torri-apps/mobile-client-configs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:brand": "node scripts/build-app.js",
+    "build:all": "node scripts/build-all-apps.js",
+    "bump:version": "node scripts/bump-version.js"
+  },
+  "devDependencies": {
+    "fs-extra": "^11.2.0",
+    "yargs": "^17.7.2"
+  }
+}

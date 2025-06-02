@@ -1,0 +1,23 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@brand/*": ["./src/brand/*"],
+      "@shared/*": ["../Shared/*"]
+    },
+    "types": ["jest", "react-native", "tamagui"]
+  },
+  "include": [
+    "src/**/*",
+    "App.tsx",
+    "index.js",
+    "tamagui.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "android",
+    "ios"
+  ]
+}

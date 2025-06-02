@@ -1,0 +1,11 @@
+{
+  "name": "TorriApps",
+  "displayName": "TorriApps",
+  "bundleId": "com.torriapps.client",
+  "packageName": "com.torriapps.client",
+  "version": "1.0.0",
+  "buildNumber": "1",
+  "versionCode": 1,
+  "description": "Default TorriApps mobile client",
+  "orientation": "portrait"
+}

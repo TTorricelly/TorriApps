@@ -1,7 +1,0 @@
-{
-  "name": "{{PACKAGE_NAME}}",
-  "version": "{{VERSION}}",
-  "description": "{{DESCRIPTION}}",
-  "main": "index.js"
-}
-
