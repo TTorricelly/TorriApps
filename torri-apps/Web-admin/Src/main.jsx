@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
-import './styles/global.css'; // Ensure this path is correct
+import { BrowserRouter } from 'react-router-dom'; // Added
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import App from './App';
+import './index.css'; // Changed CSS import path
 
+// Existing QueryClient setup - keep this
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -15,8 +17,10 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <BrowserRouter> { /* Added BrowserRouter */ }
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
