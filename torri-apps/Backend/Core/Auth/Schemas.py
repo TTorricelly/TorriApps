@@ -37,6 +37,11 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class EnhancedToken(BaseModel):
+    access_token: str
+    token_type: str
+    tenant_id: UUID
+
 class TokenData(BaseModel):
     # 'sub' (subject) is often the user's email or ID
     # For this application, let's assume 'sub' will store the email.
@@ -49,3 +54,8 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     # tenant_id is passed via header X-Tenant-ID, so not in the login body.
+
+class EnhancedLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+    tenant_id: UUID | None = None  # Optional tenant_id for enhanced login

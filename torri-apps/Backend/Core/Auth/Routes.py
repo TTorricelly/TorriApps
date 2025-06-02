@@ -61,6 +61,65 @@ async def login_for_access_token(
 
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/enhanced-login", response_model=Schemas.EnhancedToken)
+async def enhanced_login_for_access_token(
+    login_request: Schemas.EnhancedLoginRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Enhanced login endpoint that can discover tenant by email.
+    
+    - If tenant_id is provided in the request body, uses standard authentication
+    - If tenant_id is not provided, searches for the email across all tenant schemas
+    - Returns appropriate errors for multiple tenants or email not found
+    
+    Security considerations:
+    - Schema names are validated to prevent SQL injection
+    - Only searches active users
+    - All attempts are logged for auditing
+    - Note: Searches all tenant schemas (no artificial limit)
+    """
+    user, error_message = auth_services.enhanced_authenticate_user(
+        db,
+        email=login_request.email,
+        password=login_request.password,
+        tenant_id=login_request.tenant_id
+    )
+    
+    if not user:
+        # Determine appropriate status code based on error message
+        status_code = status.HTTP_401_UNAUTHORIZED
+        if error_message and "multiple tenants" in error_message.lower():
+            status_code = status.HTTP_400_BAD_REQUEST
+        elif error_message and "not found" in error_message.lower():
+            status_code = status.HTTP_404_NOT_FOUND
+            
+        raise HTTPException(
+            status_code=status_code,
+            detail=error_message or "Authentication failed.",
+            headers={"WWW-Authenticate": "Bearer"} if status_code == status.HTTP_401_UNAUTHORIZED else None,
+        )
+
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+
+    # Ensure tenant_id and role are strings for JWT standard claims if they aren't already
+    # user.tenant_id is UUID, user.role is Enum
+    token_data = {
+        "sub": user.email,
+        "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
+        "role": user.role.value # Convert Enum to string value for JWT
+    }
+
+    access_token = create_access_token(
+        data=token_data, expires_delta=access_token_expires
+    )
+
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "tenant_id": user.tenant_id
+    }
+
 # Example of how OAuth2PasswordRequestForm would be used if not using a JSON body:
 # @router.post("/token", response_model=Schemas.Token)
 # async def login_for_access_token_form(
