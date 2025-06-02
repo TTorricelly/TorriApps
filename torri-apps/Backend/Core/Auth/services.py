@@ -27,40 +27,80 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
     Returns:
         The authenticated UserTenant object or None if authentication fails.
     """
-    # Query for the user by email and tenant_id
-    # Note: The UserTenant model has a UniqueConstraint for (tenant_id, email),
-    # so this should return at most one user.
-    user = db.query(UserTenant).filter(
-        UserTenant.email == email,
-        UserTenant.tenant_id == tenant_id
-    ).first()
-
-    if not user:
+    try:
+        # First, get the tenant's schema name from the public tenants table
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        
+        # If not found, try explicit public schema query
+        if not tenant:
+            tenant_result = db.execute(text("SELECT id, name, db_schema_name FROM torri_app_public.tenants WHERE id = :tenant_id"), 
+                                     {"tenant_id": str(tenant_id)}).fetchone()
+            if tenant_result:
+                # Use the raw result since ORM failed
+                schema_name = tenant_result[2]  # db_schema_name is at index 2
+            else:
+                log_audit(
+                    event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+                    requesting_user_email=email,
+                    tenant_id=tenant_id,
+                    details={"reason": f"Tenant {tenant_id} not found."}
+                )
+                return None
+        else:
+            schema_name = tenant.db_schema_name
+        
+        # Use raw SQL with explicit schema name since ORM schema switching doesn't work
+        result = db.execute(
+            text(f"SELECT id, tenant_id, email, hashed_password, role, full_name, is_active FROM `{schema_name}`.users_tenant WHERE email = :email AND tenant_id = :tenant_id AND is_active = 1"),
+            {"email": email, "tenant_id": str(tenant_id)}
+        ).fetchone()
+        
+        if not result:
+            log_audit(
+                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+                requesting_user_email=email,
+                tenant_id=tenant_id,
+                details={"reason": f"User with email {email} not found in tenant {tenant_id}."}
+            )
+            return None
+        
+        # Verify password
+        if not verify_password(password, result[3]):  # hashed_password is at index 3
+            log_audit(
+                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+                requesting_user_email=email,
+                tenant_id=tenant_id,
+                details={"reason": "Incorrect password."}
+            )
+            return None
+        
+        # Create UserTenant object from raw result
+        from Core.Auth.constants import UserRole
+        user = UserTenant()
+        user.id = result[0]
+        user.tenant_id = UUID(result[1]) 
+        user.email = result[2]
+        user.hashed_password = result[3]
+        user.role = UserRole(result[4].upper())  # Convert to uppercase to match enum
+        user.full_name = result[5]
+        user.is_active = result[6]
+        
         log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email, # email is known from input
-            tenant_id=tenant_id, # tenant_id is known from input
-            details={"reason": f"User with email {email} not found in tenant {tenant_id}."}
-        )
-        return None  # User not found for this tenant and email
-
-    if not verify_password(password, user.hashed_password):
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_id=user.id, # user object is available here
+            event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
+            requesting_user_id=user.id,
             requesting_user_email=user.email,
-            tenant_id=user.tenant_id,
-            details={"reason": "Incorrect password."}
+            tenant_id=user.tenant_id
         )
-        return None  # Incorrect password
-
-    log_audit(
-        event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
-        requesting_user_id=user.id,
-        requesting_user_email=user.email,
-        tenant_id=user.tenant_id
-    )
-    return user
+        return user
+        
+    except Exception as e:
+        log_audit(
+            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+            requesting_user_email=email,
+            tenant_id=tenant_id,
+            details={"reason": f"Database error: {str(e)}"}
+        )
+        return None
 
 def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
     """
@@ -93,7 +133,7 @@ def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
                 
             # Use parameterized query to safely check for email in each tenant schema
             # Note: We cannot parameterize table/schema names, but we validated the schema name above
-            query = text(f"SELECT tenant_id FROM `{schema_name}`.user_tenant WHERE email = :email AND is_active = 1")
+            query = text(f"SELECT tenant_id FROM `{schema_name}`.users_tenant WHERE email = :email AND is_active = 1")
             
             try:
                 result = db.execute(query, {"email": email}).fetchone()

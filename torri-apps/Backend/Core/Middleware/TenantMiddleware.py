@@ -1,8 +1,8 @@
 from uuid import UUID
-from fastapi import HTTPException, Response as FastAPIResponse # Using FastAPI Response for convenience
+from fastapi import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 from sqlalchemy.orm import Session # For type hinting
 from sqlalchemy import text # For executing raw SQL if necessary for schema switching
 
@@ -16,11 +16,12 @@ from Modules.Tenants.models import Tenant as TenantModel # To query for db_schem
 # The FastAPI default /docs and /openapi.json are typically at the root,
 # unless the FastAPI app itself is mounted under a subpath.
 PUBLIC_ROUTE_PREFIXES = [
-    "/docs",                # FastAPI's default OpenAPI docs UI
-    "/openapi.json",        # FastAPI's default OpenAPI schema
-    "/health",              # Health check endpoint defined in main.py at root
+    "/docs",                        # FastAPI's default OpenAPI docs UI
+    "/openapi.json",                # FastAPI's default OpenAPI schema
+    "/health",                      # Health check endpoint defined in main.py at root
     # TODO: Confirm if root_health_check "/" is also needed here if it's not caught by docs
-    "/api/v1/auth/login",   # Login route is public; tenant context from X-Tenant-ID
+    "/api/v1/auth/login",           # Login route is public; tenant context from X-Tenant-ID
+    "/api/v1/auth/enhanced-login",  # Enhanced login route that doesn't require tenant ID
     # Add other public API prefixes under /api/v1 as needed:
     # e.g., "/api/v1/tenants" (if Tenant CRUD is public/admin)
     # e.g., "/api/v1/adminmaster/"
@@ -48,8 +49,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
         x_tenant_id_str = request.headers.get("X-Tenant-ID")
 
         if not x_tenant_id_str:
-            # Using FastAPIResponse for JSON error, standard Response might be text/plain
-            return FastAPIResponse(
+            # Using JSONResponse for JSON error response
+            return JSONResponse(
                 content={"detail": "X-Tenant-ID header is required for this route."},
                 status_code=400
             )
@@ -57,7 +58,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         try:
             tenant_uuid = UUID(x_tenant_id_str)
         except ValueError:
-            return FastAPIResponse(
+            return JSONResponse(
                 content={"detail": "Invalid X-Tenant-ID format. Must be a valid UUID."},
                 status_code=400
             )
@@ -78,7 +79,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             # Log the exception e
             db_public.close()
-            return FastAPIResponse(
+            return JSONResponse(
                 content={"detail": f"Error querying tenant information: {str(e)}"},
                 status_code=500 # Internal Server Error
             )
@@ -86,7 +87,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             db_public.close() # Always close the session used for this lookup
 
         if not tenant_info:
-            return FastAPIResponse(
+            return JSONResponse(
                 content={"detail": f"Tenant with ID '{tenant_uuid}' not found or has no schema configured."},
                 status_code=404 # Not Found
             )
