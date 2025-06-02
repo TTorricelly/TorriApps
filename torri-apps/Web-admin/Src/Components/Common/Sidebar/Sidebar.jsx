@@ -94,43 +94,47 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="bg-white w-64 min-h-screen shadow-lg border-r border-gray-200">
+    <div className="bg-bg-secondary w-64 h-screen shadow-card border-r border-bg-tertiary flex flex-col">
       {/* Sidebar Header */}
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-800">Menu Principal</h2>
+      <div className="p-l border-b border-bg-tertiary flex justify-center flex-shrink-0">
+        <img 
+          src="/src/assets/logo-torriapps.png" 
+          alt="TorriApps" 
+          className="h-25 w-auto"
+        />
       </div>
 
       {/* Navigation Menu */}
-      <nav className="mt-6">
+      <nav className="mt-l flex-1 overflow-y-auto overflow-x-hidden pb-l">
         {menuItems.map((group) => {
           const isExpanded = expandedGroups.includes(group.id);
           const isActive = isGroupActive(group.items);
           
           return (
-            <div key={group.id} className="mb-2">
+            <div key={group.id} className="mb-xs">
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup(group.id)}
-                className={`w-full flex items-center justify-between px-6 py-3 text-left hover:bg-gray-50 transition-colors duration-200 ${
-                  isActive ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                className={`w-full flex items-center justify-between px-l py-s text-left hover:bg-bg-tertiary transition-colors duration-fast ${
+                  isActive ? 'bg-bg-tertiary border-r-2 border-accent-primary' : ''
                 }`}
               >
                 <div className="flex items-center">
-                  <group.icon className={`h-5 w-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
-                  <span className={`font-medium ${isActive ? 'text-blue-900' : 'text-gray-700'}`}>
+                  <group.icon className={`h-5 w-5 mr-s ${isActive ? 'text-accent-primary' : 'text-text-secondary'}`} />
+                  <span className={`font-medium text-small ${isActive ? 'text-accent-primary' : 'text-text-primary'}`}>
                     {group.title}
                   </span>
                 </div>
                 {isExpanded ? (
-                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                  <ChevronDownIcon className="h-4 w-4 text-text-secondary" />
                 ) : (
-                  <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                  <ChevronRightIcon className="h-4 w-4 text-text-secondary" />
                 )}
               </button>
 
               {/* Group Items */}
               {isExpanded && (
-                <div className="ml-6 border-l border-gray-200">
+                <div className="ml-s border-l border-bg-tertiary pl-m">
                   {group.items.map((item) => {
                     const itemActive = isItemActive(item.path);
                     
@@ -138,14 +142,14 @@ export default function Sidebar() {
                       <button
                         key={item.path}
                         onClick={() => handleItemClick(item.path)}
-                        className={`w-full text-left px-6 py-2 ml-4 relative hover:bg-gray-50 transition-colors duration-200 ${
-                          itemActive ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-600'
+                        className={`w-full text-left px-s py-xs relative hover:bg-bg-tertiary transition-colors duration-fast ${
+                          itemActive ? 'text-accent-primary font-medium bg-bg-tertiary' : 'text-text-secondary'
                         }`}
                       >
                         {itemActive && (
-                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500"></div>
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent-primary"></div>
                         )}
-                        <span className="ml-2">{item.title}</span>
+                        <span className="text-small">{item.title}</span>
                       </button>
                     );
                   })}

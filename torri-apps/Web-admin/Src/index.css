@@ -1,22 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 
-  You can keep minimal global styles here if necessary, for example, 
-  a default font for the body if not relying solely on Tailwind's font-sans 
-  or Material Tailwind's defaults.
-  For now, starting clean with just Tailwind directives.
-*/
+@layer base {
+  body {
+    font-family: 'Inter', 'Montserrat', 'Roboto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
 
-/* Example: If a specific default font is desired across the application */
-/* body {
-  font-family: 'Inter', sans-serif; /* Example font */
-  /* antialiased; /* Smooths out the font */
-/* } */
-
-/* 
-  The :root color schemes and default button/link styling from the original 
-  index.css have been removed as Tailwind and Material Tailwind will manage these.
-  The login page design relies on Tailwind utility classes for specific styling.
-*/
+/* Custom component styles for modern dark theme */
+@layer components {
+  /* Primary Button Style */
+  .btn-primary {
+    @apply bg-accent-primary text-white font-medium px-l py-s rounded-button transition-all duration-fast hover:bg-opacity-90 focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-primary shadow-button;
+  }
+  
+  /* Secondary Button Style */
+  .btn-secondary {
+    @apply bg-transparent border border-accent-primary text-accent-primary font-medium px-l py-s rounded-button transition-all duration-fast hover:bg-accent-primary hover:text-white focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-primary;
+  }
+  
+  /* Input Field Style */
+  .input-field {
+    @apply bg-bg-input border border-bg-tertiary text-text-primary placeholder-text-secondary px-m py-s rounded-input transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary;
+  }
+}

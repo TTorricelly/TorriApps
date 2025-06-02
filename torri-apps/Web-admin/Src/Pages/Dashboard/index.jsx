@@ -8,29 +8,25 @@ export default function DashboardPage() {
       title: "Agendamentos Hoje",
       value: "12",
       icon: CalendarDaysIcon,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
+      color: "text-accent-primary"
     },
     {
       title: "Clientes Ativos",
       value: "248",
       icon: UsersIcon,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
+      color: "text-status-success"
     },
     {
       title: "Próximo Agendamento",
       value: "14:30",
       icon: ClockIcon,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50"
+      color: "text-status-warning"
     },
     {
       title: "Receita do Mês",
       value: "R$ 12.450",
       icon: CurrencyDollarIcon,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
+      color: "text-accent-secondary"
     }
   ];
 
@@ -42,24 +38,24 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-l">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Visão Geral</h1>
-        <p className="text-gray-600 mt-2">Bem-vindo ao painel administrativo</p>
+      <div className="mb-xl">
+        <h1 className="text-h1 font-bold text-text-primary">Visão Geral</h1>
+        <p className="text-body text-text-secondary mt-xs">Bem-vindo ao painel administrativo</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-l">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div key={index} className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l hover:shadow-card-hover transition-shadow duration-normal">
             <div className="flex items-center">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+              <div className="p-s rounded-button bg-bg-tertiary">
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <div className="ml-m">
+                <p className="text-small font-medium text-text-secondary">{stat.title}</p>
+                <p className="text-2xl font-bold text-text-primary">{stat.value}</p>
               </div>
             </div>
           </div>
@@ -67,85 +63,85 @@ export default function DashboardPage() {
       </div>
 
       {/* Today's Schedule */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Agenda de Hoje</h2>
+      <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary">
+        <div className="p-l border-b border-bg-tertiary">
+          <h2 className="text-h2 font-semibold text-text-primary">Agenda de Hoje</h2>
         </div>
-        <div className="p-6">
+        <div className="p-l">
           {todayAppointments.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-m">
               {todayAppointments.map((appointment, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-sm font-medium text-gray-900 w-16">
+                <div key={index} className="flex items-center justify-between p-m bg-bg-tertiary rounded-button hover:bg-bg-primary transition-colors duration-fast">
+                  <div className="flex items-center space-x-m">
+                    <div className="text-small font-medium text-accent-primary w-16">
                       {appointment.time}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{appointment.client}</p>
-                      <p className="text-sm text-gray-600">{appointment.service}</p>
+                      <p className="text-small font-medium text-text-primary">{appointment.client}</p>
+                      <p className="text-small text-text-secondary">{appointment.service}</p>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-small text-text-secondary">
                     {appointment.professional}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">Nenhum agendamento para hoje</p>
+            <p className="text-text-tertiary text-center py-xl">Nenhum agendamento para hoje</p>
           )}
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
-          <div className="space-y-3">
-            <button className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-l">
+        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+          <h3 className="text-h3 font-semibold text-text-primary mb-m">Ações Rápidas</h3>
+          <div className="space-y-s">
+            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
               Novo Agendamento
             </button>
-            <button className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
               Cadastrar Cliente
             </button>
-            <button className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
               Ver Relatórios
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo Semanal</h3>
-          <div className="space-y-3">
+        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+          <h3 className="text-h3 font-semibold text-text-primary mb-m">Resumo Semanal</h3>
+          <div className="space-y-s">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Agendamentos</span>
-              <span className="text-sm font-medium">67</span>
+              <span className="text-small text-text-secondary">Agendamentos</span>
+              <span className="text-small font-medium text-text-primary">67</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Novos Clientes</span>
-              <span className="text-sm font-medium">8</span>
+              <span className="text-small text-text-secondary">Novos Clientes</span>
+              <span className="text-small font-medium text-text-primary">8</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Receita</span>
-              <span className="text-sm font-medium">R$ 3.240</span>
+              <span className="text-small text-text-secondary">Receita</span>
+              <span className="text-small font-medium text-text-primary">R$ 3.240</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Status do Sistema</h3>
-          <div className="space-y-3">
+        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+          <h3 className="text-h3 font-semibold text-text-primary mb-m">Status do Sistema</h3>
+          <div className="space-y-s">
             <div className="flex items-center">
-              <div className="h-2 w-2 bg-green-500 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-600">Sistema Online</span>
+              <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
+              <span className="text-small text-text-secondary">Sistema Online</span>
             </div>
             <div className="flex items-center">
-              <div className="h-2 w-2 bg-green-500 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-600">Backup Atualizado</span>
+              <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
+              <span className="text-small text-text-secondary">Backup Atualizado</span>
             </div>
             <div className="flex items-center">
-              <div className="h-2 w-2 bg-yellow-500 rounded-full mr-3"></div>
-              <span className="text-sm text-gray-600">Sincronização Mobile</span>
+              <div className="h-2 w-2 bg-status-warning rounded-full mr-s"></div>
+              <span className="text-small text-text-secondary">Sincronização Mobile</span>
             </div>
           </div>
         </div>
