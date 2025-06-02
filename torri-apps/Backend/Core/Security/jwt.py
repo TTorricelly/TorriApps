@@ -5,8 +5,8 @@ from uuid import UUID
 from jose import JWTError, jwt
 from pydantic import ValidationError # For handling potential errors in token data
 
-from Backend.Config.Settings import settings # Adjusted import path
-from Backend.Core.Auth.constants import UserRole # Adjusted import path
+from Config.Settings import settings # Adjusted import path
+from Core.Auth.constants import UserRole # Adjusted import path
 
 ALGORITHM = "HS256"
 # ACCESS_TOKEN_EXPIRE_MINUTES is already available via settings.access_token_expire_minutes

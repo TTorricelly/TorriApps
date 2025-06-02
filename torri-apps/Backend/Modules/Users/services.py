@@ -3,10 +3,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from Backend.Core.Auth.models import UserTenant
-from Backend.Core.Auth.Schemas import UserTenantCreate, UserTenantUpdate, UserTenant as UserTenantSchema
-from Backend.Core.Security.hashing import get_password_hash # For creating/updating password
-from Backend.Core.Auth.constants import UserRole # For role validation
+from Core.Auth.models import UserTenant
+from Core.Auth.Schemas import UserTenantCreate, UserTenantUpdate, UserTenant as UserTenantSchema
+from Core.Security.hashing import get_password_hash # For creating/updating password
+from Core.Auth.constants import UserRole # For role validation
 
 def get_user_by_email_and_tenant(db: Session, email: str, tenant_id: UUID) -> UserTenant | None:
     return db.query(UserTenant).filter(UserTenant.email == email, UserTenant.tenant_id == tenant_id).first()

@@ -5,10 +5,10 @@ from datetime import date, time # Ensure correct datetime imports
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from sqlalchemy.orm import Session
 
-from Backend.Core.Database.dependencies import get_db
-from Backend.Core.Auth.dependencies import get_current_user_tenant
-from Backend.Core.Auth.models import UserTenant # For current_user type hint
-from Backend.Core.Auth.constants import UserRole # For permission checks if needed beyond helper
+from Core.Database.dependencies import get_db
+from Core.Auth.dependencies import get_current_user_tenant
+from Core.Auth.models import UserTenant # For current_user type hint
+from Core.Auth.constants import UserRole # For permission checks if needed beyond helper
 
 from . import services as availability_services # Alias
 from .schemas import (

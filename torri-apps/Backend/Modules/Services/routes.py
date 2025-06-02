@@ -4,10 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body # Added Path, Body
 from sqlalchemy.orm import Session
 
-from Backend.Core.Database.dependencies import get_db
-from Backend.Core.Auth.dependencies import get_current_user_tenant, require_role
-from Backend.Core.Auth.constants import UserRole
-from Backend.Core.Auth.models import UserTenant # For current_user type hint
+from Core.Database.dependencies import get_db
+from Core.Auth.dependencies import get_current_user_tenant, require_role
+from Core.Auth.constants import UserRole
+from Core.Auth.models import UserTenant # For current_user type hint
 
 from . import services as services_logic # Alias to avoid name collision
 from .schemas import (
@@ -56,7 +56,7 @@ def list_categories_endpoint(
     summary="Get a specific service category by ID for the current tenant."
 )
 def get_category_endpoint(
-    category_id: UUID = Path(..., description="ID of the category to retrieve."),
+    category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
 ):
@@ -71,10 +71,10 @@ def get_category_endpoint(
     summary="Update a service category by ID for the current tenant."
 )
 def update_category_endpoint(
-    category_id: UUID = Path(..., description="ID of the category to update."),
-    category_data: CategoryUpdate = Body(...),
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    category_id: UUID = Path(..., description="ID of the category to update."),
+    category_data: CategoryUpdate = Body(...)
 ):
     db_category = services_logic.get_category_by_id(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
     if not db_category:
@@ -87,9 +87,9 @@ def update_category_endpoint(
     summary="Delete a service category by ID for the current tenant."
 )
 def delete_category_endpoint(
-    category_id: UUID = Path(..., description="ID of the category to delete."),
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    category_id: UUID = Path(..., description="ID of the category to delete.")
 ):
     success = services_logic.delete_category(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
     if not success:
@@ -121,11 +121,11 @@ def create_service_endpoint(
     summary="List services for the current tenant, optionally filtered by category."
 )
 def list_services_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))], # Allow more roles to view services
     category_id: Optional[UUID] = Query(None, description="Filter services by category ID."),
     skip: int = Query(0, ge=0, description="Number of items to skip."),
-    limit: int = Query(100, ge=1, le=200, description="Number of items to return."),
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))] # Allow more roles to view services
+    limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
 ):
     # Note: If professionals/attendants can view services, ensure services_logic.get_services_by_tenant
     # correctly fetches and presents data (e.g., might not show commission for non-gestor).
@@ -140,9 +140,9 @@ def list_services_endpoint(
     summary="Get a specific service by ID for the current tenant."
 )
 def get_service_endpoint(
-    service_id: UUID = Path(..., description="ID of the service to retrieve."),
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    service_id: UUID = Path(..., description="ID of the service to retrieve.")
 ):
     db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
     if not db_service:
@@ -155,10 +155,10 @@ def get_service_endpoint(
     summary="Update a service by ID for the current tenant."
 )
 def update_service_endpoint(
-    service_id: UUID = Path(..., description="ID of the service to update."),
-    service_data: ServiceUpdate = Body(...),
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    service_id: UUID = Path(..., description="ID of the service to update."),
+    service_data: ServiceUpdate = Body(...)
 ):
     db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
     if not db_service:
@@ -176,9 +176,9 @@ def update_service_endpoint(
     summary="Delete a service by ID for the current tenant."
 )
 def delete_service_endpoint(
-    service_id: UUID = Path(..., description="ID of the service to delete."),
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    service_id: UUID = Path(..., description="ID of the service to delete.")
 ):
     success = services_logic.delete_service(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
     if not success:

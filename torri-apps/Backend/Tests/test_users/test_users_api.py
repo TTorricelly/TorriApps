@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from uuid import UUID, uuid4
 import pytest
 
-from Backend.Config.Settings import settings as app_settings
-from Backend.Core.Auth.constants import UserRole
-from Backend.Modules.Tenants.models import Tenant as TenantModel
-from Backend.Core.Auth.models import UserTenant as UserTenantModel
-from Backend.Core.Security.hashing import get_password_hash
+from Config.Settings import settings as app_settings
+from Core.Auth.constants import UserRole
+from Modules.Tenants.models import Tenant as TenantModel
+from Core.Auth.models import UserTenant as UserTenantModel
+from Core.Security.hashing import get_password_hash
 
 
 @pytest.fixture(scope="function")

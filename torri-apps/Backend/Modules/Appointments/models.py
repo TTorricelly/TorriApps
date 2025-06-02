@@ -12,8 +12,8 @@ from .constants import AppointmentStatus
 # UserTenant and Service models are needed for ForeignKey relationships.
 # Using string for relationship model names to avoid direct imports if they cause circularity issues,
 # but direct import is fine if modules are structured to allow it (e.g. models loaded after all bases).
-# from Backend.Core.Auth.models import UserTenant
-# from Backend.Modules.Services.models import Service
+# from Core.Auth.models import UserTenant
+# from Modules.Services.models import Service
 
 
 class Appointment(Base):

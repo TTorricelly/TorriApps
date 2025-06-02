@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship
 from Config.Database import Base # Base for tenant-specific models
 from Config.Settings import settings
 # UserTenant import needed for ForeignKey relationships
-# from Backend.Core.Auth.models import UserTenant # Not strictly needed if using string for relationship
+# from Core.Auth.models import UserTenant # Not strictly needed if using string for relationship
 
 from .constants import DayOfWeek, AvailabilityBlockType
 

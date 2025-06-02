@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 
-# Using relative imports assuming main.py is in torri-apps/Backend/
-from .Core.Middleware.TenantMiddleware import TenantMiddleware
-from .Core.Auth.Routes import router as auth_router
-from .Modules.Users.routes import router as users_router
-from .Modules.Services.routes import categories_router, services_router
-from .Modules.Availability.routes import router as availability_router
-from .Modules.Appointments.routes import router as appointments_router
-from .Core.Utils.exception_handlers import add_exception_handlers # Import the function
+# Using absolute imports for main.py
+from Core.Middleware.TenantMiddleware import TenantMiddleware
+from Core.Auth.Routes import router as auth_router
+from Modules.Users.routes import router as users_router
+from Modules.Services.routes import categories_router, services_router
+from Modules.Availability.routes import router as availability_router
+from Modules.Appointments.routes import router as appointments_router
+from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 # Placeholder for other routers:
 # from .Modules.Tenants.routes import router as tenants_router
 # from .Modules.AdminMaster.routes import router as admin_master_router

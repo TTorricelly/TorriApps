@@ -1,14 +1,14 @@
 from uuid import UUID
 from fastapi import HTTPException, Response as FastAPIResponse # Using FastAPI Response for convenience
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseFunction
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from sqlalchemy.orm import Session # For type hinting
 from sqlalchemy import text # For executing raw SQL if necessary for schema switching
 
-from Backend.Config.Database import SessionLocal # For creating a DB session to query public tenant table
-from Backend.Config.Settings import settings
-from Backend.Modules.Tenants.models import Tenant as TenantModel # To query for db_schema_name
+from Config.Database import SessionLocal # For creating a DB session to query public tenant table
+from Config.Settings import settings
+from Modules.Tenants.models import Tenant as TenantModel # To query for db_schema_name
 
 # Define public route prefixes that do not require X-Tenant-ID or schema switching
 # These routes will use the default public schema.
@@ -29,7 +29,7 @@ PUBLIC_ROUTE_PREFIXES = [
 # It's important that these prefixes accurately reflect the final URL structure.
 
 class TenantMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseFunction) -> Response:
+    async def dispatch(self, request: Request, call_next) -> Response:
         request.state.tenant_id = None
         request.state.tenant_schema_name = None
         request.state.use_public_schema = False # Default to not using public schema explicitly

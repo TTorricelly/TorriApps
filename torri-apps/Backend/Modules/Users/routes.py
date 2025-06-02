@@ -5,15 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response # Added 
 from sqlalchemy.orm import Session
 
 # Schemas
-from Backend.Core.Auth.Schemas import UserTenant as UserTenantSchema, UserTenantCreate, UserTenantUpdate
+from Core.Auth.Schemas import UserTenant as UserTenantSchema, UserTenantCreate, UserTenantUpdate
 # Database dependency
-from Backend.Core.Database.dependencies import get_db
+from Core.Database.dependencies import get_db
 # User services
-from Backend.Modules.Users import services as user_services
+from Modules.Users import services as user_services
 # Auth dependencies and constants
-from Backend.Core.Auth.dependencies import get_current_user_tenant, require_role
-from Backend.Core.Auth.constants import UserRole
-from Backend.Core.Auth.models import UserTenant # For type hinting current_user
+from Core.Auth.dependencies import get_current_user_tenant, require_role
+from Core.Auth.constants import UserRole
+from Core.Auth.models import UserTenant # For type hinting current_user
 
 router = APIRouter(
     prefix="/users",

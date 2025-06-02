@@ -14,8 +14,8 @@ from .schemas import (
     ProfessionalBlockedTimeCreate, ProfessionalBlockedTimeSchema
 )
 from .constants import DayOfWeek, AvailabilityBlockType
-from Backend.Core.Auth.models import UserTenant
-from Backend.Core.Auth.constants import UserRole
+from Core.Auth.models import UserTenant
+from Core.Auth.constants import UserRole
 
 
 # --- Helper Function for Permissions and Professional Validation ---

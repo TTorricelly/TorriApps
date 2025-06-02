@@ -6,9 +6,9 @@ from uuid import uuid4, UUID
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from Backend.Core.Auth.services import discover_tenant_by_email, enhanced_authenticate_user
-from Backend.Core.Auth.models import UserTenant
-from Backend.Modules.Tenants.models import Tenant
+from Core.Auth.services import discover_tenant_by_email, enhanced_authenticate_user
+from Core.Auth.models import UserTenant
+from Modules.Tenants.models import Tenant
 
 
 class TestTenantDiscovery:

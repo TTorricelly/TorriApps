@@ -1,11 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, condecimal
 from uuid import UUID
 from typing import List, Optional # Changed from typing import List, UUID
 from decimal import Decimal
 
 # Schema for UserTenant (Professional) to be nested in ServiceWithProfessionals response
 # This is a simplified version. You might want to import the actual UserTenant schema
-# from Backend.Core.Auth.Schemas import UserTenant as UserTenantSchema
+# from Core.Auth.Schemas import UserTenant as UserTenantSchema
 # For now, defining a minimal one here to avoid deeper import complexities in this step.
 class ProfessionalBase(BaseModel): # Minimal representation of a professional for service listing
     id: UUID
@@ -39,9 +39,9 @@ class ServiceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=150, example="Men's Classic Haircut")
     description: Optional[str] = Field(None, max_length=500, example="Classic haircut including wash and style.")
     duration_minutes: int = Field(..., gt=0, example=30) # Duration greater than 0
-    price: Decimal = Field(..., gt=Decimal(0), decimal_places=2, example=Decimal("25.00"))
+    price: condecimal(gt=0, max_digits=10, decimal_places=2) = Field(..., example=Decimal("25.00"))
     # Commission percentage: 0.00 to 100.00
-    commission_percentage: Optional[Decimal] = Field(None, ge=Decimal(0), le=Decimal(100), decimal_places=2, example=Decimal("10.50"))
+    commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None, example=Decimal("10.50"))
     category_id: UUID
 
 class ServiceCreate(ServiceBase):
@@ -52,8 +52,8 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     name: Optional[str] = Field(None, min_length=1, max_length=150)
     description: Optional[str] = Field(None, max_length=500)
     duration_minutes: Optional[int] = Field(None, gt=0)
-    price: Optional[Decimal] = Field(None, gt=Decimal(0), decimal_places=2)
-    commission_percentage: Optional[Decimal] = Field(None, ge=Decimal(0), le=Decimal(100), decimal_places=2)
+    price: Optional[condecimal(gt=0, max_digits=10, decimal_places=2)] = Field(None)
+    commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None)
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change
