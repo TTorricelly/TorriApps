@@ -1,59 +1,64 @@
 import React from 'react';
-// BrowserRouter is likely provided in main.jsx as per requirements, remove from here if so.
-// However, the existing App.jsx has it. Let's keep it for now and check main.jsx later.
 import { Routes, Route, Navigate } from 'react-router-dom'; 
 import { ThemeProvider } from '@material-tailwind/react';
 
-// Import layouts and page components using aliases
-// Assuming these aliases are configured in vite.config.js or jsconfig.json/tsconfig.json
-// @components -> Src/Components
-// @pages -> Src/Pages
 import { MainLayout, AuthLayout, RequireAuth } from '@components'; 
 import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, Login } from '@pages';
-// Removed NotFound from imports as it's being replaced by a redirect.
-// If NotFound is used elsewhere or desired as a true 404 page for some routes, this needs reconsideration.
-// For this specific task, redirecting * to /login is the requirement.
+
+// Placeholder components for new routes
+const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
+const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos - Em desenvolvimento</div>;
+const ServicesCatalog = () => <div className="p-6">Catálogo de Serviços - Em desenvolvimento</div>;
+const ProfessionalsTeam = () => <div className="p-6">Equipe de Profissionais - Em desenvolvimento</div>;
+const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
+const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>;
+const SalonProfile = () => <div className="p-6">Perfil do Salão - Em desenvolvimento</div>;
+const SettingsUsers = () => <div className="p-6">Usuários - Em desenvolvimento</div>;
+const Billing = () => <div className="p-6">Plano & Pagamento - Em desenvolvimento</div>;
 
 function App() {
   return (
     <ThemeProvider>
-      {/* If BrowserRouter is in main.jsx, it should be removed from here.
-          The requirement doc (section 11, step 9) shows BrowserRouter in main.tsx.
-          For now, keeping existing structure of App.jsx which has BrowserRouter.
-          This can be reconciled when main.jsx is configured. */}
-      {/* <BrowserRouter> */} 
-        <Routes>
-          {/* Protected Routes: /dashboard is the primary concern for this task */}
-          <Route 
-            path="/dashboard" // Explicitly defining /dashboard route
-            element={
-              <RequireAuth>
-                <MainLayout> {/* Assuming MainLayout is desired for the blank dashboard */}
-                  <Dashboard />
-                </MainLayout>
-              </RequireAuth>
-            } 
-          />
+      <Routes>
+        {/* Protected Routes */}
+        <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
+          {/* Dashboard Routes */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
-          {/* Other protected routes from existing setup - kept for now */}
-          <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
-            {/* <Route index element={<Dashboard />} />  This was the original dashboard route. Now explicit above. */}
-            {/* If / is also meant to be dashboard, an additional route can be <Route path="/" element={<Dashboard />} /> */}
-            <Route path="services/*" element={<ServicesRoutes />} />
-            <Route path="appointments/*" element={<AppointmentsRoutes />} />
-            <Route path="users/*" element={<UsersRoutes />} />
-          </Route>
+          {/* Appointments Routes */}
+          <Route path="/appointments/calendar" element={<AppointmentCalendar />} />
+          <Route path="/appointments/history" element={<AppointmentHistory />} />
+          <Route path="appointments/*" element={<AppointmentsRoutes />} />
+          
+          {/* Services Routes */}
+          <Route path="/services/catalog" element={<ServicesCatalog />} />
+          <Route path="services/*" element={<ServicesRoutes />} />
+          
+          {/* Professionals Routes */}
+          <Route path="/professionals/team" element={<ProfessionalsTeam />} />
+          <Route path="/professionals/availability" element={<ProfessionalsAvailability />} />
+          
+          {/* Clients Routes */}
+          <Route path="/clients/list" element={<ClientsList />} />
+          
+          {/* Settings Routes */}
+          <Route path="/settings/salon-profile" element={<SalonProfile />} />
+          <Route path="/settings/users" element={<SettingsUsers />} />
+          <Route path="/settings/billing" element={<Billing />} />
+          
+          {/* Legacy Routes */}
+          <Route path="users/*" element={<UsersRoutes />} />
+        </Route>
 
-          {/* Public Routes (e.g., Login) */}
-          {/* Assuming AuthLayout is a generic layout for non-authenticated pages */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<Login />} />
-          </Route>
+        {/* Public Routes */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
 
-          {/* Catch-all: Redirect to /login for any unknown paths */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      {/* </BrowserRouter> */}
+        {/* Catch-all: Redirect to /login for unknown paths */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     </ThemeProvider>
   );
 }

@@ -1,7 +1,20 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-// Example structure, expand as needed
-export const useTenantStore = create(set => ({
-  tenantId: null, // or load from somewhere like localStorage initially if applicable
-  setTenantId: (id) => set({ tenantId: id }),
-}));
+export const useTenantStore = create(
+  persist(
+    (set) => ({
+      tenantId: null,
+      tenantName: null,
+      setTenant: (tenantId, tenantName) => set({ tenantId, tenantName }),
+      clearTenant: () => set({ tenantId: null, tenantName: null }),
+    }),
+    {
+      name: 'tenant-storage',
+      partialize: (state) => ({
+        tenantId: state.tenantId,
+        tenantName: state.tenantName,
+      }),
+    }
+  )
+);

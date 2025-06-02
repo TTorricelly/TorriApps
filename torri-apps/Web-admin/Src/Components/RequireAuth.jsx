@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@stores/auth'; // Assuming useAuthStore has isAuthenticated
+import { useAuthStore } from '../stores/auth';
 
 export default function RequireAuth({ children }) {
   const { isAuthenticated } = useAuthStore();

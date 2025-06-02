@@ -1,26 +1,35 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/auth';
 
-// Placeholder for tenant ID - will be fetched from Zustand store
+const getAuthToken = () => {
+  return useAuthStore.getState().accessToken;
+};
+
 const getTenantId = () => {
-  // Replace with actual logic to get tenantId from Zustand store
-  // For example: const tenantId = useTenantStore.getState().tenantId;
-  // return tenantId || 'default-tenant'; // Fallback or error if not found
-  console.warn('Tenant ID is not yet implemented in api/client.js');
-  return 'public'; // Default or placeholder
+  return useAuthStore.getState().tenantId;
 };
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true, // send cookies
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+  withCredentials: true,
 });
 
-// Interceptor to add X-Tenant-ID header
+// Request interceptor to add Authorization and X-Tenant-ID headers
 api.interceptors.request.use(
   config => {
+    const token = getAuthToken();
     const tenantId = getTenantId();
-    if (tenantId && !config.url.includes('/auth/')) { // Example: don't add for auth routes
+    
+    // Add Authorization header for all requests except auth endpoints
+    if (token && !config.url?.includes('/auth/')) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Add X-Tenant-ID header for tenant-specific requests
+    if (tenantId && !config.url?.includes('/auth/')) {
       config.headers['X-Tenant-ID'] = tenantId;
     }
+    
     return config;
   },
   error => {
@@ -28,14 +37,20 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor for handling authentication errors
 api.interceptors.response.use(
-  res => res,
-  async err => {
-    if (err.response?.status === 401) {
-      // Optional: redirect to login or use auth store to update state
-      console.error('Unauthorized access - 401. TODO: Redirect to login.');
-      // window.location.href = '/login'; // Example, better to use React Router navigation
+  response => response,
+  async error => {
+    if (error.response?.status === 401) {
+      // Clear auth state and redirect to login
+      useAuthStore.getState().clearAuth();
+      
+      // Only redirect if we're not already on the login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
-    return Promise.reject(err);
+    
+    return Promise.reject(error);
   }
 );
