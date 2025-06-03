@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, Transition } from '@headlessui/react';
 import { 
   HomeIcon,
   CalendarDaysIcon,
@@ -10,8 +11,12 @@ import {
   ClockIcon,
   ClipboardDocumentListIcon,
   ChevronDownIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  UserCircleIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
+import { useAuthStore } from '../../../stores/auth';
+import { useTenantStore } from '../../../stores/tenant';
 
 const menuItems = [
   {
@@ -72,6 +77,7 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState(['dashboard']); // Dashboard expanded by default
+  const { userEmail, clearAuth, tenantData, userData } = useAuthStore();
 
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => 
@@ -93,15 +99,44 @@ export default function Sidebar() {
     navigate(path);
   };
 
+  const handleLogout = () => {
+    clearAuth();
+    // Clear tenant data on logout
+    const { clearTenant } = useTenantStore.getState();
+    clearTenant();
+    navigate('/login');
+  };
+
+  const handleProfile = () => {
+    // Navigate to profile page when implemented
+    console.log('Navigate to profile');
+  };
+
+  const displayTenantName = () => {
+    if (tenantData?.name) return tenantData.name;
+    return "Demo Salon"; // Fallback
+  };
+  
+  const displayUserName = () => {
+    if (userData?.full_name) return userData.full_name;
+    return userEmail; // Fallback to email
+  };
+
   return (
     <div className="bg-bg-secondary w-64 h-screen shadow-card border-r border-bg-tertiary flex flex-col">
       {/* Sidebar Header */}
-      <div className="p-l border-b border-bg-tertiary flex justify-center flex-shrink-0">
-        <img 
-          src="/src/assets/logo-torriapps.png" 
-          alt="TorriApps" 
-          className="h-25 w-auto"
-        />
+      <div className="p-l border-b border-bg-tertiary flex-shrink-0">
+        <div className="flex justify-center mb-s">
+          <img 
+            src="/src/assets/logo-torriapps.png" 
+            alt="TorriApps" 
+            className="h-20 w-auto"
+          />
+        </div>
+        {/* Tenant Name */}
+        <div className="text-center">
+          <h2 className="text-h3 font-semibold text-text-primary">{displayTenantName()}</h2>
+        </div>
       </div>
 
       {/* Navigation Menu */}
@@ -159,6 +194,67 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* User Section */}
+      <div className="border-t border-bg-tertiary p-m flex-shrink-0">
+        <Menu as="div" className="relative">
+          <Menu.Button className="w-full flex items-center space-x-s text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary rounded-button p-s transition-colors duration-fast">
+            <UserCircleIcon className="h-8 w-8" />
+            <div className="flex-1 text-left">
+              <div className="text-small font-medium text-text-primary truncate">
+                {displayUserName()}
+              </div>
+              <div className="text-xs text-text-secondary truncate">
+                {userData?.role || 'GESTOR'}
+              </div>
+            </div>
+            <ChevronDownIcon className="h-4 w-4" />
+          </Menu.Button>
+
+          <Transition
+            enter="transition ease-out duration-fast"
+            enterFrom="transform opacity-0 scale-95"
+            enterTo="transform opacity-100 scale-100"
+            leave="transition ease-in duration-75"
+            leaveFrom="transform opacity-100 scale-100"
+            leaveTo="transform opacity-0 scale-95"
+          >
+            <Menu.Items className="absolute bottom-full left-0 right-0 mb-2 origin-bottom bg-bg-secondary rounded-card shadow-card-hover ring-1 ring-bg-tertiary focus:outline-none z-50">
+              <div className="py-1">
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={handleProfile}
+                      className={`${
+                        active ? 'bg-bg-tertiary' : ''
+                      } flex items-center w-full px-m py-xs text-small text-text-primary hover:bg-bg-tertiary transition-colors duration-fast`}
+                    >
+                      <UserCircleIcon className="h-4 w-4 mr-s text-accent-primary" />
+                      Ver Perfil
+                    </button>
+                  )}
+                </Menu.Item>
+                
+                <div className="border-t border-bg-tertiary"></div>
+                
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={handleLogout}
+                      className={`${
+                        active ? 'bg-bg-tertiary' : ''
+                      } flex items-center w-full px-m py-xs text-small text-text-primary hover:bg-bg-tertiary transition-colors duration-fast`}
+                    >
+                      <ArrowRightOnRectangleIcon className="h-4 w-4 mr-s text-status-error" />
+                      Sair
+                    </button>
+                  )}
+                </Menu.Item>
+              </div>
+            </Menu.Items>
+          </Transition>
+        </Menu>
+      </div>
     </div>
   );
 }
