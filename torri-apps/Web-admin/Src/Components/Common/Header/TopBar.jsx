@@ -1,27 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { ChevronDownIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
 import { useNavigate } from 'react-router-dom';
-import { useTenant } from '../../../Hooks/useTenant';
 
 export default function TopBar() {
-  const { userEmail, clearAuth, tenantId, isAuthenticated } = useAuthStore();
-  const { tenantName } = useTenantStore();
+  const { userEmail, clearAuth, tenantData, userData, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   
-  
-  // Fetch tenant data
-  const { data: tenantData, isLoading: tenantLoading, error: tenantError } = useTenant();
-  
-  // Display tenant name with loading state
+  // Use tenant data from auth store (no API call needed)
   const displayTenantName = () => {
-    if (tenantLoading) return "•••";
-    if (tenantError) return "Erro";
-    if (tenantName) return tenantName;
     if (tenantData?.name) return tenantData.name;
     return "Demo Salon"; // Fallback
+  };
+  
+  const displayUserName = () => {
+    if (userData?.full_name) return userData.full_name;
+    return userEmail; // Fallback to email
   };
 
   const handleLogout = () => {
@@ -55,7 +51,7 @@ export default function TopBar() {
           <Menu as="div" className="relative">
             <Menu.Button className="flex items-center space-x-2 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary rounded-button px-s py-xs transition-colors duration-fast">
               <UserCircleIcon className="h-6 w-6" />
-              <span className="hidden md:block text-small font-medium">{userEmail}</span>
+              <span className="hidden md:block text-small font-medium">{displayUserName()}</span>
               <ChevronDownIcon className="h-4 w-4" />
             </Menu.Button>
 

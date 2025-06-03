@@ -15,7 +15,7 @@ from Modules.Users.services import get_user_by_email_and_tenant
 from Core.Database.dependencies import get_db, get_public_db
 from Core.Auth.constants import UserRole
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login") # Corrected path as per previous setup
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login") # Full path including API prefix
 
 def get_current_user_from_token(
     token: Annotated[str, Depends(oauth2_scheme)]
@@ -63,10 +63,19 @@ def get_current_user_from_token(
         # Switch to the user's tenant schema using schema name from JWT
         db_temp.execute(text(f"USE `{tenant_schema}`;"))
         
-        # Fetch user from the tenant schema
-        user = get_user_by_email_and_tenant(db_temp, email=email, tenant_id=token_tenant_id)
+        # Fetch user from the tenant schema  
+        # Use string comparison since database stores tenant_id as CHAR(36)
+        user = db_temp.query(UserTenant).filter(
+            UserTenant.email == email, 
+            UserTenant.tenant_id == str(token_tenant_id)
+        ).first()
         
         if user is None:
+            print(f"User not found. Let's check what users exist:")
+            # Debug: Check what users exist in this schema
+            all_users = db_temp.query(UserTenant).all()
+            print(f"All users in schema: {[(u.email, u.tenant_id, u.role) for u in all_users]}")
+            
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found for the provided token.",
@@ -78,9 +87,12 @@ def get_current_user_from_token(
         
     except Exception as e:
         print(f"Error fetching user from token: {e}")
+        print(f"Email: {email}, Tenant ID: {token_tenant_id}, Schema: {tenant_schema}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not validate user credentials"
+            detail=f"Could not validate user credentials: {str(e)}"
         )
     finally:
         db_temp.close()

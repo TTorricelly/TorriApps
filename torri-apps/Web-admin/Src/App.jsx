@@ -2,13 +2,12 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom'; 
 import { ThemeProvider } from '@material-tailwind/react';
 
-import { MainLayout, AuthLayout, RequireAuth } from '@components'; 
-import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, Login } from '@pages';
+import { MainLayout, AuthLayout, RequireAuth } from './Components'; 
+import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, Login } from './Pages';
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
 const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos - Em desenvolvimento</div>;
-const ServicesCatalog = () => <div className="p-6">Catálogo de Serviços - Em desenvolvimento</div>;
 const ProfessionalsTeam = () => <div className="p-6">Equipe de Profissionais - Em desenvolvimento</div>;
 const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
 const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>;
@@ -32,7 +31,6 @@ function App() {
           <Route path="appointments/*" element={<AppointmentsRoutes />} />
           
           {/* Services Routes */}
-          <Route path="/services/catalog" element={<ServicesCatalog />} />
           <Route path="services/*" element={<ServicesRoutes />} />
           
           {/* Professionals Routes */}

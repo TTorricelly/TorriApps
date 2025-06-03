@@ -28,12 +28,11 @@ class Category(Base):
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(100), nullable=False)
-    # tenant_id here links to the public.tenants table, establishing ownership.
-    # For testing with SQLite, we skip FK constraints to avoid resolution issues
-    if settings.testing:
-        tenant_id = Column(CHAR(36), nullable=False, index=True)  # No FK constraint in testing
-    else:
-        tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    display_order = Column(Integer, nullable=False, default=0)
+    icon_path = Column(String(255), nullable=True)
+    # tenant_id links to the public.tenants table, establishing ownership.
+    # Cross-schema foreign keys are handled at application level for multi-tenant isolation
+    tenant_id = Column(CHAR(36), nullable=False, index=True)
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
@@ -57,23 +56,19 @@ class Service(Base):
     commission_percentage = Column(Numeric(5, 2), nullable=True)
 
     category_id = Column(CHAR(36), ForeignKey("service_categories.id"), nullable=False, index=True)
-    # Similar to Category.tenant_id, this establishes a clear ownership link to the public.tenants table.
-    # For testing with SQLite, we skip FK constraints to avoid resolution issues
-    if settings.testing:
-        tenant_id = Column(CHAR(36), nullable=False, index=True)  # No FK constraint in testing
-    else:
-        tenant_id = Column(CHAR(36), ForeignKey(f"{settings.default_schema_name}.tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    # tenant_id links to the public.tenants table, establishing ownership.
+    # Cross-schema foreign keys are handled at application level for multi-tenant isolation
+    tenant_id = Column(CHAR(36), nullable=False, index=True)
 
     category = relationship("Category", back_populates="services")
 
     # Many-to-many relationship with UserTenant (Professionals)
-    # `UserTenant` model is in `Backend.Core.Auth.models`
-    # The string "UserTenant" will be resolved by SQLAlchemy.
-    professionals = relationship(
-        "UserTenant",
-        secondary=service_professionals_association, # The association table object
-        back_populates="services_offered" # Matches `services_offered` in UserTenant model
-    )
+    # Temporarily commented out to resolve initialization issues
+    # professionals = relationship(
+    #     "UserTenant",
+    #     secondary=service_professionals_association,
+    #     back_populates="services_offered"
+    # )
 
     __table_args__ = (
         UniqueConstraint('tenant_id', 'name', name='uq_service_tenant_name'),

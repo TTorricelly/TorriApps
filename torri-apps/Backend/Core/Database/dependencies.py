@@ -4,22 +4,30 @@ from Config.Database import SessionLocal
 from Config.Settings import settings # To potentially reset to a default public schema if needed
 
 def get_db(request: Request): # Add request: Request parameter
-    db = SessionLocal()
-
     tenant_schema_name = getattr(request.state, "tenant_schema_name", None)
-    # use_public_schema = getattr(request.state, "use_public_schema", False) # Set by Middleware
-
+    
+    # Create a fresh session for each request to avoid connection pool corruption
+    db = SessionLocal()
+    
     # If tenant_schema_name is set by the middleware, attempt to switch the schema for this session.
     # This applies to tenant-specific routes.
     if tenant_schema_name: # and not use_public_schema: (use_public_schema implies tenant_schema_name would be None)
         try:
-            # For MySQL, 'USE database_name' changes the default database for the current connection.
-            # Ensure the db_schema_name is sanitized or trusted. Here it comes from our DB.
-            # Using backticks for safety, though not strictly necessary if schema names are controlled.
+            # Force schema switch with explicit commit to ensure it takes effect
             db.execute(text(f"USE `{tenant_schema_name}`;"))
+            db.commit()  # Ensure the schema switch is committed immediately
+            
+            # Verify the schema switch worked by checking current database
+            result = db.execute(text("SELECT DATABASE();")).scalar()
+            if result != tenant_schema_name:
+                raise Exception(f"Schema switch failed. Expected {tenant_schema_name}, got {result}")
+                
         except Exception as e:
-            db.rollback() # Rollback before closing due to error
-            db.close()
+            try:
+                db.rollback() # Rollback before closing due to error
+                db.close()
+            except:
+                pass  # Ignore errors during cleanup
             # Log the error 'e' server-side for diagnostics
             print(f"Critical: Could not switch to tenant schema '{tenant_schema_name}'. Error: {e}")
             raise HTTPException(
@@ -44,6 +52,14 @@ def get_db(request: Request): # Add request: Request parameter
 
     try:
         yield db
+    except Exception as e:
+        # Handle any exceptions during the request
+        print(f"Exception in database session: {e}")
+        try:
+            db.rollback()  # Rollback any pending changes
+        except Exception as rollback_error:
+            print(f"Error during rollback: {rollback_error}")
+        raise  # Re-raise the original exception
     finally:
         # Regarding resetting the schema (e.g., `USE public_db_name`) after a request:
         # When a SQLAlchemy session is closed (`db.close()`), the underlying DB connection
@@ -62,16 +78,32 @@ def get_db(request: Request): # Add request: Request parameter
         #
         # For now, let's assume the latter, and that `settings.default_schema_name` is the one in the engine URL.
         # However, simply closing might be sufficient if the pool discards/resets session state. This is DB driver specific.
-        # A safer explicit reset for MySQL if USE was called:
-        if tenant_schema_name: # If we switched schema
-             try:
-                 # This attempts to reset the connection's default database to the public schema.
-                 # Requires `default_schema_name` to be the actual name of the database in the engine URL.
-                 db.execute(text(f"USE `{settings.default_schema_name}`;"))
-             except Exception as e:
-                 # Log this error, as it might affect connection reuse.
-                 print(f"Warning: Could not reset schema to '{settings.default_schema_name}' for connection. Error: {e}")
-        db.close()
+        # Always reset to public schema after tenant operations to prevent connection state issues
+        if tenant_schema_name:
+            try:
+                # Force reset connection to public schema to prevent connection pool corruption
+                db.execute(text(f"USE `{settings.default_schema_name}`;"))
+                db.commit()  # Ensure the schema change is committed
+            except Exception as e:
+                # Log this error, as it might affect connection reuse
+                print(f"Warning: Could not reset schema to '{settings.default_schema_name}' for connection. Error: {e}")
+                # If we can't reset the schema, this connection is corrupted - force close it
+                try:
+                    db.rollback()
+                    # Force invalidate this connection from the pool
+                    db.connection().invalidate()
+                except Exception as rollback_error:
+                    print(f"Error during final rollback: {rollback_error}")
+        
+        try:
+            db.close()
+        except Exception as close_error:
+            print(f"Error closing database session: {close_error}")
+            # If close fails, try to invalidate the connection to prevent pool corruption
+            try:
+                db.connection().invalidate()
+            except:
+                pass
 
 def get_public_db():
     """

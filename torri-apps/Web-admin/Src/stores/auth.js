@@ -7,12 +7,16 @@ export const useAuthStore = create(
       accessToken: null,
       tenantId: null,
       userEmail: null,
+      tenantData: null,  // Complete tenant info from login
+      userData: null,    // Complete user info from login
       isAuthenticated: false,
-      setAuth: (token, tenantId, email) =>
+      setAuth: (token, tenantId, email, tenantData = null, userData = null) =>
         set({
           accessToken: token,
           tenantId,
           userEmail: email,
+          tenantData,     // Store tenant data from login
+          userData,       // Store user data from login
           isAuthenticated: true,
         }),
       clearAuth: () =>
@@ -20,6 +24,8 @@ export const useAuthStore = create(
           accessToken: null,
           tenantId: null,
           userEmail: null,
+          tenantData: null,
+          userData: null,
           isAuthenticated: false,
         }),
     }),
@@ -30,8 +36,10 @@ export const useAuthStore = create(
       partialize: (state) => ({
         accessToken: state.accessToken,
         tenantId: state.tenantId,
-        userEmail: state.userEmail, // Persist userEmail as well
-        isAuthenticated: state.isAuthenticated, // Persist isAuthenticated status
+        userEmail: state.userEmail,
+        tenantData: state.tenantData,  // Persist tenant data
+        userData: state.userData,      // Persist user data
+        isAuthenticated: state.isAuthenticated,
       }),
     }
   )

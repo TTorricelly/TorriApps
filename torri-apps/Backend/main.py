@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
+from fastapi.staticfiles import StaticFiles
 
 # Using absolute imports for main.py
 from Core.Middleware.TenantMiddleware import TenantMiddleware
@@ -70,6 +71,9 @@ app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", 
 app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenants Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
+# --- Static Files ---
+# Serve uploaded files from the public directory
+app.mount("/uploads", StaticFiles(directory="public/uploads"), name="uploads")
 
 # --- Root Health Check ---
 # A simple health check endpoint for the root path or a specific health path.

@@ -88,6 +88,12 @@ async def enhanced_login_for_access_token(
         tenant_id=login_request.tenant_id
     )
     
+    # Also get tenant data from public schema for the response
+    from Modules.Tenants.services import TenantService
+    tenant_data = None
+    if user:
+        tenant_data = TenantService.get_tenant_by_id(db, user.tenant_id)
+    
     if not user:
         # Determine appropriate status code based on error message
         status_code = status.HTTP_401_UNAUTHORIZED
@@ -120,7 +126,21 @@ async def enhanced_login_for_access_token(
     return {
         "access_token": access_token, 
         "token_type": "bearer",
-        "tenant_id": user.tenant_id
+        "tenant_id": user.tenant_id,
+        "tenant": {
+            "id": tenant_data.id,
+            "name": tenant_data.name,
+            "slug": tenant_data.slug,
+            "logo_url": tenant_data.logo_url,
+            "primary_color": tenant_data.primary_color,
+            "block_size_minutes": tenant_data.block_size_minutes
+        },
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role.value
+        }
     }
 
 # Example of how OAuth2PasswordRequestForm would be used if not using a JSON body:

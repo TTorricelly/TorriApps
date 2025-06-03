@@ -19,16 +19,20 @@ class ProfessionalBase(BaseModel): # Minimal representation of a professional fo
 # --- Category Schemas ---
 class CategoryBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, example="Haircuts")
+    display_order: int = Field(default=0, ge=0, example=1)
 
 class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(BaseModel): # All fields optional for update
     name: Optional[str] = Field(None, min_length=1, max_length=100, example="Manicure/Pedicure")
+    display_order: Optional[int] = Field(None, ge=0, example=2)
 
 class CategorySchema(CategoryBase): # Renamed from Category to CategorySchema
     id: UUID
     tenant_id: UUID # Included for completeness, though often implicit in tenant context
+    icon_path: Optional[str] = None
+    icon_url: Optional[str] = None  # Computed field for frontend
 
     class Config:
         from_attributes = True

@@ -21,6 +21,7 @@ def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> Us
     # Role validation: Ensure only tenant-specific roles are assigned through this service.
     # AdminMasterRole.ADMIN_MASTER is not a UserRole and should not be assignable here.
     if user_data.role not in [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid role for tenant user: {user_data.role}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR."
@@ -28,6 +29,7 @@ def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> Us
 
     existing_user = get_user_by_email_and_tenant(db, email=user_data.email, tenant_id=tenant_id)
     if existing_user:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered for this tenant."
@@ -46,7 +48,7 @@ def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> Us
 
     db.add(db_user)
     db.commit()
-    db.refresh(db_user)
+    # Removed db.refresh() to avoid session issues
     return db_user
 
 def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, tenant_id: UUID) -> UserTenant | None:
@@ -58,6 +60,7 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
 
     # Role validation if role is being updated
     if 'role' in update_data and update_data['role'] not in [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid role for tenant user: {update_data['role']}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR."
@@ -79,6 +82,7 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
     if 'email' in update_data and update_data['email'] != db_user.email:
         existing_user_with_new_email = get_user_by_email_and_tenant(db, email=update_data['email'], tenant_id=tenant_id)
         if existing_user_with_new_email and existing_user_with_new_email.id != user_id:
+            db.rollback()  # Ensure clean state before exception
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="New email already registered for this tenant by another user."
@@ -89,7 +93,7 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
             setattr(db_user, field, value)
 
     db.commit()
-    db.refresh(db_user)
+    # Removed db.refresh() to avoid session issues
     return db_user
 
 def delete_user_tenant(db: Session, user_id: UUID, tenant_id: UUID) -> bool:

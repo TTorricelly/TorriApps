@@ -16,7 +16,7 @@ api.interceptors.request.use(
     const token = getAuthToken();
     
     // Add Authorization header for all authenticated requests
-    // The JWT token now contains tenant information, so no X-Tenant-ID header needed
+    // The JWT token contains tenant information, handled by TenantMiddleware
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }

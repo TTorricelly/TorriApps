@@ -23,7 +23,7 @@ PUBLIC_ROUTE_PREFIXES = [
     "/",                            # Root health check
     "/api/v1/auth/login",           # Login route is public; tenant context from X-Tenant-ID
     "/api/v1/auth/enhanced-login",  # Enhanced login route that doesn't require tenant ID
-    "/api/v1/tenants/me",           # Get current tenant from JWT token
+    # "/api/v1/tenants/me",         # REMOVED: Tenant data now included in login response
     # Add other public API prefixes under /api/v1 as needed:
     # e.g., "/api/v1/tenants" (if Tenant CRUD is public/admin)
     # e.g., "/api/v1/adminmaster/"

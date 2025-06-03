@@ -21,6 +21,7 @@ async def get_current_tenant(
     """
     Get current user's tenant information.
     Uses the tenant_id from the JWT token directly.
+    Access public schema since tenant data is stored there.
     """
     from Core.Security.jwt import decode_access_token
     from jose import JWTError
@@ -29,6 +30,7 @@ async def get_current_tenant(
         # Decode token to get tenant_id
         payload = decode_access_token(token)
         if not payload or not payload.tenant_id:
+            db.rollback()  # Ensure clean state before exception
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token or missing tenant information"
@@ -37,6 +39,7 @@ async def get_current_tenant(
         tenant_id = UUID(payload.tenant_id)
         
     except (JWTError, ValueError) as e:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
@@ -45,6 +48,7 @@ async def get_current_tenant(
     # Fetch tenant from public schema
     tenant = TenantService.get_tenant_by_id(db, tenant_id)
     if not tenant:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found"
@@ -63,6 +67,7 @@ async def get_tenant_by_id(
     """
     # Check if user has permission to access this tenant
     if str(current_user.tenant_id) != str(tenant_id):
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this tenant"
@@ -70,6 +75,7 @@ async def get_tenant_by_id(
     
     tenant = TenantService.get_tenant_by_id(db, tenant_id)
     if not tenant:
+        db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found"

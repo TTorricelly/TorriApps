@@ -3,7 +3,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from .Settings import settings
 
-engine = create_engine(settings.database_url)
+# Configure engine with proper connection pool settings for multi-tenant schema switching
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,  # Validates connections before use
+    pool_recycle=1800,   # Recycle connections every 30 minutes (more aggressive)
+    pool_size=5,         # Smaller pool size to reduce state corruption
+    max_overflow=10,     # Reduced overflow to prevent too many concurrent connections
+    pool_reset_on_return='commit',  # Force reset connection state on return to pool
+    echo=False           # Set to True for SQL debugging
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base para modelos de tenant-specific schemas

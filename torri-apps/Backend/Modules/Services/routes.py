@@ -1,13 +1,15 @@
 from typing import List, Optional, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body # Added Path, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body, UploadFile, File, Form # Added UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_db
 from Core.Auth.dependencies import get_current_user_tenant, require_role
 from Core.Auth.constants import UserRole
 from Core.Auth.models import UserTenant # For current_user type hint
+from Core.Utils.file_handler import file_handler
+from Config.Settings import settings
 
 from . import services as services_logic # Alias to avoid name collision
 from .schemas import (
@@ -30,12 +32,31 @@ services_router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Create a new service category for the current tenant."
 )
-def create_category_endpoint(
-    category_data: CategoryCreate,
+async def create_category_endpoint(
+    name: Annotated[str, Form(min_length=1, max_length=100)],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    display_order: Annotated[int, Form(ge=0)] = 0,
+    icon_file: Optional[UploadFile] = File(None)
 ):
-    return services_logic.create_category(db=db, category_data=category_data, tenant_id=current_user.tenant_id)
+    # Handle file upload if provided
+    icon_path = None
+    if icon_file:
+        icon_path = await file_handler.save_uploaded_file(
+            file=icon_file,
+            tenant_id=str(current_user.tenant_id),
+            subdirectory="icons"
+        )
+    
+    # Create category data object
+    category_data = CategoryCreate(name=name, display_order=display_order)
+    
+    return services_logic.create_category(
+        db=db, 
+        category_data=category_data, 
+        tenant_id=current_user.tenant_id,
+        icon_path=icon_path
+    )
 
 @categories_router.get(
     "",
@@ -63,23 +84,48 @@ def get_category_endpoint(
     db_category = services_logic.get_category_by_id(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
     if not db_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found in this tenant.")
-    return db_category
+    return services_logic._add_icon_url_to_category(db_category)
 
 @categories_router.put(
     "/{category_id}",
     response_model=CategorySchema,
     summary="Update a service category by ID for the current tenant."
 )
-def update_category_endpoint(
+async def update_category_endpoint(
+    category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
-    category_id: UUID = Path(..., description="ID of the category to update."),
-    category_data: CategoryUpdate = Body(...)
+    name: Optional[str] = Form(None, min_length=1, max_length=100),
+    display_order: Optional[int] = Form(None, ge=0),
+    icon_file: Optional[UploadFile] = File(None)
 ):
     db_category = services_logic.get_category_by_id(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
     if not db_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found to update.")
-    return services_logic.update_category(db=db, category_obj=db_category, category_data=category_data)
+    
+    # Handle file upload if provided
+    new_icon_path = None
+    if icon_file:
+        # Delete old icon file if it exists
+        if db_category.icon_path:
+            file_handler.delete_file(db_category.icon_path)
+        
+        # Save new icon file
+        new_icon_path = await file_handler.save_uploaded_file(
+            file=icon_file,
+            tenant_id=str(current_user.tenant_id),
+            subdirectory="icons"
+        )
+    
+    # Create update data object
+    category_data = CategoryUpdate(name=name, display_order=display_order)
+    
+    return services_logic.update_category(
+        db=db, 
+        category_obj=db_category, 
+        category_data=category_data,
+        new_icon_path=new_icon_path
+    )
 
 @categories_router.delete(
     "/{category_id}",
