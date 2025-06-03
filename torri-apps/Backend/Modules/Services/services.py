@@ -19,6 +19,28 @@ def _add_icon_url_to_category(category: Category, base_url: str = "http://localh
         category_data.icon_url = file_handler.get_public_url(category.icon_path, base_url)
     return category_data
 
+def _add_image_urls_to_service(service: Service, base_url: str = "http://localhost:8000") -> dict:
+    """Convert Service model to dict with image URLs."""
+    service_dict = {
+        'id': service.id,
+        'name': service.name,
+        'description': service.description,
+        'duration_minutes': service.duration_minutes,
+        'price': service.price,
+        'commission_percentage': service.commission_percentage,
+        'is_active': service.is_active,
+        'category_id': service.category_id,
+        'tenant_id': service.tenant_id,
+        'image_liso': file_handler.get_public_url(service.image_liso, base_url) if service.image_liso else None,
+        'image_ondulado': file_handler.get_public_url(service.image_ondulado, base_url) if service.image_ondulado else None,
+        'image_cacheado': file_handler.get_public_url(service.image_cacheado, base_url) if service.image_cacheado else None,
+        'image_crespo': file_handler.get_public_url(service.image_crespo, base_url) if service.image_crespo else None,
+    }
+    # Add category info if available
+    if hasattr(service, 'category') and service.category:
+        service_dict['category'] = _add_icon_url_to_category(service.category, base_url)
+    return service_dict
+
 def _validate_professionals(db: Session, professional_ids: List[UUID], tenant_id: UUID) -> List[UserTenant]:
     if not professional_ids:
         return []
@@ -168,6 +190,8 @@ def create_service(db: Session, service_data: ServiceCreate, tenant_id: UUID) ->
         )
 
     service_dict = service_data.model_dump(exclude={'professional_ids'})
+    # Convert UUID fields to strings for MySQL compatibility
+    service_dict['category_id'] = str(service_dict['category_id'])
     db_service = Service(**service_dict, tenant_id=str(tenant_id))
 
     # Professionals relationship temporarily disabled
@@ -207,9 +231,13 @@ def get_services_by_tenant(
 
 def update_service(db: Session, db_service: Service, service_data: ServiceUpdate, tenant_id: UUID) -> Service:
     update_dict = service_data.model_dump(exclude_unset=True, exclude={'professional_ids'})
+    
+    # Convert UUID fields to strings for MySQL compatibility
+    if 'category_id' in update_dict and update_dict['category_id'] is not None:
+        update_dict['category_id'] = str(update_dict['category_id'])
 
     if 'category_id' in update_dict and update_dict['category_id'] != db_service.category_id:
-        new_category = get_category_by_id(db, update_dict['category_id'], tenant_id)
+        new_category = get_category_by_id(db, UUID(update_dict['category_id']), tenant_id)
         if not new_category:
             db.rollback()  # Ensure clean state before exception
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"New category ID {update_dict['category_id']} not found.")
@@ -218,7 +246,7 @@ def update_service(db: Session, db_service: Service, service_data: ServiceUpdate
     if 'name' in update_dict and update_dict['name'] != db_service.name:
         stmt_check_unique = select(Service).where(
             Service.name == update_dict['name'],
-            Service.tenant_id == tenant_id,
+            Service.tenant_id == str(tenant_id),
             Service.id != db_service.id
         )
         if db.execute(stmt_check_unique).scalars().first():

@@ -230,3 +230,50 @@ def delete_service_endpoint(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found or could not be deleted.")
     return None # For 204 No Content
+
+@services_router.post(
+    "/{service_id}/images",
+    response_model=ServiceWithProfessionalsResponse,
+    summary="Upload images for a service (by hair type)."
+)
+async def upload_service_images_endpoint(
+    service_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    liso: Optional[UploadFile] = File(None),
+    ondulado: Optional[UploadFile] = File(None),
+    cacheado: Optional[UploadFile] = File(None),
+    crespo: Optional[UploadFile] = File(None)
+):
+    # Check if service exists and belongs to tenant
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
+    if not db_service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
+    
+    # Handle image uploads
+    image_paths = {}
+    image_files = {'liso': liso, 'ondulado': ondulado, 'cacheado': cacheado, 'crespo': crespo}
+    
+    for hair_type, file in image_files.items():
+        if file:
+            # Delete old image if exists
+            old_path = getattr(db_service, f'image_{hair_type}')
+            if old_path:
+                file_handler.delete_file(old_path)
+            
+            # Save new image
+            image_path = await file_handler.save_uploaded_file(
+                file=file,
+                tenant_id=str(current_user.tenant_id),
+                subdirectory=f"services/{hair_type}"
+            )
+            image_paths[f'image_{hair_type}'] = image_path
+    
+    # Update service with new image paths
+    if image_paths:
+        for field, path in image_paths.items():
+            setattr(db_service, field, path)
+        
+        db.commit()
+    
+    return db_service

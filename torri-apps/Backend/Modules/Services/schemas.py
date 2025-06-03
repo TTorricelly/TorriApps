@@ -41,11 +41,12 @@ class CategorySchema(CategoryBase): # Renamed from Category to CategorySchema
 # --- Service Schemas ---
 class ServiceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=150, example="Men's Classic Haircut")
-    description: Optional[str] = Field(None, max_length=500, example="Classic haircut including wash and style.")
+    description: Optional[str] = Field(None, max_length=5000, example="Classic haircut including wash and style.")
     duration_minutes: int = Field(..., gt=0, example=30) # Duration greater than 0
     price: condecimal(gt=0, max_digits=10, decimal_places=2) = Field(..., example=Decimal("25.00"))
     # Commission percentage: 0.00 to 100.00
     commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None, example=Decimal("10.50"))
+    is_active: bool = Field(default=True, example=True)
     category_id: UUID
 
 class ServiceCreate(ServiceBase):
@@ -54,10 +55,11 @@ class ServiceCreate(ServiceBase):
 
 class ServiceUpdate(BaseModel): # All fields optional for update
     name: Optional[str] = Field(None, min_length=1, max_length=150)
-    description: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = Field(None, max_length=5000)
     duration_minutes: Optional[int] = Field(None, gt=0)
     price: Optional[condecimal(gt=0, max_digits=10, decimal_places=2)] = Field(None)
     commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None)
+    is_active: Optional[bool] = Field(None)
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change
@@ -65,6 +67,10 @@ class ServiceUpdate(BaseModel): # All fields optional for update
 class ServiceSchema(ServiceBase): # Renamed from Service to ServiceSchema. Standard service response model
     id: UUID
     tenant_id: UUID # Included for completeness
+    image_liso: Optional[str] = None
+    image_ondulado: Optional[str] = None
+    image_cacheado: Optional[str] = None
+    image_crespo: Optional[str] = None
     category: Optional[CategorySchema] = None # Nested category information (using renamed CategorySchema)
 
     class Config:

@@ -42,7 +42,7 @@ def _calculate_end_time(start_time: time, duration_minutes: int) -> time:
 
 def _get_tenant_block_size(db: Session, tenant_id: UUID) -> int:
     """Fetches the tenant's block_size_minutes."""
-    tenant = db.get(Tenant, tenant_id)
+    tenant = db.get(Tenant, str(tenant_id))  # Convert UUID to string for MySQL compatibility
     if not tenant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found.")
     return tenant.block_size_minutes
@@ -66,9 +66,9 @@ def get_daily_time_slots_for_professional(
 
     # 1. Get Professional's recurring availability for that day_of_week
     stmt_avail = select(ProfessionalAvailability).where(
-        ProfessionalAvailability.professional_user_id == professional_id,
+        ProfessionalAvailability.professional_user_id == str(professional_id),
         ProfessionalAvailability.day_of_week == target_day_of_week,
-        ProfessionalAvailability.tenant_id == tenant_id # Ensure it's for the correct tenant context
+        ProfessionalAvailability.tenant_id == str(tenant_id) # Ensure it's for the correct tenant context
     ).order_by(ProfessionalAvailability.start_time)
     working_hours_today = db.execute(stmt_avail).scalars().all()
 
@@ -77,17 +77,17 @@ def get_daily_time_slots_for_professional(
 
     # 2. Get recurring breaks for that day
     stmt_breaks = select(ProfessionalBreak).where(
-        ProfessionalBreak.professional_user_id == professional_id,
+        ProfessionalBreak.professional_user_id == str(professional_id),
         ProfessionalBreak.day_of_week == target_day_of_week,
-        ProfessionalBreak.tenant_id == tenant_id
+        ProfessionalBreak.tenant_id == str(tenant_id)
     )
     breaks_today = db.execute(stmt_breaks).scalars().all()
 
     # 3. Get specific date-based blocked times (includes DAY_OFF)
     stmt_blocks = select(ProfessionalBlockedTime).where(
-        ProfessionalBlockedTime.professional_user_id == professional_id,
+        ProfessionalBlockedTime.professional_user_id == str(professional_id),
         ProfessionalBlockedTime.block_date == target_date,
-        ProfessionalBlockedTime.tenant_id == tenant_id
+        ProfessionalBlockedTime.tenant_id == str(tenant_id)
     )
     specific_blocks_today = db.execute(stmt_blocks).scalars().all()
 
@@ -104,9 +104,9 @@ def get_daily_time_slots_for_professional(
 
     # 4. Get existing appointments for that day
     stmt_appts = select(Appointment).where(
-        Appointment.professional_id == professional_id,
+        Appointment.professional_id == str(professional_id),
         Appointment.appointment_date == target_date,
-        Appointment.tenant_id == tenant_id,
+        Appointment.tenant_id == str(tenant_id),
         Appointment.status.in_([AppointmentStatus.SCHEDULED]) # Only scheduled appointments block time
     )
     appointments_today = db.execute(stmt_appts).scalars().all()
@@ -158,21 +158,21 @@ def _validate_and_get_appointment_dependencies(
     db: Session, client_id: UUID, professional_id: UUID, service_id: UUID, tenant_id: UUID
 ) -> (UserTenant, UserTenant, Service):
 
-    client = db.get(UserTenant, client_id)
-    professional = db.get(UserTenant, professional_id)
-    service = db.get(Service, service_id)
+    client = db.get(UserTenant, str(client_id))  # Convert UUID to string for MySQL compatibility
+    professional = db.get(UserTenant, str(professional_id))  # Convert UUID to string for MySQL compatibility
+    service = db.get(Service, str(service_id))  # Convert UUID to string for MySQL compatibility
 
-    if not (client and client.tenant_id == tenant_id): # Client must exist and belong to the tenant
+    if not (client and client.tenant_id == str(tenant_id)): # Client must exist and belong to the tenant
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found in this tenant.")
     # Role check for client can be done here if UserTenant has a generic role or a specific CLIENT role
     # if client.role != UserRole.CLIENTE: # Assuming CLIENTE role exists
     #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User specified as client does not have the 'CLIENTE' role.")
 
 
-    if not (professional and professional.tenant_id == tenant_id and professional.role == UserRole.PROFISSIONAL):
+    if not (professional and professional.tenant_id == str(tenant_id) and professional.role == UserRole.PROFISSIONAL):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found or invalid role in this tenant.")
 
-    if not (service and service.tenant_id == tenant_id): # Service must exist and belong to the tenant
+    if not (service and service.tenant_id == str(tenant_id)): # Service must exist and belong to the tenant
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found in this tenant.")
 
     # Validate if the professional offers the service
@@ -195,7 +195,7 @@ def create_appointment(
     # 1. Validate dependencies and permissions
     if requesting_user.role not in [UserRole.GESTOR, UserRole.ATENDENTE]:
         # If client is booking for themselves, their ID must match appointment_data.client_id
-        if requesting_user.id != appointment_data.client_id or requesting_user.role != UserRole.CLIENTE:
+        if requesting_user.id != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE:
              raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only book appointments for themselves.")
     # If Gestor/Atendente is booking, they can book for any client_id within their tenant.
     # The client_id in appointment_data will be used.
@@ -242,10 +242,10 @@ def create_appointment(
 
     # 4. Create and save the appointment
     db_appointment = Appointment(
-        client_id=client.id,
-        professional_id=professional.id,
-        service_id=service.id,
-        tenant_id=tenant_id,
+        client_id=str(client.id),  # Convert UUID to string for MySQL compatibility
+        professional_id=str(professional.id),  # Convert UUID to string for MySQL compatibility
+        service_id=str(service.id),  # Convert UUID to string for MySQL compatibility
+        tenant_id=str(tenant_id),  # Convert UUID to string for MySQL compatibility
         appointment_date=appointment_data.appointment_date,
         start_time=appointment_data.start_time,
         end_time=calculated_end_time,
@@ -307,8 +307,8 @@ def get_service_availability_for_professional(
     Returns:
         List of daily availability responses with slots that can accommodate the service
     """
-    service_obj = db.get(Service, req.service_id)
-    if not service_obj or service_obj.tenant_id != tenant_id:
+    service_obj = db.get(Service, str(req.service_id))  # Convert UUID to string for MySQL compatibility
+    if not service_obj or service_obj.tenant_id != str(tenant_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
 
     service_duration = service_obj.duration_minutes
@@ -449,7 +449,7 @@ def get_appointments(
     limit: int = 100
 ) -> List[Appointment]:
 
-    stmt = select(Appointment).where(Appointment.tenant_id == tenant_id)
+    stmt = select(Appointment).where(Appointment.tenant_id == str(tenant_id))
 
     # Permission-based filtering
     if requesting_user.role == UserRole.CLIENTE:
@@ -619,7 +619,7 @@ def reschedule_appointment(
             detail=f"Appointment cannot be rescheduled in its current state ('{appointment.status.value}')."
         )
 
-    service = db.get(Service, appointment.service_id)
+    service = db.get(Service, str(appointment.service_id))  # Convert UUID to string for MySQL compatibility
     if not service:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Associated service data missing.")
 

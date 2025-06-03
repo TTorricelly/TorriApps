@@ -9,13 +9,13 @@ from Core.Security.hashing import get_password_hash # For creating/updating pass
 from Core.Auth.constants import UserRole # For role validation
 
 def get_user_by_email_and_tenant(db: Session, email: str, tenant_id: UUID) -> UserTenant | None:
-    return db.query(UserTenant).filter(UserTenant.email == email, UserTenant.tenant_id == tenant_id).first()
+    return db.query(UserTenant).filter(UserTenant.email == email, UserTenant.tenant_id == str(tenant_id)).first()
 
 def get_user_by_id_and_tenant(db: Session, user_id: UUID, tenant_id: UUID) -> UserTenant | None:
-    return db.query(UserTenant).filter(UserTenant.id == user_id, UserTenant.tenant_id == tenant_id).first()
+    return db.query(UserTenant).filter(UserTenant.id == str(user_id), UserTenant.tenant_id == str(tenant_id)).first()
 
 def get_users_by_tenant(db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[UserTenant]:
-    return db.query(UserTenant).filter(UserTenant.tenant_id == tenant_id).offset(skip).limit(limit).all()
+    return db.query(UserTenant).filter(UserTenant.tenant_id == str(tenant_id)).offset(skip).limit(limit).all()
 
 def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> UserTenant:
     # Role validation: Ensure only tenant-specific roles are assigned through this service.
@@ -42,7 +42,7 @@ def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> Us
         hashed_password=hashed_password,
         role=user_data.role,
         full_name=user_data.full_name,
-        tenant_id=tenant_id,
+        tenant_id=str(tenant_id),  # Convert UUID to string for MySQL compatibility
         is_active=True # New users default to active
     )
 
@@ -81,7 +81,7 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
     # Email change validation: if email is in update_data and different from current one, check uniqueness
     if 'email' in update_data and update_data['email'] != db_user.email:
         existing_user_with_new_email = get_user_by_email_and_tenant(db, email=update_data['email'], tenant_id=tenant_id)
-        if existing_user_with_new_email and existing_user_with_new_email.id != user_id:
+        if existing_user_with_new_email and existing_user_with_new_email.id != str(user_id):
             db.rollback()  # Ensure clean state before exception
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

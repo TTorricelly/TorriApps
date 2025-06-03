@@ -526,6 +526,125 @@ TorriApps uses a comprehensive modern dark theme design system for consistent vi
 - Container: `bg-bg-secondary rounded-card shadow-card border-bg-tertiary`
 - Responsive: `max-w-md mx-m max-h-[90vh] overflow-y-auto`
 
+#### **UI Components Implementation Guide**
+
+**✅ Input Fields (Material Tailwind):**
+```jsx
+<Input
+  className="bg-bg-primary border-bg-tertiary text-text-primary"
+  labelProps={{ className: "text-text-secondary" }}
+  containerProps={{ className: "text-text-primary" }}
+  // Other props...
+/>
+```
+- **Text Color**: Always include `text-text-primary` in className
+- **Container**: Add `containerProps={{ className: "text-text-primary" }}` for consistent text rendering
+- **Background**: Use `bg-bg-primary` for input fields
+- **Labels**: Use `labelProps={{ className: "text-text-secondary" }}` for proper label styling
+
+**✅ Select Dropdowns (Material Tailwind):**
+```jsx
+<Select
+  className="bg-bg-primary border-bg-tertiary text-text-primary"
+  labelProps={{ className: "text-text-secondary" }}
+  containerProps={{ className: "text-text-primary" }}
+  menuProps={{ 
+    className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
+    style: { 
+      position: 'absolute',
+      top: '100%',
+      left: 0,
+      right: 0,
+      marginTop: '4px',
+      zIndex: 9999
+    }
+  }}
+>
+  <Option className="text-text-primary hover:bg-bg-tertiary hover:text-white focus:bg-bg-tertiary focus:text-accent-primary selected:bg-accent-primary selected:text-white data-[selected=true]:bg-accent-primary data-[selected=true]:text-white data-[selected=true]:hover:text-white">
+    Option Text
+  </Option>
+</Select>
+```
+- **Dropdown Container**: Use relative positioning wrapper `<div className="relative">`
+- **Menu Positioning**: Include complete `menuProps` with positioning and z-index
+- **Option States**: Define hover, focus, and selected states with proper contrast
+- **Scrolling**: Add `max-h-60 overflow-y-auto` for long lists
+- **Z-Index**: Use `z-50` and `zIndex: 9999` to ensure dropdown appears above other content
+
+**✅ Alert/Toast Notifications:**
+```jsx
+{alert.show && (
+  <div className="fixed top-4 right-4 z-50 w-96">
+    <Alert
+      open={alert.show}
+      onClose={() => setAlert({ ...alert, show: false })}
+      color={alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'amber' : 'green'}
+      className="mb-4"
+    >
+      {alert.message}
+    </Alert>
+  </div>
+)}
+```
+- **Positioning**: Use `fixed top-4 right-4` for consistent placement
+- **State Management**: Include `showAlert` helper function with auto-dismiss (5 seconds)
+- **Color Mapping**: Map alert types to Material Tailwind colors (red, amber, green)
+
+**✅ Rich Text Editor Styling:**
+```jsx
+<div className="border border-bg-tertiary rounded-lg bg-bg-primary">
+  {/* Toolbar */}
+  <div className="border-b border-bg-tertiary p-2">
+    <button className="px-2 py-1 text-text-primary hover:bg-bg-tertiary rounded">
+      B
+    </button>
+  </div>
+  
+  {/* Editor Content */}
+  <div
+    contentEditable
+    className="p-4 min-h-[300px] max-h-[600px] overflow-y-auto text-text-primary focus:outline-none"
+  />
+</div>
+```
+- **Container**: Use `border-bg-tertiary` and `bg-bg-primary`
+- **Toolbar**: Include hover states with `hover:bg-bg-tertiary`
+- **Content**: Set `text-text-primary` for editor text
+- **Height**: Use min/max height with scrolling for content overflow
+
+**✅ Image Upload Components:**
+```jsx
+<div className="border border-bg-tertiary rounded-lg p-4 bg-bg-primary">
+  {preview ? (
+    <div className="relative">
+      <img className="w-20 h-20 object-cover rounded-lg" />
+      <button className="absolute -top-2 -right-2 bg-status-error text-white rounded-full p-1">
+        <XMarkIcon className="h-3 w-3" />
+      </button>
+    </div>
+  ) : (
+    <div className="flex flex-col items-center justify-center py-4">
+      <PhotoIcon className="h-8 w-8 text-text-tertiary mb-2" />
+      <Button className="bg-accent-primary hover:bg-accent-primary/90">
+        Selecionar Arquivo
+      </Button>
+    </div>
+  )}
+</div>
+```
+- **Container**: Use consistent border and background styling
+- **Placeholder State**: Include icon with `text-text-tertiary`
+- **Remove Button**: Use `bg-status-error` for destructive actions
+- **Preview**: Maintain consistent rounded corners and sizing
+
+**⚠️ Common Styling Mistakes to Avoid:**
+- **Missing text color**: Always include `text-text-primary` in input/select className
+- **Dark text on dark background**: Use `containerProps` for Material Tailwind components
+- **Dropdown positioning**: Always use relative wrapper and proper z-index
+- **Poor contrast in selected states**: Define all interaction states (hover, focus, selected)
+- **Missing overflow handling**: Add scrolling for long dropdown lists
+- **Inconsistent spacing**: Use the defined spacing scale (`p-m`, `gap-4`, etc.)
+
 #### **Animation & Transitions**
 
 **Standard Transitions:**

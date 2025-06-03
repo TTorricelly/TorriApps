@@ -1,3 +1,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Rich Text Display Styles */
+.rich-text-display h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.83em 0;
+  color: #E0E0E0;
+}
+
+.rich-text-display h3 {
+  font-size: 1.17em;
+  font-weight: 600;
+  margin: 1em 0;
+  color: #E0E0E0;
+}
+
+.rich-text-display ul, 
+.rich-text-display ol {
+  margin: 1em 0;
+  padding-left: 2em;
+  color: #E0E0E0;
+}
+
+.rich-text-display li {
+  margin: 0.5em 0;
+  color: #E0E0E0;
+}
+
+.rich-text-display p {
+  margin: 0.5em 0;
+  color: #E0E0E0;
+  line-height: 1.6;
+}
+
+.rich-text-display strong {
+  font-weight: 600;
+  color: #E0E0E0;
+}
+
+.rich-text-display em {
+  font-style: italic;
+  color: #E0E0E0;
+}
+
+.rich-text-display u {
+  text-decoration: underline;
+  color: #E0E0E0;
+}
+
+/* Ensure proper spacing for rich text content */
+.rich-text-display > *:first-child {
+  margin-top: 0;
+}
+
+.rich-text-display > *:last-child {
+  margin-bottom: 0;
+}

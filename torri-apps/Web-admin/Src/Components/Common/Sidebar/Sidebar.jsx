@@ -41,7 +41,8 @@ const menuItems = [
     title: 'Serviços',
     icon: WrenchScrewdriverIcon,
     items: [
-      { title: 'Catálogo', path: '/services/catalog' }
+      { title: 'Categoria de Serviços', path: '/services/catalog' },
+      { title: 'Catálogo de Serviços', path: '/services/list' }
     ]
   },
   {

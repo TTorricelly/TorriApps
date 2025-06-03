@@ -1,5 +1,5 @@
 from uuid import uuid4
-from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Table, UniqueConstraint, Boolean, Text
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 
@@ -49,11 +49,18 @@ class Service(Base):
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(150), nullable=False)
-    description = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)  # Changed to Text for rich content
     duration_minutes = Column(Integer, nullable=False) # Duration in minutes
     price = Column(Numeric(10, 2), nullable=False) # Example: 12345.67
     # commission_percentage stores values like 10.50 for 10.50%
     commission_percentage = Column(Numeric(5, 2), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    
+    # Image paths for different hair types
+    image_liso = Column(String(255), nullable=True)
+    image_ondulado = Column(String(255), nullable=True)
+    image_cacheado = Column(String(255), nullable=True)
+    image_crespo = Column(String(255), nullable=True)
 
     category_id = Column(CHAR(36), ForeignKey("service_categories.id"), nullable=False, index=True)
     # tenant_id links to the public.tenants table, establishing ownership.

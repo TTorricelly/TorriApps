@@ -31,7 +31,7 @@ def _get_professional_for_availability_management(
     """
     # Fetch the professional whose availability is being managed
     stmt = select(UserTenant).where(
-        UserTenant.id == professional_user_id_to_manage,
+        UserTenant.id == str(professional_user_id_to_manage),
         UserTenant.tenant_id == requesting_user.tenant_id # Must be in the same tenant
     )
     professional_to_manage = db.execute(stmt).scalars().first()
@@ -53,7 +53,7 @@ def _get_professional_for_availability_management(
         # Gestor can manage any professional in their tenant.
         return professional_to_manage
     elif requesting_user.role == UserRole.PROFISSIONAL:
-        if requesting_user.id == professional_user_id_to_manage:
+        if requesting_user.id == str(professional_user_id_to_manage):
             # Professionals can manage their own availability.
             return professional_to_manage
         else:
@@ -73,7 +73,7 @@ def _check_slot_overlap(db: Session, professional_user_id: UUID, day_of_week: Da
     """Checks for overlapping availability slots or breaks for a given professional."""
     # Check against ProfessionalAvailability
     query_avail = select(ProfessionalAvailability).where(
-        ProfessionalAvailability.professional_user_id == professional_user_id,
+        ProfessionalAvailability.professional_user_id == str(professional_user_id),
         ProfessionalAvailability.day_of_week == day_of_week,
         not_(or_(
             ProfessionalAvailability.end_time <= start_time, # Existing ends before or at new start
@@ -81,7 +81,7 @@ def _check_slot_overlap(db: Session, professional_user_id: UUID, day_of_week: Da
         ))
     )
     if exclude_slot_id: # When updating, exclude the current slot itself
-        query_avail = query_avail.where(ProfessionalAvailability.id != exclude_slot_id)
+        query_avail = query_avail.where(ProfessionalAvailability.id != str(exclude_slot_id))
 
     overlapping_availability = db.execute(query_avail).scalars().first()
     if overlapping_availability:
@@ -89,7 +89,7 @@ def _check_slot_overlap(db: Session, professional_user_id: UUID, day_of_week: Da
 
     # Check against ProfessionalBreak
     query_break = select(ProfessionalBreak).where(
-        ProfessionalBreak.professional_user_id == professional_user_id,
+        ProfessionalBreak.professional_user_id == str(professional_user_id),
         ProfessionalBreak.day_of_week == day_of_week,
         not_(or_(
             ProfessionalBreak.end_time <= start_time,
@@ -122,8 +122,8 @@ def create_availability_slot(
 
     db_slot = ProfessionalAvailability(
         **slot_data.model_dump(),
-        professional_user_id=professional_user_id,
-        tenant_id=tenant_id
+        professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
+        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
     )
     db.add(db_slot)
     db.commit()
@@ -138,7 +138,7 @@ def get_availability_slots_for_professional(
 ) -> List[ProfessionalAvailability]:
     stmt = select(ProfessionalAvailability).where(
         ProfessionalAvailability.professional_user_id == professional_user_id,
-        ProfessionalAvailability.tenant_id == tenant_id # Security check
+        ProfessionalAvailability.tenant_id == str(tenant_id) # Security check
     ).order_by(ProfessionalAvailability.day_of_week, ProfessionalAvailability.start_time)
 
     if day_of_week is not None:
@@ -153,9 +153,9 @@ def delete_availability_slot(
     tenant_id: UUID
 ) -> bool:
     stmt = select(ProfessionalAvailability).where(
-        ProfessionalAvailability.id == slot_id,
+        ProfessionalAvailability.id == str(slot_id),
         ProfessionalAvailability.professional_user_id == professional_user_id, # Ensure slot belongs to this professional
-        ProfessionalAvailability.tenant_id == tenant_id # And this tenant
+        ProfessionalAvailability.tenant_id == str(tenant_id) # And this tenant
     )
     db_slot = db.execute(stmt).scalars().first()
 
@@ -197,7 +197,7 @@ def _check_break_overlap(db: Session, professional_user_id: UUID, day_of_week: D
         ))
     )
     if exclude_break_id:
-        query_break = query_break.where(ProfessionalBreak.id != exclude_break_id)
+        query_break = query_break.where(ProfessionalBreak.id != str(exclude_break_id))
 
     if db.execute(query_break).scalars().first():
         return True # Overlaps with another break
@@ -228,8 +228,8 @@ def create_break(
 
     db_break = ProfessionalBreak(
         **break_data.model_dump(),
-        professional_user_id=professional_user_id,
-        tenant_id=tenant_id
+        professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
+        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
     )
     db.add(db_break)
     db.commit()
@@ -244,7 +244,7 @@ def get_breaks_for_professional(
 ) -> List[ProfessionalBreak]:
     stmt = select(ProfessionalBreak).where(
         ProfessionalBreak.professional_user_id == professional_user_id,
-        ProfessionalBreak.tenant_id == tenant_id
+        ProfessionalBreak.tenant_id == str(tenant_id)
     ).order_by(ProfessionalBreak.day_of_week, ProfessionalBreak.start_time)
 
     if day_of_week is not None:
@@ -259,7 +259,7 @@ def delete_break(
     tenant_id: UUID
 ) -> bool:
     stmt = select(ProfessionalBreak).where(
-        ProfessionalBreak.id == break_id,
+        ProfessionalBreak.id == str(break_id),
         ProfessionalBreak.professional_user_id == professional_user_id,
         ProfessionalBreak.tenant_id == tenant_id
     )
@@ -278,11 +278,11 @@ def delete_break(
 def _check_blocked_time_overlap(db: Session, professional_user_id: UUID, block_date: date, start_time: Optional[time], end_time: Optional[time], block_type: AvailabilityBlockType, exclude_id: Optional[UUID] = None):
     """Checks for overlapping ProfessionalBlockedTime entries."""
     query = select(ProfessionalBlockedTime).where(
-        ProfessionalBlockedTime.professional_user_id == professional_user_id,
+        ProfessionalBlockedTime.professional_user_id == str(professional_user_id),
         ProfessionalBlockedTime.block_date == block_date
     )
     if exclude_id:
-        query = query.where(ProfessionalBlockedTime.id != exclude_id)
+        query = query.where(ProfessionalBlockedTime.id != str(exclude_id))
 
     if block_type == AvailabilityBlockType.DAY_OFF:
         # If new block is DAY_OFF, it overlaps if any other block (DAY_OFF or BLOCKED_SLOT) exists on that day.
@@ -324,8 +324,8 @@ def create_blocked_time(
 
     db_blocked_time = ProfessionalBlockedTime(
         **blocked_time_data.model_dump(),
-        professional_user_id=professional_user_id,
-        tenant_id=tenant_id
+        professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
+        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
     )
     db.add(db_blocked_time)
     db.commit()
@@ -341,7 +341,7 @@ def get_blocked_times_for_professional(
 ) -> List[ProfessionalBlockedTime]:
     stmt = select(ProfessionalBlockedTime).where(
         ProfessionalBlockedTime.professional_user_id == professional_user_id,
-        ProfessionalBlockedTime.tenant_id == tenant_id
+        ProfessionalBlockedTime.tenant_id == str(tenant_id)
     ).order_by(ProfessionalBlockedTime.block_date, ProfessionalBlockedTime.start_time)
 
     if start_date_filter:
@@ -358,7 +358,7 @@ def delete_blocked_time(
     tenant_id: UUID
 ) -> bool:
     stmt = select(ProfessionalBlockedTime).where(
-        ProfessionalBlockedTime.id == blocked_time_id,
+        ProfessionalBlockedTime.id == str(blocked_time_id),
         ProfessionalBlockedTime.professional_user_id == professional_user_id,
         ProfessionalBlockedTime.tenant_id == tenant_id
     )
