@@ -433,7 +433,8 @@ export default function ClientForm() { // Renamed component
           {/* Removed Tabs */}
           {/* The form content is now directly rendered */}
           <form onSubmit={handleSubmit}>
-            <ClientDataForm {/* Renamed from BasicDataTab */}
+            {/* Renamed from BasicDataTab */}
+            <ClientDataForm
               formData={formData}
               handleInputChange={handleInputChange}
               errors={errors}
