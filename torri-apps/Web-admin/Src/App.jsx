@@ -12,7 +12,7 @@ import {
   ProfessionalForm,
   Login
 } from './Pages';
-import { ClientsPage } from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage
+import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;

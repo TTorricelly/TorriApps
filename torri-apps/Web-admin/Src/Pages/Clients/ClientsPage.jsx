@@ -30,7 +30,7 @@ import {
 import { clientsApi } from '../../Services/clients.js'; // Correctly import clientsApi
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
 
-export default function ClientsPage() { // Renamed component
+function ClientsPage() { // Renamed component and removed default export from here
   const navigate = useNavigate();
 
   // State management
@@ -319,3 +319,5 @@ export default function ClientsPage() { // Renamed component
     </div>
   );
 }
+
+export default ClientsPage; // Added default export here
