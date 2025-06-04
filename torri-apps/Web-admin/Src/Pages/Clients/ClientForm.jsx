@@ -24,21 +24,7 @@ import {
 } from '@material-tailwind/react';
 import {
   ArrowLeftIcon,
-  PhotoIcon,
-  XMarkIcon,
-  UserIcon,
-  CalendarIcon,
-  ClockIcon,
-  NoSymbolIcon,
-  // PhotoIcon, // Removed for clients
-  // XMarkIcon, // Will be re-added if needed for specific UI elements, but not for photo/services
-  UserIcon, // Keep for basic data tab icon
-  // CalendarIcon, // Removed (Availability tab)
-  // ClockIcon, // Removed (Breaks tab)
-  // NoSymbolIcon, // Removed (Blocked Periods tab)
-  // PlusIcon, // Will be re-added if needed, but not for services
-  // TrashIcon // Will be re-added if needed
-  ArrowLeftIcon, // Kept for navigation
+  UserIcon
 } from '@heroicons/react/24/outline';
 
 import { clientsApi } from '../../Services/clients'; // Changed from professionalsApi
