@@ -110,7 +110,7 @@ def delete_existing_user(
     Delete a user within the current user's (Gestor's) tenant.
     """
     # Prevent a GESTOR from deleting themselves (optional, but good practice)
-    if user_id == current_user.id:
+    if user_id == current_user.user_id: # Corrected attribute access
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Gestor cannot delete themselves. Use account deactivation or another admin account."
