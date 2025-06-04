@@ -13,6 +13,7 @@ import {
   Login
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
+import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
@@ -49,7 +50,9 @@ function App() {
           <Route path="/professionals/availability" element={<ProfessionalsAvailability />} />
           
           {/* Clients Routes */}
-          <Route path="/clients" element={<ClientsPage />} /> {/* Added new route */}
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/create" element={<ClientForm />} />
+          <Route path="/clients/edit/:clientId" element={<ClientForm />} />
           
           {/* Settings Routes */}
           <Route path="/settings/salon-profile" element={<SalonProfile />} />

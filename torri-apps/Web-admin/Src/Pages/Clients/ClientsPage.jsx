@@ -19,13 +19,12 @@ import {
   Avatar,
 } from '@material-tailwind/react';
 import {
-  // PlusIcon, // No longer needed
+  PlusIcon, // Added PlusIcon back
   // PencilIcon, // No longer needed
   // TrashIcon, // No longer needed
   MagnifyingGlassIcon,
-  UserIcon // Removed trailing comma if UserIcon is the last active import
+  UserIcon
 } from '@heroicons/react/24/outline';
-// The duplicate block below was an artifact of previous edits, removing it too by only having one SEARCH/REPLACE for this import.
 
 import { clientsApi } from '../../Services/clients.js'; // Correctly import clientsApi
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
@@ -184,7 +183,13 @@ function ClientsPage() { // Renamed component and removed default export from he
                 Clientes
               </Typography>
             </div>
-            {/* Novo Profissional Button Removed */}
+            <Button
+              className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
+              onClick={() => navigate('/clients/create')}
+            >
+              <PlusIcon className="h-4 w-4" />
+              Novo Cliente
+            </Button>
           </div>
 
           {/* Filters Section */}
@@ -256,10 +261,10 @@ function ClientsPage() { // Renamed component and removed default export from he
                   {filteredClients.map((client, index) => ( // Use filteredClients and client
                     <tr
                       key={client.id}
-                      className={`border-b border-bg-tertiary hover:bg-bg-primary/50 ${ // Removed cursor-pointer and onClick
+                      className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
                         index % 2 === 0 ? 'bg-bg-primary/20' : 'bg-bg-secondary'
                       }`}
-                      // onClick={() => handleEditProfessional(professional.id)} // Removed onClick
+                      onClick={() => navigate(`/clients/edit/${client.id}`)}
                     >
                       <td className="p-4">
                         <div className="w-10 h-10">
