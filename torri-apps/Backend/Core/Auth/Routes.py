@@ -22,7 +22,7 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 @router.post("/login", response_model=Schemas.Token)
 async def login_for_access_token(
     login_request: Schemas.LoginRequest, # Using Pydantic model for request body
-    db: Session = Depends(get_public_db)  # Use public DB for login
+    db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
 ):
 
     user, error_message, tenant_schema = auth_services.enhanced_authenticate_user(
@@ -48,13 +48,17 @@ async def login_for_access_token(
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
 
-    # Ensure tenant_id and role are strings for JWT standard claims if they aren't already
+    # Include complete user data in JWT to avoid database calls during requests
     # user.tenant_id is UUID, user.role is Enum
     token_data = {
         "sub": user.email,
         "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
         "tenant_schema": tenant_schema, # Include schema name for direct access
-        "role": user.role.value # Convert Enum to string value for JWT
+        "role": user.role.value, # Convert Enum to string value for JWT
+        # Additional user data to avoid DB calls
+        "user_id": str(user.id),
+        "full_name": user.full_name,
+        "is_active": user.is_active
     }
 
     access_token = create_access_token(
@@ -66,7 +70,7 @@ async def login_for_access_token(
 @router.post("/enhanced-login", response_model=Schemas.EnhancedToken)
 async def enhanced_login_for_access_token(
     login_request: Schemas.EnhancedLoginRequest,
-    db: Session = Depends(get_public_db)  # Use public DB for login
+    db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
 ):
     """
     Enhanced login endpoint that can discover tenant by email.
@@ -110,13 +114,17 @@ async def enhanced_login_for_access_token(
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
 
-    # Ensure tenant_id and role are strings for JWT standard claims if they aren't already
+    # Include complete user data in JWT to avoid database calls during requests
     # user.tenant_id is UUID, user.role is Enum
     token_data = {
         "sub": user.email,
         "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
         "tenant_schema": tenant_schema, # Include schema name for direct access
-        "role": user.role.value # Convert Enum to string value for JWT
+        "role": user.role.value, # Convert Enum to string value for JWT
+        # Additional user data to avoid DB calls
+        "user_id": str(user.id),
+        "full_name": user.full_name,
+        "is_active": user.is_active
     }
 
     access_token = create_access_token(

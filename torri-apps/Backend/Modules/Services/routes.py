@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from Core.Database.dependencies import get_db
 from Core.Auth.dependencies import get_current_user_tenant, require_role
 from Core.Auth.constants import UserRole
-from Core.Auth.models import UserTenant # For current_user type hint
+from Core.Security.jwt import TokenPayload # Enhanced user data from JWT
 from Core.Utils.file_handler import file_handler
 from Config.Settings import settings
 
@@ -35,7 +35,7 @@ services_router = APIRouter()
 async def create_category_endpoint(
     name: Annotated[str, Form(min_length=1, max_length=100)],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     display_order: Annotated[int, Form(ge=0)] = 0,
     icon_file: Optional[UploadFile] = File(None)
 ):
@@ -44,7 +44,7 @@ async def create_category_endpoint(
     if icon_file:
         icon_path = await file_handler.save_uploaded_file(
             file=icon_file,
-            tenant_id=str(current_user.tenant_id),
+            tenant_id="default",  # Use default tenant for single schema
             subdirectory="icons"
         )
     
@@ -54,7 +54,6 @@ async def create_category_endpoint(
     return services_logic.create_category(
         db=db, 
         category_data=category_data, 
-        tenant_id=current_user.tenant_id,
         icon_path=icon_path
     )
 
@@ -65,11 +64,14 @@ async def create_category_endpoint(
 )
 def list_categories_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     skip: int = Query(0, ge=0, description="Number of items to skip."),
     limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
 ):
-    return services_logic.get_categories_by_tenant(db=db, tenant_id=current_user.tenant_id, skip=skip, limit=limit)
+    # SIMPLIFIED: Get all categories (no tenant filtering needed)
+    categories = services_logic.get_all_categories(db=db, skip=skip, limit=limit)
+    
+    return categories
 
 @categories_router.get(
     "/{category_id}",
@@ -79,11 +81,11 @@ def list_categories_endpoint(
 def get_category_endpoint(
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
 ):
-    db_category = services_logic.get_category_by_id(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
+    db_category = services_logic.get_category_by_id(db=db, category_id=category_id)
     if not db_category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found in this tenant.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found.")
     return services_logic._add_icon_url_to_category(db_category)
 
 @categories_router.put(
@@ -94,12 +96,12 @@ def get_category_endpoint(
 async def update_category_endpoint(
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     name: Optional[str] = Form(None, min_length=1, max_length=100),
     display_order: Optional[int] = Form(None, ge=0),
     icon_file: Optional[UploadFile] = File(None)
 ):
-    db_category = services_logic.get_category_by_id(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
+    db_category = services_logic.get_category_by_id(db=db, category_id=category_id)
     if not db_category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found to update.")
     
@@ -113,7 +115,7 @@ async def update_category_endpoint(
         # Save new icon file
         new_icon_path = await file_handler.save_uploaded_file(
             file=icon_file,
-            tenant_id=str(current_user.tenant_id),
+            tenant_id="default",  # Use default for single schema
             subdirectory="icons"
         )
     
@@ -134,10 +136,10 @@ async def update_category_endpoint(
 )
 def delete_category_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     category_id: UUID = Path(..., description="ID of the category to delete.")
 ):
-    success = services_logic.delete_category(db=db, category_id=category_id, tenant_id=current_user.tenant_id)
+    success = services_logic.delete_category(db=db, category_id=category_id)
     if not success:
         # HTTPException for 404 might be raised by the service if category not found,
         # or if deletion constraint (like services associated) is violated (which is a 409).
@@ -156,10 +158,10 @@ def delete_category_endpoint(
 def create_service_endpoint(
     service_data: ServiceCreate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))]
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
 ):
     # service_logic.create_service will validate category_id and professional_ids
-    return services_logic.create_service(db=db, service_data=service_data, tenant_id=current_user.tenant_id)
+    return services_logic.create_service(db=db, service_data=service_data)
 
 @services_router.get(
     "",
@@ -168,7 +170,7 @@ def create_service_endpoint(
 )
 def list_services_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))], # Allow more roles to view services
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))], # Allow more roles to view services
     category_id: Optional[UUID] = Query(None, description="Filter services by category ID."),
     skip: int = Query(0, ge=0, description="Number of items to skip."),
     limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
@@ -176,8 +178,9 @@ def list_services_endpoint(
     # Note: If professionals/attendants can view services, ensure services_logic.get_services_by_tenant
     # correctly fetches and presents data (e.g., might not show commission for non-gestor).
     # For now, assuming full data for authorized roles.
-    return services_logic.get_services_by_tenant(
-        db=db, tenant_id=current_user.tenant_id, category_id=category_id, skip=skip, limit=limit
+    # SIMPLIFIED: Get all services (no tenant filtering needed)
+    return services_logic.get_all_services(
+        db=db, category_id=category_id, skip=skip, limit=limit
     )
 
 @services_router.get(
@@ -187,10 +190,10 @@ def list_services_endpoint(
 )
 def get_service_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
     service_id: UUID = Path(..., description="ID of the service to retrieve.")
 ):
-    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
     if not db_service:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found in this tenant.")
     return db_service
@@ -202,15 +205,15 @@ def get_service_endpoint(
 )
 def update_service_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to update."),
     service_data: ServiceUpdate = Body(...)
 ):
-    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
     if not db_service:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found to update.")
 
-    updated_service = services_logic.update_service(db=db, db_service=db_service, service_data=service_data, tenant_id=current_user.tenant_id)
+    updated_service = services_logic.update_service(db=db, db_service=db_service, service_data=service_data)
     if not updated_service: # Should not happen if initial fetch worked, unless update_service returns None on other error
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update service.")
     return updated_service
@@ -223,10 +226,10 @@ def update_service_endpoint(
 )
 def delete_service_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to delete.")
 ):
-    success = services_logic.delete_service(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
+    success = services_logic.delete_service(db=db, service_id=service_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found or could not be deleted.")
     return None # For 204 No Content
@@ -239,14 +242,14 @@ def delete_service_endpoint(
 async def upload_service_images_endpoint(
     service_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[UserTenant, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     liso: Optional[UploadFile] = File(None),
     ondulado: Optional[UploadFile] = File(None),
     cacheado: Optional[UploadFile] = File(None),
     crespo: Optional[UploadFile] = File(None)
 ):
     # Check if service exists and belongs to tenant
-    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id, tenant_id=current_user.tenant_id)
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
     if not db_service:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
     
@@ -264,7 +267,7 @@ async def upload_service_images_endpoint(
             # Save new image
             image_path = await file_handler.save_uploaded_file(
                 file=file,
-                tenant_id=str(current_user.tenant_id),
+                tenant_id="default",  # Use default for single schema
                 subdirectory=f"services/{hair_type}"
             )
             image_paths[f'image_{hair_type}'] = image_path

@@ -160,61 +160,64 @@ def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
 
 def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id: UUID | None = None) -> tuple[UserTenant | None, str | None, str | None]:
     """
-    Enhanced authentication that can discover tenant by email if tenant_id is not provided.
+    SIMPLIFIED: Single schema authentication.
+    No tenant discovery needed - all users are in the same schema.
     
     Args:
         db: SQLAlchemy database session.
         email: User's email.
         password: User's plain text password.
-        tenant_id: Optional tenant_id. If not provided, will search for email across tenants.
+        tenant_id: Ignored in single schema mode.
     
     Returns:
-        Tuple of (UserTenant object or None, error_message or None, tenant_schema_name or None)
+        Tuple of (UserTenant object or None, error_message or None, schema_name or None)
         - Success: (UserTenant, None, schema_name)
         - Failure: (None, error_message, None)
     """
-    # If tenant_id is provided, use the existing authentication method
-    if tenant_id:
-        user, schema_name = authenticate_user(db, tenant_id, email, password)
-        if user:
-            return user, None, schema_name
-        else:
-            return None, "Incorrect email or password for the specified tenant.", None
-    
-    # Tenant discovery flow
-    found_tenant_ids = discover_tenant_by_email(db, email)
-    
-    if len(found_tenant_ids) == 0:
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email,
-            details={"reason": "Email not found in any tenant."}
-        )
-        return None, "Email not found.", None
-    
-    if len(found_tenant_ids) > 1:
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email,
-            details={"reason": f"Email found in {len(found_tenant_ids)} tenants. Tenant ID required."}
-        )
-        return None, "Email found in multiple tenants. Please specify your tenant.", None
-    
-    # Exactly one tenant found - proceed with authentication
-    discovered_tenant_id = found_tenant_ids[0]
-    user, schema_name = authenticate_user(db, discovered_tenant_id, email, password)
-    
-    if user:
+    try:
+        # SIMPLIFIED: Direct query in single schema
+        user = db.query(UserTenant).filter(
+            UserTenant.email == email,
+            UserTenant.is_active == True
+        ).first()
+        
+        if not user:
+            log_audit(
+                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+                requesting_user_email=email,
+                details={"reason": f"User with email {email} not found."}
+            )
+            return None, "Email not found.", None
+        
+        # Verify password
+        if not verify_password(password, user.hashed_password):
+            log_audit(
+                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+                requesting_user_email=email,
+                details={"reason": "Incorrect password."}
+            )
+            return None, "Incorrect password.", None
+        
+        # Success
+        from Config.Settings import settings
+        schema_name = settings.default_schema_name
+        
         log_audit(
             event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
             requesting_user_id=user.id,
             requesting_user_email=user.email,
             tenant_id=user.tenant_id,
-            details={"method": "enhanced_login_with_tenant_discovery"}
+            details={"method": "single_schema_login"}
         )
         return user, None, schema_name
-    else:
-        return None, "Incorrect password.", None
+        
+    except Exception as e:
+        log_audit(
+            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
+            requesting_user_email=email,
+            details={"reason": f"Database error: {str(e)}"}
+        )
+        return None, f"Authentication error: {str(e)}", None
 
 # (Opcional, para depois) Criar função `create_user_tenant(db: Session, user: UserTenantCreate, tenant_id: UUID) -> UserTenant`:
 # *   Esta função será mais apropriada no `Modules/Users/services.py`. Por enquanto, o foco do `Auth/services.py` é autenticação.

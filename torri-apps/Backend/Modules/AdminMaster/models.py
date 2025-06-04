@@ -2,15 +2,13 @@ import enum
 from sqlalchemy import Column, String, Boolean, Enum as SAEnum
 from sqlalchemy.dialects.mysql import CHAR
 from uuid import uuid4
-from Config.Database import BasePublic  # Corrected import path
-from Config.Settings import settings    # Corrected import path
+from Config.Database import Base
 
 class AdminMasterRole(enum.Enum):
     ADMIN_MASTER = "ADMIN_MASTER"
 
-class AdminMasterUser(BasePublic):
+class AdminMasterUser(Base):
     __tablename__ = "admin_master_users"
-    # __table_args__ = {"schema": settings.default_schema_name} # Removed
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     email = Column(String(120), unique=True, nullable=False, index=True)

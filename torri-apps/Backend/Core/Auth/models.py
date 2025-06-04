@@ -15,17 +15,14 @@ class UserTenant(Base):
     __tablename__ = 'users_tenant'
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    tenant_id = Column(CHAR(36),
-                       nullable=False,
-                       index=True)  # FK removed: cross-schema reference handled at application level
+    # Keep tenant_id for legacy compatibility but no longer enforce constraints
+    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
     
-    email = Column(String(120), index=True, nullable=False) # Uniqueness per tenant handled by UniqueConstraint
+    email = Column(String(120), unique=True, index=True, nullable=False)  # Now globally unique
     hashed_password = Column(String(255), nullable=False)
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
-
-    __table_args__ = (UniqueConstraint('tenant_id', 'email', name='uq_user_tenant_email'),)
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model

@@ -15,6 +15,7 @@ ALGORITHM = "HS256"
 # This can be expanded as needed.
 # Using a Pydantic model for this helps with validation when decoding.
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 class TokenPayload(BaseModel):
     sub: EmailStr # Subject (standard claim for user identifier)
@@ -22,6 +23,15 @@ class TokenPayload(BaseModel):
     tenant_schema: str # Database schema name for the tenant (e.g., "tenant_beauty_hub")
     role: UserRole
     exp: datetime # Expiration time (standard claim)
+    
+    # Enhanced user data to avoid database calls (optional for backward compatibility)
+    user_id: Optional[str] = None # User UUID as string
+    full_name: Optional[str] = None # User's full name
+    is_active: Optional[bool] = True # User active status - defaults to True for old tokens
+    
+    # Optional: Add more user data if needed
+    # phone: Optional[str] = None
+    # avatar_url: Optional[str] = None
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()

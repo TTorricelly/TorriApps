@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import select, delete, update, func # func for count
+from sqlalchemy import select, delete, update, func, text # func for count, text for raw SQL
 
 from fastapi import HTTPException, status
 
@@ -69,41 +69,35 @@ def _validate_professionals(db: Session, professional_ids: List[UUID], tenant_id
     return list(valid_professionals)
 
 # --- Category Services ---
-def create_category(db: Session, category_data: CategoryCreate, tenant_id: UUID, icon_path: Optional[str] = None) -> CategorySchema:
-    # Convert UUID to string for database comparison
-    tenant_id_str = str(tenant_id)
-    
-    # Check for unique category name within the tenant
-    stmt_check_unique = select(Category).where(Category.name == category_data.name, Category.tenant_id == tenant_id_str)
+def create_category(db: Session, category_data: CategoryCreate, icon_path: Optional[str] = None) -> CategorySchema:
+    # SIMPLIFIED: Check for unique category name globally (single schema)
+    stmt_check_unique = select(Category).where(Category.name == category_data.name)
     existing_category = db.execute(stmt_check_unique).scalars().first()
     if existing_category:
-        db.rollback()  # Ensure clean state before exception
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A category with the name '{category_data.name}' already exists in this tenant."
+            detail=f"A category with the name '{category_data.name}' already exists."
         )
 
     category_dict = category_data.model_dump()
     if icon_path:
         category_dict['icon_path'] = icon_path
     
-    db_category = Category(**category_dict, tenant_id=tenant_id_str)
+    db_category = Category(**category_dict)
     db.add(db_category)
     db.commit()
-    # Removed db.refresh() as it's causing issues with disconnected session
     return _add_icon_url_to_category(db_category)
 
-def get_category_by_id(db: Session, category_id: UUID, tenant_id: UUID) -> Category | None:
-    # Convert UUID to string for database comparison
+def get_category_by_id(db: Session, category_id: UUID) -> Category | None:
+    # SIMPLIFIED: Get category by ID only (no tenant filtering)
     category_id_str = str(category_id)
-    tenant_id_str = str(tenant_id)
-    
-    stmt = select(Category).where(Category.id == category_id_str, Category.tenant_id == tenant_id_str)
+    stmt = select(Category).where(Category.id == category_id_str)
     return db.execute(stmt).scalars().first()
 
-def get_categories_by_tenant(db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[CategorySchema]:
-    # Convert UUID to string for database comparison
-    stmt = select(Category).where(Category.tenant_id == str(tenant_id)).order_by(Category.display_order, Category.name).offset(skip).limit(limit)
+def get_all_categories(db: Session, skip: int = 0, limit: int = 100) -> List[CategorySchema]:
+    # SIMPLIFIED: Get all categories (no tenant filtering)
+    stmt = select(Category).order_by(Category.display_order, Category.name).offset(skip).limit(limit)
     categories = list(db.execute(stmt).scalars().all())
     return [_add_icon_url_to_category(category) for category in categories]
 
@@ -137,22 +131,19 @@ def update_category(db: Session, category_obj: Category, category_data: Category
     # Removed db.refresh() to avoid session issues
     return _add_icon_url_to_category(category_obj)
 
-def delete_category(db: Session, category_id: UUID, tenant_id: UUID) -> bool:
-    # Check if category exists and belongs to the tenant
-    db_category = get_category_by_id(db, category_id, tenant_id)
+def delete_category(db: Session, category_id: UUID) -> bool:
+    # SIMPLIFIED: Check if category exists (no tenant filtering)
+    db_category = get_category_by_id(db, category_id)
     if not db_category:
-        # Category doesn't exist - treat as successful deletion (idempotent)
-        # This handles cases where frontend cache is stale or concurrent deletions occurred
-        return True
+        return True  # Idempotent deletion
 
-    # Check if any services are associated with this category - convert UUIDs to strings
-    stmt_services_count = select(func.count(Service.id)).where(Service.category_id == str(category_id), Service.tenant_id == str(tenant_id))
+    # Check if any services are associated with this category
+    stmt_services_count = select(func.count(Service.id)).where(Service.category_id == str(category_id))
     services_count = db.execute(stmt_services_count).scalar_one()
 
     if services_count > 0:
         services_text = "serviço" if services_count == 1 else "serviços"
-        # Ensure transaction is properly handled before raising exception
-        db.rollback()  # Rollback any pending changes
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Não é possível excluir a categoria '{db_category.name}' pois ela possui {services_count} {services_text} associado(s). Por favor, remova ou reatribua os serviços primeiro."
@@ -167,32 +158,27 @@ def delete_category(db: Session, category_id: UUID, tenant_id: UUID) -> bool:
     return True
 
 # --- Service Services ---
-def create_service(db: Session, service_data: ServiceCreate, tenant_id: UUID) -> Service:
-    # Validate category_id
-    category = get_category_by_id(db, service_data.category_id, tenant_id)
+def create_service(db: Session, service_data: ServiceCreate, tenant_id: UUID = None) -> Service:
+    # SIMPLIFIED: Validate category_id (no tenant filtering)
+    category = get_category_by_id(db, service_data.category_id)
     if not category:
-        db.rollback()  # Ensure clean state before exception
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Category with ID {service_data.category_id} not found in this tenant.")
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Category with ID {service_data.category_id} not found.")
 
-    # Validate professionals (temporarily disabled due to relationship issues)
-    # valid_professionals = []
-    # if service_data.professional_ids:
-    #     valid_professionals = _validate_professionals(db, service_data.professional_ids, tenant_id)
-
-    # Check for unique service name within the tenant - convert UUID to string
-    stmt_check_unique = select(Service).where(Service.name == service_data.name, Service.tenant_id == str(tenant_id))
+    # Check for unique service name globally
+    stmt_check_unique = select(Service).where(Service.name == service_data.name)
     existing_service = db.execute(stmt_check_unique).scalars().first()
     if existing_service:
-        db.rollback()  # Ensure clean state before exception
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A service with the name '{service_data.name}' already exists in this tenant."
+            detail=f"A service with the name '{service_data.name}' already exists."
         )
 
     service_dict = service_data.model_dump(exclude={'professional_ids'})
     # Convert UUID fields to strings for MySQL compatibility
     service_dict['category_id'] = str(service_dict['category_id'])
-    db_service = Service(**service_dict, tenant_id=str(tenant_id))
+    db_service = Service(**service_dict)
 
     # Professionals relationship temporarily disabled
     # if valid_professionals:
@@ -203,11 +189,10 @@ def create_service(db: Session, service_data: ServiceCreate, tenant_id: UUID) ->
     # Removed db.refresh() to avoid session issues
     return db_service
 
-def get_service_with_details_by_id(db: Session, service_id: UUID, tenant_id: UUID) -> Service | None:
-    # Convert UUIDs to strings for database comparison
-    stmt = select(Service).where(Service.id == str(service_id), Service.tenant_id == str(tenant_id)).options(
+def get_service_with_details_by_id(db: Session, service_id: UUID) -> Service | None:
+    # SIMPLIFIED: Get service by ID only (no tenant filtering)
+    stmt = select(Service).where(Service.id == str(service_id)).options(
         joinedload(Service.category)
-        # selectinload(Service.professionals) # Temporarily disabled due to relationship issues
     )
     return db.execute(stmt).scalars().first()
 
@@ -218,18 +203,26 @@ def get_services_by_tenant(
     limit: int = 100,
     category_id: Optional[UUID] = None
 ) -> List[Service]:
-    # Convert UUIDs to strings for database comparison
-    stmt = select(Service).where(Service.tenant_id == str(tenant_id)).options(
-        joinedload(Service.category) # Use joinedload if category is usually accessed
-        # selectinload(Service.professionals) # Temporarily disabled due to relationship issues
+    # LEGACY: Keep for backward compatibility, but ignore tenant_id
+    return get_all_services(db, skip, limit, category_id)
+
+def get_all_services(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    category_id: Optional[UUID] = None
+) -> List[Service]:
+    # SIMPLIFIED: Get all services (no tenant filtering)
+    stmt = select(Service).options(
+        joinedload(Service.category)
     )
     if category_id:
         stmt = stmt.where(Service.category_id == str(category_id))
 
-    stmt = stmt.order_by(Service.name).offset(skip).limit(limit) # Added ordering
+    stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
 
-def update_service(db: Session, db_service: Service, service_data: ServiceUpdate, tenant_id: UUID) -> Service:
+def update_service(db: Session, db_service: Service, service_data: ServiceUpdate) -> Service:
     update_dict = service_data.model_dump(exclude_unset=True, exclude={'professional_ids'})
     
     # Convert UUID fields to strings for MySQL compatibility
@@ -237,44 +230,36 @@ def update_service(db: Session, db_service: Service, service_data: ServiceUpdate
         update_dict['category_id'] = str(update_dict['category_id'])
 
     if 'category_id' in update_dict and update_dict['category_id'] != db_service.category_id:
-        new_category = get_category_by_id(db, UUID(update_dict['category_id']), tenant_id)
+        new_category = get_category_by_id(db, UUID(update_dict['category_id']))
         if not new_category:
-            db.rollback()  # Ensure clean state before exception
+            db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"New category ID {update_dict['category_id']} not found.")
 
     # Check for unique name if name is being changed
     if 'name' in update_dict and update_dict['name'] != db_service.name:
         stmt_check_unique = select(Service).where(
             Service.name == update_dict['name'],
-            Service.tenant_id == str(tenant_id),
             Service.id != db_service.id
         )
         if db.execute(stmt_check_unique).scalars().first():
-            db.rollback()  # Ensure clean state before exception
+            db.rollback()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Service name '{update_dict['name']}' already exists.")
 
     for field, value in update_dict.items():
         setattr(db_service, field, value)
 
-    # Handle professional_ids if provided (temporarily disabled due to relationship issues)
-    # if service_data.professional_ids is not None: # Check if the key itself is provided
-    #     valid_professionals = _validate_professionals(db, service_data.professional_ids, tenant_id)
-    #     db_service.professionals = valid_professionals # SQLAlchemy handles M2M updates
-
     db.commit()
-    # Removed db.refresh() to avoid session issues
     # Re-fetch with relationships for the response
-    return get_service_with_details_by_id(db, UUID(db_service.id), tenant_id)
+    return get_service_with_details_by_id(db, UUID(db_service.id))
 
 
-def delete_service(db: Session, service_id: UUID, tenant_id: UUID) -> bool:
-    db_service = get_service_with_details_by_id(db, service_id, tenant_id) # Check existence and ownership
+def delete_service(db: Session, service_id: UUID) -> bool:
+    # SIMPLIFIED: Check if service exists (no tenant filtering)
+    db_service = get_service_with_details_by_id(db, service_id)
     if not db_service:
-        return False # Or raise 404
+        return False
 
-    # Disassociate professionals (temporarily disabled due to relationship issues)
-    # db_service.professionals.clear()
-
+    # Delete the service
     db.delete(db_service)
     db.commit()
     return True

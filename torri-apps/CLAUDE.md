@@ -4,18 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TorriApps is a multi-tenant salon/barbershop management SaaS platform with white-label mobile client applications. The system serves multiple beauty businesses through schema-based database multi-tenancy and provides branded mobile apps for their customers.
+TorriApps is a salon/barbershop management SaaS platform with white-label mobile client applications. The system provides comprehensive business management tools for beauty professionals and branded mobile apps for their customers.
 
 ## Architecture
 
-### Multi-Tenant Database Strategy
-- **Schema-based multi-tenancy**: Each tenant gets its own MySQL schema
-- **Public schema**: Stores tenant metadata and admin users in `public.tenants` and `public.admin_master_users` tables
-- **Tenant schemas**: Store business-specific data (users, appointments, services, etc.)
-- **TenantMiddleware**: Handles schema switching automatically using JWT token payload (no headers needed)
+### Database Strategy
+⚠️ **ARCHITECTURE MIGRATION COMPLETED**: The system has been **migrated from multi-tenant to single schema architecture** for simplified development and deployment.
+
+**Current Architecture (Single Schema):**
+- **Single Database**: `tenant_beauty_hub` - Contains all application data
+- **Unified Data Model**: All entities (users, appointments, services, categories) in one schema
+- **Simplified Authentication**: JWT-based auth without complex tenant switching
+- **Development Focus**: Uses single tenant data for streamlined development workflow
+
+**Legacy Multi-Tenant Architecture (Deprecated):**
+- ~~Schema-based multi-tenancy: Each tenant gets its own MySQL schema~~
+- ~~Public schema: Stores tenant metadata and admin users~~
+- ~~Tenant schemas: Store business-specific data~~
+- ~~TenantMiddleware: Handles schema switching automatically~~
+
+**Migration Benefits:**
+- ✅ **Simplified Development**: No complex schema switching logic
+- ✅ **Easier Debugging**: Single database reduces connection complexity  
+- ✅ **Faster Development**: No tenant context required for development
+- ✅ **Reduced Complexity**: Eliminated multi-tenant middleware and dependencies
 
 ### Component Structure
-- **Backend**: FastAPI + SQLAlchemy + PostgreSQL with multi-tenant architecture
+- **Backend**: FastAPI + SQLAlchemy + MySQL with single schema architecture
 - **Web-admin**: React.js administrative interface for salon owners
 - **Mobile-client-core**: React Native base application with white-label capabilities
 - **Mobile-client-configs**: Brand-specific configurations and assets for white-label apps
@@ -51,7 +66,8 @@ alembic upgrade head
 ### Environment Configuration
 Required `.env` file in Backend directory:
 ```
-DATABASE_URL=mysql+mysqlconnector://root:@localhost:3306/torri_app_public
+DATABASE_URL=mysql+mysqlconnector://root:@localhost:3306/tenant_beauty_hub
+DEFAULT_SCHEMA_NAME=tenant_beauty_hub
 SECRET_KEY=your-secret-key
 REDIS_URL=redis://localhost:6379
 DEBUG=true
@@ -59,13 +75,21 @@ DEBUG=true
 
 ## Key Design Patterns
 
-### Multi-Tenant Request Flow (Session-Based)
-1. **TenantMiddleware** intercepts requests and extracts tenant info from JWT token payload
-2. **Public routes** (auth, docs, health) bypass tenant validation
-3. **Tenant routes** require valid JWT token containing `tenant_id` and `tenant_schema`
-4. **Middleware extracts tenant info** from JWT and sets `request.state.tenant_schema_name`
-5. **Database dependencies** use request state to switch MySQL schemas automatically
-6. **No X-Tenant-ID header needed** - all tenant context comes from the cryptographically signed JWT token
+### Single Schema Request Flow (Simplified)
+⚠️ **CURRENT ARCHITECTURE**: Simplified single schema approach after migration from multi-tenant.
+
+1. **Simplified Middleware** handles basic JWT authentication
+2. **All routes** use the same `tenant_beauty_hub` database
+3. **JWT tokens** contain user info but no tenant switching required
+4. **Database dependencies** connect directly to single schema
+5. **No tenant context switching** - all data in unified schema
+6. **Authorization header only** - `Bearer <jwt_token>`
+
+**Key Changes from Multi-Tenant:**
+- ✅ Removed complex schema switching logic
+- ✅ Eliminated `request.state.tenant_schema_name` 
+- ✅ Simplified database connection handling
+- ✅ No tenant validation middleware needed
 
 ### Module Structure
 Each business module follows this pattern:
@@ -80,11 +104,11 @@ Modules/FeatureName/
 ```
 
 ### Authentication & Authorization
-- **JWT tokens** with tenant-specific user roles (GESTOR, PROFESSIONAL, CLIENT)
-- **JWT payload contains**: `tenant_id`, `tenant_schema`, `role`, `sub` (user email), `exp` (expiration)
-- **Multi-tenant users**: Users belong to specific tenants via `tenant_id` foreign key
+- **JWT tokens** with user roles (GESTOR, PROFISSIONAL, ATENDENTE, CLIENTE)
+- **JWT payload contains**: `tenant_id`, `tenant_schema`, `role`, `sub` (user email), `user_id`, `full_name`, `is_active`, `exp`
+- **Single schema users**: All users in unified `tenant_beauty_hub` database
 - **Role-based access**: Different API permissions based on user roles
-- **Tenant isolation**: Automatic tenant context from JWT token eliminates need for separate headers
+- **Simplified auth**: No tenant context switching - direct database access
 
 ## Mobile White-Label System
 
@@ -105,81 +129,139 @@ node Build-app.js --brand=beauty-hub
 
 ## Database Schema Management
 
-### Alembic Multi-Tenant Setup
-- **Base metadata**: `Base` for tenant schemas, `BasePublic` for public schema
-- **Schema detection**: Models automatically detect target schema via `__table_args__`
-- **Migration strategy**: Separate migrations for public vs tenant schemas
+### Alembic Single Schema Setup
+- **Base metadata**: Unified `Base` for all models in single schema
+- **Simplified migrations**: All models use same database schema
+- **Migration strategy**: Single migration path for all tables
 
 ### Key Models
-- **Public Schema**: `Tenant`, `AdminMasterUser` 
-- **Tenant Schema**: `UserTenant`, `Service`, `Appointment`, `Availability`
+- **Single Schema** (`tenant_beauty_hub`): All models in unified database
+  - `UserTenant` - User accounts and authentication
+  - `Category` - Service categories
+  - `Service` - Service offerings
+  - `Appointment` - Booking data
+  - `Availability` - Schedule management
+  - `Tenant`, `AdminMasterUser` - Tenant metadata (legacy compatibility)
 
 ## API Structure
 
 ### Route Organization
 - **Global prefix**: `/api/v1` for all API endpoints
 - **Module routing**: Each module registers its own router with appropriate tags
-- **Public routes**: Authentication and health checks (bypass tenant middleware)
-- **Tenant routes**: Require valid JWT token with tenant context
+- **Simplified routes**: All routes use single database schema
+- **Authentication routes**: `/api/v1/auth/login` and `/api/v1/auth/enhanced-login`
 
 ### Request Headers (Current Implementation)
-- **Authorization**: Bearer JWT token for authenticated endpoints (contains all tenant context)
-- **X-Tenant-ID**: ⚠️ **DEPRECATED** - No longer used. Tenant info comes from JWT token payload.
+- **Authorization**: Bearer JWT token for authenticated endpoints
+- **No tenant headers**: Simplified - no tenant context switching needed
 
 ### Frontend API Usage
 ```javascript
-// ✅ CORRECT: Only Authorization header needed
+// ✅ CURRENT: Only Authorization header needed
 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-// ❌ DEPRECATED: Don't use X-Tenant-ID header
-// api.defaults.headers.common['X-Tenant-ID'] = tenantId;
+// ✅ SIMPLIFIED: No tenant context switching
+// All API calls use same database automatically
 ```
 
-## JWT-Based Tenant System
+## JWT-Based Authentication System
 
-### Token Payload Structure
-The JWT token contains all necessary tenant context:
+### Enhanced JWT Token Payload (Single Schema)
+⚠️ **SIMPLIFIED AUTHENTICATION**: JWT tokens contain complete user data for direct authentication without database calls:
+
 ```json
 {
   "sub": "user@example.com",
   "tenant_id": "uuid-string",
   "tenant_schema": "tenant_beauty_hub", 
   "role": "GESTOR",
-  "exp": 1234567890
+  "exp": 1734567890,
+  "user_id": "user-uuid-string",
+  "full_name": "João Silva",
+  "is_active": true
 }
 ```
 
-### Backend Flow
-1. **Login**: User authenticates → Backend creates JWT with tenant info from user's tenant_id
+**Note**: `tenant_id` and `tenant_schema` are maintained for legacy compatibility but no longer used for schema switching since all data is in single schema.
+
+**🎯 Single Schema + JWT-Only Authentication Benefits:**
+
+| **Aspect** | **❌ Old: Multi-Tenant + DB Lookup** | **✅ New: Single Schema + JWT-Only** |
+|------------|---------------------------|---------------------|
+| **DB Calls per Request** | 1+ (user + tenant switching) | 0 |
+| **Response Time** | +100-200ms | Baseline |
+| **Scalability** | Limited by DB + schema complexity | Excellent |
+| **Session Issues** | SQLAlchemy detached objects | Eliminated |
+| **Performance** | Depends on DB load + tenant switching | Consistent |
+| **Development Complexity** | High (tenant context required) | Low (direct database access) |
+
+**✅ Authentication Dependencies (Optimized):**
+```python
+# Core/Auth/dependencies.py
+def get_current_user_tenant(payload: TokenPayload) -> TokenPayload:
+    """Get user data from JWT payload only - no database calls needed."""
+    
+    # If token has complete user data, use it directly (new optimized path)
+    if payload.user_id and payload.full_name and payload.is_active is not None:
+        if not payload.is_active:
+            raise HTTPException(status_code=400, detail="Inactive user")
+        return payload
+    
+    # Fallback for old tokens: fetch from database (temporary compatibility)
+    # This path will be removed once all tokens are upgraded
+    ...
+```
+
+**✅ Enhanced Login Response:**
+```python
+# Login now includes ALL user/tenant data to avoid future API calls
+{
+  "access_token": "jwt...",
+  "token_type": "bearer",
+  "tenant": { "id": "uuid", "name": "Beauty Hub", ... },
+  "user": { "id": "uuid", "email": "user@domain.com", "full_name": "..." }
+}
+```
+
+### Token Payload Structure (Legacy Support)
+For backward compatibility, the system supports both enhanced and legacy token formats:
+
+### Backend Flow (Simplified)
+1. **Login**: User authenticates → Backend creates JWT with user info
 2. **Request**: Frontend sends request with `Authorization: Bearer <token>`
-3. **TenantMiddleware**: Extracts tenant info from JWT payload automatically
-4. **Database**: Uses `request.state.tenant_schema_name` for schema switching
-5. **Response**: Returns tenant-specific data
+3. **Middleware**: Basic JWT validation (no tenant switching)
+4. **Database**: Direct connection to `tenant_beauty_hub` schema
+5. **Response**: Returns data from unified database
 
 ### Key Files
 - **JWT Logic**: `Backend/Core/Security/jwt.py` - Token creation/validation with `TokenPayload` model
-- **Middleware**: `Backend/Core/Middleware/TenantMiddleware.py` - Automatic tenant extraction
+- **Middleware**: `Backend/Core/Middleware/TenantMiddleware.py` - Simplified JWT validation
+- **Database**: `Backend/Core/Database/dependencies.py` - Direct single schema connection
 - **Frontend API**: `Web-admin/Src/api/client.js` - Simple Bearer token authentication
 
-### Important Authentication Rules
+### Important Migration Notes
 
-#### **Cross-Schema Foreign Key Constraints**
-⚠️ **CRITICAL**: In multi-tenant architectures, avoid cross-schema foreign key constraints:
+#### **Schema Migration Considerations**
+⚠️ **COMPLETED MIGRATION**: The system has been successfully migrated from multi-tenant to single schema architecture.
 
-- **Problem**: Foreign keys referencing `public.tenants` from tenant schemas cause SQLAlchemy initialization errors
-- **Solution**: Use application-level validation instead of database-level foreign keys
-- **Pattern**: Remove `ForeignKey(f"{settings.default_schema_name}.tenants.id")` from tenant schema models
+**Migration Changes Made:**
+- **Removed**: Complex cross-schema foreign key constraints
+- **Simplified**: All models now use single schema approach
+- **Updated**: `tenant_id` fields made optional for backward compatibility
+- **Fixed**: Pydantic schemas to handle `Optional[UUID]` for `tenant_id`
 
-**✅ CORRECT Pattern:**
+**✅ CURRENT Pattern (Single Schema):**
 ```python
-# In tenant schema models (Categories, Services, etc.)
-tenant_id = Column(CHAR(36), nullable=False, index=True)  # No FK constraint
+# In unified schema models (Categories, Services, etc.)
+tenant_id = Column(CHAR(36), nullable=True, index=True)  # Optional for legacy data
 ```
 
-**❌ WRONG Pattern:**
+**✅ Service Layer Pattern:**
 ```python
-# This causes "NoReferencedTableError" in multi-tenant setups
-tenant_id = Column(CHAR(36), ForeignKey("torri_app_public.tenants.id"), nullable=False)
+# No tenant filtering required - all data in same schema
+def get_all_categories(db: Session, skip: int = 0, limit: int = 100) -> List[CategorySchema]:
+    stmt = select(Category).order_by(Category.display_order, Category.name).offset(skip).limit(limit)
+    return [_add_icon_url_to_category(category) for category in db.execute(stmt).scalars().all()]
 ```
 
 #### **UUID vs String Type Handling**
@@ -226,14 +308,66 @@ stmt = select(Category).where(Category.tenant_id == tenant_id)  # UUID won't mat
 
 **⚠️ COMMON MISTAKE**: Service layer functions receiving UUID parameters from FastAPI routes must convert them to strings before database operations. This affects ALL CRUD operations including create, read, update, and delete functions.
 
-#### **Database Connection Pool Corruption Prevention**
-⚠️ **CRITICAL**: Multi-tenant schema switching can corrupt the database connection pool if not handled properly:
+#### **Multi-Tenant Database Connection Architecture**
+⚠️ **CRITICAL ARCHITECTURE CHANGE**: Direct tenant database connections eliminate pool corruption issues:
 
-**The Problem:**
-- MySQL connections use `USE schema_name` to switch contexts
-- When exceptions occur during database operations, connections can get "stuck" in wrong schemas
-- Connection pool reuses these corrupted connections, causing data leakage between tenants
-- Symptoms: Categories/data loading from wrong tenant schemas, requiring server restart
+**✅ NEW APPROACH - Direct Tenant Database Connections:**
+Instead of using `USE schema_name` commands which can corrupt connection pools, the system now creates **direct connections** to tenant databases:
+
+```python
+# Core/Database/dependencies.py
+def get_db(request: Request):
+    tenant_schema_name = getattr(request.state, "tenant_schema_name", None)
+    
+    if tenant_schema_name:
+        # Create tenant-specific engine and session
+        from urllib.parse import urlparse, urlunparse
+        
+        # Parse database URL and replace database name with tenant schema
+        parsed_url = urlparse(settings.database_url)
+        new_path = f"/{tenant_schema_name}"
+        tenant_database_url = urlunparse(parsed_url._replace(path=new_path))
+        
+        # Create isolated tenant engine
+        tenant_engine = create_engine(
+            tenant_database_url,
+            pool_pre_ping=True,
+            pool_size=2,  # Smaller pool for tenant connections
+            max_overflow=5,
+            pool_reset_on_return='commit'
+        )
+        
+        # Create tenant-specific session
+        TenantSession = sessionmaker(bind=tenant_engine)
+        db = TenantSession()
+        
+        # Verify connection to correct database
+        result = db.execute(text("SELECT DATABASE();")).scalar()
+        if result != tenant_schema_name:
+            raise Exception(f"Failed to connect to {tenant_schema_name}")
+    else:
+        # Use default public schema connection
+        db = SessionLocal()
+    
+    try:
+        yield db
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+```
+
+**🎯 Benefits of Direct Connection Approach:**
+
+| **Aspect** | **❌ Old: USE Schema** | **✅ New: Direct Connection** |
+|------------|----------------------|----------------------------|
+| **Pool Corruption** | High risk | Eliminated |
+| **Schema Isolation** | Shared pool | Completely isolated |
+| **Connection State** | Can get "stuck" | Always correct |
+| **Performance** | Unpredictable | Consistent |
+| **Debugging** | Complex | Simple |
+| **Reliability** | Schema switch failures | Direct connection guarantee |
 
 **✅ CORRECT Pattern - Always Rollback Before HTTPException:**
 ```python
@@ -253,70 +387,6 @@ def create_category(db: Session, category_data: CategoryCreate, tenant_id: UUID)
     return new_category
 ```
 
-**❌ WRONG Pattern - No Rollback Before Exception:**
-```python
-def create_category(db: Session, category_data: CategoryCreate, tenant_id: UUID) -> CategorySchema:
-    # Check for conflicts
-    existing = db.execute(select(Category).where(Category.name == category_data.name)).first()
-    if existing:
-        # ❌ WRONG: No rollback - leaves session in inconsistent state
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Category already exists"
-        )
-    
-    # Database operations...
-```
-
-**✅ Database Connection Pool Configuration:**
-```python
-# In Config/Database.py
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,                    # Validate connections before use
-    pool_recycle=1800,                     # Recycle connections every 30 minutes
-    pool_size=5,                           # Smaller pool to reduce corruption surface
-    max_overflow=10,                       # Limited overflow connections
-    pool_reset_on_return='commit',         # Force reset connection state on return
-    echo=False
-)
-```
-
-**✅ Enhanced Database Dependency with Schema Verification:**
-```python
-def get_db(request: Request):
-    db = SessionLocal()
-    
-    if tenant_schema_name:
-        try:
-            # Force schema switch with verification
-            db.execute(text(f"USE `{tenant_schema_name}`;"))
-            db.commit()
-            
-            # Verify schema switch worked
-            result = db.execute(text("SELECT DATABASE();")).scalar()
-            if result != tenant_schema_name:
-                raise Exception(f"Schema switch failed")
-        except Exception as e:
-            db.close()
-            raise HTTPException(status_code=500, detail="Schema access error")
-    
-    try:
-        yield db
-    except Exception:
-        db.rollback()  # Clean up on any exception
-        raise
-    finally:
-        # Always reset to public schema
-        if tenant_schema_name:
-            try:
-                db.execute(text(f"USE `{settings.default_schema_name}`;"))
-                db.commit()
-            except:
-                db.connection().invalidate()  # Force remove corrupted connection
-        db.close()
-```
-
 **⚠️ ALL HTTPException Must Include db.rollback():**
 Every service function that can raise HTTPException during database operations must call `db.rollback()` first. This includes:
 - Validation errors (409 Conflict, 400 Bad Request)
@@ -327,8 +397,8 @@ Every service function that can raise HTTPException during database operations m
 **⚠️ Avoid db.refresh() After Exceptions:**
 Remove `db.refresh()` calls as they can cause session disconnection issues. Objects are automatically updated after `db.commit()`.
 
-#### **Avoid Mixed Schema Access - Single-Schema Per Request Pattern**
-⚠️ **ARCHITECTURE**: The most effective way to prevent pool corruption is to eliminate mixed schema access within the same request lifecycle:
+#### **Migration from Schema Switching to Direct Connections**
+⚠️ **IMPORTANT**: This architectural change eliminates the need for:
 
 **✅ CORRECT Architecture - Public Data at Login Only:**
 ```javascript

@@ -24,35 +24,27 @@ service_professionals_association = Table(
 
 class Category(Base):
     __tablename__ = "service_categories"
-    # This table will also be in the tenant's schema.
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)  # Now globally unique in single schema
     display_order = Column(Integer, nullable=False, default=0)
     icon_path = Column(String(255), nullable=True)
-    # tenant_id links to the public.tenants table, establishing ownership.
-    # Cross-schema foreign keys are handled at application level for multi-tenant isolation
-    tenant_id = Column(CHAR(36), nullable=False, index=True)
+    # Keep tenant_id for legacy compatibility but no longer enforce constraints
+    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        UniqueConstraint('tenant_id', 'name', name='uq_category_tenant_name'),
-    )
-
     def __repr__(self):
-        return f"<Category(id={self.id}, name='{self.name}', tenant_id='{self.tenant_id}')>"
+        return f"<Category(id={self.id}, name='{self.name}')>"
 
 class Service(Base):
     __tablename__ = "services"
-    # This table will be in the tenant's schema.
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    name = Column(String(150), nullable=False)
-    description = Column(Text, nullable=True)  # Changed to Text for rich content
-    duration_minutes = Column(Integer, nullable=False) # Duration in minutes
-    price = Column(Numeric(10, 2), nullable=False) # Example: 12345.67
-    # commission_percentage stores values like 10.50 for 10.50%
+    name = Column(String(150), nullable=False)  # Will enforce uniqueness at application level if needed
+    description = Column(Text, nullable=True)
+    duration_minutes = Column(Integer, nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
     commission_percentage = Column(Numeric(5, 2), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     
@@ -63,23 +55,18 @@ class Service(Base):
     image_crespo = Column(String(255), nullable=True)
 
     category_id = Column(CHAR(36), ForeignKey("service_categories.id"), nullable=False, index=True)
-    # tenant_id links to the public.tenants table, establishing ownership.
-    # Cross-schema foreign keys are handled at application level for multi-tenant isolation
-    tenant_id = Column(CHAR(36), nullable=False, index=True)
+    # Keep tenant_id for legacy compatibility but no longer enforce constraints
+    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
 
     category = relationship("Category", back_populates="services")
 
     # Many-to-many relationship with UserTenant (Professionals)
-    # Temporarily commented out to resolve initialization issues
+    # Can be uncommented now that we're in single schema
     # professionals = relationship(
     #     "UserTenant",
     #     secondary=service_professionals_association,
     #     back_populates="services_offered"
     # )
 
-    __table_args__ = (
-        UniqueConstraint('tenant_id', 'name', name='uq_service_tenant_name'),
-    )
-
     def __repr__(self):
-        return f"<Service(id={self.id}, name='{self.name}', tenant_id='{self.tenant_id}')>"
+        return f"<Service(id={self.id}, name='{self.name}')>"

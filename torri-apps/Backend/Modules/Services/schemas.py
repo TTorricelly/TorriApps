@@ -30,7 +30,7 @@ class CategoryUpdate(BaseModel): # All fields optional for update
 
 class CategorySchema(CategoryBase): # Renamed from Category to CategorySchema
     id: UUID
-    tenant_id: UUID # Included for completeness, though often implicit in tenant context
+    tenant_id: Optional[UUID] = None  # Optional for single schema architecture
     icon_path: Optional[str] = None
     icon_url: Optional[str] = None  # Computed field for frontend
 
@@ -66,7 +66,7 @@ class ServiceUpdate(BaseModel): # All fields optional for update
 
 class ServiceSchema(ServiceBase): # Renamed from Service to ServiceSchema. Standard service response model
     id: UUID
-    tenant_id: UUID # Included for completeness
+    tenant_id: Optional[UUID] = None  # Optional for single schema architecture
     image_liso: Optional[str] = None
     image_ondulado: Optional[str] = None
     image_cacheado: Optional[str] = None

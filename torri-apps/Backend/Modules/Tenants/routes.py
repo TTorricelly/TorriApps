@@ -13,15 +13,22 @@ from .services import TenantService
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
+# DEPRECATED: This endpoint is no longer needed as tenant data is included in JWT
+# and provided in the enhanced login response. Keeping for backward compatibility
+# but should be removed in future versions.
 @router.get("/me", response_model=TenantSchema)
-async def get_current_tenant(
+async def get_current_tenant_deprecated(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_public_db)
 ):
     """
-    Get current user's tenant information.
-    Uses the tenant_id from the JWT token directly.
-    Access public schema since tenant data is stored there.
+    DEPRECATED: Get current user's tenant information.
+    
+    This endpoint is deprecated as tenant data is now included directly in:
+    1. JWT token payload (for session-based access)
+    2. Enhanced login response (stored in frontend session)
+    
+    Use the tenant data from your session storage instead of calling this API.
     """
     from Core.Security.jwt import decode_access_token
     from jose import JWTError

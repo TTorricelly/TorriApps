@@ -2,7 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
 const getAuthToken = () => {
-  return useAuthStore.getState().accessToken;
+  // Use the enhanced token validation method
+  return useAuthStore.getState().getValidToken();
 };
 
 export const api = axios.create({
@@ -33,11 +34,15 @@ api.interceptors.response.use(
   response => response,
   async error => {
     if (error.response?.status === 401) {
+      console.log('401 Unauthorized - Token expired or invalid');
+      
       // Clear auth state and redirect to login
       useAuthStore.getState().clearAuth();
       
       // Only redirect if we're not already on the login page
       if (window.location.pathname !== '/login') {
+        // Show a brief message before redirecting
+        console.log('Sessão expirada. Redirecionando para login...');
         window.location.href = '/login';
       }
     }

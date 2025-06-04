@@ -3,29 +3,33 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from .Settings import settings
 
-# Configure engine with proper connection pool settings for multi-tenant schema switching
+# SIMPLIFIED: Single schema configuration - no complex multi-tenant pool management needed
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,  # Validates connections before use
-    pool_recycle=1800,   # Recycle connections every 30 minutes (more aggressive)
-    pool_size=5,         # Smaller pool size to reduce state corruption
-    max_overflow=10,     # Reduced overflow to prevent too many concurrent connections
-    pool_reset_on_return='commit',  # Force reset connection state on return to pool
-    echo=False           # Set to True for SQL debugging
+    pool_pre_ping=True,          # Validates connections before use
+    pool_recycle=3600,           # Recycle connections every hour
+    pool_size=10,                # Reduced pool size for single schema
+    max_overflow=15,             # Reduced overflow for single schema
+    pool_reset_on_return='commit',  # Reset connection state on return
+    pool_timeout=30,             # Max wait time for connection from pool
+    echo=settings.debug,         # Show SQL in debug mode
+    
+    # Enhanced connection arguments for MySQL
+    connect_args={
+        "charset": "utf8mb4",
+        "use_unicode": True,
+        "autocommit": False,
+        "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO",
+    }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base para modelos de tenant-specific schemas
+# Single Base for all models - no need for separate Public/Tenant bases
 Base = declarative_base()
 
-# Base para modelos do schema público
-# Adicionar metadados para o schema publico, se necessário para Alembic
-# metadata_public = MetaData(schema=settings.default_schema_name)
-# BasePublic = declarative_base(metadata=metadata_public)
-# Simplesmente criar outra base pode ser suficiente e o schema é definido no modelo.
-BasePublic = declarative_base()
+# Legacy BasePublic alias for backward compatibility during migration
+BasePublic = Base
 
-# Note: Model imports are handled in migrations/env.py to avoid circular imports
-# The models are imported there to ensure Base.metadata and BasePublic.metadata are populated
-# when running Alembic operations
+# Note: All models now use the same Base and target the same schema
+# Model imports are handled in migrations/env.py to avoid circular imports
 
