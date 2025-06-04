@@ -64,7 +64,7 @@ def get_professional_availability_slots_endpoint(
     # or a simpler check if professional_user_id_managed exists in tenant.
     # For now, assuming get_current_user_tenant is enough for basic tenant validation.
     # More specific validation of professional_user_id_managed:
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == professional_user_id_managed, UserTenant.tenant_id == requesting_user.tenant_id).first()
+    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
 
@@ -128,7 +128,7 @@ def get_professional_breaks_endpoint(
     requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
     db: Annotated[Session, Depends(get_db)] = None
 ):
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == professional_user_id_managed, UserTenant.tenant_id == requesting_user.tenant_id).first()
+    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
 
@@ -190,7 +190,7 @@ def get_professional_blocked_times_endpoint(
     requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
     db: Annotated[Session, Depends(get_db)] = None
 ):
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == professional_user_id_managed, UserTenant.tenant_id == requesting_user.tenant_id).first()
+    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
 

@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import Optional
 from datetime import time, date # Ensure these are imported from datetime
 
-from .constants import DayOfWeek, AvailabilityBlockType
+from .constants import DayOfWeek
 
 # --- ProfessionalAvailability Schemas ---
 class ProfessionalAvailabilityBase(BaseModel):
@@ -11,7 +11,6 @@ class ProfessionalAvailabilityBase(BaseModel):
     start_time: time
     end_time: time
 
-    @model_validator(mode='after')
     def validate_start_end_time(cls, values):
         start, end = values.start_time, values.end_time
         if start and end and start >= end:
@@ -37,7 +36,6 @@ class ProfessionalBreakBase(BaseModel):
     end_time: time
     name: Optional[str] = Field(None, max_length=100, example="Lunch Break")
 
-    @model_validator(mode='after')
     def validate_start_end_time(cls, values):
         start, end = values.start_time, values.end_time
         if start and end and start >= end:
@@ -58,25 +56,12 @@ class ProfessionalBreakSchema(ProfessionalBreakBase):
 
 # --- ProfessionalBlockedTime Schemas ---
 class ProfessionalBlockedTimeBase(BaseModel):
-    block_date: date
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
-    block_type: AvailabilityBlockType
+    blocked_date: date
+    start_time: time
+    end_time: time
+    block_type: str
     reason: Optional[str] = Field(None, max_length=255, example="Doctor's appointment")
 
-    @model_validator(mode='after')
-    def validate_blocked_time_based_on_type(cls, values):
-        block_type, start, end = values.block_type, values.start_time, values.end_time
-
-        if block_type == AvailabilityBlockType.DAY_OFF:
-            if start is not None or end is not None:
-                raise ValueError("For DAY_OFF, start_time and end_time must be null.")
-        elif block_type == AvailabilityBlockType.BLOCKED_SLOT:
-            if start is None or end is None:
-                raise ValueError("For BLOCKED_SLOT, start_time and end_time are required.")
-            if start >= end:
-                raise ValueError("For BLOCKED_SLOT, start_time must be before end_time.")
-        return values
 
 class ProfessionalBlockedTimeCreate(ProfessionalBlockedTimeBase):
     pass

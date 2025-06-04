@@ -188,9 +188,7 @@ export default function ServicesPage() {
               <Typography variant="h4" className="text-text-primary">
                 Catálogo de Serviços
               </Typography>
-              <Typography className="text-text-secondary mt-1">
-                Gerencie os serviços oferecidos por categoria
-              </Typography>
+           
             </div>
           </div>
 

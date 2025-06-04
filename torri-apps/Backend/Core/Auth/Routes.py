@@ -52,7 +52,7 @@ async def login_for_access_token(
     # user.tenant_id is UUID, user.role is Enum
     token_data = {
         "sub": user.email,
-        "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
+        "tenant_id": str(user.tenant_id) if user.tenant_id else "default", # Convert UUID to string for JWT
         "tenant_schema": tenant_schema, # Include schema name for direct access
         "role": user.role.value, # Convert Enum to string value for JWT
         # Additional user data to avoid DB calls
@@ -95,7 +95,7 @@ async def enhanced_login_for_access_token(
     # Also get tenant data from public schema for the response
     from Modules.Tenants.services import TenantService
     tenant_data = None
-    if user:
+    if user and user.tenant_id:
         tenant_data = TenantService.get_tenant_by_id(db, user.tenant_id)
     
     if not user:
@@ -118,7 +118,7 @@ async def enhanced_login_for_access_token(
     # user.tenant_id is UUID, user.role is Enum
     token_data = {
         "sub": user.email,
-        "tenant_id": str(user.tenant_id), # Convert UUID to string for JWT
+        "tenant_id": str(user.tenant_id) if user.tenant_id else "default", # Convert UUID to string for JWT
         "tenant_schema": tenant_schema, # Include schema name for direct access
         "role": user.role.value, # Convert Enum to string value for JWT
         # Additional user data to avoid DB calls
@@ -131,18 +131,33 @@ async def enhanced_login_for_access_token(
         data=token_data, expires_delta=access_token_expires
     )
 
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer",
-        "tenant_id": user.tenant_id,
-        "tenant": {
+    # Prepare tenant info
+    tenant_info = None
+    if tenant_data:
+        tenant_info = {
             "id": tenant_data.id,
             "name": tenant_data.name,
             "slug": tenant_data.slug,
             "logo_url": tenant_data.logo_url,
             "primary_color": tenant_data.primary_color,
             "block_size_minutes": tenant_data.block_size_minutes
-        },
+        }
+    else:
+        # Default tenant info for single schema mode
+        tenant_info = {
+            "id": user.tenant_id or "default",
+            "name": "Default Tenant",
+            "slug": "default",
+            "logo_url": None,
+            "primary_color": "#00BFFF",
+            "block_size_minutes": 30
+        }
+
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "tenant_id": user.tenant_id,
+        "tenant": tenant_info,
         "user": {
             "id": user.id,
             "email": user.email,

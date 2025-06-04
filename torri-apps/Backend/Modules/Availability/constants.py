@@ -1,23 +1,30 @@
 import enum
+from datetime import time
 
-class DayOfWeek(enum.IntEnum):
+class DayOfWeek(str, enum.Enum):
     """
-    Represents the day of the week, consistent with Python's datetime.weekday()
-    (Monday=0, Sunday=6).
+    Represents the day of the week as string values matching the database enum.
+    Using lowercase to match database schema.
     """
-    MONDAY = 0
-    TUESDAY = 1
-    WEDNESDAY = 2
-    THURSDAY = 3
-    FRIDAY = 4
-    SATURDAY = 5
-    SUNDAY = 6
+    MONDAY = "monday"
+    TUESDAY = "tuesday" 
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
 
 class AvailabilityBlockType(str, enum.Enum):
     """
-    Defines the type of a time block for a professional.
-    BLOCKED_SLOT: A specific time range on a given day is blocked.
-    DAY_OFF: The entire day is marked as off.
+    Represents the type of blocked time/unavailability.
     """
-    BLOCKED_SLOT = "BLOCKED_SLOT"
-    DAY_OFF = "DAY_OFF"
+    BREAK = "break"           # Short break (coffee, bathroom, etc.)
+    VACATION = "vacation"     # Vacation days
+    SICK_LEAVE = "sick_leave" # Sick leave
+    OTHER = "other"           # Any other type of unavailability
+
+# Common time constants (optional, for convenience)
+BUSINESS_START_TIME = time(9, 0)   # 9:00 AM
+BUSINESS_END_TIME = time(18, 0)    # 6:00 PM
+LUNCH_START_TIME = time(12, 0)     # 12:00 PM
+LUNCH_END_TIME = time(13, 0)       # 1:00 PM

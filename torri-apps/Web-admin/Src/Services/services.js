@@ -9,6 +9,13 @@ export const servicesApi = {
     return response.data;
   },
 
+  // Get all services from all categories
+  getAllServices: async () => {
+    // Since there's no /services/all endpoint, we get services without category filter
+    const response = await api.get('/services');
+    return response.data;
+  },
+
   // Get service by ID
   getById: async (id) => {
     const response = await api.get(`/services/${id}`);

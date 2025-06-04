@@ -23,6 +23,9 @@ class UserTenant(Base):
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
+    
+    # Photo fields for professionals
+    photo_path = Column(String(500), nullable=True)  # Path to uploaded photo file
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model
@@ -53,5 +56,43 @@ class UserTenant(Base):
     #     cascade="all, delete-orphan"
     # )
 
+    # Professional-specific relationships - commented out to avoid circular imports
+    # Will be added dynamically after models are loaded
+    # availability_schedule = relationship(
+    #     "ProfessionalAvailability",
+    #     back_populates="professional",
+    #     cascade="all, delete-orphan"
+    # )
+    
+    # blocked_times = relationship(
+    #     "ProfessionalBlockedTime", 
+    #     back_populates="professional",
+    #     cascade="all, delete-orphan"
+    # )
+    
+    # recurring_breaks = relationship(
+    #     "ProfessionalBreak",
+    #     back_populates="professional", 
+    #     cascade="all, delete-orphan"
+    # )
+
     def __repr__(self):
         return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
+
+# Configure the relationship after the class definition to avoid circular imports
+def _configure_user_service_relationship():
+    """Configure the services_offered relationship after all models are loaded."""
+    try:
+        from Modules.Services.models import service_professionals_association
+        UserTenant.services_offered = relationship(
+            "Service",
+            secondary=service_professionals_association,
+            back_populates="professionals",
+            lazy="select"
+        )
+    except ImportError:
+        # If Services module isn't available, create an empty relationship
+        UserTenant.services_offered = []
+
+# Call the configuration function
+_configure_user_service_relationship()

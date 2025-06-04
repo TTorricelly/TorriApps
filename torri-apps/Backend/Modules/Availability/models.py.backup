@@ -19,7 +19,7 @@ class ProfessionalAvailability(Base):
     # Cross-schema foreign keys are handled at application level for multi-tenant isolation
     tenant_id = Column(CHAR(36), nullable=False, index=True)
 
-    day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
+    day_of_week = Column(Enum(DayOfWeek), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
     end_time = Column(Time, nullable=False)   # Format: HH:MM:SS
 
@@ -43,7 +43,7 @@ class ProfessionalBreak(Base):
     # Cross-schema foreign keys are handled at application level for multi-tenant isolation
     tenant_id = Column(CHAR(36), nullable=False, index=True)
 
-    day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
+    day_of_week = Column(Enum(DayOfWeek), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
     end_time = Column(Time, nullable=False)   # Format: HH:MM:SS
     name = Column(String(100), nullable=True, default="Break") # Optional name, e.g., "Lunch Break"
@@ -68,17 +68,17 @@ class ProfessionalBlockedTime(Base):
     # Cross-schema foreign keys are handled at application level for multi-tenant isolation
     tenant_id = Column(CHAR(36), nullable=False, index=True)
 
-    blocked_date = Column(Date, nullable=False)
-    start_time = Column(Time, nullable=False) # Nullable if block_type is DAY_OFF
-    end_time = Column(Time, nullable=False)   # Nullable if block_type is DAY_OFF
-    block_type = Column(String(20), nullable=True, default="other")
+    block_date = Column(Date, nullable=False)
+    start_time = Column(Time, nullable=True) # Nullable if block_type is DAY_OFF
+    end_time = Column(Time, nullable=True)   # Nullable if block_type is DAY_OFF
+    block_type = Column(Enum(AvailabilityBlockType), nullable=False)
     reason = Column(String(255), nullable=True) # Optional reason, e.g., "Doctor's appointment", "Public Holiday"
 
     # Relationship back to UserTenant (Professional)
     # professional = relationship("UserTenant", back_populates="blocked_times") # Define 'blocked_times' in UserTenant
 
     __table_args__ = (
-        UniqueConstraint('professional_user_id', 'blocked_date', 'start_time', 'end_time', 'block_type', name='uq_prof_blocked_date_slot_type'),
+        UniqueConstraint('professional_user_id', 'block_date', 'start_time', 'end_time', 'block_type', name='uq_prof_block_date_slot_type'),
         # Add CHECK constraint for start_time/end_time nullability based on block_type if DB supports it,
         # otherwise, this must be validated at the application/schema level.
         # E.g., CHECK ((block_type = 'DAY_OFF' AND start_time IS NULL AND end_time IS NULL) OR
@@ -86,4 +86,4 @@ class ProfessionalBlockedTime(Base):
     )
 
     def __repr__(self):
-        return f"<ProfessionalBlockedTime(id={self.id}, prof_id='{self.professional_user_id}', date='{self.blocked_date}', type='{self.block_type}'>"
+        return f"<ProfessionalBlockedTime(id={self.id}, prof_id='{self.professional_user_id}', date='{self.block_date}', type='{self.block_type.value}')>"
