@@ -19,14 +19,13 @@ import {
   Avatar,
 } from '@material-tailwind/react';
 import {
-  PlusIcon, // Added PlusIcon back
-  // PencilIcon, // No longer needed
-  // TrashIcon, // No longer needed
+  PlusIcon,
   MagnifyingGlassIcon,
-  UserIcon
+  UserIcon,
+  TrashIcon // Added TrashIcon
 } from '@heroicons/react/24/outline';
 
-import { clientsApi } from '../../Services/clients.js'; // Correctly import clientsApi
+import { clientsApi } from '../../Services/clients.js';
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
 
 function ClientsPage() { // Renamed component and removed default export from here
@@ -37,10 +36,9 @@ function ClientsPage() { // Renamed component and removed default export from he
   // const [allServices, setAllServices] = useState([]); // Removed
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  // const [serviceFilter, setServiceFilter] = useState([]); // Removed
   const [isLoading, setIsLoading] = useState(true);
-  // const [deleteDialog, setDeleteDialog] = useState({ open: false, professional: null }); // Removed
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, client: null }); // Added deleteDialog state
 
   // Load data on component mount
   useEffect(() => {
@@ -75,9 +73,29 @@ function ClientsPage() { // Renamed component and removed default export from he
   //   }
   // };
 
+  const handleDeleteClient = (client) => {
+    setDeleteDialog({ open: true, client });
+  };
+
+  const confirmDeleteClient = async () => {
+    if (!deleteDialog.client) return;
+
+    try {
+      await clientsApi.deleteClient(deleteDialog.client.id);
+      showAlert('Cliente excluído com sucesso!', 'success');
+      loadClients(); // Reload clients list
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      const message = error.response?.data?.detail || 'Falha ao excluir cliente';
+      showAlert(message, 'error');
+    } finally {
+      setDeleteDialog({ open: false, client: null });
+    }
+  };
+
   // Filter clients based on search query and status
-  const filteredClients = useMemo(() => { // Renamed variable
-    let filtered = clients; // Use clients state
+  const filteredClients = useMemo(() => {
+    let filtered = clients;
 
     // Filter by search query (name or email)
     if (searchQuery.trim()) {
@@ -253,12 +271,11 @@ function ClientsPage() { // Renamed component and removed default export from he
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bg-tertiary">
-                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th><th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th><th className="text-left p-4 text-text-primary font-semibold">E-mail</th><th className="text-left p-4 text-text-primary font-semibold">Telefone</th>{/* Added Telefone */}<th className="text-left p-4 text-text-primary font-semibold">Status</th>
-                    {/* <th className="text-left p-4 text-text-primary font-semibold">Ações</th> Removed Actions Column */}
+                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th><th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th><th className="text-left p-4 text-text-primary font-semibold">E-mail</th><th className="text-left p-4 text-text-primary font-semibold">Telefone</th>{/* Added Telefone */}<th className="text-left p-4 text-text-primary font-semibold">Status</th><th className="text-left p-4 text-text-primary font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClients.map((client, index) => ( // Use filteredClients and client
+                  {filteredClients.map((client, index) => (
                     <tr
                       key={client.id}
                       className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
@@ -303,10 +320,24 @@ function ClientsPage() { // Renamed component and removed default export from he
                           color={client.is_active ? "green" : "orange"} // Use client
                           className="text-xs"
                         >
-                          {client.is_active ? "Ativo" : "Inativo"} {/* Use client */}
+                          {client.is_active ? "Ativo" : "Inativo"}
                         </Badge>
                       </td>
-                      {/* Removed Actions Cell */}
+                      <td className="p-4">
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            className="border-status-error text-status-error hover:bg-status-error/10 p-2"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click
+                              handleDeleteClient(client);
+                            }}
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -316,9 +347,37 @@ function ClientsPage() { // Renamed component and removed default export from he
         </CardBody>
       </Card>
 
-      {/* Delete Confirmation Dialog Removed */}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialog.open}
+        handler={() => setDeleteDialog({ open: false, client: null })}
+        className="bg-bg-secondary border-bg-tertiary"
+      >
+        <DialogHeader className="text-text-primary">
+          Confirmar Exclusão
+        </DialogHeader>
+        <DialogBody className="text-text-primary">
+          Tem certeza que deseja excluir o cliente "{deleteDialog.client?.full_name || deleteDialog.client?.email}"?
+          Esta ação não pode ser desfeita.
+        </DialogBody>
+        <DialogFooter className="flex gap-2">
+          <Button
+            variant="outlined"
+            onClick={() => setDeleteDialog({ open: false, client: null })}
+            className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmDeleteClient}
+            className="bg-status-error hover:bg-status-error/90"
+          >
+            Confirmar Exclusão
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
 
-export default ClientsPage; // Added default export here
+export default ClientsPage;

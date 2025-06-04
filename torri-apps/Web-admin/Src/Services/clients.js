@@ -51,4 +51,14 @@ export const clientsApi = {
       throw error;
     }
   },
+
+  deleteClient: async (clientId) => {
+    try {
+      const response = await api.delete(`${ENDPOINTS.USERS}/${clientId}`);
+      return response.data; // For 204 No Content, response.data will be undefined or null.
+    } catch (error) {
+      console.error(`Erro ao excluir cliente com ID ${clientId}:`, error.response?.data || error.message);
+      throw error;
+    }
+  },
 };
