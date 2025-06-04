@@ -248,11 +248,7 @@ function ClientsPage() { // Renamed component and removed default export from he
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bg-tertiary">
-                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">E-mail</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Telefone</th> {/* Added Telefone */}
-                    <th className="text-left p-4 text-text-primary font-semibold">Status</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th><th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th><th className="text-left p-4 text-text-primary font-semibold">E-mail</th><th className="text-left p-4 text-text-primary font-semibold">Telefone</th>{/* Added Telefone */}<th className="text-left p-4 text-text-primary font-semibold">Status</th>
                     {/* <th className="text-left p-4 text-text-primary font-semibold">Ações</th> Removed Actions Column */}
                   </tr>
                 </thead>
