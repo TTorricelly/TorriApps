@@ -19,18 +19,13 @@ import {
   Avatar,
 } from '@material-tailwind/react';
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
+  // PlusIcon, // No longer needed
+  // PencilIcon, // No longer needed
+  // TrashIcon, // No longer needed
   MagnifyingGlassIcon,
-  UserIcon,
-  // PencilIcon, // Removed as edit is not a client feature here
-  // TrashIcon, // Removed as delete is not a client feature here
+  UserIcon // Removed trailing comma if UserIcon is the last active import
 } from '@heroicons/react/24/outline';
-
-  // PencilIcon, // Removed as edit is not a client feature here
-  // TrashIcon, // Removed as delete is not a client feature here
-} from '@heroicons/react/24/outline';
+// The duplicate block below was an artifact of previous edits, removing it too by only having one SEARCH/REPLACE for this import.
 
 import { clientsApi } from '../../Services/clients.js'; // Correctly import clientsApi
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
