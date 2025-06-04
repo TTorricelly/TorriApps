@@ -40,7 +40,7 @@ def create_professional(
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
 ):
     """Create a new professional."""
-    return professional_services.create_professional(db, professional_data)
+    return professional_services.create_professional(db, professional_data, current_user.tenant_id)
 
 @router.get("/{professional_id}", response_model=Professional)
 def get_professional(

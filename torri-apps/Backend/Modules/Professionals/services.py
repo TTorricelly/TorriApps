@@ -67,7 +67,7 @@ def get_professionals(db: Session, skip: int = 0, limit: int = 100) -> List[Prof
     ).offset(skip).limit(limit).all()
     return [_add_photo_url_to_professional(prof, db) for prof in professionals]
 
-def create_professional(db: Session, professional_data: ProfessionalCreate) -> Professional:
+def create_professional(db: Session, professional_data: ProfessionalCreate, tenant_id: UUID = None) -> Professional:
     # Check if email already exists
     existing_user = db.query(UserTenant).filter(UserTenant.email == professional_data.email).first()
     if existing_user:
@@ -80,13 +80,14 @@ def create_professional(db: Session, professional_data: ProfessionalCreate) -> P
     # Hash password
     hashed_password = get_password_hash(professional_data.password)
     
-    # Create professional
+    # Create professional with tenant_id
     db_professional = UserTenant(
         email=professional_data.email,
         hashed_password=hashed_password,
         role=UserRole.PROFISSIONAL,
         full_name=professional_data.full_name,
-        is_active=professional_data.is_active
+        is_active=professional_data.is_active,
+        tenant_id=str(tenant_id) if tenant_id else None
     )
     
     db.add(db_professional)
@@ -199,6 +200,7 @@ def update_professional_availability(db: Session, professional_id: UUID, availab
             for period_data in periods:
                 period = ProfessionalAvailability(
                     professional_user_id=str(professional_id),
+                    tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
                     day_of_week=day_enum,
                     start_time=period_data['start_time'],
                     end_time=period_data['end_time']
@@ -233,6 +235,7 @@ def create_blocked_time(db: Session, professional_id: UUID, blocked_time_data: B
     
     db_blocked_time = ProfessionalBlockedTime(
         professional_user_id=str(professional_id),
+        tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
         **data_dict
     )
     
@@ -294,6 +297,7 @@ def create_break(db: Session, professional_id: UUID, break_data: BreakCreate) ->
     
     db_break = ProfessionalBreak(
         professional_user_id=str(professional_id),
+        tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
         **break_data.model_dump()
     )
     
