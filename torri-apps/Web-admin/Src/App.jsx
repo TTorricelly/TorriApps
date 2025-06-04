@@ -3,12 +3,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@material-tailwind/react';
 
 import { MainLayout, AuthLayout, RequireAuth } from './Components'; 
-import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, Login } from './Pages';
+import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, ProfessionalsRoutes, Login } from './Pages';
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
 const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos - Em desenvolvimento</div>;
-const ProfessionalsTeam = () => <div className="p-6">Equipe de Profissionais - Em desenvolvimento</div>;
+// Placeholder for availability section
 const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
 const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>;
 const SalonProfile = () => <div className="p-6">Perfil do Salão - Em desenvolvimento</div>;
@@ -34,7 +34,7 @@ function App() {
           <Route path="services/*" element={<ServicesRoutes />} />
           
           {/* Professionals Routes */}
-          <Route path="/professionals/team" element={<ProfessionalsTeam />} />
+          <Route path="professionals/*" element={<ProfessionalsRoutes />} />
           <Route path="/professionals/availability" element={<ProfessionalsAvailability />} />
           
           {/* Clients Routes */}
