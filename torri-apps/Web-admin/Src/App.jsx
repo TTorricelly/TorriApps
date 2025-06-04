@@ -3,13 +3,22 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@material-tailwind/react';
 
 import { MainLayout, AuthLayout, RequireAuth } from './Components'; 
-import { Dashboard, ServicesRoutes, AppointmentsRoutes, UsersRoutes, ProfessionalsPage, ProfessionalForm, Login } from './Pages';
+import {
+  Dashboard,
+  ServicesRoutes,
+  AppointmentsRoutes,
+  UsersRoutes,
+  ProfessionalsPage,
+  ProfessionalForm,
+  Login
+} from './Pages';
+import { ClientsPage } from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
 const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos - Em desenvolvimento</div>;
 const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
-const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>;
+// const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>; // Remove placeholder
 const SalonProfile = () => <div className="p-6">Perfil do Salão - Em desenvolvimento</div>;
 const SettingsUsers = () => <div className="p-6">Usuários - Em desenvolvimento</div>;
 const Billing = () => <div className="p-6">Plano & Pagamento - Em desenvolvimento</div>;
@@ -40,7 +49,7 @@ function App() {
           <Route path="/professionals/availability" element={<ProfessionalsAvailability />} />
           
           {/* Clients Routes */}
-          <Route path="/clients/list" element={<ClientsList />} />
+          <Route path="/clients" element={<ClientsPage />} /> {/* Added new route */}
           
           {/* Settings Routes */}
           <Route path="/settings/salon-profile" element={<SalonProfile />} />

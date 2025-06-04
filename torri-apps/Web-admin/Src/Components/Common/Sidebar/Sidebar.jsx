@@ -59,7 +59,7 @@ const menuItems = [
     title: 'Clientes',
     icon: UsersIcon,
     items: [
-      { title: 'Lista', path: '/clients/list' }
+      { title: 'Lista', path: '/clients' } // Changed path here
     ]
   },
   {
