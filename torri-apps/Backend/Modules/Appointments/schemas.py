@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, date, time # Ensure time is imported if used by legacy schemas
-from decimal import Decimal # Ensure Decimal is imported if used by legacy schemas
+from datetime import datetime, date, time
+from decimal import Decimal
 
 # Attempt to import AppointmentStatus, if it fails, we'll use a string.
 try:
@@ -10,14 +10,14 @@ try:
 except ImportError:
     AppointmentStatus = str # Fallback to string if enum not found
 
-# --- Schemas from existing file (to be preserved if needed elsewhere, or cleaned up later) ---
+# --- Basic Info Schemas ---
 class UserTenantBasicInfo(BaseModel):
     id: UUID
     full_name: Optional[str] = None
     email: str
 
     class Config:
-        from_attributes = True # Changed from orm_mode for Pydantic v2 compatibility if applicable
+        from_attributes = True
 
 class ServiceBasicInfo(BaseModel):
     id: UUID
@@ -27,7 +27,16 @@ class ServiceBasicInfo(BaseModel):
     class Config:
         from_attributes = True
 
-# Schemas related to professional availability checking
+# --- Availability & Slot Schemas ---
+class TimeSlot(BaseModel):
+    start_time: time
+    end_time: time
+    is_available: bool
+    appointment_id: Optional[UUID] = None # To indicate which appointment blocks the slot
+
+    class Config:
+        from_attributes = True
+
 class DatedTimeSlot(BaseModel):
     date: date
     start_time: time
@@ -46,10 +55,8 @@ class ProfessionalDailyAvailabilityResponse(BaseModel):
 class AvailabilityRequest(BaseModel):
     service_id: UUID
     professional_id: UUID
-    year: int # Field(..., ge=2024) can be added if Pydantic v1, or handled by validator
-    month: int # Field(..., ge=1, le=12) can be added if Pydantic v1, or handled by validator
-    # Pydantic v2 handles simple > < checks often without Field if type is just int.
-    # For more complex validation, use @validator or Field with constraints.
+    year: int
+    month: int
 
     class Config:
         from_attributes = True
@@ -61,15 +68,7 @@ class DailyServiceAvailabilityResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class TimeSlot(BaseModel):
-    start_time: time
-    end_time: time
-    is_available: bool
-    appointment_id: Optional[UUID] = None # To indicate which appointment blocks the slot
-
-    class Config:
-        from_attributes = True
-
+# --- Core Appointment Schemas ---
 class AppointmentBase(BaseModel):
     client_id: UUID
     professional_id: UUID
@@ -79,10 +78,6 @@ class AppointmentBase(BaseModel):
     notes_by_client: Optional[str] = Field(None, max_length=500)
 
 class AppointmentCreate(AppointmentBase):
-    # This schema is used when creating a new appointment.
-    # It inherits all fields from AppointmentBase.
-    # Add any additional fields specific to creation if necessary.
-    # For now, we assume it has the same fields as AppointmentBase.
     pass
 
 class AppointmentUpdate(BaseModel):
@@ -92,20 +87,19 @@ class AppointmentUpdate(BaseModel):
     appointment_date: Optional[date] = None
     start_time: Optional[time] = None
     notes_by_client: Optional[str] = Field(None, max_length=500)
-    # Fields from AppointmentSchema that might be updatable
     status: Optional[AppointmentStatus] = None
-    price_at_booking: Optional[Decimal] = None # Usually not updated, but depends on business logic
+    price_at_booking: Optional[Decimal] = None
     paid_manually: Optional[bool] = None
     notes_by_professional: Optional[str] = Field(None, max_length=500)
 
     class Config:
         from_attributes = True
 
-class AppointmentSchema(AppointmentBase): # Existing response schema, may need review
+class AppointmentSchema(AppointmentBase):
     id: UUID
     tenant_id: UUID
     end_time: time
-    status: AppointmentStatus # Uses imported or fallback AppointmentStatus
+    status: AppointmentStatus
     price_at_booking: Decimal
     paid_manually: bool
     notes_by_professional: Optional[str] = None
@@ -116,8 +110,7 @@ class AppointmentSchema(AppointmentBase): # Existing response schema, may need r
     class Config:
         from_attributes = True
 
-# --- New Schemas for Daily Schedule View ---
-
+# --- Schemas for Daily Schedule View ---
 class ServiceTagSchema(BaseModel):
     id: UUID
     name: str
@@ -131,7 +124,7 @@ class AppointmentDetailSchema(BaseModel):
     start_time: datetime # Using datetime for full timestamp
     duration_minutes: int
     services: List[ServiceTagSchema]
-    status: str # As per new requirement, simple string status
+    status: str
 
     class Config:
         from_attributes = True
