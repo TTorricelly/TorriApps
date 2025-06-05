@@ -2,6 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date, time, datetime, timedelta, timezone
 from decimal import Decimal
+from enum import Enum # Added missing import
 
 from sqlalchemy.orm import Session, selectinload # Added selectinload
 from sqlalchemy import select, and_, or_, func, case
