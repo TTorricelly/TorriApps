@@ -295,7 +295,7 @@ const DailySchedulePage = () => {
                                 className="border border-bg-tertiary bg-bg-secondary px-m py-s shadow-card text-text-primary text-small rounded-card" // CLAUDE: Tooltip styles
                                 content={
                                   <div className="w-64">
-                                    <Typography color="blue-gray" className="font-semibold text-text-primary text-body">
+                                    <Typography className="font-semibold text-text-primary text-body">
                                       {appointmentInSlot.clientName} ({appointmentInSlot.status || 'Status N/A'})
                                     </Typography>
                                     <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
@@ -341,7 +341,7 @@ const DailySchedulePage = () => {
                                       className="border border-bg-tertiary bg-bg-secondary px-m py-s shadow-card text-text-primary text-small rounded-card" // CLAUDE: Tooltip styles
                                       content={
                                          <div className="w-64">
-                                            <Typography color="blue-gray" className="font-semibold text-text-primary text-body">
+                                            <Typography className="font-semibold text-text-primary text-body">
                                                 Horário Bloqueado
                                             </Typography>
                                             <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
