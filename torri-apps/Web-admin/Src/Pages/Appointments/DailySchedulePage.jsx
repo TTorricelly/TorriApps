@@ -292,6 +292,7 @@ const DailySchedulePage = () => {
                               style={{ gridRow: `span ${appointmentSpans}`, zIndex: 5 }}
                             >
                               <Tooltip
+                                interactive={true}
                                 placement="top"
                                 // CLAUDE: Tooltip styles - Adjusted padding from px-m py-s to px-s py-xs
                                 className="border border-bg-tertiary bg-bg-secondary px-s py-xs shadow-card text-text-primary text-small rounded-card"
