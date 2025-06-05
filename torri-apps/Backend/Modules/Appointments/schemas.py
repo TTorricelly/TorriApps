@@ -19,6 +19,20 @@ class UserTenantBasicInfo(BaseModel):
     class Config:
         from_attributes = True
 
+class AppointmentReschedulePayload(BaseModel):
+    new_date: date
+    new_start_time: time
+    reason: Optional[str] = Field(None, max_length=255) # Added max_length from service example
+
+    class Config:
+        from_attributes = True
+
+class AppointmentCancelPayload(BaseModel):
+    reason: Optional[str] = Field(None, max_length=255) # Added max_length from service example
+
+    class Config:
+        from_attributes = True
+
 class ServiceBasicInfo(BaseModel):
     id: UUID
     name: str
