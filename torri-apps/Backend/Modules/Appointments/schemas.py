@@ -35,6 +35,13 @@ class AppointmentBase(BaseModel):
     start_time: time
     notes_by_client: Optional[str] = Field(None, max_length=500)
 
+class AppointmentCreate(AppointmentBase):
+    # This schema is used when creating a new appointment.
+    # It inherits all fields from AppointmentBase.
+    # Add any additional fields specific to creation if necessary.
+    # For now, we assume it has the same fields as AppointmentBase.
+    pass
+
 class AppointmentSchema(AppointmentBase): # Existing response schema, may need review
     id: UUID
     tenant_id: UUID
