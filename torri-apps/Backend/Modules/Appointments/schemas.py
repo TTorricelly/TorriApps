@@ -27,6 +27,15 @@ class ServiceBasicInfo(BaseModel):
     class Config:
         from_attributes = True
 
+class TimeSlot(BaseModel):
+    start_time: time
+    end_time: time
+    is_available: bool
+    appointment_id: Optional[UUID] = None # To indicate which appointment blocks the slot
+
+    class Config:
+        from_attributes = True
+
 class AppointmentBase(BaseModel):
     client_id: UUID
     professional_id: UUID
