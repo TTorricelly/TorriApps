@@ -3,7 +3,7 @@ import { Typography, Button, Input, Spinner, Alert, Tooltip } from "@material-ta
 import {
   ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, ExclamationTriangleIcon, LockClosedIcon
 } from "@heroicons/react/24/solid"; // Added LockClosedIcon
-import { getDailySchedule } from '../../../Services/appointmentsApi'; // Assuming this path is correct
+import { getDailySchedule } from '../../Services/appointmentsApi'; // Assuming this path is correct
 
 const DailySchedulePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
