@@ -205,7 +205,7 @@ const DailySchedulePage = () => {
               <div className="grid min-w-max">
                 <div
                   className="grid sticky top-0 z-10 bg-bg-secondary shadow-sm"
-                  style={{ gridTemplateColumns: `minmax(3.5rem,auto) repeat(${filteredProfessionals.length}, minmax(7rem, 1fr)) sm:minmax(4.5rem,auto) repeat(${filteredProfessionals.length}, minmax(9rem, 1fr)) lg:minmax(6rem,auto) repeat(${filteredProfessionals.length}, minmax(10rem, 1fr))` }} // Responsive column widths
+                  style={{ gridTemplateColumns: `6rem repeat(${filteredProfessionals.length || 1}, minmax(10rem, 1fr))` }}
                 >
                   <div className="p-xs sm:p-s border-r border-b border-bg-tertiary text-center">
                     <Typography variant="small" className="font-semibold text-text-primary text-xs sm:text-small">
@@ -249,7 +249,7 @@ const DailySchedulePage = () => {
                     <div
                       key={timeString}
                       className="grid items-start"
-                      style={{ gridTemplateColumns: `minmax(3.5rem,auto) repeat(${filteredProfessionals.length}, minmax(7rem, 1fr)) sm:minmax(4.5rem,auto) repeat(${filteredProfessionals.length}, minmax(9rem, 1fr)) lg:minmax(6rem,auto) repeat(${filteredProfessionals.length}, minmax(10rem, 1fr))` }}
+                      style={{ gridTemplateColumns: `6rem repeat(${filteredProfessionals.length || 1}, minmax(10rem, 1fr))` }}
                     >
                       <div className={timeCellClass}>
                         {isCurrentSlot && <div className="absolute top-0 left-0 w-0.5 sm:w-1 h-full bg-accent-primary"></div>}
