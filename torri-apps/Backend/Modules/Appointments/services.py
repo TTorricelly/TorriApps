@@ -783,11 +783,35 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
                         )
                     )
 
+        photo_url_to_send = None
+        if prof.photo_path: # UserTenant.photo_path stores the relative path from 'public/uploads/'
+            server_host_url = str(settings.SERVER_HOST).rstrip('/')
+
+            # Ensure scheme is present
+            if not server_host_url.startswith("http://") and not server_host_url.startswith("https://"):
+                server_host_url = f"http://{server_host_url}" # Default to http
+
+            # photo_path is expected to be relative to 'public/uploads/', e.g., 'professionals/avatar.jpg'
+            # or could be an absolute path already if an old system stored it that way.
+            # For new system, assume it's relative to 'public/uploads/'
+            db_photo_path = prof.photo_path.lstrip('/')
+
+            # Construct the URL, assuming photo_path does not contain 'public/uploads' prefix.
+            # If it might, add logic to strip it.
+            # For now, direct concatenation is assumed based on UserTenant.photo_path storing relative path.
+            # Example: if photo_path = "professionals/123.jpg", result = "http://host/public/uploads/professionals/123.jpg"
+            if "public/uploads/" in db_photo_path: # If path accidentally contains the base static path
+                 path_segment = db_photo_path.split("public/uploads/",1)[-1]
+            else:
+                 path_segment = db_photo_path
+
+            photo_url_to_send = f"{server_host_url}/public/uploads/{path_segment}"
+
         professionals_schedule_list.append(
             ProfessionalScheduleSchema(
                 professional_id=prof.id,
                 professional_name=prof.full_name or prof.email, # Fallback to email if full_name is not set
-                professional_photo_url=prof.photo_url, # Assuming UserTenant has a photo_url field
+                professional_photo_url=photo_url_to_send,
                 appointments=appointment_details,
                 blocked_slots=blocked_slot_details
             )
