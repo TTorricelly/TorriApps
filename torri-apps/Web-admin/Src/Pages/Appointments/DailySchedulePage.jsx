@@ -259,9 +259,28 @@ const DailySchedulePage = () => {
                       </div>
 
                       {filteredProfessionals.map(prof => {
-                        const appointmentInSlot = prof.appointments?.find(apt => {/* ... */});
-                        const blockedSlotInSlot = prof.blockedSlots?.find(block => {/* ... */});
-                        let cardOpacity = 'opacity-100'; // Logic remains
+                        // Construct current slot's start datetime for comparisons
+                        const slotStartDateTime = new Date(selectedDate);
+                        slotStartDateTime.setHours(hour, parseInt(minute), 0, 0);
+
+                        const appointmentInSlot = (prof.appointments || []).find(apt => {
+                            const aptStart = new Date(apt.startTimeISO);
+                            return aptStart.getTime() === slotStartDateTime.getTime();
+                        });
+
+                        const blockedSlotInSlot = (prof.blockedSlots || []).find(block => {
+                            const blockStart = new Date(block.startTimeISO);
+                            return blockStart.getTime() === slotStartDateTime.getTime();
+                        });
+
+                        let cardOpacity = 'opacity-100';
+                        if (clientSearchTerm && appointmentInSlot) {
+                          if (!appointmentInSlot.clientName.toLowerCase().includes(clientSearchTerm.toLowerCase())) {
+                            cardOpacity = 'opacity-30 hover:opacity-100 transition-opacity';
+                          }
+                        } else if (clientSearchTerm && !appointmentInSlot && !blockedSlotInSlot) {
+                           // If there's an active client search and this slot is empty, it remains fully visible
+                        }
 
                         if (appointmentInSlot) {
                           const appointmentSpans = Math.ceil(appointmentInSlot.duration / 30);
@@ -348,14 +367,43 @@ const DailySchedulePage = () => {
                             );
                         }
 
-                        let isCoveredByAppointment = false; /* ... */
-                        let isCoveredByBlockedSlot = false; /* ... */
+                        let isCoveredByAppointment = false;
+                        if (!appointmentInSlot && !blockedSlotInSlot) { // Only check if cell isn't already taken by an item starting in this slot
+                            for (const apt of (prof.appointments || [])) {
+                                const aptStart = new Date(apt.startTimeISO);
+                                const aptEnd = new Date(apt.endTimeISO);
+                                if (aptStart < slotStartDateTime && slotStartDateTime < aptEnd) {
+                                    isCoveredByAppointment = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        let isCoveredByBlockedSlot = false;
+                        if (!appointmentInSlot && !blockedSlotInSlot && !isCoveredByAppointment) { // Only check if not already covered
+                            for (const block of (prof.blockedSlots || [])) {
+                                const blockStart = new Date(block.startTimeISO);
+                                const blockEnd = new Date(block.endTimeISO);
+                                if (blockStart < slotStartDateTime && slotStartDateTime < blockEnd) {
+                                    isCoveredByBlockedSlot = true;
+                                    break;
+                                }
+                            }
+                        }
+
                         if (isCoveredByAppointment || isCoveredByBlockedSlot) {
                           return ( <div key={`${prof.id}-${timeString}-covered`} className={`border-r border-b border-bg-tertiary ${slotIndex % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-secondary'}`}></div> );
                         }
 
                         const emptySlotOpacity = clientSearchTerm ? 'opacity-30' : 'opacity-100';
-                        return ( <div key={`${prof.id}-${timeString}-empty`} className={`p-xs border-r border-b border-bg-tertiary h-full ${slotIndex % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-secondary'} hover:bg-bg-tertiary/50 transition-colors cursor-pointer ${emptySlotOpacity}`} title={`Disponível ${timeString} - ${prof.name}`} > </div> );
+                        // Render empty slot only if no appointment, no block, and not covered
+                        if (!appointmentInSlot && !blockedSlotInSlot) {
+                            return ( <div key={`${prof.id}-${timeString}-empty`} className={`p-xs border-r border-b border-bg-tertiary h-full ${slotIndex % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-secondary'} hover:bg-bg-tertiary/50 transition-colors cursor-pointer ${emptySlotOpacity}`} title={`Disponível ${timeString} - ${prof.name}`} > </div> );
+                        }
+                        // If we reach here, it means an appointmentInSlot or blockedSlotInSlot was found but not rendered (e.g. due to other conditions)
+                        // This case should ideally not be reached if the logic for rendering appointments/blocks is exhaustive.
+                        // Fallback to an empty div to maintain grid structure, though this might hide unhandled items.
+                        return <div key={`${prof.id}-${timeString}-unhandled`} className={`p-xs border-r border-b border-bg-tertiary h-full ${slotIndex % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-secondary'} ${emptySlotOpacity}`}></div>;
                       })}
                     </div>
                   );
