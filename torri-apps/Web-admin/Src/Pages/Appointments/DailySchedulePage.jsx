@@ -294,6 +294,7 @@ const DailySchedulePage = () => {
                               <Tooltip
                                 interactive={true}
                                 placement="top"
+                                offset={0} // Added offset={0}
                                 // CLAUDE: Tooltip styles - Adjusted padding from px-m py-s to px-s py-xs
                                 className="border border-bg-tertiary bg-bg-secondary px-s py-xs shadow-card text-text-primary text-small rounded-card"
                                 content={
