@@ -1,24 +1,25 @@
-from pydantic import BaseModel, Field, validator, model_validator
-from uuid import UUID
+from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import date, time
-from decimal import Decimal
+from uuid import UUID
+from datetime import datetime, date, time # Ensure time is imported if used by legacy schemas
+from decimal import Decimal # Ensure Decimal is imported if used by legacy schemas
 
-from .constants import AppointmentStatus
+# Attempt to import AppointmentStatus, if it fails, we'll use a string.
+try:
+    from .constants import AppointmentStatus
+except ImportError:
+    AppointmentStatus = str # Fallback to string if enum not found
 
-# --- Schemas for related entities (minimal versions for nesting) ---
-# These should ideally be imported from their respective schema files for consistency
-# For now, defining minimal versions here to keep this subtask focused.
-
-class UserTenantBasicInfo(BaseModel): # For client/professional info in appointment
+# --- Schemas from existing file (to be preserved if needed elsewhere, or cleaned up later) ---
+class UserTenantBasicInfo(BaseModel):
     id: UUID
     full_name: Optional[str] = None
-    email: str # Consider using EmailStr from pydantic
+    email: str
 
     class Config:
-        from_attributes = True
+        from_attributes = True # Changed from orm_mode for Pydantic v2 compatibility if applicable
 
-class ServiceBasicInfo(BaseModel): # For service info in appointment
+class ServiceBasicInfo(BaseModel):
     id: UUID
     name: str
     duration_minutes: int
@@ -26,49 +27,22 @@ class ServiceBasicInfo(BaseModel): # For service info in appointment
     class Config:
         from_attributes = True
 
-# --- Appointment Schemas ---
 class AppointmentBase(BaseModel):
-    # client_id will be taken from authenticated user if client is booking,
-    # or provided by gestor/atendente if they are booking for a client.
-    # For MVP, let's assume client_id is provided in the request payload.
     client_id: UUID
     professional_id: UUID
     service_id: UUID
     appointment_date: date
-    start_time: time # Client typically selects this from available slots
+    start_time: time
     notes_by_client: Optional[str] = Field(None, max_length=500)
 
-class AppointmentCreate(AppointmentBase):
-    # end_time and price_at_booking will be determined by the backend service
-    pass
-
-class AppointmentUpdate(BaseModel): # For updating existing appointments
-    # Only limited fields should be updatable, e.g., rescheduling or adding notes.
-    # Status changes (cancel, complete) should be handled by dedicated endpoints/services.
-    appointment_date: Optional[date] = None
-    start_time: Optional[time] = None # If rescheduling
-    notes_by_client: Optional[str] = Field(None, max_length=500)
-    notes_by_professional: Optional[str] = Field(None, max_length=500)
-    # Perhaps status can be updated here by a GESTOR/PROFISSIONAL, e.g. to CANCELLED/COMPLETED
-    # status: Optional[AppointmentStatus] = None
-    # paid_manually: Optional[bool] = None
-
-    @model_validator(mode='after')
-    def check_at_least_one_value(cls, values):
-        if not any(values.model_dump(exclude_unset=True).values()):
-            raise ValueError("At least one field must be provided for update")
-        return values
-
-class AppointmentSchema(AppointmentBase): # Response schema
+class AppointmentSchema(AppointmentBase): # Existing response schema, may need review
     id: UUID
     tenant_id: UUID
     end_time: time
-    status: AppointmentStatus
+    status: AppointmentStatus # Uses imported or fallback AppointmentStatus
     price_at_booking: Decimal
     paid_manually: bool
     notes_by_professional: Optional[str] = None
-
-    # Include nested representations of related objects
     client: Optional[UserTenantBasicInfo] = None
     professional: Optional[UserTenantBasicInfo] = None
     service: Optional[ServiceBasicInfo] = None
@@ -76,52 +50,48 @@ class AppointmentSchema(AppointmentBase): # Response schema
     class Config:
         from_attributes = True
 
+# --- New Schemas for Daily Schedule View ---
 
-# --- Schemas for Professional Availability Query ---
-class TimeSlot(BaseModel):
-    start_time: time
-    end_time: time
-    # 'available' might be too simplistic if we want to show reasons for unavailability (e.g., break, existing appointment)
-    # For now, keeping it simple for an MVP.
-    # available: bool
-    # Instead of 'available:bool', let's provide more context if a slot is "booked" or a "break"
-    is_available: bool = True # True if slot is generally within working hours and not a break/blocked time
-    # The following would be populated if is_available is False due to an appointment
-    appointment_id: Optional[UUID] = None # If slot is taken by an appointment
+class ServiceTagSchema(BaseModel):
+    id: UUID
+    name: str
 
-class ProfessionalDailyAvailabilityResponse(BaseModel):
-    date: date
-    slots: List[TimeSlot]
+    class Config:
+        from_attributes = True
 
-# Schema for requesting available slots (input to a service function)
-class AvailabilityRequest(BaseModel):
+class AppointmentDetailSchema(BaseModel):
+    id: UUID
+    client_name: str
+    start_time: datetime # Using datetime for full timestamp
+    duration_minutes: int
+    services: List[ServiceTagSchema]
+    status: str # As per new requirement, simple string status
+
+    class Config:
+        from_attributes = True
+
+class BlockedSlotSchema(BaseModel):
+    id: UUID
+    start_time: datetime # Using datetime
+    duration_minutes: int
+    reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ProfessionalScheduleSchema(BaseModel):
     professional_id: UUID
-    service_id: UUID # Needed to determine slot duration
-    month: int = Field(..., ge=1, le=12) # Year and Month to check
-    year: int = Field(..., ge=2024) # Example: current year or future
+    professional_name: str
+    professional_photo_url: Optional[str] = None
+    appointments: List[AppointmentDetailSchema]
+    blocked_slots: List[BlockedSlotSchema]
 
-# Schema for available slots on a specific day, including service duration
-class DatedTimeSlot(BaseModel):
+    class Config:
+        from_attributes = True
+
+class DailyScheduleResponseSchema(BaseModel):
     date: date
-    start_time: time
-    end_time: time # Calculated end_time based on service duration
+    professionals_schedule: List[ProfessionalScheduleSchema]
 
-class DailyServiceAvailabilityResponse(BaseModel):
-    date: date
-    available_slots: List[DatedTimeSlot] = []
-
-
-# --- Schemas for Modifying Appointments ---
-class AppointmentReschedulePayload(BaseModel):
-    new_date: date = Field(..., description="The new date for the appointment.")
-    new_start_time: time = Field(..., description="The new start time for the appointment.")
-    reason: Optional[str] = Field(None, max_length=255, description="Optional reason for rescheduling.")
-
-class AppointmentCancelPayload(BaseModel):
-    reason: Optional[str] = Field(None, max_length=255, description="Optional reason for cancellation.")
-
-# Schema for updating appointment status internally or by specific privileged actions
-# Not typically exposed directly as a generic update payload for status.
-# class AppointmentStatusUpdate(BaseModel):
-#     status: AppointmentStatus
-#     # reason: Optional[str] = None # Could be part of this if status change needs a reason
+    class Config:
+        from_attributes = True

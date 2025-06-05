@@ -33,6 +33,7 @@ const menuItems = [
     icon: CalendarDaysIcon,
     items: [
       { title: 'Agenda', path: '/appointments/calendar' },
+      { title: 'Agenda Diária', path: '/appointments/daily-schedule' },
       { title: 'Histórico', path: '/appointments/history' }
     ]
   },

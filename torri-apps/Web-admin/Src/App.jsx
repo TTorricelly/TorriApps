@@ -14,6 +14,7 @@ import {
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
 import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
+import DailySchedulePage from './Pages/Appointments/DailySchedulePage.jsx'; // Import DailySchedulePage
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
@@ -37,6 +38,7 @@ function App() {
           {/* Appointments Routes */}
           <Route path="/appointments/calendar" element={<AppointmentCalendar />} />
           <Route path="/appointments/history" element={<AppointmentHistory />} />
+          <Route path="/appointments/daily-schedule" element={<DailySchedulePage />} />
           <Route path="appointments/*" element={<AppointmentsRoutes />} />
           
           {/* Services Routes */}

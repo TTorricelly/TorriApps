@@ -16,7 +16,8 @@ from .schemas import (
     ProfessionalDailyAvailabilityResponse, AvailabilityRequest,
     DailyServiceAvailabilityResponse,
     AppointmentUpdate, # For future generic update, if needed
-    AppointmentReschedulePayload, AppointmentCancelPayload # New schemas for specific actions
+    AppointmentReschedulePayload, AppointmentCancelPayload, # New schemas for specific actions
+    DailyScheduleResponseSchema # New schema for the daily schedule endpoint
 )
 from .constants import AppointmentStatus
 
@@ -30,6 +31,34 @@ router = APIRouter(
     # so routes here should be relative to that.
     tags=["Appointments and Availability (Tenant)"]
 )
+
+# --- Daily Schedule Endpoint ---
+@router.get(
+    "/daily-schedule/{schedule_date}",
+    response_model=DailyScheduleResponseSchema,
+    summary="Get the daily schedule for all professionals, including appointments and blocked times."
+)
+def get_daily_schedule_endpoint(
+    schedule_date: date = Path(..., description="The target date for the schedule (YYYY-MM-DD)."),
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    # Permission: Any authenticated user in the tenant can view this.
+    # The service layer handles fetching data scoped to the user's tenant.
+    daily_schedule_data = appointments_services.get_daily_schedule_data(
+        db=db,
+        schedule_date=schedule_date,
+        tenant_id=requesting_user.tenant_id
+    )
+    if not daily_schedule_data.professionals_schedule:
+        # Depending on desired behavior, either return 200 with empty list or 404.
+        # For a schedule, 200 with empty is often preferred if the date is valid but no one is scheduled.
+        # However, if it implies "no tenant data for this day", 404 could be an option.
+        # Let's stick to 200 with empty list as per current service logic.
+        pass # Service returns it as is.
+
+    return daily_schedule_data
+
 
 # --- Availability Endpoints ---
 @router.get(

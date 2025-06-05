@@ -19,10 +19,12 @@ from Modules.Tenants.models import Tenant
 from .schemas import (
     AppointmentCreate, AppointmentSchema, AppointmentUpdate, # AppointmentUpdate is for future use
     TimeSlot, ProfessionalDailyAvailabilityResponse, AvailabilityRequest,
-    DailyServiceAvailabilityResponse, DatedTimeSlot # For future use
+    DailyServiceAvailabilityResponse, DatedTimeSlot, # For future use
+    # New schemas for daily schedule
+    DailyScheduleResponseSchema, ProfessionalScheduleSchema, AppointmentDetailSchema, ServiceTagSchema, BlockedSlotSchema
 )
 from .constants import AppointmentStatus
-from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType # Corrected import path
+from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
 
 # Auth & Config
 from Core.Auth.constants import UserRole
@@ -681,6 +683,120 @@ def reschedule_appointment(
         }
     )
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+
+
+# --- Daily Schedule Service ---
+def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -> DailyScheduleResponseSchema:
+    """
+    Fetches the daily schedule for all active professionals in a tenant,
+    including their appointments and blocked time slots for a given date.
+    """
+
+    # Fetch active professionals for the tenant
+    stmt_professionals = select(UserTenant).where(
+        UserTenant.tenant_id == str(tenant_id),
+        UserTenant.is_active == True,
+        UserTenant.role == UserRole.PROFISSIONAL # Ensure only professionals are included
+    ).order_by(UserTenant.full_name) # Optional: order professionals by name
+
+    active_professionals = db.execute(stmt_professionals).scalars().all()
+
+    professionals_schedule_list: List[ProfessionalScheduleSchema] = []
+
+    for prof in active_professionals:
+        # Fetch appointments for the professional on the given date
+        stmt_appts = select(Appointment).where(
+            Appointment.professional_id == str(prof.id),
+            Appointment.appointment_date == schedule_date,
+            Appointment.tenant_id == str(tenant_id) # Should be redundant if professional is correctly filtered by tenant
+        ).options(
+            selectinload(Appointment.client), # For client_name
+            selectinload(Appointment.service)  # For service details
+        ).order_by(Appointment.start_time)
+
+        appointments_for_prof = db.execute(stmt_appts).scalars().all()
+
+        appointment_details: List[AppointmentDetailSchema] = []
+        for appt in appointments_for_prof:
+            if not appt.service: # Should not happen if data is consistent
+                continue
+
+            # Combine date and time for start_time
+            appointment_start_datetime = datetime.combine(appt.appointment_date, appt.start_time)
+
+            # Calculate duration
+            appointment_end_datetime = datetime.combine(appt.appointment_date, appt.end_time)
+            duration = int((appointment_end_datetime - appointment_start_datetime).total_seconds() / 60)
+
+            # Map single service to List[ServiceTagSchema]
+            service_tags = [ServiceTagSchema(id=appt.service.id, name=appt.service.name)] if appt.service else []
+
+            appointment_details.append(
+                AppointmentDetailSchema(
+                    id=appt.id,
+                    client_name=appt.client.full_name if appt.client else "Cliente Desconhecido",
+                    start_time=appointment_start_datetime,
+                    duration_minutes=duration,
+                    services=service_tags,
+                    status=appt.status.value if isinstance(appt.status, Enum) else str(appt.status) # Handle Enum or string status
+                )
+            )
+
+        # Fetch blocked slots for the professional on the given date
+        stmt_blocks = select(ProfessionalBlockedTime).where(
+            ProfessionalBlockedTime.professional_user_id == str(prof.id),
+            ProfessionalBlockedTime.blocked_date == schedule_date,
+            ProfessionalBlockedTime.tenant_id == str(tenant_id) # Ensure tenant context
+        ).order_by(ProfessionalBlockedTime.start_time)
+
+        blocked_slots_for_prof = db.execute(stmt_blocks).scalars().all()
+
+        blocked_slot_details: List[BlockedSlotSchema] = []
+        for block in blocked_slots_for_prof:
+            if block.block_type == AvailabilityBlockType.DAY_OFF: # Handle full day off
+                # Create a single block for the typical working day or a placeholder
+                # For simplicity, let's assume a DAY_OFF block means 8 AM to 8 PM for now.
+                # This might need refinement based on actual tenant/professional working hours.
+                block_start_dt = datetime.combine(schedule_date, time(8,0))
+                block_end_dt = datetime.combine(schedule_date, time(20,0))
+                block_duration = int((block_end_dt - block_start_dt).total_seconds() / 60)
+                blocked_slot_details.append(
+                    BlockedSlotSchema(
+                        id=block.id,
+                        start_time=block_start_dt,
+                        duration_minutes=block_duration,
+                        reason=block.reason or "Dia de Folga"
+                    )
+                )
+            elif block.start_time and block.end_time: # Regular timed block
+                block_start_datetime = datetime.combine(block.blocked_date, block.start_time)
+                block_end_datetime = datetime.combine(block.blocked_date, block.end_time)
+                duration = int((block_end_datetime - block_start_datetime).total_seconds() / 60)
+
+                if duration > 0 : # only add if valid duration
+                    blocked_slot_details.append(
+                        BlockedSlotSchema(
+                            id=block.id,
+                            start_time=block_start_datetime,
+                            duration_minutes=duration,
+                            reason=block.reason
+                        )
+                    )
+
+        professionals_schedule_list.append(
+            ProfessionalScheduleSchema(
+                professional_id=prof.id,
+                professional_name=prof.full_name or prof.email, # Fallback to email if full_name is not set
+                professional_photo_url=prof.photo_url, # Assuming UserTenant has a photo_url field
+                appointments=appointment_details,
+                blocked_slots=blocked_slot_details
+            )
+        )
+
+    return DailyScheduleResponseSchema(
+        date=schedule_date,
+        professionals_schedule=professionals_schedule_list
+    )
 
 
 def complete_appointment(
