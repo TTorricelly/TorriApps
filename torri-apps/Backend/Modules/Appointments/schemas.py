@@ -42,6 +42,22 @@ class AppointmentCreate(AppointmentBase):
     # For now, we assume it has the same fields as AppointmentBase.
     pass
 
+class AppointmentUpdate(BaseModel):
+    client_id: Optional[UUID] = None
+    professional_id: Optional[UUID] = None
+    service_id: Optional[UUID] = None
+    appointment_date: Optional[date] = None
+    start_time: Optional[time] = None
+    notes_by_client: Optional[str] = Field(None, max_length=500)
+    # Fields from AppointmentSchema that might be updatable
+    status: Optional[AppointmentStatus] = None
+    price_at_booking: Optional[Decimal] = None # Usually not updated, but depends on business logic
+    paid_manually: Optional[bool] = None
+    notes_by_professional: Optional[str] = Field(None, max_length=500)
+
+    class Config:
+        from_attributes = True
+
 class AppointmentSchema(AppointmentBase): # Existing response schema, may need review
     id: UUID
     tenant_id: UUID
