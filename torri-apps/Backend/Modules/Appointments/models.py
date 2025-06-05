@@ -45,9 +45,9 @@ class Appointment(Base):
     notes_by_professional = Column(String(500), nullable=True) # Notes by professional or salon staff
 
     # Relationships - temporarily commented out to resolve initialization issues
-    # client = relationship("UserTenant", foreign_keys=[client_id], back_populates="client_appointments")
-    # professional = relationship("UserTenant", foreign_keys=[professional_id], back_populates="professional_appointments")
-    # service = relationship("Service", foreign_keys=[service_id])
+    client = relationship("UserTenant", foreign_keys=[client_id], back_populates="client_appointments")
+    professional = relationship("UserTenant", foreign_keys=[professional_id], back_populates="professional_appointments")
+    service = relationship("Service", foreign_keys=[service_id])
 
     __table_args__ = (
         # A professional cannot have two appointments starting at the exact same date and time.
