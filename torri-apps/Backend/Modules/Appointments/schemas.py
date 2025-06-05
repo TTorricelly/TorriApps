@@ -27,6 +27,40 @@ class ServiceBasicInfo(BaseModel):
     class Config:
         from_attributes = True
 
+# Schemas related to professional availability checking
+class DatedTimeSlot(BaseModel):
+    date: date
+    start_time: time
+    end_time: time
+
+    class Config:
+        from_attributes = True
+
+class ProfessionalDailyAvailabilityResponse(BaseModel):
+    date: date
+    slots: List[TimeSlot] # Uses the TimeSlot schema already defined
+
+    class Config:
+        from_attributes = True
+
+class AvailabilityRequest(BaseModel):
+    service_id: UUID
+    professional_id: UUID
+    year: int # Field(..., ge=2024) can be added if Pydantic v1, or handled by validator
+    month: int # Field(..., ge=1, le=12) can be added if Pydantic v1, or handled by validator
+    # Pydantic v2 handles simple > < checks often without Field if type is just int.
+    # For more complex validation, use @validator or Field with constraints.
+
+    class Config:
+        from_attributes = True
+
+class DailyServiceAvailabilityResponse(BaseModel):
+    date: date
+    available_slots: List[DatedTimeSlot] # Uses the DatedTimeSlot schema defined above
+
+    class Config:
+        from_attributes = True
+
 class TimeSlot(BaseModel):
     start_time: time
     end_time: time
