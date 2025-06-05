@@ -1,4 +1,4 @@
-import apiClient from '../api/client'; // Adjust path as necessary
+import { api as apiClient } from '../api/client'; // Adjust path as necessary
 
 // Helper function to format date as YYYY-MM-DD
 const formatDateToYYYYMMDD = (date) => {
