@@ -791,7 +791,7 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
                 server_host_url = f"http://{server_host_url}"
             server_host_url = server_host_url.rstrip('/')
 
-            base_url_path_prefix = "/public/uploads"
+            base_url_path_prefix = "/uploads" # Corrected base path as per main.py static mount
 
             processed_path_segment = prof.photo_path.lstrip('/')
 
