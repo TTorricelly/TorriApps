@@ -295,16 +295,16 @@ const DailySchedulePage = () => {
                                 className="border border-bg-tertiary bg-bg-secondary px-m py-s shadow-card text-text-primary text-small rounded-card" // CLAUDE: Tooltip styles
                                 content={
                                   <div className="w-64">
-                                    <Typography className="font-semibold text-text-primary text-body">
+                                    <Typography className="font-semibold !text-text-primary text-body">
                                       {appointmentInSlot.clientName} ({appointmentInSlot.status || 'Status N/A'})
                                     </Typography>
-                                    <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                    <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                       Profissional: {prof.name}
                                     </Typography>
-                                    <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                    <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                       Horário: {new Date(appointmentInSlot.startTimeISO).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - {new Date(appointmentInSlot.endTimeISO).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} ({appointmentInSlot.duration} min)
                                     </Typography>
-                                    <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                    <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                       Serviços: {(appointmentInSlot._originalServices || appointmentInSlot.services).map(s => typeof s === 'string' ? s : s.name).join(', ')}
                                     </Typography>
                                   </div>
@@ -341,16 +341,16 @@ const DailySchedulePage = () => {
                                       className="border border-bg-tertiary bg-bg-secondary px-m py-s shadow-card text-text-primary text-small rounded-card" // CLAUDE: Tooltip styles
                                       content={
                                          <div className="w-64">
-                                            <Typography className="font-semibold text-text-primary text-body">
+                                            <Typography className="font-semibold !text-text-primary text-body">
                                                 Horário Bloqueado
                                             </Typography>
-                                            <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                            <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                                 Profissional: {prof.name}
                                             </Typography>
-                                            <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                            <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                                 Motivo: {blockedSlotInSlot.reason || 'N/A'}
                                             </Typography>
-                                            <Typography variant="small" className="font-normal text-text-secondary opacity-80 text-small">
+                                            <Typography variant="small" className="font-normal !text-text-secondary opacity-80 text-small">
                                                 Horário: {new Date(blockedSlotInSlot.startTimeISO).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - {new Date(blockedSlotInSlot.endTimeISO).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} ({blockedSlotInSlot.duration} min)
                                             </Typography>
                                         </div>
