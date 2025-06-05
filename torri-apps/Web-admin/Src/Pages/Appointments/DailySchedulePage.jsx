@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Typography, Button, Input, Spinner, Alert, Tooltip } from "@material-tailwind/react";
+import { Typography, Button, Input, Spinner, Alert } from "@material-tailwind/react";
 import {
   ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, ExclamationTriangleIcon, LockClosedIcon,
   PencilIcon, TrashIcon
@@ -14,6 +14,7 @@ const DailySchedulePage = () => {
   const [searchTerm, setSearchTerm] = useState(''); // For professional search
   const [clientSearchTerm, setClientSearchTerm] = useState(''); // For client search
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [hoveredAppointment, setHoveredAppointment] = useState(null);
 
   const fetchSchedule = useCallback(async () => {
     setLoading(true);
@@ -291,31 +292,38 @@ const DailySchedulePage = () => {
                               className={`p-xs border-r border-b border-bg-tertiary relative ${slotIndex % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-secondary'}`}
                               style={{ gridRow: `span ${appointmentSpans}`, zIndex: 5 }}
                             >
-                              <Tooltip
-                                interactive={true}
-                                placement="top"
-                                offset={0} // Added offset={0}
-                                // CLAUDE: Tooltip styles - Adjusted padding from px-m py-s to px-s py-xs
-                                className="border border-bg-tertiary bg-bg-secondary px-s py-xs shadow-card text-text-primary text-small rounded-card"
-                                content={
-                                  <div className="flex items-center gap-s"> {/* Use theme spacing 's' or 'xs' */}
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); console.log(`Edit clicked for appointment ${appointmentInSlot.id}`)}}
-                                      className="p-xs rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-accent-primary transition-colors"
-                                      title="Editar Agendamento"
-                                    >
-                                      <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); console.log(`Delete clicked for appointment ${appointmentInSlot.id}`)}}
-                                      className="p-xs rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-status-error transition-colors"
-                                      title="Excluir Agendamento"
-                                    >
-                                      <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                    </button>
-                                  </div>
-                                }
+                              <div 
+                                className="relative"
+                                onMouseEnter={() => setHoveredAppointment(appointmentInSlot.id)}
+                                onMouseLeave={() => setHoveredAppointment(null)}
                               >
+                                {/* Custom Tooltip */}
+                                {hoveredAppointment === appointmentInSlot.id && (
+                                  <div 
+                                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-50 px-2 py-2"
+                                    onMouseEnter={() => setHoveredAppointment(appointmentInSlot.id)}
+                                    onMouseLeave={() => setHoveredAppointment(null)}
+                                  >
+                                    <div className="border border-bg-tertiary bg-bg-secondary px-6 py-4 shadow-card text-text-primary text-small rounded-card flex items-center justify-center gap-4 min-w-[140px]">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); console.log(`Edit clicked for appointment ${appointmentInSlot.id}`)}}
+                                        className="p-3 rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-accent-primary transition-colors"
+                                        title="Editar Agendamento"
+                                        onMouseEnter={() => setHoveredAppointment(appointmentInSlot.id)}
+                                      >
+                                        <PencilIcon className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); console.log(`Delete clicked for appointment ${appointmentInSlot.id}`)}}
+                                        className="p-3 rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-status-error transition-colors"
+                                        title="Excluir Agendamento"
+                                        onMouseEnter={() => setHoveredAppointment(appointmentInSlot.id)}
+                                      >
+                                        <TrashIcon className="h-5 w-5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                                 <div className={`bg-bg-secondary p-xs sm:p-s rounded-card shadow-sm h-full border-l-2 sm:border-l-4 border-accent-primary ${cardOpacity} cursor-default`}>
                                   <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal truncate">
                                     {appointmentInSlot.clientName}
@@ -331,7 +339,7 @@ const DailySchedulePage = () => {
                                     ))}
                                   </div>
                                 </div>
-                              </Tooltip>
+                              </div>
                             </div>
                           );
                         } else if (blockedSlotInSlot) {
