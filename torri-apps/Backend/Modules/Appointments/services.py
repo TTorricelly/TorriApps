@@ -55,12 +55,17 @@ def get_daily_time_slots_for_professional(
     db: Session,
     professional_id: UUID,
     target_date: date,
-    tenant_id: UUID
+    tenant_id: UUID,
+    ignore_client_id: Optional[UUID] = None,
+    ignore_start_time: Optional[time] = None
 ) -> ProfessionalDailyAvailabilityResponse:
     """
-    Calculates all available and unavailable time slots for a professional on a specific date,
-    based on their work hours, breaks, existing appointments, and blocked times.
-    The granularity of slots is determined by tenant.block_size_minutes.
+    Calculates all available and unavailable time slots for a professional on a
+    specific date based on their work hours, breaks, existing appointments and
+    blocked times.  Optional parameters allow ignoring appointments that belong
+    to ``ignore_client_id`` starting at ``ignore_start_time`` – used when the
+    same client wants to book multiple services at the same time.
+    The granularity of slots is determined by ``tenant.block_size_minutes``.
     """
     block_size_minutes = _get_tenant_block_size(db, tenant_id)
     target_day_of_week = DayOfWeek(target_date.weekday()) # Convert to our DayOfWeek enum
@@ -113,6 +118,12 @@ def get_daily_time_slots_for_professional(
         Appointment.status.in_([AppointmentStatus.SCHEDULED]) # Only scheduled appointments block time
     )
     appointments_today = db.execute(stmt_appts).scalars().all()
+
+    if ignore_client_id and ignore_start_time:
+        appointments_today = [
+            appt for appt in appointments_today
+            if not (appt.client_id == str(ignore_client_id) and appt.start_time == ignore_start_time)
+        ]
 
     # Generate all potential slots based on working hours and block_size_minutes
     for wh in working_hours_today:
@@ -215,10 +226,16 @@ def create_appointment(
     # 3. Check professional's availability for the entire duration of the service
     block_size_minutes = _get_tenant_block_size(db, tenant_id)
 
-    # Generate fine-grained slots for the professional on the target date
-    # This re-uses the detailed slot generation logic.
+    # Generate fine-grained slots for the professional on the target date.
+    # Appointments belonging to the same client at the exact start time are
+    # ignored so a client can book multiple services simultaneously.
     daily_availability_response = get_daily_time_slots_for_professional(
-        db, professional.id, appointment_data.appointment_date, tenant_id
+        db,
+        professional.id,
+        appointment_data.appointment_date,
+        tenant_id,
+        ignore_client_id=appointment_data.client_id,
+        ignore_start_time=appointment_data.start_time,
     )
 
     # Check if all necessary mini-slots for the service duration are available
@@ -616,9 +633,15 @@ def reschedule_appointment(
     new_end_time = _calculate_end_time(new_start_time, service.duration_minutes)
 
     # Availability Check (re-using create_appointment's core logic for slot validation)
-    # This is a simplified version of the availability check logic from create_appointment
+    # Appointments belonging to the same client at the new start time are ignored
+    # so rescheduling can stack services for the client.
     daily_availability_response = get_daily_time_slots_for_professional(
-        db, appointment.professional_id, new_date, tenant_id
+        db,
+        appointment.professional_id,
+        new_date,
+        tenant_id,
+        ignore_client_id=appointment.client_id,
+        ignore_start_time=new_start_time,
     )
 
     block_size_minutes = _get_tenant_block_size(db, tenant_id)

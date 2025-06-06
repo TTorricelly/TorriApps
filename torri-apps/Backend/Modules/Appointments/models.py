@@ -50,12 +50,10 @@ class Appointment(Base):
     # service = relationship("Service", foreign_keys=[service_id])
 
     __table_args__ = (
-        # A professional cannot have two appointments starting at the exact same date and time.
-        # This doesn't prevent overlapping if durations vary, service logic must handle that.
-        UniqueConstraint('professional_id', 'appointment_date', 'start_time', name='uq_appointment_professional_datetime'),
+        # Time validation handled in application logic. Overlap checks allow the
+        # same client to book multiple services at the same time with the same
+        # professional.
         CheckConstraint('start_time < end_time', name='cc_appointment_start_before_end'),
-        # Potentially, a client cannot have two appointments at the exact same time either:
-        # UniqueConstraint('client_id', 'appointment_date', 'start_time', name='uq_appointment_client_datetime'),
     )
 
     def __repr__(self):
