@@ -338,26 +338,11 @@ const DailySchedulePage = () => {
       }
       
       if (editingAppointment) {
-        // Check if multiple services are selected
-        if (appointmentForm.services && appointmentForm.services.length > 1) {
-          // Use multiple services API
-          const updateData = {
-            client_id: appointmentForm.clientId,
-            professional_id: appointmentForm.professionalId,
-            services: appointmentForm.services,
-            appointment_date: appointmentForm.date,
-            start_time: appointmentForm.startTime,
-            notes_by_client: appointmentForm.notes || null
-          };
-          await updateAppointmentWithMultipleServices(editingAppointment.id, updateData);
-          console.log('Appointment updated with multiple services successfully');
-        } else {
-          // Use single service API
-          await updateAppointment(editingAppointment.id, appointmentData);
-          console.log('Appointment updated successfully');
-        }
+        // Update existing appointment (single service only)
+        await updateAppointment(editingAppointment.id, appointmentData);
+        console.log('Appointment updated successfully');
       } else {
-        // Create new appointment
+        // Create new appointment (single service only)
         await createAppointment(appointmentData);
         console.log('Appointment created successfully');
         
@@ -455,6 +440,34 @@ const DailySchedulePage = () => {
       setLoading(false);
     }
   }, [selectedDate]);
+
+  // Calculate total duration from selected services
+  const calculateTotalDuration = useCallback((selectedServiceNames) => {
+    if (!selectedServiceNames || selectedServiceNames.length === 0) {
+      return 60; // Default duration
+    }
+
+    let totalDuration = 0;
+    selectedServiceNames.forEach(serviceName => {
+      const service = availableServices.find(s => s.name === serviceName);
+      if (service && service.duration_minutes) {
+        totalDuration += service.duration_minutes;
+      }
+    });
+
+    return totalDuration > 0 ? totalDuration : 60; // Fallback to default if no valid durations found
+  }, [availableServices]);
+
+  // Auto-calculate duration when services change
+  useEffect(() => {
+    if (!editingAppointment && appointmentForm.services.length > 0) {
+      const calculatedDuration = calculateTotalDuration(appointmentForm.services);
+      setAppointmentForm(prev => ({ 
+        ...prev, 
+        duration: calculatedDuration 
+      }));
+    }
+  }, [appointmentForm.services, calculateTotalDuration, editingAppointment]);
 
   useEffect(() => {
     fetchSchedule();
@@ -1283,10 +1296,16 @@ const DailySchedulePage = () => {
                     labelProps={{ className: "text-text-secondary" }}
                     containerProps={{ className: "text-text-primary" }}
                     error={!!formErrors.duration}
+                    disabled={!editingAppointment && appointmentForm.services.length > 0}
                   />
                   {formErrors.duration && (
                     <Typography variant="small" className="text-status-error mt-1">
                       {formErrors.duration}
+                    </Typography>
+                  )}
+                  {!editingAppointment && appointmentForm.services.length > 0 && (
+                    <Typography variant="small" className="text-text-tertiary mt-1 text-xs">
+                      Duração calculada automaticamente com base nos serviços selecionados
                     </Typography>
                   )}
                 </div>
