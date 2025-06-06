@@ -266,9 +266,6 @@ const DailySchedulePage = () => {
     
     setSavingAppointment(true);
     try {
-      // Prepare appointment data for API
-      const startDateTime = new Date(`${appointmentForm.date}T${appointmentForm.startTime}:00`);
-      
       // Find selected services with their IDs - for now use first service
       const selectedServices = availableServices.filter(service => 
         appointmentForm.services.includes(service.name)
@@ -427,14 +424,22 @@ const DailySchedulePage = () => {
     setLoadingClients(true);
     try {
       const results = await searchClients(searchTerm);
-      setClientSearchResults(results);
+      setClientSearchResults(results || []);
     } catch (err) {
       console.error("Error searching clients:", err);
       setClientSearchResults([]);
+      // Fallback to filtering from available clients if search API fails
+      if (availableClients.length > 0) {
+        const filtered = availableClients.filter(client => 
+          (client.full_name && client.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        setClientSearchResults(filtered.slice(0, 10)); // Limit to 10 results
+      }
     } finally {
       setLoadingClients(false);
     }
-  }, []);
+  }, [availableClients]);
 
   const fetchSchedule = useCallback(async () => {
     setLoading(true);
@@ -809,6 +814,13 @@ const DailySchedulePage = () => {
 
                       const spans = Math.ceil(item.duration / 30);
                       
+                      // Calculate end time for display (common for both appointments and blocked slots)
+                      const endTime = new Date(item.endTimeISO || item.startTimeISO);
+                      if (!item.endTimeISO) {
+                        endTime.setMinutes(endTime.getMinutes() + item.duration);
+                      }
+                      const endTimeFormatted = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                      
                       let cardOpacity = 'opacity-100';
                       if (clientSearchTerm && item.type === 'appointment') {
                         if (!item.clientName.toLowerCase().includes(clientSearchTerm.toLowerCase())) {
@@ -817,13 +829,6 @@ const DailySchedulePage = () => {
                       }
                       
                       if (item.type === 'appointment') {
-                        // Calculate end time for display
-                        const endTime = new Date(item.endTimeISO || item.startTimeISO);
-                        if (!item.endTimeISO) {
-                          endTime.setMinutes(endTime.getMinutes() + item.duration);
-                        }
-                        const endTimeFormatted = endTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        
                         // Determine if we have enough space for services (threshold: 2+ spans = 60+ minutes)
                         const hasSpaceForServices = spans >= 3;
                         const servicesList = item.services || [];
@@ -1078,12 +1083,16 @@ const DailySchedulePage = () => {
                           if (value.length >= 2) {
                             // Debounce search
                             setTimeout(() => {
-                              if (appointmentForm.clientName === value) {
-                                handleClientSearch(value);
-                              }
+                              handleClientSearch(value);
                             }, 300);
                           } else {
                             setClientSearchResults([]);
+                          }
+                        }}
+                        onFocus={() => {
+                          // If no search term, show some available clients
+                          if (!appointmentForm.clientName || appointmentForm.clientName.length < 2) {
+                            setClientSearchResults(availableClients.slice(0, 10)); // Show first 10 clients
                           }
                         }}
                         className="bg-bg-primary border-bg-tertiary text-text-primary"

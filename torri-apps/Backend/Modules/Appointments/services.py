@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from datetime import date, time, datetime, timedelta, timezone
 from decimal import Decimal
@@ -30,7 +30,7 @@ from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
 # Auth & Config
 from Core.Auth.constants import UserRole
 from Config.Settings import settings
-from Core.Audit import log_audit, AuditLogEvent # Import audit logging
+# Removed audit logging imports
 
 
 # --- Helper Functions ---
@@ -63,7 +63,18 @@ def get_daily_time_slots_for_professional(
     The granularity of slots is determined by tenant.block_size_minutes.
     """
     block_size_minutes = _get_tenant_block_size(db, tenant_id)
-    target_day_of_week = DayOfWeek(target_date.weekday()) # Convert to our DayOfWeek enum
+    
+    # Convert Python weekday (0=Monday, 1=Tuesday, etc.) to our DayOfWeek enum
+    weekday_mapping = {
+        0: DayOfWeek.MONDAY,
+        1: DayOfWeek.TUESDAY,
+        2: DayOfWeek.WEDNESDAY,
+        3: DayOfWeek.THURSDAY,
+        4: DayOfWeek.FRIDAY,
+        5: DayOfWeek.SATURDAY,
+        6: DayOfWeek.SUNDAY
+    }
+    target_day_of_week = weekday_mapping[target_date.weekday()]
 
     slots = []
 
@@ -89,7 +100,7 @@ def get_daily_time_slots_for_professional(
     # 3. Get specific date-based blocked times (includes DAY_OFF)
     stmt_blocks = select(ProfessionalBlockedTime).where(
         ProfessionalBlockedTime.professional_user_id == str(professional_id),
-        ProfessionalBlockedTime.block_date == target_date,
+        ProfessionalBlockedTime.blocked_date == target_date,
         ProfessionalBlockedTime.tenant_id == str(tenant_id)
     )
     specific_blocks_today = db.execute(stmt_blocks).scalars().all()
@@ -159,7 +170,7 @@ def get_daily_time_slots_for_professional(
 # --- Appointment Creation and Management ---
 def _validate_and_get_appointment_dependencies(
     db: Session, client_id: UUID, professional_id: UUID, service_id: UUID, tenant_id: UUID
-) -> (UserTenant, UserTenant, Service):
+) -> Tuple[UserTenant, UserTenant, Service]:
 
     client = db.get(UserTenant, str(client_id))  # Convert UUID to string for MySQL compatibility
     professional = db.get(UserTenant, str(professional_id))  # Convert UUID to string for MySQL compatibility
@@ -199,7 +210,7 @@ def create_appointment(
     # 1. Validate dependencies and permissions
     if requesting_user.role not in [UserRole.GESTOR, UserRole.ATENDENTE]:
         # If client is booking for themselves, their ID must match appointment_data.client_id
-        if requesting_user.id != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE:
+        if requesting_user.user_id != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE:
              raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only book appointments for themselves.")
     # If Gestor/Atendente is booking, they can book for any client_id within their tenant.
     # The client_id in appointment_data will be used.
@@ -275,19 +286,7 @@ def create_appointment(
     stmt_for_response = select(Appointment).where(Appointment.id == db_appointment.id)
     refreshed_appointment_with_relations = db.execute(stmt_for_response).scalar_one()
 
-    log_audit(
-        event_type=AuditLogEvent.APPOINTMENT_CREATED,
-        requesting_user_id=requesting_user.id,
-        tenant_id=tenant_id,
-        entity_id=refreshed_appointment_with_relations.id,
-        details={
-            "client_id": str(refreshed_appointment_with_relations.client_id),
-            "professional_id": str(refreshed_appointment_with_relations.professional_id),
-            "service_id": str(refreshed_appointment_with_relations.service_id),
-            "date": refreshed_appointment_with_relations.appointment_date.isoformat(),
-            "start_time": refreshed_appointment_with_relations.start_time.isoformat()
-        }
-    )
+    # Removed audit logging
     return refreshed_appointment_with_relations
 
 
@@ -452,13 +451,13 @@ def get_appointments(
 
     # Permission-based filtering
     if requesting_user.role == UserRole.CLIENTE:
-        if client_id and str(client_id) != str(requesting_user.id): # Client trying to query for another client
+        if client_id and str(client_id) != str(requesting_user.user_id): # Client trying to query for another client
              raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only view their own appointments.")
-        stmt = stmt.where(Appointment.client_id == str(requesting_user.id))  # Convert to string
+        stmt = stmt.where(Appointment.client_id == str(requesting_user.user_id))  # Convert to string
     elif requesting_user.role == UserRole.PROFISSIONAL:
-        if professional_id and str(professional_id) != str(requesting_user.id): # Prof trying to query for another prof
+        if professional_id and str(professional_id) != str(requesting_user.user_id): # Prof trying to query for another prof
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only view their own appointments.")
-        stmt = stmt.where(Appointment.professional_id == str(requesting_user.id))  # Convert to string
+        stmt = stmt.where(Appointment.professional_id == str(requesting_user.user_id))  # Convert to string
     else: # GESTOR, ATENDENTE can use filters
         if professional_id:
             stmt = stmt.where(Appointment.professional_id == str(professional_id))  # Convert UUID to string
@@ -499,9 +498,9 @@ def get_appointment_by_id(
         return None # Handled as 404 in route
 
     # Permission check
-    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != str(requesting_user.id):
+    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != str(requesting_user.user_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client can only view their own appointment details.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professional can only view their own appointment details.")
     # GESTOR and ATENDENTE can view any appointment in their tenant (already filtered by tenant_id)
 
@@ -532,9 +531,9 @@ def _get_appointment_for_modification(
     can_modify = False
     if requesting_user.role in [UserRole.GESTOR, UserRole.ATENDENTE]:
         can_modify = True
-    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == str(requesting_user.id):
+    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == str(requesting_user.user_id):
         can_modify = True
-    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == str(requesting_user.id):
+    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == str(requesting_user.user_id):
         can_modify = True
 
     if not can_modify:
@@ -573,18 +572,7 @@ def cancel_appointment(
 
     db.commit()
 
-    log_audit(
-        event_type=AuditLogEvent.APPOINTMENT_CANCELLED,
-        requesting_user_id=requesting_user.id,
-        tenant_id=tenant_id,
-        entity_id=appointment.id,
-        details={
-            "reason": reason,
-            "original_professional_id": str(original_professional_id),
-            "original_client_id": str(original_client_id),
-            "original_date": original_date.isoformat()
-        }
-    )
+    # Removed audit logging
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user) # Re-fetch with relations
 
 
@@ -656,19 +644,7 @@ def reschedule_appointment(
 
     db.commit()
 
-    log_audit(
-        event_type=AuditLogEvent.APPOINTMENT_RESCHEDULED,
-        requesting_user_id=requesting_user.id,
-        tenant_id=tenant_id,
-        entity_id=appointment.id,
-        details={
-            "reason": reason,
-            "original_date": original_date.isoformat(),
-            "original_start_time": original_start_time.isoformat(),
-            "new_date": new_date.isoformat(),
-            "new_start_time": new_start_time.isoformat()
-        }
-    )
+    # Removed audit logging
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
 
 
@@ -817,7 +793,7 @@ def complete_appointment(
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as completed.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only complete their own appointments.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:
@@ -831,12 +807,7 @@ def complete_appointment(
                                      # This field might need more context in a real payment flow.
     db.commit()
 
-    log_audit(
-        event_type=AuditLogEvent.APPOINTMENT_COMPLETED,
-        requesting_user_id=requesting_user.id,
-        tenant_id=tenant_id,
-        entity_id=appointment.id
-    )
+    # Removed audit logging
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
 
 
@@ -850,7 +821,7 @@ def mark_appointment_as_no_show(
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as No Show.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only mark their own appointments as No Show.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:
@@ -862,12 +833,7 @@ def mark_appointment_as_no_show(
     appointment.status = AppointmentStatus.NO_SHOW
     db.commit()
 
-    log_audit(
-        event_type=AuditLogEvent.APPOINTMENT_NOSHOW,
-        requesting_user_id=requesting_user.id,
-        tenant_id=tenant_id,
-        entity_id=appointment.id
-    )
+    # Removed audit logging
     return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
 
 
@@ -998,14 +964,7 @@ def update_appointment_details(
         try:
             db.commit()
             
-            # Log audit event
-            log_audit(
-                event_type=AuditLogEvent.APPOINTMENT_UPDATED,
-                requesting_user_id=requesting_user.id,
-                tenant_id=tenant_id,
-                entity_id=appointment.id,
-                details=f"Updated: {', '.join(changes)}"
-            )
+            # Removed audit logging
             
         except Exception as e:
             db.rollback()

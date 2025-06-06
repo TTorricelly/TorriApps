@@ -12,7 +12,7 @@ from Core.Security.hashing import verify_password
 # from Core.Security.jwt import create_access_token
 # HTTPException is typically raised in routes, services usually return data or None/False
 # from fastapi import HTTPException
-from Core.Audit import log_audit, AuditLogEvent # Import audit logging utilities
+# Removed audit logging imports
 
 def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -> tuple[UserTenant | None, str | None]:
     """
@@ -39,12 +39,6 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
                 # Use the raw result since ORM failed
                 schema_name = tenant_result[2]  # db_schema_name is at index 2
             else:
-                log_audit(
-                    event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                    requesting_user_email=email,
-                    tenant_id=tenant_id,
-                    details={"reason": f"Tenant {tenant_id} not found."}
-                )
                 return None, None
         else:
             schema_name = tenant.db_schema_name
@@ -56,22 +50,10 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
         ).fetchone()
         
         if not result:
-            log_audit(
-                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                requesting_user_email=email,
-                tenant_id=tenant_id,
-                details={"reason": f"User with email {email} not found in tenant {tenant_id}."}
-            )
             return None, None
         
         # Verify password
         if not verify_password(password, result[3]):  # hashed_password is at index 3
-            log_audit(
-                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                requesting_user_email=email,
-                tenant_id=tenant_id,
-                details={"reason": "Incorrect password."}
-            )
             return None, None
         
         # Create UserTenant object from raw result
@@ -85,21 +67,9 @@ def authenticate_user(db: Session, tenant_id: UUID, email: str, password: str) -
         user.full_name = result[5]
         user.is_active = result[6]
         
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
-            requesting_user_id=user.id,
-            requesting_user_email=user.email,
-            tenant_id=user.tenant_id
-        )
         return user, schema_name
         
     except Exception as e:
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email,
-            tenant_id=tenant_id,
-            details={"reason": f"Database error: {str(e)}"}
-        )
         return None, None
 
 def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
@@ -124,11 +94,6 @@ def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
             schema_name = tenant.db_schema_name
             # Basic validation - schema names should be alphanumeric with underscores only
             if not schema_name.replace('_', '').replace('-', '').isalnum():
-                log_audit(
-                    event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                    requesting_user_email=email,
-                    details={"reason": f"Invalid schema name detected: {schema_name}"}
-                )
                 continue
                 
             # Use parameterized query to safely check for email in each tenant schema
@@ -141,21 +106,11 @@ def discover_tenant_by_email(db: Session, email: str) -> list[UUID]:
                     found_tenant_ids.append(UUID(result[0]))
             except Exception as e:
                 # Log but continue - schema might not exist or be accessible
-                log_audit(
-                    event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                    requesting_user_email=email,
-                    details={"reason": f"Error querying schema {schema_name}: {str(e)}"}
-                )
                 continue
                 
         return found_tenant_ids
         
     except Exception as e:
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email,
-            details={"reason": f"Error during tenant discovery: {str(e)}"}
-        )
         return []
 
 def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id: UUID | None = None) -> tuple[UserTenant | None, str | None, str | None]:
@@ -182,41 +137,19 @@ def enhanced_authenticate_user(db: Session, email: str, password: str, tenant_id
         ).first()
         
         if not user:
-            log_audit(
-                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                requesting_user_email=email,
-                details={"reason": f"User with email {email} not found."}
-            )
             return None, "Email not found.", None
         
         # Verify password
         if not verify_password(password, user.hashed_password):
-            log_audit(
-                event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-                requesting_user_email=email,
-                details={"reason": "Incorrect password."}
-            )
             return None, "Incorrect password.", None
         
         # Success
         from Config.Settings import settings
         schema_name = settings.default_schema_name
         
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_SUCCESS,
-            requesting_user_id=user.id,
-            requesting_user_email=user.email,
-            tenant_id=user.tenant_id,
-            details={"method": "single_schema_login"}
-        )
         return user, None, schema_name
         
     except Exception as e:
-        log_audit(
-            event_type=AuditLogEvent.USER_LOGIN_FAILURE,
-            requesting_user_email=email,
-            details={"reason": f"Database error: {str(e)}"}
-        )
         return None, f"Authentication error: {str(e)}", None
 
 # (Opcional, para depois) Criar função `create_user_tenant(db: Session, user: UserTenantCreate, tenant_id: UUID) -> UserTenant`:

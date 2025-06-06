@@ -53,7 +53,7 @@ def _get_professional_for_availability_management(
         # Gestor can manage any professional in their tenant.
         return professional_to_manage
     elif requesting_user.role == UserRole.PROFISSIONAL:
-        if requesting_user.id == str(professional_user_id_to_manage):
+        if requesting_user.user_id == str(professional_user_id_to_manage):
             # Professionals can manage their own availability.
             return professional_to_manage
         else:
