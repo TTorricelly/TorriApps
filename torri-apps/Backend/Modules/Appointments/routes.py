@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_db
-from Core.Auth.dependencies import get_current_user_tenant, require_role
+from Core.Auth.dependencies import get_current_user_tenant, get_current_user_from_db, require_role
 from Core.Auth.models import UserTenant # For current_user type hint
 from Core.Auth.constants import UserRole
 
@@ -272,20 +272,58 @@ def mark_appointment_as_no_show_endpoint(
     return updated_appointment
 
 
-# Placeholder for general Update Endpoint (if different from specific actions like reschedule)
-# @router.put("/{appointment_id}", response_model=AppointmentSchema, summary="Update appointment details (e.g., notes).")
-# def update_appointment_details_endpoint(
-#     appointment_id: UUID = Path(..., description="ID of the appointment to update."),
-#     update_data: AppointmentUpdate = Body(...), # Generic update schema
-#     requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)],
-#     db: Annotated[Session, Depends(get_db)]
-# ):
-#     # This would call a generic update service:
-#     # updated_appointment = appointments_services.update_appointment_details(
-#     #     db, appointment_id, update_data, requesting_user.tenant_id, requesting_user
-#     # )
-#     # if not updated_appointment:
-#     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or update failed.")
-#     # return updated_appointment
+@router.put(
+    "/{appointment_id}",
+    response_model=AppointmentSchema,
+    summary="Update appointment details (e.g., notes, client info, time, services)."
+)
+def update_appointment_details_endpoint(
+    appointment_id: UUID,
+    update_data: AppointmentUpdate,
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    # Call the generic update service
+    updated_appointment = appointments_services.update_appointment_details(
+        db, appointment_id, update_data, requesting_user.tenant_id, requesting_user
+    )
+    if not updated_appointment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or update failed.")
+    return updated_appointment
+
+
+@router.put(
+    "/{appointment_id}/multiple-services",
+    response_model=List[AppointmentSchema],
+    summary="Update appointment with multiple services (creates one appointment per service)."
+)
+def update_appointment_multiple_services_endpoint(
+    appointment_id: UUID,
+    requesting_user: Annotated[UserTenant, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)],
+    update_data: dict = Body(..., description="Update data including services array")
+):
+    """
+    Update appointment to handle multiple services.
+    Each service will get its own appointment record.
+    
+    Expected update_data format:
+    {
+        "services": ["Service Name 1", "Service Name 2"],
+        "client_id": "uuid",
+        "professional_id": "uuid", 
+        "appointment_date": "2024-01-15",
+        "start_time": "10:00",
+        "notes_by_client": "notes"
+    }
+    """
+    updated_appointments = appointments_services.update_appointment_with_multiple_services(
+        db=db,
+        appointment_id=appointment_id,
+        update_data=update_data,
+        tenant_id=requesting_user.tenant_id,
+        requesting_user=requesting_user
+    )
+    return updated_appointments
 
 # Delete endpoint is intentionally omitted as per subtask notes (cancellation is logical deletion).

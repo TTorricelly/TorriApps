@@ -42,19 +42,20 @@ class UserTenant(Base):
     # )
 
     # Relationships to Appointments - temporarily commented out to resolve initialization issues
-    client_appointments = relationship(
-        "Appointment",
-        foreign_keys="[Appointment.client_id]", # This tells SQLAlchemy which FK on Appointment model to use
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
+    # Commented out to avoid circular imports - these relationships cause issues
+    # client_appointments = relationship(
+    #     "Appointment",
+    #     foreign_keys="[Appointment.client_id]", # This tells SQLAlchemy which FK on Appointment model to use
+    #     back_populates="client",
+    #     cascade="all, delete-orphan"
+    # )
 
-    professional_appointments = relationship(
-        "Appointment",
-        foreign_keys="[Appointment.professional_id]", # This tells SQLAlchemy which FK on Appointment model to use
-        back_populates="professional",
-        cascade="all, delete-orphan"
-    )
+    # professional_appointments = relationship(
+    #     "Appointment",
+    #     foreign_keys="[Appointment.professional_id]", # This tells SQLAlchemy which FK on Appointment model to use
+    #     back_populates="professional",
+    #     cascade="all, delete-orphan"
+    # )
 
     # Professional-specific relationships - commented out to avoid circular imports
     # Will be added dynamically after models are loaded

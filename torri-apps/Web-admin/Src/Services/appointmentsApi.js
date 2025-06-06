@@ -74,3 +74,89 @@ export const getDailySchedule = async (date) => {
     throw new Error(errorMessage);
   }
 };
+
+/**
+ * Creates a new appointment.
+ * @param {object} appointmentData - The appointment data to create.
+ * @returns {Promise<object>} The created appointment data.
+ * @throws {Error} If the API call fails.
+ */
+export const createAppointment = async (appointmentData) => {
+  try {
+    const response = await apiClient.post('/appointments', appointmentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao criar agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Updates an existing appointment.
+ * @param {string} appointmentId - The ID of the appointment to update.
+ * @param {object} appointmentData - The updated appointment data.
+ * @returns {Promise<object>} The updated appointment data.
+ * @throws {Error} If the API call fails.
+ */
+export const updateAppointment = async (appointmentId, appointmentData) => {
+  try {
+    const response = await apiClient.put(`/appointments/${appointmentId}`, appointmentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao atualizar agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Updates an appointment with multiple services (creates one appointment per service).
+ * @param {string} appointmentId - The ID of the appointment to update.
+ * @param {object} appointmentData - The updated appointment data including services array.
+ * @returns {Promise<Array>} Array of appointment data (one per service).
+ * @throws {Error} If the API call fails.
+ */
+export const updateAppointmentWithMultipleServices = async (appointmentId, appointmentData) => {
+  try {
+    const response = await apiClient.put(`/appointments/${appointmentId}/multiple-services`, appointmentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating appointment with multiple services:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao atualizar agendamento com múltiplos serviços. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Deletes an appointment.
+ * @param {string} appointmentId - The ID of the appointment to delete.
+ * @returns {Promise<void>}
+ * @throws {Error} If the API call fails.
+ */
+export const deleteAppointment = async (appointmentId) => {
+  try {
+    await apiClient.delete(`/appointments/${appointmentId}`);
+  } catch (error) {
+    console.error("Error deleting appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao excluir agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Gets appointment by ID.
+ * @param {string} appointmentId - The ID of the appointment to fetch.
+ * @returns {Promise<object>} The appointment data.
+ * @throws {Error} If the API call fails.
+ */
+export const getAppointmentById = async (appointmentId) => {
+  try {
+    const response = await apiClient.get(`/appointments/${appointmentId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao buscar agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
