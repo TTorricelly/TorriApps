@@ -7,6 +7,7 @@ import {
 import { getDailySchedule, createAppointment, updateAppointment, updateAppointmentWithMultipleServices, deleteAppointment } from '../../Services/appointmentsApi';
 import { servicesApi } from '../../Services/services';
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
+import SearchableServiceSelect from '../../Components/SearchableServiceSelect';
 
 const DailySchedulePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -1341,65 +1342,18 @@ const DailySchedulePage = () => {
                     </Typography>
                   </div>
                 ) : (
-                  /* When creating: Show all available services grouped by category */
-                  <>
-                    {availableServices.reduce((groups, service) => {
-                      const categoryName = service.category_name || 'Sem Categoria';
-                      if (!groups[categoryName]) {
-                        groups[categoryName] = [];
-                      }
-                      groups[categoryName].push(service);
-                      return groups;
-                    }, {}) && Object.entries(availableServices.reduce((groups, service) => {
-                      const categoryName = service.category_name || 'Sem Categoria';
-                      if (!groups[categoryName]) {
-                        groups[categoryName] = [];
-                      }
-                      groups[categoryName].push(service);
-                      return groups;
-                    }, {})).map(([categoryName, categoryServices]) => (
-                      <div key={categoryName} className="space-y-2">
-                        <Typography variant="small" className="text-text-secondary font-medium">
-                          {categoryName}
-                        </Typography>
-                        <div className="flex flex-wrap gap-2">
-                          {categoryServices.map(service => {
-                            const isSelected = appointmentForm.services.includes(service.name);
-                            return (
-                              <Badge
-                                key={service.id}
-                                className={`cursor-pointer px-3 py-1 text-sm transition-all duration-200 ${
-                                  isSelected 
-                                    ? 'bg-accent-primary text-white hover:bg-accent-primary/90' 
-                                    : 'bg-bg-tertiary text-text-primary hover:bg-bg-tertiary/80 border border-bg-tertiary'
-                                }`}
-                                onClick={() => {
-                                  if (isSelected) {
-                                    setAppointmentForm(prev => ({ 
-                                      ...prev, 
-                                      services: prev.services.filter(s => s !== service.name) 
-                                    }));
-                                  } else {
-                                    setAppointmentForm(prev => ({ 
-                                      ...prev, 
-                                      services: [...prev.services, service.name] 
-                                    }));
-                                  }
-                                }}
-                              >
-                                {service.name}
-                                {service.duration_minutes && (
-                                  <span className="ml-1 text-xs opacity-80">
-                                    ({service.duration_minutes}min)
-                                  </span>
-                                )}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </>
+                  /* When creating: Show searchable service selection dropdown */
+                  <SearchableServiceSelect
+                    services={availableServices}
+                    selectedServices={appointmentForm.services}
+                    onServicesChange={(services) => {
+                      setAppointmentForm(prev => ({ 
+                        ...prev, 
+                        services 
+                      }));
+                    }}
+                    placeholder="Buscar e selecionar serviços..."
+                  />
                 )}
               </div>
             )}

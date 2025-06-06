@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AIs to code when working with code in this repository.
 
 ## Project Overview
 
@@ -8,33 +8,17 @@ TorriApps is a salon/barbershop management SaaS platform with white-label mobile
 
 ## Architecture
 
-### Database Strategy
-⚠️ **ARCHITECTURE MIGRATION COMPLETED**: The system has been **migrated from multi-tenant to single schema architecture** for simplified development and deployment.
-
 **Current Architecture (Single Schema):**
 - **Single Database**: `tenant_beauty_hub` - Contains all application data
-- **Unified Data Model**: All entities (users, appointments, services, categories) in one schema
-- **Simplified Authentication**: JWT-based auth without complex tenant switching
-- **Development Focus**: Uses single tenant data for streamlined development workflow
-
-**Legacy Multi-Tenant Architecture (Deprecated):**
-- ~~Schema-based multi-tenancy: Each tenant gets its own MySQL schema~~
-- ~~Public schema: Stores tenant metadata and admin users~~
-- ~~Tenant schemas: Store business-specific data~~
-- ~~TenantMiddleware: Handles schema switching automatically~~
-
-**Migration Benefits:**
-- ✅ **Simplified Development**: No complex schema switching logic
-- ✅ **Easier Debugging**: Single database reduces connection complexity  
-- ✅ **Faster Development**: No tenant context required for development
-- ✅ **Reduced Complexity**: Eliminated multi-tenant middleware and dependencies
+- **Data Model**: Entities (users, appointments, services, categories)
+- **Simplified Authentication**: JWT-based auth
 
 ### Component Structure
 - **Backend**: FastAPI + SQLAlchemy + MySQL with single schema architecture
 - **Web-admin**: React.js administrative interface for salon owners
 - **Mobile-client-core**: React Native base application with white-label capabilities
 - **Mobile-client-configs**: Brand-specific configurations and assets for white-label apps
-- **Infrastructure**: Docker, Kubernetes, Terraform deployment automation
+- **Infrastructure**: TBD
 
 ## Development Commands
 
@@ -75,21 +59,13 @@ DEBUG=true
 
 ## Key Design Patterns
 
-### Single Schema Request Flow (Simplified)
-⚠️ **CURRENT ARCHITECTURE**: Simplified single schema approach after migration from multi-tenant.
+### Single Schema Request Flow
+⚠️ **CURRENT ARCHITECTURE**
 
 1. **Simplified Middleware** handles basic JWT authentication
 2. **All routes** use the same `tenant_beauty_hub` database
-3. **JWT tokens** contain user info but no tenant switching required
-4. **Database dependencies** connect directly to single schema
-5. **No tenant context switching** - all data in unified schema
+3. **JWT tokens** contain user info 
 6. **Authorization header only** - `Bearer <jwt_token>`
-
-**Key Changes from Multi-Tenant:**
-- ✅ Removed complex schema switching logic
-- ✅ Eliminated `request.state.tenant_schema_name` 
-- ✅ Simplified database connection handling
-- ✅ No tenant validation middleware needed
 
 ### Module Structure
 Each business module follows this pattern:
@@ -108,7 +84,6 @@ Modules/FeatureName/
 - **JWT payload contains**: `tenant_id`, `tenant_schema`, `role`, `sub` (user email), `user_id`, `full_name`, `is_active`, `exp`
 - **Single schema users**: All users in unified `tenant_beauty_hub` database
 - **Role-based access**: Different API permissions based on user roles
-- **Simplified auth**: No tenant context switching - direct database access
 
 ## Mobile White-Label System
 
@@ -159,9 +134,6 @@ node Build-app.js --brand=beauty-hub
 ```javascript
 // ✅ CURRENT: Only Authorization header needed
 api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-// ✅ SIMPLIFIED: No tenant context switching
-// All API calls use same database automatically
 ```
 
 ## JWT-Based Authentication System
@@ -184,37 +156,24 @@ api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
 **Note**: `tenant_id` and `tenant_schema` are maintained for legacy compatibility but no longer used for schema switching since all data is in single schema.
 
-**🎯 Single Schema + JWT-Only Authentication Benefits:**
-
-| **Aspect** | **❌ Old: Multi-Tenant + DB Lookup** | **✅ New: Single Schema + JWT-Only** |
-|------------|---------------------------|---------------------|
-| **DB Calls per Request** | 1+ (user + tenant switching) | 0 |
-| **Response Time** | +100-200ms | Baseline |
-| **Scalability** | Limited by DB + schema complexity | Excellent |
-| **Session Issues** | SQLAlchemy detached objects | Eliminated |
-| **Performance** | Depends on DB load + tenant switching | Consistent |
-| **Development Complexity** | High (tenant context required) | Low (direct database access) |
-
 **✅ Authentication Dependencies (Optimized):**
 ```python
 # Core/Auth/dependencies.py
 def get_current_user_tenant(payload: TokenPayload) -> TokenPayload:
     """Get user data from JWT payload only - no database calls needed."""
     
-    # If token has complete user data, use it directly (new optimized path)
+    # If token has complete user data, use it directly 
     if payload.user_id and payload.full_name and payload.is_active is not None:
         if not payload.is_active:
             raise HTTPException(status_code=400, detail="Inactive user")
         return payload
     
-    # Fallback for old tokens: fetch from database (temporary compatibility)
-    # This path will be removed once all tokens are upgraded
     ...
 ```
 
 **✅ Enhanced Login Response:**
 ```python
-# Login now includes ALL user/tenant data to avoid future API calls
+# Login includes ALL user/tenant data to avoid future API calls
 {
   "access_token": "jwt...",
   "token_type": "bearer",
@@ -241,16 +200,7 @@ For backward compatibility, the system supports both enhanced and legacy token f
 
 ### Important Migration Notes
 
-#### **Schema Migration Considerations**
-⚠️ **COMPLETED MIGRATION**: The system has been successfully migrated from multi-tenant to single schema architecture.
-
-**Migration Changes Made:**
-- **Removed**: Complex cross-schema foreign key constraints
-- **Simplified**: All models now use single schema approach
-- **Updated**: `tenant_id` fields made optional for backward compatibility
-- **Fixed**: Pydantic schemas to handle `Optional[UUID]` for `tenant_id`
-
-**✅ CURRENT Pattern (Single Schema):**
+**✅ CURRENT Pattern:**
 ```python
 # In unified schema models (Categories, Services, etc.)
 tenant_id = Column(CHAR(36), nullable=True, index=True)  # Optional for legacy data
@@ -309,10 +259,6 @@ stmt = select(Category).where(Category.tenant_id == tenant_id)  # UUID won't mat
 **⚠️ COMMON MISTAKE**: Service layer functions receiving UUID parameters from FastAPI routes must convert them to strings before database operations. This affects ALL CRUD operations including create, read, update, and delete functions.
 
 #### **Multi-Tenant Database Connection Architecture**
-⚠️ **CRITICAL ARCHITECTURE CHANGE**: Direct tenant database connections eliminate pool corruption issues:
-
-**✅ NEW APPROACH - Direct Tenant Database Connections:**
-Instead of using `USE schema_name` commands which can corrupt connection pools, the system now creates **direct connections** to tenant databases:
 
 ```python
 # Core/Database/dependencies.py
@@ -495,9 +441,7 @@ async def get_current_tenant(
 ## Deployment
 
 ### Infrastructure
-- **Docker**: Containerized applications with multi-stage builds
-- **Kubernetes**: Production orchestration with tenant isolation
-- **Terraform**: Infrastructure as code for cloud resources
+TBD
 
 ### Mobile Deployment
 - **Fastlane**: Automated iOS and Android app store deployments
