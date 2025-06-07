@@ -61,12 +61,11 @@ class Service(Base):
     category = relationship("Category", back_populates="services")
 
     # Many-to-many relationship with UserTenant (Professionals)
-    # Temporarily commented out to resolve circular import issues
-    # professionals = relationship(
-    #     "UserTenant",
-    #     secondary=service_professionals_association,
-    #     back_populates="services_offered"
-    # )
+    professionals = relationship(
+        "UserTenant",
+        secondary=service_professionals_association,
+        back_populates="services_offered"
+    )
 
     def __repr__(self):
         return f"<Service(id={self.id}, name='{self.name}')>"

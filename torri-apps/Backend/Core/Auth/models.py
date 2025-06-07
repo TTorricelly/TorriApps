@@ -34,12 +34,11 @@ class UserTenant(Base):
     # This might require the table to be imported or defined before this model is fully processed,
     # or for metadata to be shared/ordered correctly.
     # Using a string for `secondary` assumes it's in the same `Base.metadata`.
-    # Temporarily commented out to resolve initialization issues
-    # services_offered = relationship(
-    #     "Service",
-    #     secondary="service_professionals_association",
-    #     back_populates="professionals"
-    # )
+    services_offered = relationship(
+        "Service",
+        secondary="service_professionals_association",
+        back_populates="professionals"
+    )
 
     # Relationships to Appointments - temporarily commented out to resolve initialization issues
     # Commented out to avoid circular imports - these relationships cause issues
@@ -79,22 +78,3 @@ class UserTenant(Base):
 
     def __repr__(self):
         return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
-
-# Configure the relationship after the class definition to avoid circular imports
-# Temporarily disable relationship configuration to resolve circular import issues
-# def _configure_user_service_relationship():
-#     """Configure the services_offered relationship after all models are loaded."""
-#     try:
-#         from Modules.Services.models import service_professionals_association
-#         UserTenant.services_offered = relationship(
-#             "Service",
-#             secondary=service_professionals_association,
-#             back_populates="professionals",
-#             lazy="select"
-#         )
-#     except ImportError:
-#         # If Services module isn't available, create an empty relationship
-#         UserTenant.services_offered = []
-
-# # Call the configuration function
-# _configure_user_service_relationship()
