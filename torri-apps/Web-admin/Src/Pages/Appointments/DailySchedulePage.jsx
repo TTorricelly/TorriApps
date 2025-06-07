@@ -923,7 +923,7 @@ const DailySchedulePage = () => {
                                   unmount: {
                                     scale: 0,
                                     y: 25,
-                                    transition: { delay: 0.3, duration: 0.2 }
+                                    transition: { delay: 0.7, duration: 0.2 }
                                   }
                                 }}
                                 className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]"
