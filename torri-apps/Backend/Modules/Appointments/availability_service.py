@@ -35,9 +35,12 @@ def get_daily_time_slots_for_professional(
     """
     Calculates all available and unavailable time slots for a professional on a
     specific date based on their work hours, breaks, existing appointments and
-    blocked times.  Optional parameters allow ignoring appointments that belong
-    to ``ignore_client_id`` starting at ``ignore_start_time`` – used when the
-    same client wants to book multiple services at the same time.
+    blocked times.
+    If ``ignore_client_id`` is provided, all existing appointments for that
+    client on that day (with this professional) are disregarded for availability
+    checking. This allows a client to have multiple overlapping appointments
+    with the same professional. The ``ignore_start_time`` parameter is not
+    used by the filtering logic if ``ignore_client_id`` is present.
     The granularity of slots is determined by ``tenant.block_size_minutes``.
     """
     block_size_minutes = get_tenant_block_size(db, tenant_id)
@@ -98,10 +101,10 @@ def get_daily_time_slots_for_professional(
     )
     appointments_today = db.execute(stmt_appts).scalars().all()
 
-    if ignore_client_id and ignore_start_time:
+    if ignore_client_id: # Check only for ignore_client_id
         appointments_today = [
             appt for appt in appointments_today
-            if not (appt.client_id == str(ignore_client_id) and appt.start_time == ignore_start_time)
+            if not (appt.client_id == str(ignore_client_id)) # Filter if client_id matches
         ]
 
     # Generate all potential slots based on working hours and block_size_minutes

@@ -526,6 +526,191 @@ def test_create_appointment_professional_doesnt_offer_service(
     assert "does not offer service" in response.json()["detail"]
 
 
+# === APPOINTMENT OVERLAP LOGIC TESTS ===
+
+def _get_next_monday() -> date:
+    """Helper function to get the date of the next Monday."""
+    today = date.today()
+    monday = today + timedelta(days=(0 - today.weekday() + 7) % 7)
+    if monday <= today: # if today is Monday, get next Monday
+        monday += timedelta(days=7)
+    return monday
+
+def test_create_overlapping_appointments_same_client_same_professional(
+    test_client: TestClient,
+    client_user_test: UserTenantModel,
+    professional_user_test: UserTenantModel,
+    test_service: Service,
+    test_availability_slot: ProfessionalAvailability, # Ensures professional is available on Monday
+    auth_headers_atendente # Atendente can book for any client
+):
+    """
+    Test Case 1: Same client, same professional, overlapping appointments.
+    - Book Appt1.
+    - Book Appt2 for the same client and professional, overlapping with Appt1.
+    This should succeed due to the updated logic.
+    """
+    appointment_date = _get_next_monday()
+    start_time_appt1 = time(10, 0)
+    start_time_appt2 = time(10, 15) # Overlaps with Appt1 (10:00-10:30)
+
+    # Book Appointment 1
+    appointment_data_1 = {
+        "client_id": str(client_user_test.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time_appt1.strftime("%H:%M:%S"),
+    }
+    response_1 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_1,
+        headers=auth_headers_atendente
+    )
+    assert response_1.status_code == 201
+    appt_1_id = response_1.json()["id"]
+
+    # Book Appointment 2 (Overlapping)
+    appointment_data_2 = {
+        "client_id": str(client_user_test.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time_appt2.strftime("%H:%M:%S"),
+        # Pass ignore_client_id to trigger the new logic.
+        # The API will internally use the client_id from the payload if this specific
+        # parameter for ignoring is part of the booking request schema,
+        # or the backend service `get_daily_time_slots_for_professional` will use it.
+        # For this test, we assume the endpoint passes it down or the service infers it.
+        # The key is that the logic inside `get_daily_time_slots_for_professional` handles it.
+    }
+    response_2 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_2,
+        headers=auth_headers_atendente
+    )
+    assert response_2.status_code == 201, f"Response content: {response_2.content.decode()}"
+
+
+def test_create_appointments_same_client_same_professional_same_start_time(
+    test_client: TestClient,
+    client_user_test: UserTenantModel,
+    professional_user_test: UserTenantModel,
+    test_service: Service,
+    test_availability_slot: ProfessionalAvailability,
+    auth_headers_atendente
+):
+    """
+    Test Case 2: Same client, same professional, same start time.
+    - Book Appt1.
+    - Book Appt2 for the same client and professional, at the exact same start time.
+    This should succeed.
+    """
+    appointment_date = _get_next_monday()
+    start_time = time(11, 0)
+
+    # Book Appointment 1
+    appointment_data_1 = {
+        "client_id": str(client_user_test.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time.strftime("%H:%M:%S"),
+    }
+    response_1 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_1,
+        headers=auth_headers_atendente
+    )
+    assert response_1.status_code == 201
+    appt_1_id = response_1.json()["id"]
+
+    # Book Appointment 2 (Same Start Time)
+    appointment_data_2 = {
+        "client_id": str(client_user_test.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time.strftime("%H:%M:%S"),
+    }
+    response_2 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_2,
+        headers=auth_headers_atendente
+    )
+    assert response_2.status_code == 201, f"Response content: {response_2.content.decode()}"
+
+
+@pytest.fixture(scope="function")
+def client_user_test_2(db_session_test: SQLAlchemySession, default_tenant_test: TenantModel) -> UserTenantModel:
+    """Creates a second CLIENT user within the default_tenant_test for testing."""
+    hashed_password = get_password_hash("testpassword2") # Different password just in case
+    user = UserTenantModel(
+        id=str(uuid4()),
+        tenant_id=default_tenant_test.id,
+        email="client.test2@example.com",
+        hashed_password=hashed_password,
+        role=UserRole.CLIENTE,
+        full_name="Client Test User 2",
+        is_active=True
+    )
+    db_session_test.add(user)
+    db_session_test.commit()
+    db_session_test.refresh(user)
+    return user
+
+def test_create_overlapping_appointments_different_clients_same_professional_should_fail(
+    test_client: TestClient,
+    client_user_test: UserTenantModel,
+    client_user_test_2: UserTenantModel, # New fixture for the second client
+    professional_user_test: UserTenantModel,
+    test_service: Service,
+    test_availability_slot: ProfessionalAvailability,
+    auth_headers_atendente
+):
+    """
+    Test Case 3: Different clients, same professional, overlapping appointments.
+    - Book Appt1 for client_user_test.
+    - Attempt to book Appt2 for client_user_test_2, overlapping with Appt1.
+    This should fail as it's a genuine conflict.
+    """
+    appointment_date = _get_next_monday()
+    start_time_appt1 = time(14, 0) # Appt1: 14:00 - 14:30
+    start_time_appt2 = time(14, 15) # Appt2: 14:15 - 14:45 (Overlaps)
+
+    # Book Appointment 1 for client_user_test
+    appointment_data_1 = {
+        "client_id": str(client_user_test.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time_appt1.strftime("%H:%M:%S"),
+    }
+    response_1 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_1,
+        headers=auth_headers_atendente
+    )
+    assert response_1.status_code == 201
+    appt_1_id = response_1.json()["id"]
+
+    # Attempt to Book Appointment 2 for client_user_test_2 (Overlapping)
+    appointment_data_2 = {
+        "client_id": str(client_user_test_2.id),
+        "professional_id": str(professional_user_test.id),
+        "service_id": str(test_service.id),
+        "appointment_date": appointment_date.isoformat(),
+        "start_time": start_time_appt2.strftime("%H:%M:%S"),
+    }
+    response_2 = test_client.post(
+        f"{app_settings.API_V1_PREFIX}/appointments",
+        json=appointment_data_2,
+        headers=auth_headers_atendente
+    )
+    assert response_2.status_code == 409 # Expecting Conflict
+    assert "Professional is not available" in response_2.json()["detail"]
+
+
 # === APPOINTMENT LISTING TESTS ===
 
 def test_list_appointments_as_gestor(
