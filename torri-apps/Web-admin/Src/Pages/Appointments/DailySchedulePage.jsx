@@ -918,6 +918,14 @@ const DailySchedulePage = () => {
                               <Tooltip
                                 placement="top"
                                 interactive={true}
+                                animate={{
+                                  mount: { scale: 1, y: 0 },
+                                  unmount: {
+                                    scale: 0,
+                                    y: 25,
+                                    transition: { delay: 0.3, duration: 0.2 }
+                                  }
+                                }}
                                 className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]"
                                 content={
                                   <div className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]">
