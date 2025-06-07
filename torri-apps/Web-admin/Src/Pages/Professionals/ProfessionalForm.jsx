@@ -51,6 +51,7 @@ const ServiceTagSelector = ({ services, selectedServices, onServicesChange, show
 
   const handleAddService = (serviceId) => {
     if (!selectedServices.includes(serviceId)) {
+      console.log('Adding service:', serviceId);
       onServicesChange([...selectedServices, serviceId]);
     }
     setSearchTerm('');
@@ -58,6 +59,7 @@ const ServiceTagSelector = ({ services, selectedServices, onServicesChange, show
   };
 
   const handleRemoveService = (serviceId) => {
+    console.log('Removing service:', serviceId);
     onServicesChange(selectedServices.filter(id => id !== serviceId));
   };
 
@@ -1329,17 +1331,21 @@ export default function ProfessionalForm() {
         try {
           await professionalsApi.uploadPhoto(result.id || professionalId, photoFile);
         } catch (error) {
-          console.warn('Erro ao fazer upload da foto:', error);
+          console.error('Erro ao fazer upload da foto:', error);
           showAlert('Profissional salvo, mas houve erro no upload da foto', 'warning');
         }
       }
       
       // Update services association
-      if (selectedServices.length > 0) {
+      const profId = result?.id || professionalId;
+      console.log('Updating services for professional:', profId);
+      console.log('Selected services:', selectedServices);
+      if (selectedServices.length > 0 || isEdit) {
         try {
-          await professionalsApi.updateProfessionalServices(result.id || professionalId, selectedServices);
+          const servicesResult = await professionalsApi.updateProfessionalServices(profId, selectedServices);
+          console.log('Services update result:', servicesResult);
         } catch (error) {
-          console.warn('Erro ao associar serviços:', error);
+          console.error('Erro ao associar serviços:', error, error.response?.data);
           showAlert('Profissional salvo, mas houve erro na associação de serviços', 'warning');
         }
       }
