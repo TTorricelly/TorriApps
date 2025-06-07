@@ -923,7 +923,7 @@ const DailySchedulePage = () => {
                               {/* Enhanced Tooltip with appointment details */}
                               {hoveredAppointment === item.id && (
                                 <div 
-                                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-50 px-2 py-2"
+                                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-[60] px-2 py-2"
                                   onMouseEnter={() => setHoveredAppointment(item.id)}
                                   onMouseLeave={() => setHoveredAppointment(null)}
                                 >
