@@ -909,7 +909,7 @@ const DailySchedulePage = () => {
                         return (
                           <div
                             key={`${prof.id}-apt-${item.id}`}
-                            className="border-r border-b border-bg-tertiary relative z-10"
+                            className="border-r border-b border-bg-tertiary relative"
                             style={{ 
                               gridColumn: profIndex + 2,
                               gridRow: `${startSlotIndex + 1} / span ${spans}`
@@ -1043,7 +1043,7 @@ const DailySchedulePage = () => {
                         return (
                           <div
                             key={`${prof.id}-blocked-${item.id || itemIndex}`}
-                            className="border-r border-b border-bg-tertiary relative z-10"
+                            className="border-r border-b border-bg-tertiary relative"
                             style={{ 
                               gridColumn: profIndex + 2,
                               gridRow: `${startSlotIndex + 1} / span ${spans}`
