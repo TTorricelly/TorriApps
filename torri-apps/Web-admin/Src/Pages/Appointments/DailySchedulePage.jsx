@@ -398,7 +398,7 @@ const DailySchedulePage = () => {
   const fetchServicesForProfessional = useCallback(async (professionalId) => {
     if (professionalServicesCache[professionalId]) {
       setAvailableServices(professionalServicesCache[professionalId]);
-      return;
+      return professionalServicesCache[professionalId]; // Return cached services
     }
 
     setLoadingServices(true);
@@ -407,10 +407,12 @@ const DailySchedulePage = () => {
       const fetchedServices = await professionalsApi.getProfessionalServices(professionalId);
       setProfessionalServicesCache(prevCache => ({ ...prevCache, [professionalId]: fetchedServices }));
       setAvailableServices(fetchedServices);
+      return fetchedServices; // Return fetched services
     } catch (err) {
       console.error(`Error fetching services for professional ${professionalId}:`, err);
       setError(`Erro ao carregar serviços para o profissional.`);
       setAvailableServices([]);
+      return []; // Return empty array on error
     } finally {
       setLoadingServices(false);
     }
@@ -506,12 +508,28 @@ const DailySchedulePage = () => {
 
   // Fetch services when professional changes in the appointment form
   useEffect(() => {
-    if (appointmentForm.professionalId) {
-      fetchServicesForProfessional(appointmentForm.professionalId);
-    } else {
-      setAvailableServices([]);
-      setAppointmentForm(prev => ({ ...prev, services: [] })); // Clear selected services
-    }
+    const updateServicesForProfessional = async () => {
+      if (appointmentForm.professionalId) {
+        const newServices = await fetchServicesForProfessional(appointmentForm.professionalId);
+        // newServices is an array of service objects, e.g., [{id: '1', name: 'Corte'}, ...]
+        // prev.services is an array of service names, e.g., ['Corte', 'Barba']
+
+        setAppointmentForm(prev => {
+          const updatedServices = prev.services.filter(serviceName => {
+            // Assuming serviceName is the name and we need to find it in newServices
+            // This might need adjustment if appointmentForm.services stores IDs instead of names
+            const serviceExists = newServices.some(ns => ns.name === serviceName);
+            return serviceExists;
+          });
+          return { ...prev, services: updatedServices };
+        });
+      } else {
+        setAvailableServices([]);
+        setAppointmentForm(prev => ({ ...prev, services: [] })); // Clear selected services
+      }
+    };
+
+    updateServicesForProfessional();
   }, [appointmentForm.professionalId, fetchServicesForProfessional]);
 
   useEffect(() => {
