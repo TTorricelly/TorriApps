@@ -1025,6 +1025,7 @@ const DailySchedulePage = () => {
                                   </>
                                 )}
                               </div>
+                              </Tooltip>
                             </div>
                           </div>
                         );
