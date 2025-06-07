@@ -92,22 +92,7 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
 
         blocked_slot_details: List[BlockedSlotSchema] = []
         for block in blocked_slots_for_prof:
-            if block.block_type == AvailabilityBlockType.DAY_OFF: # Handle full day off
-                # Create a single block for the typical working day or a placeholder
-                # For simplicity, let's assume a DAY_OFF block means 8 AM to 8 PM for now.
-                # This might need refinement based on actual tenant/professional working hours.
-                block_start_dt = datetime.combine(schedule_date, time(8,0))
-                block_end_dt = datetime.combine(schedule_date, time(20,0))
-                block_duration = int((block_end_dt - block_start_dt).total_seconds() / 60)
-                blocked_slot_details.append(
-                    BlockedSlotSchema(
-                        id=block.id,
-                        start_time=block_start_dt,
-                        duration_minutes=block_duration,
-                        reason=block.reason or "Dia de Folga"
-                    )
-                )
-            elif block.start_time and block.end_time: # Regular timed block
+            if block.start_time and block.end_time: # Regular timed block
                 block_start_datetime = datetime.combine(block.blocked_date, block.start_time)
                 block_end_datetime = datetime.combine(block.blocked_date, block.end_time)
                 duration = int((block_end_datetime - block_start_datetime).total_seconds() / 60)
