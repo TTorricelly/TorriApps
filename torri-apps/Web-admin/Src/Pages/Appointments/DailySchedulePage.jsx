@@ -917,6 +917,7 @@ const DailySchedulePage = () => {
                             <div className="relative h-full p-xs">
                               <Tooltip
                                 placement="top"
+                                interactive={true}
                                 className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]"
                                 content={
                                   <div className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]">
