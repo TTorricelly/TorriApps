@@ -6,6 +6,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { getDailySchedule, createAppointment, updateAppointment, updateAppointmentWithMultipleServices, deleteAppointment } from '../../Services/appointmentsApi';
 import { servicesApi } from '../../Services/services';
+import { professionalsApi } from '../../Services/professionals'; // Added import
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
 import SearchableServiceSelect from '../../Components/SearchableServiceSelect';
 
@@ -38,8 +39,9 @@ const DailySchedulePage = () => {
   const [savingAppointment, setSavingAppointment] = useState(false);
 
   // Services state
-  const [availableServices, setAvailableServices] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]); // Changed initial state
   const [loadingServices, setLoadingServices] = useState(false);
+  const [professionalServicesCache, setProfessionalServicesCache] = useState({}); // Added state
 
   // Client management state
   const [availableClients, setAvailableClients] = useState([]);
@@ -111,6 +113,7 @@ const DailySchedulePage = () => {
     setSelectedClient(null);
     setIsNewClient(false);
     setClientSearchResults([]);
+    setAvailableServices([]); // Clear available services
     setShowAppointmentModal(true);
   };
 
@@ -130,6 +133,11 @@ const DailySchedulePage = () => {
     });
     setFormErrors({});
     setShowAppointmentModal(true);
+    // Fetch services if professionalId is available
+    const profId = professionalId || appointment.professionalId;
+    if (profId) {
+      fetchServicesForProfessional(profId);
+    }
   };
 
   const handleDeleteAppointment = async (appointment) => {
@@ -366,26 +374,47 @@ const DailySchedulePage = () => {
     }
   };
 
-  const fetchServices = useCallback(async () => {
+  // const fetchServices = useCallback(async () => { // Commented out old fetchServices
+  //   setLoadingServices(true);
+  //   try {
+  //     const services = await servicesApi.getAllServices();
+  //     setAvailableServices(services);
+  //   } catch (err) {
+  //     console.error("Error fetching services:", err);
+  //     // Don't set error for services - use fallback services if API fails
+  //     setAvailableServices([
+  //       { id: '1', name: 'Corte' },
+  //       { id: '2', name: 'Barba' },
+  //       { id: '3', name: 'Bigode' },
+  //       { id: '4', name: 'Sobrancelha' },
+  //       { id: '5', name: 'Lavagem' },
+  //       { id: '6', name: 'Hidratação' }
+  //     ]);
+  //   } finally {
+  //     setLoadingServices(false);
+  //   }
+  // }, []);
+
+  const fetchServicesForProfessional = useCallback(async (professionalId) => {
+    if (professionalServicesCache[professionalId]) {
+      setAvailableServices(professionalServicesCache[professionalId]);
+      return;
+    }
+
     setLoadingServices(true);
+    setError(null); // Clear previous errors
     try {
-      const services = await servicesApi.getAllServices();
-      setAvailableServices(services);
+      const fetchedServices = await professionalsApi.getProfessionalServices(professionalId);
+      setProfessionalServicesCache(prevCache => ({ ...prevCache, [professionalId]: fetchedServices }));
+      setAvailableServices(fetchedServices);
     } catch (err) {
-      console.error("Error fetching services:", err);
-      // Don't set error for services - use fallback services if API fails
-      setAvailableServices([
-        { id: '1', name: 'Corte' },
-        { id: '2', name: 'Barba' },
-        { id: '3', name: 'Bigode' },
-        { id: '4', name: 'Sobrancelha' },
-        { id: '5', name: 'Lavagem' },
-        { id: '6', name: 'Hidratação' }
-      ]);
+      console.error(`Error fetching services for professional ${professionalId}:`, err);
+      setError(`Erro ao carregar serviços para o profissional.`);
+      setAvailableServices([]);
     } finally {
       setLoadingServices(false);
     }
-  }, []);
+  }, [professionalServicesCache]);
 
   const fetchClients = useCallback(async () => {
     setLoadingClients(true);
@@ -471,9 +500,19 @@ const DailySchedulePage = () => {
 
   useEffect(() => {
     fetchSchedule();
-    fetchServices();
+    // fetchServices(); // Removed call to old fetchServices
     fetchClients();
-  }, [fetchSchedule, fetchServices, fetchClients]);
+  }, [fetchSchedule, fetchClients]); // Removed fetchServices from dependencies
+
+  // Fetch services when professional changes in the appointment form
+  useEffect(() => {
+    if (appointmentForm.professionalId) {
+      fetchServicesForProfessional(appointmentForm.professionalId);
+    } else {
+      setAvailableServices([]);
+      setAppointmentForm(prev => ({ ...prev, services: [] })); // Clear selected services
+    }
+  }, [appointmentForm.professionalId, fetchServicesForProfessional]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1375,12 +1414,17 @@ const DailySchedulePage = () => {
                     services={availableServices}
                     selectedServices={appointmentForm.services}
                     onServicesChange={(services) => {
-                      setAppointmentForm(prev => ({ 
-                        ...prev, 
-                        services 
+                      setAppointmentForm(prev => ({
+                        ...prev,
+                        services
                       }));
                     }}
-                    placeholder="Buscar e selecionar serviços..."
+                    placeholder={
+                      !appointmentForm.professionalId
+                        ? "Selecione um profissional para ver os serviços"
+                        : "Buscar e selecionar serviços..."
+                    }
+                    disabled={!appointmentForm.professionalId || loadingServices}
                   />
                 )}
               </div>
