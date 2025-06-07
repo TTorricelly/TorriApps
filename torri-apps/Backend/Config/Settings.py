@@ -2,9 +2,9 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Core application settings
-    database_url: str
-    secret_key: str
-    redis_url: str
+    database_url: str = "sqlite:///./test.db"
+    secret_key: str = "dummy-secret"
+    redis_url: str = "redis://localhost:6379/0"
     debug: bool = False
     testing: bool = False
     
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     SERVER_HOST: str = "http://localhost:8000" # Base URL for serving static files etc.
     
     # Schema configuration (from environment variable)
-    default_schema_name: str  # Read from DEFAULT_SCHEMA_NAME env var
+    default_schema_name: str = "public"  # Read from DEFAULT_SCHEMA_NAME env var
     
     # Legacy multi-tenant settings (deprecated but kept for compatibility)
     public_database_url: str = ""  # Will use database_url if empty

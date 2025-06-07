@@ -1,5 +1,6 @@
 import pytest
 from typing import List
+from enum import Enum
 from uuid import uuid4, UUID
 from datetime import date, time, datetime, timedelta
 
@@ -9,7 +10,7 @@ from fastapi import HTTPException
 # Models to create
 from Core.Auth.models import UserTenant
 from Modules.Tenants.models import Tenant
-from Modules.Services.models import Service, ServiceProfessionalAssociation # Assuming this association model if many-to-many
+from Modules.Services.models import Service, Category, service_professionals_association
 from Modules.Appointments.models import Appointment
 from Modules.Availability.models import ProfessionalBlockedTime # Using the existing model
 
@@ -24,6 +25,11 @@ from Core.Auth.constants import UserRole
 from Modules.Appointments.constants import AppointmentStatus
 from Modules.Availability.constants import AvailabilityBlockType
 
+# Alias db_session fixture used in older tests
+@pytest.fixture
+def db_session(db_session_test: Session) -> Session:
+    return db_session_test
+
 # Helper to create professionals
 def create_professional(db: Session, tenant_id: UUID, full_name: str, email_prefix: str, is_active: bool = True) -> UserTenant:
     user = UserTenant(
@@ -33,8 +39,7 @@ def create_professional(db: Session, tenant_id: UUID, full_name: str, email_pref
         email=f"{email_prefix}@example.com",
         hashed_password="hashed_password", # Not relevant for this test but required
         role=UserRole.PROFISSIONAL,
-        is_active=is_active,
-        email_verified=True
+        is_active=is_active
     )
     db.add(user)
     db.commit()
@@ -43,6 +48,15 @@ def create_professional(db: Session, tenant_id: UUID, full_name: str, email_pref
 
 # Helper to create services
 def create_service(db: Session, tenant_id: UUID, name: str, duration_minutes: int, price: float) -> Service:
+    category = Category(
+        id=str(uuid4()),
+        name=f"Test Category {uuid4().hex[:6]}",
+        tenant_id=str(tenant_id)
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+
     service = Service(
         id=str(uuid4()),
         tenant_id=str(tenant_id),
@@ -50,6 +64,7 @@ def create_service(db: Session, tenant_id: UUID, name: str, duration_minutes: in
         description="Test Service Description",
         duration_minutes=duration_minutes,
         price=price,
+        category_id=str(category.id),
         is_active=True
     )
     db.add(service)
@@ -94,7 +109,7 @@ def create_appointment_for_professional(
 def create_blocked_slot_for_professional(
     db: Session, tenant_id: UUID, professional: UserTenant,
     blocked_date_obj: date, start_time_obj: time, end_time_obj: time,
-    reason: str, block_type: AvailabilityBlockType = AvailabilityBlockType.BLOCKED_SLOT
+    reason: str, block_type: AvailabilityBlockType = AvailabilityBlockType.OTHER
 ) -> ProfessionalBlockedTime:
     blocked_slot = ProfessionalBlockedTime(
         id=str(uuid4()),
@@ -117,7 +132,8 @@ def sample_tenant(db_session: Session) -> Tenant:
     tenant = Tenant(
         id=str(uuid4()),
         name="Test Tenant Schedule",
-        block_size_minutes=30 # Needed for some service functions, though not directly by get_daily_schedule_data
+        slug=f"test-tenant-{uuid4().hex[:6]}",
+        block_size_minutes=30  # Needed for some service functions, though not directly by get_daily_schedule_data
     )
     db_session.add(tenant)
     db_session.commit()
@@ -133,8 +149,7 @@ def client_user(db_session: Session, sample_tenant: Tenant) -> UserTenant:
         email="client@example.com",
         hashed_password="hashed_password",
         role=UserRole.CLIENTE, # Assuming CLIENTE role exists
-        is_active=True,
-        email_verified=True
+        is_active=True
     )
     db_session.add(client)
     db_session.commit()
@@ -182,8 +197,8 @@ def test_get_daily_schedule_data_basic_retrieval(db_session: Session, sample_ten
     assert result_schema.date == target_date
     assert len(result_schema.professionals_schedule) == 2 # prof1 and prof2
 
-    prof_a_schedule = next((p for p in result_schema.professionals_schedule if p.professional_id == prof1.id), None)
-    prof_b_schedule = next((p for p in result_schema.professionals_schedule if p.professional_id == prof2.id), None)
+    prof_a_schedule = next((p for p in result_schema.professionals_schedule if str(p.professional_id) == prof1.id), None)
+    prof_b_schedule = next((p for p in result_schema.professionals_schedule if str(p.professional_id) == prof2.id), None)
 
     assert prof_a_schedule is not None
     assert prof_a_schedule.professional_name == "Prof A"
@@ -224,7 +239,7 @@ def test_get_daily_schedule_data_no_appointments_or_blocks(db_session: Session, 
     assert len(result_schema.professionals_schedule) == 1
 
     prof_c_schedule = result_schema.professionals_schedule[0]
-    assert prof_c_schedule.professional_id == prof1.id
+    assert str(prof_c_schedule.professional_id) == prof1.id
     assert prof_c_schedule.professional_name == "Prof C"
     assert len(prof_c_schedule.appointments) == 0
     assert len(prof_c_schedule.blocked_slots) == 0
@@ -245,7 +260,7 @@ def test_get_daily_schedule_data_filters_inactive_or_wrong_role(db_session: Sess
     result_schema = get_daily_schedule_data(db_session, target_date, sample_tenant.id)
 
     assert len(result_schema.professionals_schedule) == 1 # Only active_prof should be included
-    assert result_schema.professionals_schedule[0].professional_id == active_prof.id
+    assert str(result_schema.professionals_schedule[0].professional_id) == active_prof.id
     assert result_schema.professionals_schedule[0].professional_name == "Active Prof"
 
 def test_get_daily_schedule_data_tenant_isolation(db_session: Session, sample_tenant: Tenant, client_user: UserTenant):
@@ -259,7 +274,7 @@ def test_get_daily_schedule_data_tenant_isolation(db_session: Session, sample_te
     )
 
     # Create another tenant and a professional for it
-    other_tenant = Tenant(id=str(uuid4()), name="Other Tenant", block_size_minutes=30)
+    other_tenant = Tenant(id=str(uuid4()), name="Other Tenant", slug=f"other-{uuid4().hex[:6]}", block_size_minutes=30)
     db_session.add(other_tenant)
     db_session.commit()
 
@@ -281,7 +296,7 @@ def test_get_daily_schedule_data_tenant_isolation(db_session: Session, sample_te
     result_schema = get_daily_schedule_data(db_session, target_date, sample_tenant.id)
 
     assert len(result_schema.professionals_schedule) == 1
-    assert result_schema.professionals_schedule[0].professional_id == prof1.id
+    assert str(result_schema.professionals_schedule[0].professional_id) == prof1.id
     assert result_schema.professionals_schedule[0].professional_name == "Prof Tenant1"
     assert len(result_schema.professionals_schedule[0].appointments) == 1
     assert result_schema.professionals_schedule[0].appointments[0].services[0].name == "Service T1"

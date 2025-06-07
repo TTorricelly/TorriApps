@@ -33,3 +33,12 @@ BasePublic = Base
 # Note: All models now use the same Base and target the same schema
 # Model imports are handled in migrations/env.py to avoid circular imports
 
+
+def get_db():
+    """Yield a new database session for request handling."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+

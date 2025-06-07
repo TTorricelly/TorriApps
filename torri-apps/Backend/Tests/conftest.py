@@ -193,6 +193,13 @@ async def get_service_availability(
         ]
     }
 
+@appointments_test_router.get("/daily-schedule/{schedule_date}")
+async def get_daily_schedule(schedule_date: str, authorization: str = Header(None)):
+    if not authorization:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"date": schedule_date, "professionals_schedule": []}
+
 @appointments_test_router.post("/", status_code=201)
 async def create_appointment(request: Request, authorization: str = Header(None), db: SQLAlchemySession = Depends(get_db)):
     # Check for authorization header

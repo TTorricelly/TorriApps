@@ -23,6 +23,7 @@ class AvailabilityBlockType(str, enum.Enum):
     VACATION = "vacation"     # Vacation days
     SICK_LEAVE = "sick_leave" # Sick leave
     OTHER = "other"           # Any other type of unavailability
+    DAY_OFF = "day_off"       # Full day off
 
 # Common time constants (optional, for convenience)
 BUSINESS_START_TIME = time(9, 0)   # 9:00 AM
