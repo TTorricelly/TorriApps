@@ -970,42 +970,52 @@ const DailySchedulePage = () => {
                                 </div>
                               )}
                               
-                              <div className={`bg-bg-secondary p-xs sm:p-s rounded-card shadow-sm h-full border-l-2 sm:border-l-4 ${statusInfo.color} ${cardOpacity} cursor-default flex flex-col ${hasSpaceForServices ? 'justify-between' : 'justify-start'}`}>
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal">
-                                      {item.clientName}
-                                    </Typography>
-                                    {!hasSpaceForServices && (
-                                      <span className={`w-2 h-2 rounded-full ${statusInfo.color.replace('border-', 'bg-')}`} title={statusInfo.label}></span>
-                                    )}
-                                  </div>
-                                  <Typography variant="small" className="text-text-secondary text-small">
-                                    {startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} - {endTimeFormatted} ({item.duration} min) {item.isGrouped && <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs bg-accent-primary/20 text-accent-primary ml-1">{item.appointmentIds.length} serviços</span>}
+                              <div className={`bg-bg-secondary p-xs sm:p-s rounded-card shadow-sm h-full border-l-2 sm:border-l-4 ${statusInfo.color} ${cardOpacity} cursor-default flex flex-col ${item.duration <= 30 ? 'justify-center items-center' : (hasSpaceForServices ? 'justify-between' : 'justify-start')}`}>
+                                {item.duration <= 30 ? (
+                                  // Content for appointments <= 30 minutes
+                                  <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal text-center">
+                                    {item.clientName}
                                   </Typography>
-                                  
-                                  {/* Show service count for short appointments */}
-                                  {!hasSpaceForServices && servicesList.length > 0 && (
-                                    <Typography variant="caption" className="text-text-tertiary block text-2xs mt-1">
-                                      {servicesList.length} serviço{servicesList.length > 1 ? 's' : ''}
-                                    </Typography>
-                                  )}
-                                </div>
-                                
-                                {/* Show services only if we have enough space */}
-                                {hasSpaceForServices && servicesList.length > 0 && (
-                                  <div className="flex flex-wrap gap-xs mt-xs">
-                                    {servicesList.slice(0, 3).map((service, index) => (
-                                      <span key={index} className="text-xs bg-accent-secondary/20 text-accent-secondary px-xs sm:px-s py-0.5 sm:py-xs rounded-full text-2xs sm:text-xs">
-                                        {service}
-                                      </span>
-                                    ))}
-                                    {servicesList.length > 3 && (
-                                      <span className="text-xs text-text-tertiary px-xs py-0.5 text-2xs">
-                                        +{servicesList.length - 3}
-                                      </span>
+                                ) : (
+                                  // Existing content for appointments > 30 minutes
+                                  <>
+                                    <div className="flex-1">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal">
+                                          {item.clientName}
+                                        </Typography>
+                                        {!hasSpaceForServices && (
+                                          <span className={`w-2 h-2 rounded-full ${statusInfo.color.replace('border-', 'bg-')}`} title={statusInfo.label}></span>
+                                        )}
+                                      </div>
+                                      <Typography variant="small" className="text-text-secondary text-small">
+                                        {startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} - {endTimeFormatted} ({item.duration} min) {item.isGrouped && <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs bg-accent-primary/20 text-accent-primary ml-1">{item.appointmentIds.length} serviços</span>}
+                                      </Typography>
+
+                                      {/* Show service count for short appointments */}
+                                      {!hasSpaceForServices && servicesList.length > 0 && (
+                                        <Typography variant="caption" className="text-text-tertiary block text-2xs mt-1">
+                                          {servicesList.length} serviço{servicesList.length > 1 ? 's' : ''}
+                                        </Typography>
+                                      )}
+                                    </div>
+
+                                    {/* Show services only if we have enough space */}
+                                    {hasSpaceForServices && servicesList.length > 0 && (
+                                      <div className="flex flex-wrap gap-xs mt-xs">
+                                        {servicesList.slice(0, 3).map((service, index) => (
+                                          <span key={index} className="text-xs bg-accent-secondary/20 text-accent-secondary px-xs sm:px-s py-0.5 sm:py-xs rounded-full text-2xs sm:text-xs">
+                                            {service}
+                                          </span>
+                                        ))}
+                                        {servicesList.length > 3 && (
+                                          <span className="text-xs text-text-tertiary px-xs py-0.5 text-2xs">
+                                            +{servicesList.length - 3}
+                                          </span>
+                                        )}
+                                      </div>
                                     )}
-                                  </div>
+                                  </>
                                 )}
                               </div>
                             </div>
