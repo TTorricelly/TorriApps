@@ -81,19 +81,20 @@ class UserTenant(Base):
         return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
 
 # Configure the relationship after the class definition to avoid circular imports
-def _configure_user_service_relationship():
-    """Configure the services_offered relationship after all models are loaded."""
-    try:
-        from Modules.Services.models import service_professionals_association
-        UserTenant.services_offered = relationship(
-            "Service",
-            secondary=service_professionals_association,
-            back_populates="professionals",
-            lazy="select"
-        )
-    except ImportError:
-        # If Services module isn't available, create an empty relationship
-        UserTenant.services_offered = []
+# Temporarily disable relationship configuration to resolve circular import issues
+# def _configure_user_service_relationship():
+#     """Configure the services_offered relationship after all models are loaded."""
+#     try:
+#         from Modules.Services.models import service_professionals_association
+#         UserTenant.services_offered = relationship(
+#             "Service",
+#             secondary=service_professionals_association,
+#             back_populates="professionals",
+#             lazy="select"
+#         )
+#     except ImportError:
+#         # If Services module isn't available, create an empty relationship
+#         UserTenant.services_offered = []
 
-# Call the configuration function
-_configure_user_service_relationship()
+# # Call the configuration function
+# _configure_user_service_relationship()

@@ -17,6 +17,7 @@ class DayOfWeek(str, enum.Enum):
 class AvailabilityBlockType(str, enum.Enum):
     """
     Represents the type of blocked time/unavailability.
+    Matches database enum: enum('break','vacation','sick_leave','other')
     """
     BREAK = "break"           # Short break (coffee, bathroom, etc.)
     VACATION = "vacation"     # Vacation days
