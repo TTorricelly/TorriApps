@@ -156,7 +156,7 @@ const SearchableServiceSelect = ({
       
       {/* Dropdown */}
       {isDropdownOpen && !loading && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+        <div className="absolute bottom-full left-0 right-0 mb-1 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
           {Object.keys(filteredGroupedServices).length === 0 ? (
             <div className="p-3 text-center">
               <Typography variant="small" className="text-text-secondary">
