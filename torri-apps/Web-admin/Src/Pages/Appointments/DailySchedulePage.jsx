@@ -18,7 +18,6 @@ const DailySchedulePage = () => {
   const [searchTerm, setSearchTerm] = useState(''); // For professional search
   const [clientSearchTerm, setClientSearchTerm] = useState(''); // For client search
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [hoveredAppointment, setHoveredAppointment] = useState(null);
 
   // Appointment modal state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -915,18 +914,11 @@ const DailySchedulePage = () => {
                               gridRow: `${startSlotIndex + 1} / span ${spans}`
                             }}
                           >
-                            <div 
-                              className="relative h-full p-xs"
-                              onMouseEnter={() => setHoveredAppointment(item.id)}
-                              onMouseLeave={() => setHoveredAppointment(null)}
-                            >
-                              {/* Enhanced Tooltip with appointment details */}
-                              {hoveredAppointment === item.id && (
-                                <div 
-                                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 z-[60] px-2 py-2"
-                                  onMouseEnter={() => setHoveredAppointment(item.id)}
-                                  onMouseLeave={() => setHoveredAppointment(null)}
-                                >
+                            <div className="relative h-full p-xs">
+                              <Tooltip
+                                placement="top"
+                                className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]"
+                                content={
                                   <div className="border border-bg-tertiary bg-bg-secondary px-4 py-3 shadow-card text-text-primary text-small rounded-card min-w-[200px] max-w-[300px]">
                                     {/* Appointment Info */}
                                     <div className="mb-3">
@@ -963,8 +955,7 @@ const DailySchedulePage = () => {
                                     <div className="flex items-center justify-center gap-2 pt-2 border-t border-bg-tertiary">
                                       <button
                                         onClick={(e) => { 
-                                          e.stopPropagation(); 
-                                          setHoveredAppointment(null);
+                                          e.stopPropagation();
                                           openEditModal(item, prof.id);
                                         }}
                                         className="p-2 rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-accent-primary transition-colors"
@@ -974,8 +965,7 @@ const DailySchedulePage = () => {
                                       </button>
                                       <button
                                         onClick={(e) => { 
-                                          e.stopPropagation(); 
-                                          setHoveredAppointment(null);
+                                          e.stopPropagation();
                                           handleDeleteAppointment(item);
                                         }}
                                         className="p-2 rounded-button hover:bg-bg-tertiary text-text-secondary hover:text-status-error transition-colors"
@@ -985,11 +975,10 @@ const DailySchedulePage = () => {
                                       </button>
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                              
-                              <div className={`bg-bg-secondary p-xs sm:p-s rounded-card shadow-sm h-full border-l-2 sm:border-l-4 ${statusInfo.color} ${cardOpacity} cursor-default flex flex-col ${item.duration <= 30 ? 'justify-center items-center' : (hasSpaceForServices ? 'justify-between' : 'justify-start')}`}>
-                                {item.duration <= 30 ? (
+                                }
+                              >
+                                <div className={`bg-bg-secondary p-xs sm:p-s rounded-card shadow-sm h-full border-l-2 sm:border-l-4 ${statusInfo.color} ${cardOpacity} cursor-default flex flex-col ${item.duration <= 30 ? 'justify-center items-center' : (hasSpaceForServices ? 'justify-between' : 'justify-start')}`}>
+                                  {item.duration <= 30 ? (
                                   // Content for appointments <= 30 minutes
                                   <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal text-center">
                                     {item.clientName}
