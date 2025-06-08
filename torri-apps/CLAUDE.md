@@ -333,99 +333,15 @@ def create_category(db: Session, category_data: CategoryCreate, tenant_id: UUID)
     return new_category
 ```
 
-
-
-#### **Migration from Schema Switching to Direct Connections**
-⚠️ **IMPORTANT**: This architectural change eliminates the need for:
-
-
-
-// 2. Store in frontend session storage
-localStorage.setItem('tenantInfo', JSON.stringify(response.tenant));
-
-// 3. All subsequent requests = TENANT SCHEMA ONLY
-GET /api/v1/categories     // Only tenant schema
-GET /api/v1/services       // Only tenant schema  
-GET /api/v1/users          // Only tenant schema
-```
-
-**❌ WRONG Architecture - Mixed Schema Access:**
-```javascript
-// Every page load = Schema switching risk
-GET /api/v1/tenants/me     // PUBLIC schema
-GET /api/v1/categories     // TENANT schema  
-// Connection pool corruption risk!
-```
-
 **Implementation Pattern:**
-```python
-# Enhanced login returns complete public data
-@router.post("/enhanced-login", response_model=EnhancedToken)
-async def enhanced_login(login_request: EnhancedLoginRequest, db: Session = Depends(get_public_db)):
-    user, tenant_schema = authenticate_user(db, ...)
-    tenant_data = TenantService.get_tenant_by_id(db, user.tenant_id)
-    
-    return {
-        "access_token": access_token,
-        "tenant": { "id": tenant_data.id, "name": tenant_data.name, ... },
-        "user": { "id": user.id, "email": user.email, ... }
-    }
-
-# Remove /tenants/me endpoint - no longer needed
-# All other endpoints use get_db() (tenant schema only)
-```
-
-**Benefits:**
-- ✅ **Zero pool corruption** - no schema mixing after login
-- ✅ **Better performance** - fewer API calls, cached tenant data
-- ✅ **Cleaner architecture** - clear separation of public vs tenant operations
-- ✅ **Enhanced security** - reduced public schema access surface
 
 #### **Database Enum Values**
 - **Database enums must match Python enum values exactly**: Case-sensitive
 - **UserRole enum**: Use uppercase values (`'GESTOR'`, `'PROFISSIONAL'`, etc.)
-- **Update database**: `ALTER TABLE users_tenant MODIFY COLUMN role ENUM('GESTOR','ATENDENTE','PROFISSIONAL','CLIENTE')`
+- **Update database**: `ALTER TABLE users MODIFY COLUMN role ENUM('GESTOR','ATENDENTE','PROFISSIONAL','CLIENTE')`
 
-## API Patterns by Data Location
-
-### **Tenant Schema APIs** (Users, Services, Appointments, Availability)
-**Data Location**: Tenant-specific schemas (`tenant_xyz`)
-**Pattern**: Session-based with automatic schema switching
-```python
-# ✅ Correct pattern for tenant data
-@router.post("/categories")
-async def create_category(
-    current_user: UserTenant = Depends(get_current_user_tenant),
-    db: Session = Depends(get_db)  # Auto-switches to tenant schema
-):
-    return service_logic.create_category(
-        db=db, 
-        tenant_id=current_user.tenant_id  # From session
-    )
-```
-
-### **Public Schema APIs** (Tenants, Admin)
-**Data Location**: Public schema (`torri_app_public`)
-**Pattern**: Direct JWT token access
-```python
-# ✅ Correct pattern for public data
-@router.get("/tenants/me")
-async def get_current_tenant(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_public_db)  # Stays on public schema
-):
-    payload = decode_access_token(token)
-    return TenantService.get_tenant_by_id(db, UUID(payload.tenant_id))
-```
-
-### **Why Two Patterns?**
-- **Tenant data**: Lives in isolated schemas, requires schema switching via middleware
-- **Public data**: Lives in shared public schema, accessed directly without switching
 
 ## Deployment
-
-### Infrastructure
-TBD
 
 ### Mobile Deployment
 - **Fastlane**: Automated iOS and Android app store deployments
