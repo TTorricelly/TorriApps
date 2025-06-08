@@ -1012,12 +1012,7 @@ const DailySchedulePage = () => {
                                         {startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} - {endTimeFormatted} ({item.duration} min) {item.isGrouped && <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs bg-accent-primary/20 text-accent-primary ml-1">{item.appointmentIds.length} serviços</span>}
                                       </Typography>
 
-                                      {/* Show service count for short appointments */}
-                                      {!hasSpaceForServices && servicesList.length > 0 && (
-                                        <Typography variant="caption" className="text-text-tertiary block text-2xs mt-1">
-                                          {servicesList.length} serviço{servicesList.length > 1 ? 's' : ''}
-                                        </Typography>
-                                      )}
+                                    
                                     </div>
 
                                     {/* Show services only if we have enough space */}
