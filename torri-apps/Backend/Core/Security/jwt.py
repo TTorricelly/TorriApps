@@ -19,8 +19,6 @@ from typing import Optional
 
 class TokenPayload(BaseModel):
     sub: EmailStr # Subject (standard claim for user identifier)
-    tenant_id: str # Changed to str, as UUID is not directly JSON serializable for JWT standard fields
-    tenant_schema: str # Database schema name for the tenant (e.g., "tenant_beauty_hub")
     role: UserRole
     exp: datetime # Expiration time (standard claim)
     

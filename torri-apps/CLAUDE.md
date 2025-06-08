@@ -9,7 +9,7 @@ TorriApps is a salon/barbershop management SaaS platform with white-label mobile
 ## Architecture
 
 **Current Architecture (Single Schema):**
-- **Single Database**: `tenant_beauty_hub` - Contains all application data
+- **Single Database**: `tenant_my_hair_salon` - Contains all application data
 - **Data Model**: Entities (users, appointments, services, categories)
 - **Simplified Authentication**: JWT-based auth
 
@@ -50,8 +50,8 @@ alembic upgrade head
 ### Environment Configuration
 Required `.env` file in Backend directory:
 ```
-DATABASE_URL=mysql+mysqlconnector://root:@localhost:3306/tenant_beauty_hub
-DEFAULT_SCHEMA_NAME=tenant_beauty_hub
+DATABASE_URL=mysql+mysqlconnector://root:@localhost:3306/tenant_my_hair_salon
+DEFAULT_SCHEMA_NAME=tenant_my_hair_salon
 SECRET_KEY=your-secret-key
 REDIS_URL=redis://localhost:6379
 DEBUG=true
@@ -63,7 +63,7 @@ DEBUG=true
 ⚠️ **CURRENT ARCHITECTURE**
 
 1. **Simplified Middleware** handles basic JWT authentication
-2. **All routes** use the same `tenant_beauty_hub` database
+2. **All routes** use the same `tenant_my_hair_salon` database
 3. **JWT tokens** contain user info 
 6. **Authorization header only** - `Bearer <jwt_token>`
 
@@ -81,7 +81,7 @@ Modules/FeatureName/
 
 ### Authentication & Authorization
 - **JWT tokens** with user roles (GESTOR, PROFISSIONAL, ATENDENTE, CLIENTE)
-- **JWT payload contains**: `tenant_id`, `tenant_schema`, `role`, `sub` (user email), `user_id`, `full_name`, `is_active`, `exp`
+- **JWT payload contains**:  `tenant_schema`, `role`, `sub` (user email), `user_id`, `full_name`, `is_active`, `exp`
 - **Single schema users**: All users in unified `tenant_beauty_hub` database
 - **Role-based access**: Different API permissions based on user roles
 
@@ -110,8 +110,8 @@ node Build-app.js --brand=beauty-hub
 - **Migration strategy**: Single migration path for all tables
 
 ### Key Models
-- **Single Schema** (`tenant_beauty_hub`): All models in unified database
-  - `UserTenant` - User accounts and authentication
+- **Single Schema** (`tenant_my_hair_salon`): All models in unified database
+  - `User` - User accounts and authentication
   - `Category` - Service categories
   - `Service` - Service offerings
   - `Appointment` - Booking data
@@ -124,7 +124,7 @@ node Build-app.js --brand=beauty-hub
 - **Global prefix**: `/api/v1` for all API endpoints
 - **Module routing**: Each module registers its own router with appropriate tags
 - **Simplified routes**: All routes use single database schema
-- **Authentication routes**: `/api/v1/auth/login` and `/api/v1/auth/enhanced-login`
+- **Authentication routes**: `/api/v1/auth/login` 
 
 ### Request Headers (Current Implementation)
 - **Authorization**: Bearer JWT token for authenticated endpoints
@@ -145,7 +145,7 @@ api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 {
   "sub": "user@example.com",
   "tenant_id": "uuid-string",
-  "tenant_schema": "tenant_beauty_hub", 
+  "tenant_schema": "tenant_my_hair_salon", 
   "role": "GESTOR",
   "exp": 1734567890,
   "user_id": "user-uuid-string",
@@ -171,7 +171,7 @@ def get_current_user_tenant(payload: TokenPayload) -> TokenPayload:
     ...
 ```
 
-**✅ Enhanced Login Response:**
+**✅  Login Response:**
 ```python
 # Login includes ALL user/tenant data to avoid future API calls
 {
@@ -189,7 +189,7 @@ For backward compatibility, the system supports both enhanced and legacy token f
 1. **Login**: User authenticates → Backend creates JWT with user info
 2. **Request**: Frontend sends request with `Authorization: Bearer <token>`
 3. **Middleware**: Basic JWT validation (no tenant switching)
-4. **Database**: Direct connection to `tenant_beauty_hub` schema
+4. **Database**: Direct connection to `tenant_my_hair_salon` schema
 5. **Response**: Returns data from unified database
 
 ### Key Files
@@ -333,115 +333,15 @@ def create_category(db: Session, category_data: CategoryCreate, tenant_id: UUID)
     return new_category
 ```
 
-**⚠️ ALL HTTPException Must Include db.rollback():**
-Every service function that can raise HTTPException during database operations must call `db.rollback()` first. This includes:
-- Validation errors (409 Conflict, 400 Bad Request)
-- Not found errors (404 Not Found) 
-- Business logic violations
-- Any exception that interrupts normal transaction flow
-
-**⚠️ Avoid db.refresh() After Exceptions:**
-Remove `db.refresh()` calls as they can cause session disconnection issues. Objects are automatically updated after `db.commit()`.
-
-#### **Migration from Schema Switching to Direct Connections**
-⚠️ **IMPORTANT**: This architectural change eliminates the need for:
-
-**✅ CORRECT Architecture - Public Data at Login Only:**
-```javascript
-// 1. Login once → Get ALL public schema data
-POST /api/v1/auth/enhanced-login
-{
-  "access_token": "jwt...",
-  "tenant": { "id": "uuid", "name": "Beauty Hub", "logo_url": "..." },
-  "user": { "id": "uuid", "email": "user@domain.com", "full_name": "..." }
-}
-
-// 2. Store in frontend session storage
-localStorage.setItem('tenantInfo', JSON.stringify(response.tenant));
-
-// 3. All subsequent requests = TENANT SCHEMA ONLY
-GET /api/v1/categories     // Only tenant schema
-GET /api/v1/services       // Only tenant schema  
-GET /api/v1/users          // Only tenant schema
-```
-
-**❌ WRONG Architecture - Mixed Schema Access:**
-```javascript
-// Every page load = Schema switching risk
-GET /api/v1/tenants/me     // PUBLIC schema
-GET /api/v1/categories     // TENANT schema  
-// Connection pool corruption risk!
-```
-
 **Implementation Pattern:**
-```python
-# Enhanced login returns complete public data
-@router.post("/enhanced-login", response_model=EnhancedToken)
-async def enhanced_login(login_request: EnhancedLoginRequest, db: Session = Depends(get_public_db)):
-    user, tenant_schema = authenticate_user(db, ...)
-    tenant_data = TenantService.get_tenant_by_id(db, user.tenant_id)
-    
-    return {
-        "access_token": access_token,
-        "tenant": { "id": tenant_data.id, "name": tenant_data.name, ... },
-        "user": { "id": user.id, "email": user.email, ... }
-    }
-
-# Remove /tenants/me endpoint - no longer needed
-# All other endpoints use get_db() (tenant schema only)
-```
-
-**Benefits:**
-- ✅ **Zero pool corruption** - no schema mixing after login
-- ✅ **Better performance** - fewer API calls, cached tenant data
-- ✅ **Cleaner architecture** - clear separation of public vs tenant operations
-- ✅ **Enhanced security** - reduced public schema access surface
 
 #### **Database Enum Values**
 - **Database enums must match Python enum values exactly**: Case-sensitive
 - **UserRole enum**: Use uppercase values (`'GESTOR'`, `'PROFISSIONAL'`, etc.)
-- **Update database**: `ALTER TABLE users_tenant MODIFY COLUMN role ENUM('GESTOR','ATENDENTE','PROFISSIONAL','CLIENTE')`
+- **Update database**: `ALTER TABLE users MODIFY COLUMN role ENUM('GESTOR','ATENDENTE','PROFISSIONAL','CLIENTE')`
 
-## API Patterns by Data Location
-
-### **Tenant Schema APIs** (Users, Services, Appointments, Availability)
-**Data Location**: Tenant-specific schemas (`tenant_xyz`)
-**Pattern**: Session-based with automatic schema switching
-```python
-# ✅ Correct pattern for tenant data
-@router.post("/categories")
-async def create_category(
-    current_user: UserTenant = Depends(get_current_user_tenant),
-    db: Session = Depends(get_db)  # Auto-switches to tenant schema
-):
-    return service_logic.create_category(
-        db=db, 
-        tenant_id=current_user.tenant_id  # From session
-    )
-```
-
-### **Public Schema APIs** (Tenants, Admin)
-**Data Location**: Public schema (`torri_app_public`)
-**Pattern**: Direct JWT token access
-```python
-# ✅ Correct pattern for public data
-@router.get("/tenants/me")
-async def get_current_tenant(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_public_db)  # Stays on public schema
-):
-    payload = decode_access_token(token)
-    return TenantService.get_tenant_by_id(db, UUID(payload.tenant_id))
-```
-
-### **Why Two Patterns?**
-- **Tenant data**: Lives in isolated schemas, requires schema switching via middleware
-- **Public data**: Lives in shared public schema, accessed directly without switching
 
 ## Deployment
-
-### Infrastructure
-TBD
 
 ### Mobile Deployment
 - **Fastlane**: Automated iOS and Android app store deployments

@@ -34,22 +34,20 @@ class ProfessionalAvailability(Base):
     __tablename__ = "professional_availability"
     
     id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users_tenant.id'), nullable=False, index=True)  # Match existing column name
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Existing column
+    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     day_of_week = Column(SQLEnum(DayOfWeek), nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     
     # Relationships
-    professional = relationship("UserTenant", foreign_keys=[professional_user_id])
+    professional = relationship("User", foreign_keys=[professional_user_id])
 
 # Professional blocked times (vacations, sick days, etc.)
 class ProfessionalBlockedTime(Base):
     __tablename__ = "professional_blocked_time"  # Match existing table name (singular)
     
     id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users_tenant.id'), nullable=False, index=True)  # Match existing column name
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Existing column
+    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     block_date = Column(Date, nullable=False)  # Match existing column name
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
@@ -57,19 +55,18 @@ class ProfessionalBlockedTime(Base):
     reason = Column(Text, nullable=True)
     
     # Relationships
-    professional = relationship("UserTenant", foreign_keys=[professional_user_id])
+    professional = relationship("User", foreign_keys=[professional_user_id])
 
 # Professional recurring breaks (lunch, coffee break, etc.)
 class ProfessionalBreak(Base):
     __tablename__ = "professional_breaks"
     
     id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users_tenant.id'), nullable=False, index=True)  # Match existing column name
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Existing column
+    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     day_of_week = Column(SQLEnum(DayOfWeek), nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     name = Column(String(100), nullable=True)  # Match existing schema (nullable)
     
     # Relationships  
-    professional = relationship("UserTenant", foreign_keys=[professional_user_id])
+    professional = relationship("User", foreign_keys=[professional_user_id])

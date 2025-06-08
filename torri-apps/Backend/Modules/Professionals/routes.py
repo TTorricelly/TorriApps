@@ -40,7 +40,7 @@ def create_professional(
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
 ):
     """Create a new professional."""
-    return professional_services.create_professional(db, professional_data, current_user.tenant_id)
+    return professional_services.create_professional(db, professional_data) # current_user.tenant_id argument removed
 
 @router.get("/{professional_id}", response_model=Professional)
 def get_professional(
@@ -96,11 +96,11 @@ async def upload_professional_photo(
     photo: UploadFile = File(...)
 ):
     """Upload a photo for a professional."""
-    # Get the raw UserTenant object for updating
-    from Core.Auth.models import UserTenant
-    professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    # Get the raw User object for updating
+    from Core.Auth.models import User # Updated import
+    professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not professional:
         raise HTTPException(

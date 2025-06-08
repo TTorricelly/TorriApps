@@ -14,7 +14,7 @@ from .schemas import (
     ProfessionalBlockedTimeCreate, ProfessionalBlockedTimeSchema
 )
 from .constants import DayOfWeek, AvailabilityBlockType
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
 
 
@@ -22,24 +22,24 @@ from Core.Auth.constants import UserRole
 def _get_professional_for_availability_management(
     db: Session,
     professional_user_id_to_manage: UUID,
-    requesting_user: UserTenant
-) -> UserTenant:
+    requesting_user: User # Updated type
+) -> User: # Updated return type
     """
     Validates if the requesting_user has permission to manage availability
     for professional_user_id_to_manage.
-    Returns the UserTenant object of the professional whose availability is being managed.
+    Returns the User object of the professional whose availability is being managed.
     """
     # Fetch the professional whose availability is being managed
-    stmt = select(UserTenant).where(
-        UserTenant.id == str(professional_user_id_to_manage),
-        UserTenant.tenant_id == str(requesting_user.tenant_id) # Must be in the same tenant
+    stmt = select(User).where( # Changed UserTenant to User
+        User.id == str(professional_user_id_to_manage) # Changed UserTenant to User
+        # UserTenant.tenant_id == str(requesting_user.tenant_id) # Tenant check removed
     )
     professional_to_manage = db.execute(stmt).scalars().first()
 
     if not professional_to_manage:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Professional with ID {professional_user_id_to_manage} not found in this tenant."
+            detail=f"Professional with ID {professional_user_id_to_manage} not found." # Updated detail
         )
 
     if professional_to_manage.role != UserRole.PROFISSIONAL:
@@ -75,10 +75,10 @@ def _check_slot_overlap(db: Session, professional_user_id: UUID, day_of_week: Da
     query_avail = select(ProfessionalAvailability).where(
         ProfessionalAvailability.professional_user_id == str(professional_user_id),
         ProfessionalAvailability.day_of_week == day_of_week,
-        not_(or_(
+        ~or_( # Changed not_ to ~
             ProfessionalAvailability.end_time <= start_time, # Existing ends before or at new start
             ProfessionalAvailability.start_time >= end_time  # Existing starts after or at new end
-        ))
+        )
     )
     if exclude_slot_id: # When updating, exclude the current slot itself
         query_avail = query_avail.where(ProfessionalAvailability.id != str(exclude_slot_id))
@@ -108,8 +108,8 @@ def _check_slot_overlap(db: Session, professional_user_id: UUID, day_of_week: Da
 def create_availability_slot(
     db: Session,
     slot_data: ProfessionalAvailabilityCreate,
-    professional_user_id: UUID,
-    tenant_id: UUID # tenant_id of the professional/operation context
+    professional_user_id: UUID
+    # tenant_id: UUID parameter removed
 ) -> ProfessionalAvailability:
 
     if _check_slot_overlap(db, professional_user_id, slot_data.day_of_week, slot_data.start_time, slot_data.end_time):
@@ -121,7 +121,7 @@ def create_availability_slot(
     db_slot = ProfessionalAvailability(
         **slot_data.model_dump(),
         professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
-        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
+        # tenant_id=str(tenant_id) # Removed tenant_id assignment
     )
     db.add(db_slot)
     db.commit()
@@ -131,12 +131,12 @@ def create_availability_slot(
 def get_availability_slots_for_professional(
     db: Session,
     professional_user_id: UUID,
-    tenant_id: UUID, # Ensure tenant context is respected
+    # tenant_id: UUID, # Parameter removed
     day_of_week: Optional[DayOfWeek] = None
 ) -> List[ProfessionalAvailability]:
     stmt = select(ProfessionalAvailability).where(
-        ProfessionalAvailability.professional_user_id == str(professional_user_id),
-        ProfessionalAvailability.tenant_id == str(tenant_id) # Security check
+        ProfessionalAvailability.professional_user_id == str(professional_user_id)
+        # ProfessionalAvailability.tenant_id == str(tenant_id) # Filter removed
     ).order_by(ProfessionalAvailability.day_of_week, ProfessionalAvailability.start_time)
 
     if day_of_week is not None:
@@ -148,12 +148,12 @@ def delete_availability_slot(
     db: Session,
     slot_id: UUID,
     professional_user_id: UUID, # Passed for ownership check via _get_professional_for_availability_management
-    tenant_id: UUID
+    # tenant_id: UUID # Parameter removed
 ) -> bool:
     stmt = select(ProfessionalAvailability).where(
         ProfessionalAvailability.id == str(slot_id),
-        ProfessionalAvailability.professional_user_id == str(professional_user_id), # Ensure slot belongs to this professional
-        ProfessionalAvailability.tenant_id == str(tenant_id) # And this tenant
+        ProfessionalAvailability.professional_user_id == str(professional_user_id) # Ensure slot belongs to this professional
+        # ProfessionalAvailability.tenant_id == str(tenant_id) # Filter removed
     )
     db_slot = db.execute(stmt).scalars().first()
 
@@ -189,10 +189,10 @@ def _check_break_overlap(db: Session, professional_user_id: UUID, day_of_week: D
     query_break = select(ProfessionalBreak).where(
         ProfessionalBreak.professional_user_id == str(professional_user_id),
         ProfessionalBreak.day_of_week == day_of_week,
-        not_(or_(
+        ~or_( # Changed not_ to ~
             ProfessionalBreak.end_time <= start_time,
             ProfessionalBreak.start_time >= end_time
-        ))
+        )
     )
     if exclude_break_id:
         query_break = query_break.where(ProfessionalBreak.id != str(exclude_break_id))
@@ -209,8 +209,8 @@ def _check_break_overlap(db: Session, professional_user_id: UUID, day_of_week: D
 def create_break(
     db: Session,
     break_data: ProfessionalBreakCreate,
-    professional_user_id: UUID,
-    tenant_id: UUID
+    professional_user_id: UUID
+    # tenant_id: UUID parameter removed
 ) -> ProfessionalBreak:
     if not _is_break_within_availability(db, professional_user_id, break_data.day_of_week, break_data.start_time, break_data.end_time):
         raise HTTPException(
@@ -227,7 +227,7 @@ def create_break(
     db_break = ProfessionalBreak(
         **break_data.model_dump(),
         professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
-        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
+        # tenant_id=str(tenant_id) # Removed tenant_id assignment
     )
     db.add(db_break)
     db.commit()
@@ -237,12 +237,12 @@ def create_break(
 def get_breaks_for_professional(
     db: Session,
     professional_user_id: UUID,
-    tenant_id: UUID,
+    # tenant_id: UUID, # Parameter removed
     day_of_week: Optional[DayOfWeek] = None
 ) -> List[ProfessionalBreak]:
     stmt = select(ProfessionalBreak).where(
-        ProfessionalBreak.professional_user_id == str(professional_user_id),
-        ProfessionalBreak.tenant_id == str(tenant_id)
+        ProfessionalBreak.professional_user_id == str(professional_user_id)
+        # ProfessionalBreak.tenant_id == str(tenant_id) # Filter removed
     ).order_by(ProfessionalBreak.day_of_week, ProfessionalBreak.start_time)
 
     if day_of_week is not None:
@@ -254,12 +254,12 @@ def delete_break(
     db: Session,
     break_id: UUID,
     professional_user_id: UUID,
-    tenant_id: UUID
+    # tenant_id: UUID # Parameter removed
 ) -> bool:
     stmt = select(ProfessionalBreak).where(
         ProfessionalBreak.id == str(break_id),
-        ProfessionalBreak.professional_user_id == str(professional_user_id),
-        ProfessionalBreak.tenant_id == str(tenant_id)
+        ProfessionalBreak.professional_user_id == str(professional_user_id)
+        # ProfessionalBreak.tenant_id == str(tenant_id) # Filter removed
     )
     db_break = db.execute(stmt).scalars().first()
 
@@ -307,8 +307,8 @@ def _check_blocked_time_overlap(db: Session, professional_user_id: UUID, block_d
 def create_blocked_time(
     db: Session,
     blocked_time_data: ProfessionalBlockedTimeCreate,
-    professional_user_id: UUID,
-    tenant_id: UUID
+    professional_user_id: UUID
+    # tenant_id: UUID parameter removed
 ) -> ProfessionalBlockedTime:
 
     if _check_blocked_time_overlap(db, professional_user_id, blocked_time_data.blocked_date, blocked_time_data.start_time, blocked_time_data.end_time, blocked_time_data.block_type):
@@ -323,7 +323,7 @@ def create_blocked_time(
     db_blocked_time = ProfessionalBlockedTime(
         **blocked_time_data.model_dump(),
         professional_user_id=str(professional_user_id),  # Convert UUID to string for MySQL compatibility
-        tenant_id=str(tenant_id)  # Convert UUID to string for MySQL compatibility
+        # tenant_id=str(tenant_id) # Removed tenant_id assignment
     )
     db.add(db_blocked_time)
     db.commit()
@@ -333,13 +333,13 @@ def create_blocked_time(
 def get_blocked_times_for_professional(
     db: Session,
     professional_user_id: UUID,
-    tenant_id: UUID,
+    # tenant_id: UUID, # Parameter removed
     start_date_filter: Optional[date] = None, # Renamed for clarity
     end_date_filter: Optional[date] = None   # Renamed for clarity
 ) -> List[ProfessionalBlockedTime]:
     stmt = select(ProfessionalBlockedTime).where(
-        ProfessionalBlockedTime.professional_user_id == str(professional_user_id),
-        ProfessionalBlockedTime.tenant_id == str(tenant_id)
+        ProfessionalBlockedTime.professional_user_id == str(professional_user_id)
+        # ProfessionalBlockedTime.tenant_id == str(tenant_id) # Filter removed
     ).order_by(ProfessionalBlockedTime.blocked_date, ProfessionalBlockedTime.start_time)
 
     if start_date_filter:
@@ -353,12 +353,12 @@ def delete_blocked_time(
     db: Session,
     blocked_time_id: UUID,
     professional_user_id: UUID,
-    tenant_id: UUID
+    # tenant_id: UUID # Parameter removed
 ) -> bool:
     stmt = select(ProfessionalBlockedTime).where(
         ProfessionalBlockedTime.id == str(blocked_time_id),
-        ProfessionalBlockedTime.professional_user_id == str(professional_user_id),
-        ProfessionalBlockedTime.tenant_id == str(tenant_id)
+        ProfessionalBlockedTime.professional_user_id == str(professional_user_id)
+        # ProfessionalBlockedTime.tenant_id == str(tenant_id) # Filter removed
     )
     db_blocked_time = db.execute(stmt).scalars().first()
 
@@ -372,15 +372,15 @@ def delete_blocked_time(
     db.commit()
     return True
 
-# Helper for sqlalchemy "not" operator in overlap checks
-def not_(expression):
-    return expression == False # Or use sqlalchemy.sql.expression.not_
-                               # Using `~` operator on a SQLAlchemy boolean clause also works e.g. ~or_(...)
-                               # For simplicity and directness with `not_(or_(...))` pattern:
-    # from sqlalchemy import not_ # this is the typical import
-    # However, to avoid new import if not already there, this lambda-like approach works for simple cases.
-    # A more robust way is to use `from sqlalchemy.sql.expression import not_`
-    # or rely on the `~` operator if the expression is a SQLAlchemy ColumnElement.
-    # For `or_` and `and_` results, `~` is fine.
-    from sqlalchemy.sql.expression import not_ as sqlalchemy_not_
-    return sqlalchemy_not_(expression)
+# Helper for sqlalchemy "not" operator in overlap checks - REMOVED
+# def not_(expression):
+#     return expression == False # Or use sqlalchemy.sql.expression.not_
+#                                # Using `~` operator on a SQLAlchemy boolean clause also works e.g. ~or_(...)
+#                                # For simplicity and directness with `not_(or_(...))` pattern:
+#     # from sqlalchemy import not_ # this is the typical import
+#     # However, to avoid new import if not already there, this lambda-like approach works for simple cases.
+#     # A more robust way is to use `from sqlalchemy.sql.expression import not_`
+#     # or rely on the `~` operator if the expression is a SQLAlchemy ColumnElement.
+#     # For `or_` and `and_` results, `~` is fine.
+#     from sqlalchemy.sql.expression import not_ as sqlalchemy_not_
+#     return sqlalchemy_not_(expression)

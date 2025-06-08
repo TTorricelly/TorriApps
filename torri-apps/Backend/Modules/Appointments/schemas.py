@@ -11,7 +11,7 @@ except ImportError:
     AppointmentStatus = str # Fallback to string if enum not found
 
 # --- Basic Info Schemas ---
-class UserTenantBasicInfo(BaseModel):
+class UserBasicInfo(BaseModel): # Renamed from UserTenantBasicInfo
     id: UUID
     full_name: Optional[str] = None
     email: str
@@ -117,8 +117,8 @@ class AppointmentSchema(AppointmentBase):
     price_at_booking: Decimal
     paid_manually: bool
     notes_by_professional: Optional[str] = None
-    client: Optional[UserTenantBasicInfo] = None
-    professional: Optional[UserTenantBasicInfo] = None
+    client: Optional[UserBasicInfo] = None # Updated type
+    professional: Optional[UserBasicInfo] = None # Updated type
     service: Optional[ServiceBasicInfo] = None
 
     class Config:

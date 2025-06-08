@@ -7,23 +7,16 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# This import is crucial for the dual-metadata setup.
-from Config.Database import Base, BasePublic
+# This import is crucial for the dual-metadata setup. # Now simplified for single schema
+from Config.Database import Base # BasePublic removed
 
-# Import models conditionally based on which metadata we're using
-# This prevents cross-schema foreign key resolution issues during autogenerate
-
-# Always import public models (they're needed for both cases)
-from Modules.Tenants.models import Tenant
+# Import all models for the single schema operation
+from Core.Auth.models import User # Changed from UserTenant
+from Modules.Services.models import Service, Category
+from Modules.Appointments.models import Appointment
+from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
 from Modules.AdminMaster.models import AdminMasterUser
-
-# Import tenant models only when working with tenant metadata
-# This prevents issues with cross-schema foreign keys during public schema generation
-if context.get_x_argument(as_dictionary=True).get("metadata_choice") != "public":
-    from Core.Auth.models import UserTenant
-    from Modules.Services.models import Service, Category
-    from Modules.Appointments.models import Appointment
-    from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
+# from Modules.Tenants.models import Tenant # Tenant model removed
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -39,25 +32,16 @@ if config.config_file_name is not None:
 # To generate a migration for the public schema, you would run:
 # alembic -x metadata_choice=public revision -m "create_public_tables"
 # To generate a migration for the tenant schema, you would run:
-# alembic -x metadata_choice=tenant revision -m "create_tenant_tables"
-# or simply: alembic revision -m "create_tenant_tables" (as tenant is default)
+# alembic -x metadata_choice=tenant revision -m "create_tenant_tables" # Comment retained for context, but logic removed
+# or simply: alembic revision -m "create_tenant_tables" (as tenant is default) # Comment retained
 
-# Check both main option and -x parameter
-which_metadata = context.get_x_argument(as_dictionary=True).get("metadata_choice")
-if which_metadata is None:
-    which_metadata = config.get_main_option("metadata_choice", "tenant")
-
-if which_metadata == "public":
-    print("INFO: Using PUBLIC metadata for Alembic operations.")
-    target_metadata = BasePublic.metadata
-    SQLALCHEMY_URL = "mysql+mysqlconnector://root:@localhost:3306/torri_app_public"
-else:
-    print("INFO: Using TENANT metadata for Alembic operations.")
-    target_metadata = Base.metadata
-    SQLALCHEMY_URL = "mysql+mysqlconnector://root:@localhost:3306/torri_app_public"
+# Metadata choice logic removed, always use Base.metadata for single schema
+print("INFO: Using main Base.metadata for Alembic operations.")
+target_metadata = Base.metadata
+# SQLALCHEMY_URL will be taken from alembic.ini via config.get_main_option("sqlalchemy.url")
 
 # For autogenerate to detect changes, all model files that define tables
-# in EITHER Base.metadata or BasePublic.metadata must have been imported
+# in Base.metadata must have been imported
 # by the time these metadata objects are constructed and used.
 # This is typically achieved by ensuring that __init__.py files in your models
 # directories (or the Config.Database module itself) import all relevant models.
@@ -65,39 +49,16 @@ else:
 def include_object(object, name, type_, reflected, compare_to):
     """
     Filter function to include only tables we want in migrations.
-    This prevents Alembic from detecting system schemas and other databases.
+    This ensures Alembic only operates on tables defined in our Base.metadata.
     """
     if type_ == "table":
-        # Get the current metadata choice
-        metadata_choice = context.get_x_argument(as_dictionary=True).get("metadata_choice", "tenant")
-        
-        if metadata_choice == "public":
-            # For public schema, only include our public tables
-            return name in ['tenants', 'admin_master_users']
-        else:
-            # For tenant schema, only include tables that are in our target metadata
-            if target_metadata is not None:
-                return name in target_metadata.tables
-            return False
-    
-    elif type_ == "index":
-        # Only include indexes for tables we're managing
-        metadata_choice = context.get_x_argument(as_dictionary=True).get("metadata_choice", "tenant")
-        
-        if metadata_choice == "public":
-            return name.startswith('ix_admin_master_users_') or name.startswith('ix_tenants_')
-        else:
-            # For tenant schemas, include indexes from our metadata
-            if target_metadata is not None:
-                for table_name, table in target_metadata.tables.items():
-                    if hasattr(table, 'indexes'):
-                        for index in table.indexes:
-                            if index.name == name:
-                                return True
-            return False
-    
-    # For other objects (constraints, etc.), include them if they belong to our tables
-    return True
+        return name in target_metadata.tables
+    # For other types like indexes, constraints, allow Alembic to manage them
+    # if they are associated with the tables in target_metadata.
+    # A more granular control might be needed if there are shared indexes/constraints
+    # from other metadata objects, but for a single Base.metadata, this should be fine.
+    # If issues arise, one might need to check `object.table.name in target_metadata.tables`.
+    return True # Default to include other types like indexes, constraints
 
 
 def run_migrations_offline() -> None:
@@ -117,13 +78,13 @@ def run_migrations_offline() -> None:
     # or set in alembic.ini. If None, Alembic uses its default behavior.
     vts = config.get_main_option("version_table_schema")
 
-    print(f"DEBUG: run_migrations_offline(): sqlalchemy.url={url}")
-    print(f"DEBUG: run_migrations_offline(): metadata_choice={which_metadata}")
-    print(f"DEBUG: run_migrations_offline(): version_table_schema={vts}")
-    print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+    # print(f"DEBUG: run_migrations_offline(): sqlalchemy.url={url}") # Using url from config
+    # print(f"DEBUG: run_migrations_offline(): metadata_choice={which_metadata}") # metadata_choice removed
+    # print(f"DEBUG: run_migrations_offline(): version_table_schema={vts}")
+    # print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
 
     context.configure(
-        url=SQLALCHEMY_URL,  # Use the defined URL
+        url=url,  # Use URL from alembic.ini
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -145,21 +106,21 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # connectable = engine_from_config(
-    #     config.get_section(config.config_ini_section, {}),
-    #     prefix="sqlalchemy.",
-    #     poolclass=pool.NullPool,
-    # )
-    connectable = create_engine(SQLALCHEMY_URL)
+    connectable = engine_from_config( # Use engine_from_config to read from alembic.ini
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    # connectable = create_engine(SQLALCHEMY_URL) # Hardcoded URL removed
 
     with connectable.connect() as connection:
         # version_table_schema can be passed via -x version_table_schema=my_schema
         # or set in alembic.ini. If None, Alembic uses its default behavior.
         vts = config.get_main_option("version_table_schema")
 
-        print(f"DEBUG: run_migrations_online(): metadata_choice={which_metadata}")
-        print(f"DEBUG: run_migrations_online(): version_table_schema={vts}")
-        print(f"DEBUG: run_migrations_online(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+        # print(f"DEBUG: run_migrations_online(): metadata_choice={which_metadata}") # metadata_choice removed
+        # print(f"DEBUG: run_migrations_online(): version_table_schema={vts}")
+        # print(f"DEBUG: run_migrations_online(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
 
         context.configure(
             connection=connection,

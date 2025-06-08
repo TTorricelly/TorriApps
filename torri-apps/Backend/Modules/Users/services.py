@@ -3,46 +3,46 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from Core.Auth.models import UserTenant
-from Core.Auth.Schemas import UserTenantCreate, UserTenantUpdate, UserTenant as UserTenantSchema
+from Core.Auth.models import User # Updated import
+from Core.Auth.Schemas import UserCreate, UserUpdate, User as UserSchema # Updated imports
 from Core.Security.hashing import get_password_hash # For creating/updating password
 from Core.Auth.constants import UserRole # For role validation
 
-def get_user_by_email_and_tenant(db: Session, email: str, tenant_id: UUID) -> UserTenant | None:
-    return db.query(UserTenant).filter(UserTenant.email == email, UserTenant.tenant_id == str(tenant_id)).first()
+def get_user_by_email(db: Session, email: str) -> User | None: # Renamed, removed tenant_id, updated return type
+    return db.query(User).filter(User.email == email).first() # Updated query
 
-def get_user_by_id_and_tenant(db: Session, user_id: UUID, tenant_id: UUID) -> UserTenant | None:
-    return db.query(UserTenant).filter(UserTenant.id == str(user_id), UserTenant.tenant_id == str(tenant_id)).first()
+def get_user_by_id(db: Session, user_id: UUID) -> User | None: # Renamed, removed tenant_id, updated return type
+    return db.query(User).filter(User.id == str(user_id)).first() # Updated query
 
-def get_users_by_tenant(db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[UserTenant]:
-    return db.query(UserTenant).filter(UserTenant.tenant_id == str(tenant_id)).offset(skip).limit(limit).all()
+def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]: # Renamed, removed tenant_id, updated return type
+    return db.query(User).offset(skip).limit(limit).all() # Updated query
 
-def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> UserTenant:
+def create_user(db: Session, user_data: UserCreate) -> User: # Removed tenant_id, updated types
     # Role validation: Ensure only tenant-specific roles are assigned through this service.
     # AdminMasterRole.ADMIN_MASTER is not a UserRole and should not be assignable here.
     if user_data.role not in [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]:
         db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role for tenant user: {user_data.role}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR."
+            detail=f"Invalid role for user: {user_data.role}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR." # Updated detail
         )
 
-    existing_user = get_user_by_email_and_tenant(db, email=user_data.email, tenant_id=tenant_id)
+    existing_user = get_user_by_email(db, email=user_data.email) # Updated call
     if existing_user:
         db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered for this tenant."
+            detail="Email already registered." # Updated detail
         )
 
     hashed_password = get_password_hash(user_data.password)
 
-    db_user = UserTenant(
+    db_user = User( # Updated model
         email=user_data.email,
         hashed_password=hashed_password,
         role=user_data.role,
         full_name=user_data.full_name,
-        tenant_id=str(tenant_id),  # Convert UUID to string for MySQL compatibility
+        # tenant_id removed
         is_active=True # New users default to active
     )
 
@@ -51,8 +51,8 @@ def create_user(db: Session, user_data: UserTenantCreate, tenant_id: UUID) -> Us
     # Removed db.refresh() to avoid session issues
     return db_user
 
-def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, tenant_id: UUID) -> UserTenant | None:
-    db_user = get_user_by_id_and_tenant(db, user_id=user_id, tenant_id=tenant_id)
+def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> User | None: # Renamed, removed tenant_id, updated types
+    db_user = get_user_by_id(db, user_id=user_id) # Updated call
     if not db_user:
         return None # Or raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -63,11 +63,11 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
         db.rollback()  # Ensure clean state before exception
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role for tenant user: {update_data['role']}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR."
+            detail=f"Invalid role for user: {update_data['role']}. Allowed roles are CLIENTE, PROFISSIONAL, ATENDENTE, GESTOR." # Updated detail
         )
 
     # Password update: If a new password is provided, hash it.
-    # This schema (UserTenantUpdate) allows password to be None, so only update if provided.
+    # This schema (UserUpdate) allows password to be None, so only update if provided.
     if 'password' in update_data and update_data['password'] is not None:
         hashed_password = get_password_hash(update_data["password"])
         db_user.hashed_password = hashed_password
@@ -80,12 +80,12 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
 
     # Email change validation: if email is in update_data and different from current one, check uniqueness
     if 'email' in update_data and update_data['email'] != db_user.email:
-        existing_user_with_new_email = get_user_by_email_and_tenant(db, email=update_data['email'], tenant_id=tenant_id)
+        existing_user_with_new_email = get_user_by_email(db, email=update_data['email']) # Updated call
         if existing_user_with_new_email and existing_user_with_new_email.id != str(user_id):
             db.rollback()  # Ensure clean state before exception
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="New email already registered for this tenant by another user."
+                detail="New email already registered by another user." # Updated detail
             )
 
     for field, value in update_data.items():
@@ -96,8 +96,8 @@ def update_user_tenant(db: Session, user_id: UUID, user_data: UserTenantUpdate, 
     # Removed db.refresh() to avoid session issues
     return db_user
 
-def delete_user_tenant(db: Session, user_id: UUID, tenant_id: UUID) -> bool:
-    db_user = get_user_by_id_and_tenant(db, user_id=user_id, tenant_id=tenant_id)
+def delete_user(db: Session, user_id: UUID) -> bool: # Renamed, removed tenant_id
+    db_user = get_user_by_id(db, user_id=user_id) # Updated call
     if not db_user:
         return False # Or raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

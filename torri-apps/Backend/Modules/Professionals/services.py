@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from fastapi import HTTPException, status
 
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
 from Core.Security.hashing import get_password_hash
 from Core.Utils.file_handler import file_handler
@@ -19,8 +19,8 @@ from .schemas import (
 )
 
 # Helper function to convert professional with photo URL
-def _add_photo_url_to_professional(professional: UserTenant, db: Session = None, base_url: str = "http://localhost:8000") -> Professional:
-    """Convert UserTenant model to Professional schema with photo_url."""
+def _add_photo_url_to_professional(professional: User, db: Session = None, base_url: str = "http://localhost:8000") -> Professional: # Changed UserTenant to User
+    """Convert User model to Professional schema with photo_url."""
     photo_url = None
     if professional.photo_path:
         photo_url = file_handler.get_public_url(professional.photo_path, base_url)
@@ -53,23 +53,23 @@ def _add_photo_url_to_professional(professional: UserTenant, db: Session = None,
 
 # Professional CRUD operations
 def get_professional_by_id(db: Session, professional_id: UUID) -> Optional[Professional]:
-    professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if professional:
         return _add_photo_url_to_professional(professional, db)
     return None
 
 def get_professionals(db: Session, skip: int = 0, limit: int = 100) -> List[Professional]:
-    professionals = db.query(UserTenant).filter(
-        UserTenant.role == UserRole.PROFISSIONAL
+    professionals = db.query(User).filter( # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).offset(skip).limit(limit).all()
     return [_add_photo_url_to_professional(prof, db) for prof in professionals]
 
-def create_professional(db: Session, professional_data: ProfessionalCreate, tenant_id: UUID = None) -> Professional:
+def create_professional(db: Session, professional_data: ProfessionalCreate) -> Professional: # Removed tenant_id parameter
     # Check if email already exists
-    existing_user = db.query(UserTenant).filter(UserTenant.email == professional_data.email).first()
+    existing_user = db.query(User).filter(User.email == professional_data.email).first() # Changed UserTenant to User
     if existing_user:
         db.rollback()
         raise HTTPException(
@@ -80,14 +80,14 @@ def create_professional(db: Session, professional_data: ProfessionalCreate, tena
     # Hash password
     hashed_password = get_password_hash(professional_data.password)
     
-    # Create professional with tenant_id
-    db_professional = UserTenant(
+    # Create professional
+    db_professional = User( # Changed UserTenant to User
         email=professional_data.email,
         hashed_password=hashed_password,
         role=UserRole.PROFISSIONAL,
         full_name=professional_data.full_name,
-        is_active=professional_data.is_active,
-        tenant_id=str(tenant_id) if tenant_id else None
+        is_active=professional_data.is_active
+        # tenant_id removed
     )
     
     db.add(db_professional)
@@ -95,19 +95,19 @@ def create_professional(db: Session, professional_data: ProfessionalCreate, tena
     return _add_photo_url_to_professional(db_professional, db)
 
 def update_professional(db: Session, professional_id: UUID, professional_data: ProfessionalUpdate) -> Optional[Professional]:
-    # Get the raw UserTenant object, not the converted Professional schema
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    # Get the raw User object, not the converted Professional schema
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         return None
     
     # Check email uniqueness if being updated
     if professional_data.email and professional_data.email != db_professional.email:
-        existing_user = db.query(UserTenant).filter(
-            UserTenant.email == professional_data.email,
-            UserTenant.id != str(professional_id)
+        existing_user = db.query(User).filter( # Changed UserTenant to User
+            User.email == professional_data.email, # Changed UserTenant to User
+            User.id != str(professional_id) # Changed UserTenant to User
         ).first()
         if existing_user:
             db.rollback()
@@ -125,10 +125,10 @@ def update_professional(db: Session, professional_id: UUID, professional_data: P
     return _add_photo_url_to_professional(db_professional, db)
 
 def delete_professional(db: Session, professional_id: UUID) -> bool:
-    # Get the raw UserTenant object for deletion
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    # Get the raw User object for deletion
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         return False
@@ -139,20 +139,20 @@ def delete_professional(db: Session, professional_id: UUID) -> bool:
 
 # Service association operations
 def get_professional_services(db: Session, professional_id: UUID) -> List[Service]:
-    # Get the raw UserTenant object to access services_offered relationship
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    # Get the raw User object to access services_offered relationship
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         return []
     return db_professional.services_offered
 
 def update_professional_services(db: Session, professional_id: UUID, service_data: ServiceAssociationUpdate) -> List[Service]:
-    # Get the raw UserTenant object to access services_offered relationship
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    # Get the raw User object to access services_offered relationship
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         raise HTTPException(
@@ -177,9 +177,9 @@ def get_professional_availability(db: Session, professional_id: UUID) -> List[Pr
 
 def update_professional_availability(db: Session, professional_id: UUID, availability_data: AvailabilityUpdate) -> List[ProfessionalAvailability]:
     # Verify professional exists
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         raise HTTPException(
@@ -200,7 +200,7 @@ def update_professional_availability(db: Session, professional_id: UUID, availab
             for period_data in periods:
                 period = ProfessionalAvailability(
                     professional_user_id=str(professional_id),
-                    tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
+                    # tenant_id removed
                     day_of_week=day_enum,
                     start_time=period_data['start_time'],
                     end_time=period_data['end_time']
@@ -219,9 +219,9 @@ def get_professional_blocked_times(db: Session, professional_id: UUID) -> List[P
 
 def create_blocked_time(db: Session, professional_id: UUID, blocked_time_data: BlockedTimeCreate) -> ProfessionalBlockedTime:
     # Verify professional exists
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         raise HTTPException(
@@ -235,7 +235,7 @@ def create_blocked_time(db: Session, professional_id: UUID, blocked_time_data: B
     
     db_blocked_time = ProfessionalBlockedTime(
         professional_user_id=str(professional_id),
-        tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
+        # tenant_id removed
         **data_dict
     )
     
@@ -285,9 +285,9 @@ def get_professional_breaks(db: Session, professional_id: UUID) -> List[Professi
 
 def create_break(db: Session, professional_id: UUID, break_data: BreakCreate) -> ProfessionalBreak:
     # Verify professional exists
-    db_professional = db.query(UserTenant).filter(
-        UserTenant.id == str(professional_id),
-        UserTenant.role == UserRole.PROFISSIONAL
+    db_professional = db.query(User).filter( # Changed UserTenant to User
+        User.id == str(professional_id), # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
     ).first()
     if not db_professional:
         raise HTTPException(
@@ -297,7 +297,7 @@ def create_break(db: Session, professional_id: UUID, break_data: BreakCreate) ->
     
     db_break = ProfessionalBreak(
         professional_user_id=str(professional_id),
-        tenant_id=str(db_professional.tenant_id) if db_professional.tenant_id else None,
+        # tenant_id removed
         **break_data.model_dump()
     )
     

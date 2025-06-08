@@ -4,8 +4,8 @@
 
 # Import utility functions from specialized modules
 from .appointment_utils import (
-    calculate_end_time as _calculate_end_time,
-    get_tenant_block_size as _get_tenant_block_size
+    calculate_end_time as _calculate_end_time
+    # get_tenant_block_size as _get_tenant_block_size # Removed as function was deleted
 )
 
 # Import availability functions
@@ -43,7 +43,7 @@ from .schedule_service import (
 __all__ = [
     # Utility functions (private)
     '_calculate_end_time',
-    '_get_tenant_block_size',
+    # '_get_tenant_block_size', # Removed
     '_validate_and_get_appointment_dependencies',
     '_get_appointment_for_modification', 
     '_find_contiguous_available_slots',

@@ -25,11 +25,11 @@ async def login_for_access_token(
     db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
 ):
 
-    user, error_message, tenant_schema = auth_services.enhanced_authenticate_user(
+    user, error_message = auth_services.authenticate_user( # Renamed and simplified call
         db,
         email=login_request.email,
-        password=login_request.password,
-        tenant_id=getattr(login_request, 'tenant_id', None)  # Use tenant_id from request if provided
+        password=login_request.password
+        # tenant_id argument removed
     )
 
     if not user:
@@ -52,8 +52,7 @@ async def login_for_access_token(
     # user.tenant_id is UUID, user.role is Enum
     token_data = {
         "sub": user.email,
-        "tenant_id": str(user.tenant_id) if user.tenant_id else "default", # Convert UUID to string for JWT
-        "tenant_schema": tenant_schema, # Include schema name for direct access
+        # tenant_id and tenant_schema removed
         "role": user.role.value, # Convert Enum to string value for JWT
         # Additional user data to avoid DB calls
         "user_id": str(user.id),
@@ -67,104 +66,7 @@ async def login_for_access_token(
 
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/enhanced-login", response_model=Schemas.EnhancedToken)
-async def enhanced_login_for_access_token(
-    login_request: Schemas.EnhancedLoginRequest,
-    db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
-):
-    """
-    Enhanced login endpoint that can discover tenant by email.
-    
-    - If tenant_id is provided in the request body, uses standard authentication
-    - If tenant_id is not provided, searches for the email across all tenant schemas
-    - Returns appropriate errors for multiple tenants or email not found
-    
-    Security considerations:
-    - Schema names are validated to prevent SQL injection
-    - Only searches active users
-    - All attempts are logged for auditing
-    - Note: Searches all tenant schemas (no artificial limit)
-    """
-    user, error_message, tenant_schema = auth_services.enhanced_authenticate_user(
-        db,
-        email=login_request.email,
-        password=login_request.password,
-        tenant_id=login_request.tenant_id
-    )
-    
-    # Also get tenant data from public schema for the response
-    from Modules.Tenants.services import TenantService
-    tenant_data = None
-    if user and user.tenant_id:
-        tenant_data = TenantService.get_tenant_by_id(db, user.tenant_id)
-    
-    if not user:
-        # Determine appropriate status code based on error message
-        status_code = status.HTTP_401_UNAUTHORIZED
-        if error_message and "multiple tenants" in error_message.lower():
-            status_code = status.HTTP_400_BAD_REQUEST
-        elif error_message and "not found" in error_message.lower():
-            status_code = status.HTTP_404_NOT_FOUND
-            
-        raise HTTPException(
-            status_code=status_code,
-            detail=error_message or "Authentication failed.",
-            headers={"WWW-Authenticate": "Bearer"} if status_code == status.HTTP_401_UNAUTHORIZED else None,
-        )
-
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-
-    # Include complete user data in JWT to avoid database calls during requests
-    # user.tenant_id is UUID, user.role is Enum
-    token_data = {
-        "sub": user.email,
-        "tenant_id": str(user.tenant_id) if user.tenant_id else "default", # Convert UUID to string for JWT
-        "tenant_schema": tenant_schema, # Include schema name for direct access
-        "role": user.role.value, # Convert Enum to string value for JWT
-        # Additional user data to avoid DB calls
-        "user_id": str(user.id),
-        "full_name": user.full_name,
-        "is_active": user.is_active
-    }
-
-    access_token = create_access_token(
-        data=token_data, expires_delta=access_token_expires
-    )
-
-    # Prepare tenant info
-    tenant_info = None
-    if tenant_data:
-        tenant_info = {
-            "id": tenant_data.id,
-            "name": tenant_data.name,
-            "slug": tenant_data.slug,
-            "logo_url": tenant_data.logo_url,
-            "primary_color": tenant_data.primary_color,
-            "block_size_minutes": tenant_data.block_size_minutes
-        }
-    else:
-        # Default tenant info for single schema mode
-        tenant_info = {
-            "id": user.tenant_id or "default",
-            "name": "Default Tenant",
-            "slug": "default",
-            "logo_url": None,
-            "primary_color": "#00BFFF",
-            "block_size_minutes": 30
-        }
-
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer",
-        "tenant_id": user.tenant_id,
-        "tenant": tenant_info,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role.value
-        }
-    }
+# The /enhanced-login route has been removed.
 
 # Example of how OAuth2PasswordRequestForm would be used if not using a JSON body:
 # @router.post("/token", response_model=Schemas.Token)

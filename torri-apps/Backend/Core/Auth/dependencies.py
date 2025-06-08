@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from jose import JWTError
 
 from Core.Security.jwt import decode_access_token, TokenPayload
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 from Core.Database.dependencies import get_db
 from Core.Auth.constants import UserRole
 
@@ -67,14 +67,14 @@ def get_current_user_tenant(
 def get_current_user_from_db(
     payload: Annotated[TokenPayload, Depends(get_current_token_payload)],
     db: Annotated[Session, Depends(get_db)]
-) -> UserTenant:
+) -> User: # Updated return type
     """
     Get current user from database when you need fresh data or relationships.
     Simplified for single schema - no tenant_id matching needed.
     """
     try:
-        user = db.query(UserTenant).filter(
-            UserTenant.email == payload.sub
+        user = db.query(User).filter( # Updated model
+            User.email == payload.sub # Updated model
         ).first()
         
         if user is None:

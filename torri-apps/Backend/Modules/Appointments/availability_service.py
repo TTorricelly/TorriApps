@@ -21,14 +21,15 @@ from .constants import AppointmentStatus
 from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
 
 # Utils
-from .appointment_utils import get_tenant_block_size, calculate_end_time
+# from .appointment_utils import get_tenant_block_size # Removed as tenant concept is deprecated
+from .appointment_utils import calculate_end_time
 
 
 def get_daily_time_slots_for_professional(
     db: Session,
     professional_id: UUID,
     target_date: date,
-    tenant_id: UUID,
+    # tenant_id: UUID, # Parameter removed
     ignore_client_id: Optional[UUID] = None,
     ignore_start_time: Optional[time] = None
 ) -> ProfessionalDailyAvailabilityResponse:
@@ -41,9 +42,9 @@ def get_daily_time_slots_for_professional(
     checking. This allows a client to have multiple overlapping appointments
     with the same professional. The ``ignore_start_time`` parameter is not
     used by the filtering logic if ``ignore_client_id`` is present.
-    The granularity of slots is determined by ``tenant.block_size_minutes``.
+    The granularity of slots is determined by a default block size.
     """
-    block_size_minutes = get_tenant_block_size(db, tenant_id)
+    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
     
     # Convert Python weekday (0=Monday, 1=Tuesday, etc.) to our DayOfWeek enum
     weekday_mapping = {
@@ -62,8 +63,8 @@ def get_daily_time_slots_for_professional(
     # 1. Get Professional's recurring availability for that day_of_week
     stmt_avail = select(ProfessionalAvailability).where(
         ProfessionalAvailability.professional_user_id == str(professional_id),
-        ProfessionalAvailability.day_of_week == target_day_of_week,
-        ProfessionalAvailability.tenant_id == str(tenant_id) # Ensure it's for the correct tenant context
+        ProfessionalAvailability.day_of_week == target_day_of_week
+        # ProfessionalAvailability.tenant_id == str(tenant_id) # Filter removed
     ).order_by(ProfessionalAvailability.start_time)
     working_hours_today = db.execute(stmt_avail).scalars().all()
 
@@ -73,16 +74,16 @@ def get_daily_time_slots_for_professional(
     # 2. Get recurring breaks for that day
     stmt_breaks = select(ProfessionalBreak).where(
         ProfessionalBreak.professional_user_id == str(professional_id),
-        ProfessionalBreak.day_of_week == target_day_of_week,
-        ProfessionalBreak.tenant_id == str(tenant_id)
+        ProfessionalBreak.day_of_week == target_day_of_week
+        # ProfessionalBreak.tenant_id == str(tenant_id) # Filter removed
     )
     breaks_today = db.execute(stmt_breaks).scalars().all()
 
     # 3. Get specific date-based blocked times (includes DAY_OFF)
     stmt_blocks = select(ProfessionalBlockedTime).where(
         ProfessionalBlockedTime.professional_user_id == str(professional_id),
-        ProfessionalBlockedTime.blocked_date == target_date,
-        ProfessionalBlockedTime.tenant_id == str(tenant_id)
+        ProfessionalBlockedTime.blocked_date == target_date
+        # ProfessionalBlockedTime.tenant_id == str(tenant_id) # Filter removed
     )
     specific_blocks_today = db.execute(stmt_blocks).scalars().all()
 
@@ -96,7 +97,7 @@ def get_daily_time_slots_for_professional(
     stmt_appts = select(Appointment).where(
         Appointment.professional_id == str(professional_id),
         Appointment.appointment_date == target_date,
-        Appointment.tenant_id == str(tenant_id),
+        # Appointment.tenant_id == str(tenant_id), # Filter removed
         Appointment.status.in_([AppointmentStatus.SCHEDULED]) # Only scheduled appointments block time
     )
     appointments_today = db.execute(stmt_appts).scalars().all()
@@ -150,7 +151,7 @@ def get_daily_time_slots_for_professional(
 
 
 def get_service_availability_for_professional(
-    db: Session, req: AvailabilityRequest, tenant_id: UUID
+    db: Session, req: AvailabilityRequest # tenant_id: UUID parameter removed
 ) -> List[DailyServiceAvailabilityResponse]:
     """
     Finds available time slots that can accommodate a service of specific duration.
@@ -159,22 +160,21 @@ def get_service_availability_for_professional(
     Args:
         db: Database session
         req: Availability request containing service_id, professional_id, year, month
-        tenant_id: Tenant context
         
     Returns:
         List of daily availability responses with slots that can accommodate the service
     """
-    service_obj = db.get(Service, str(req.service_id))  # Convert UUID to string for MySQL compatibility
-    if not service_obj or service_obj.tenant_id != str(tenant_id):
+    service_obj = db.get(Service, str(req.service_id)) # Convert UUID to string for MySQL compatibility
+    if not service_obj: # service_obj.tenant_id check removed
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
 
     service_duration = service_obj.duration_minutes
     if service_duration <= 0:
         return []
 
-    block_size_minutes = get_tenant_block_size(db, tenant_id)
-    if block_size_minutes <= 0:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Tenant block size not configured correctly.")
+    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
+    if block_size_minutes <= 0: # This check might be redundant if block_size is always 30
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Default block size not configured correctly.")
 
     results: List[DailyServiceAvailabilityResponse] = []
     year = req.year
@@ -184,7 +184,7 @@ def get_service_availability_for_professional(
 
     for day_num in range(1, num_days + 1):
         current_date = date(year, month, day_num)
-        daily_availability_raw = get_daily_time_slots_for_professional(db, req.professional_id, current_date, tenant_id)
+        daily_availability_raw = get_daily_time_slots_for_professional(db, req.professional_id, current_date) # tenant_id removed from call
 
         raw_slots = daily_availability_raw.slots
         available_service_slots_for_day: List[DatedTimeSlot] = []

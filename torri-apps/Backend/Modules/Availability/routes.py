@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_db
-from Core.Auth.dependencies import get_current_user_tenant
-from Core.Auth.models import UserTenant # For current_user type hint
+from Core.Auth.dependencies import get_current_user_tenant # This dependency should also be updated if it returns UserTenant model
+from Core.Auth.models import User # Updated import UserTenant to User
 from Core.Auth.constants import UserRole # For permission checks if needed beyond helper
 
 from . import services as availability_services # Alias
@@ -33,7 +33,7 @@ router = APIRouter(
 def create_professional_availability_slot_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose availability is being managed."),
     slot_data: ProfessionalAvailabilityCreate = Body(...),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission check and fetch the professional being managed
@@ -44,8 +44,8 @@ def create_professional_availability_slot_endpoint(
     return availability_services.create_availability_slot(
         db=db,
         slot_data=slot_data,
-        professional_user_id=professional_user_id_managed,
-        tenant_id=requesting_user.tenant_id # Operation is within the requesting user's tenant
+        professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
 
 @router.get(
@@ -56,22 +56,19 @@ def create_professional_availability_slot_endpoint(
 def get_professional_availability_slots_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose availability is being listed."),
     day_of_week: Optional[DayOfWeek] = Query(None, description="Filter by day of the week (0=Monday, 6=Sunday)."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None, # Ensures user is authenticated and tenant context is known
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
-    # Basic permission: any authenticated user in the tenant can view availability (adjust if needed)
-    # _get_professional_for_availability_management can be used if stricter checks are needed for GETs,
-    # or a simpler check if professional_user_id_managed exists in tenant.
-    # For now, assuming get_current_user_tenant is enough for basic tenant validation.
+    # Basic permission: any authenticated user can view availability.
     # More specific validation of professional_user_id_managed:
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
+    prof_to_view = db.query(User).filter(User.id == str(professional_user_id_managed)).first() # Removed tenant_id check
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found.") # Updated detail
 
     return availability_services.get_availability_slots_for_professional(
         db=db,
         professional_user_id=professional_user_id_managed,
-        tenant_id=requesting_user.tenant_id,
+        # tenant_id=requesting_user.tenant_id, # Argument removed
         day_of_week=day_of_week
     )
 
@@ -83,14 +80,15 @@ def get_professional_availability_slots_endpoint(
 def delete_professional_availability_slot_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose slot is being deleted."),
     slot_id: UUID = Path(..., description="ID of the availability slot to delete."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     availability_services._get_professional_for_availability_management(
         db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
     )
     success = availability_services.delete_availability_slot(
-        db=db, slot_id=slot_id, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id
+        db=db, slot_id=slot_id, professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
     if not success: # Should be handled by exceptions in service now
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found or deletion failed.")
@@ -107,14 +105,15 @@ def delete_professional_availability_slot_endpoint(
 def create_professional_break_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional for whom the break is being created."),
     break_data: ProfessionalBreakCreate = Body(...),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     availability_services._get_professional_for_availability_management(
         db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
     )
     return availability_services.create_break(
-        db=db, break_data=break_data, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id
+        db=db, break_data=break_data, professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
 
 @router.get(
@@ -125,15 +124,16 @@ def create_professional_break_endpoint(
 def get_professional_breaks_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose breaks are being listed."),
     day_of_week: Optional[DayOfWeek] = Query(None, description="Filter by day of the week (0=Monday, 6=Sunday)."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
+    prof_to_view = db.query(User).filter(User.id == str(professional_user_id_managed)).first() # Removed tenant_id check
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found.") # Updated detail
 
     return availability_services.get_breaks_for_professional(
-        db=db, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id, day_of_week=day_of_week
+        db=db, professional_user_id=professional_user_id_managed, day_of_week=day_of_week
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
 
 @router.delete(
@@ -144,14 +144,15 @@ def get_professional_breaks_endpoint(
 def delete_professional_break_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose break is being deleted."),
     break_id: UUID = Path(..., description="ID of the break to delete."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     availability_services._get_professional_for_availability_management(
         db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
     )
     success = availability_services.delete_break(
-        db=db, break_id=break_id, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id
+        db=db, break_id=break_id, professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
     if not success: # Should be handled by exceptions in service now
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Break not found or deletion failed.")
@@ -168,14 +169,15 @@ def delete_professional_break_endpoint(
 def create_professional_blocked_time_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional for whom the block is being created."),
     blocked_time_data: ProfessionalBlockedTimeCreate = Body(...),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     availability_services._get_professional_for_availability_management(
         db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
     )
     return availability_services.create_blocked_time(
-        db=db, blocked_time_data=blocked_time_data, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id
+        db=db, blocked_time_data=blocked_time_data, professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
 
 @router.get(
@@ -187,16 +189,17 @@ def get_professional_blocked_times_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose blocked times are being listed."),
     start_date: Optional[date] = Query(None, description="Filter by start date (YYYY-MM-DD)."),
     end_date: Optional[date] = Query(None, description="Filter by end date (YYYY-MM-DD)."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
-    prof_to_view = db.query(UserTenant).filter(UserTenant.id == str(professional_user_id_managed), UserTenant.tenant_id == str(requesting_user.tenant_id)).first()
+    prof_to_view = db.query(User).filter(User.id == str(professional_user_id_managed)).first() # Removed tenant_id check
     if not prof_to_view or prof_to_view.role != UserRole.PROFISSIONAL:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found in this tenant.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found.") # Updated detail
 
     return availability_services.get_blocked_times_for_professional(
-        db=db, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id,
+        db=db, professional_user_id=professional_user_id_managed,
         start_date_filter=start_date, end_date_filter=end_date
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
 
 @router.delete(
@@ -207,14 +210,15 @@ def get_professional_blocked_times_endpoint(
 def delete_professional_blocked_time_endpoint(
     professional_user_id_managed: UUID = Path(..., description="ID of the professional whose blocked time is being deleted."),
     blocked_time_id: UUID = Path(..., description="ID of the blocked time to delete."),
-    requesting_user: Annotated[UserTenant, Depends(get_current_user_tenant)] = None,
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)] = None
 ):
     availability_services._get_professional_for_availability_management(
         db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
     )
     success = availability_services.delete_blocked_time(
-        db=db, blocked_time_id=blocked_time_id, professional_user_id=professional_user_id_managed, tenant_id=requesting_user.tenant_id
+        db=db, blocked_time_id=blocked_time_id, professional_user_id=professional_user_id_managed
+        # tenant_id=requesting_user.tenant_id # Argument removed
     )
     if not success: # Should be handled by exceptions in service now
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blocked time not found or deletion failed.")
