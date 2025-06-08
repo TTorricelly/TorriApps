@@ -10,9 +10,11 @@ export function useLogin() {
   return useMutation({ // In React Query v5, useMutation expects an object
     mutationFn: (credentials) => loginRequest(credentials), // credentials should be { email, password }
     onSuccess: (data, variables) => {
-      // data is the response from loginRequest, now includes tenant and user data
-      // e.g., { access_token, tenant_id, token_type, tenant: {...}, user: {...} }
-      setAuth(data.access_token, data.tenant_id, variables.email, data.tenant, data.user);
+      // data is now { access_token, token_type }
+      const token = data.access_token;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // The new setAuth signature is (token, decodedTokenPayload)
+      setAuth(token, payload);
       
       // The requirement doc mentions:
       // api.defaults.headers.common["Authorization"] = `Bearer ${data.access_token}`;

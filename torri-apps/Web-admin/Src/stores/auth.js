@@ -21,26 +21,26 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       accessToken: null,
-      tenantId: null,
+      // tenantId: null, // Removed
       userEmail: null,
-      tenantData: null,  // Complete tenant info from login
-      userData: null,    // Complete user info from login
+      // tenantData: null,  // Removed
+      userData: null,    // Will store decoded JWT payload
       isAuthenticated: false,
-      setAuth: (token, tenantId, email, tenantData = null, userData = null) =>
+      setAuth: (token, decodedTokenPayload) => // Updated signature
         set({
           accessToken: token,
-          tenantId,
-          userEmail: email,
-          tenantData,     // Store tenant data from login
-          userData,       // Store user data from login
+          // tenantId, // Removed
+          userEmail: decodedTokenPayload.sub || decodedTokenPayload.email, // Set from decoded payload
+          // tenantData, // Removed
+          userData: decodedTokenPayload, // Store full decoded payload
           isAuthenticated: true,
         }),
       clearAuth: () =>
         set({
           accessToken: null,
-          tenantId: null,
+          // tenantId: null, // Removed
           userEmail: null,
-          tenantData: null,
+          // tenantData: null, // Removed
           userData: null,
           isAuthenticated: false,
         }),
@@ -68,10 +68,10 @@ export const useAuthStore = create(
       // By default, the entire store is persisted.
       partialize: (state) => ({
         accessToken: state.accessToken,
-        tenantId: state.tenantId,
+        // tenantId: state.tenantId, // Removed
         userEmail: state.userEmail,
-        tenantData: state.tenantData,  // Persist tenant data
-        userData: state.userData,      // Persist user data
+        // tenantData: state.tenantData,  // Removed
+        userData: state.userData,      // Persist user data (decoded payload)
         isAuthenticated: state.isAuthenticated,
       }),
     }
