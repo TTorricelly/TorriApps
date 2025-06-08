@@ -111,7 +111,7 @@ class AppointmentUpdate(BaseModel):
 
 class AppointmentSchema(AppointmentBase):
     id: UUID
-    tenant_id: UUID
+    # tenant_id: UUID # Removed
     end_time: time
     status: AppointmentStatus
     price_at_booking: Decimal

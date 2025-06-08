@@ -63,5 +63,11 @@ class Service(Base):
         back_populates="services_offered"
     )
 
+    appointments = relationship(
+        "Modules.Appointments.models.Appointment", # String type hint
+        foreign_keys="[Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
+        back_populates="service"
+    )
+
     def __repr__(self):
         return f"<Service(id={self.id}, name='{self.name}')>"

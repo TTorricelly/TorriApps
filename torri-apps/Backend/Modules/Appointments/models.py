@@ -42,10 +42,10 @@ class Appointment(Base):
     notes_by_client = Column(String(500), nullable=True)
     notes_by_professional = Column(String(500), nullable=True) # Notes by professional or salon staff
 
-    # Relationships - commented out to avoid circular imports
-    # client = relationship("UserTenant", foreign_keys=[client_id], back_populates="client_appointments")
-    # professional = relationship("UserTenant", foreign_keys=[professional_id], back_populates="professional_appointments")
-    # service = relationship("Service", foreign_keys=[service_id])
+    # Relationships
+    client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="client_appointments")
+    professional = relationship("Core.Auth.models.User", foreign_keys=[professional_id], back_populates="professional_appointments")
+    service = relationship("Modules.Services.models.Service", foreign_keys=[service_id], back_populates="appointments")
 
     __table_args__ = (
         # Time validation handled in application logic. Overlap checks allow the

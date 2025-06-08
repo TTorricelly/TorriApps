@@ -38,21 +38,20 @@ class User(Base):
         back_populates="professionals"
     )
 
-    # Relationships to Appointments - temporarily commented out to resolve initialization issues
-    # Commented out to avoid circular imports - these relationships cause issues
-    # client_appointments = relationship(
-    #     "Appointment",
-    #     foreign_keys="[Appointment.client_id]", # This tells SQLAlchemy which FK on Appointment model to use
-    #     back_populates="client",
-    #     cascade="all, delete-orphan"
-    # )
+    # Relationships to Appointments
+    client_appointments = relationship(
+        "Modules.Appointments.models.Appointment",  # String type hint
+        foreign_keys="[Modules.Appointments.models.Appointment.client_id]", # Module path to Appointment model and its client_id
+        back_populates="client",
+        cascade="all, delete-orphan" # Added cascade as it's common for appointments
+    )
 
-    # professional_appointments = relationship(
-    #     "Appointment",
-    #     foreign_keys="[Appointment.professional_id]", # This tells SQLAlchemy which FK on Appointment model to use
-    #     back_populates="professional",
-    #     cascade="all, delete-orphan"
-    # )
+    professional_appointments = relationship(
+        "Modules.Appointments.models.Appointment", # String type hint
+        foreign_keys="[Modules.Appointments.models.Appointment.professional_id]", # Module path to Appointment model and its professional_id
+        back_populates="professional",
+        cascade="all, delete-orphan" # Added cascade
+    )
 
     # Professional-specific relationships - commented out to avoid circular imports
     # Will be added dynamically after models are loaded

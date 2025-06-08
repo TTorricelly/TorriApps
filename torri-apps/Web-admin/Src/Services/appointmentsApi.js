@@ -129,17 +129,22 @@ export const updateAppointmentWithMultipleServices = async (appointmentId, appoi
 };
 
 /**
- * Deletes an appointment.
- * @param {string} appointmentId - The ID of the appointment to delete.
- * @returns {Promise<void>}
+ * Cancels an appointment.
+ * @param {string} appointmentId - The ID of the appointment to cancel.
+ * @param {object} [reasonPayload=null] - Optional payload with cancellation reason, e.g., { reason: "Client request" }.
+ * @returns {Promise<object>} The updated appointment data (which now includes the cancelled status).
  * @throws {Error} If the API call fails.
  */
-export const deleteAppointment = async (appointmentId) => {
+export const cancelAppointment = async (appointmentId, reasonPayload = null) => {
   try {
-    await apiClient.delete(`/appointments/${appointmentId}`);
+    // The backend PATCH endpoint for cancel expects an Optional[AppointmentCancelPayload].
+    // An empty body or a body with { "reason": null/undefined } should be acceptable if reason is optional.
+    // If reasonPayload is null, apiClient.patch might send an empty body or just the headers.
+    const response = await apiClient.patch(`/appointments/${appointmentId}/cancel`, reasonPayload);
+    return response.data; // The cancel endpoint returns the updated appointment
   } catch (error) {
-    console.error("Error deleting appointment:", error.response?.data || error.message);
-    const errorMessage = error.response?.data?.detail || "Falha ao excluir agendamento. Tente novamente.";
+    console.error("Error cancelling appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao cancelar agendamento. Tente novamente.";
     throw new Error(errorMessage);
   }
 };
