@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 # Models
 from .models import Appointment
 from Modules.Services.models import Service
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 
 # Schemas
 from .schemas import AppointmentCreate
@@ -19,30 +19,30 @@ from .constants import AppointmentStatus
 from Core.Auth.constants import UserRole
 
 # Utils
-from .appointment_utils import calculate_end_time, get_tenant_block_size
+from .appointment_utils import calculate_end_time # get_tenant_block_size removed
 from .availability_service import get_daily_time_slots_for_professional
 
 
 def validate_and_get_appointment_dependencies(
-    db: Session, client_id: UUID, professional_id: UUID, service_id: UUID, tenant_id: UUID
-) -> Tuple[UserTenant, UserTenant, Service]:
+    db: Session, client_id: UUID, professional_id: UUID, service_id: UUID # tenant_id: UUID parameter removed
+) -> Tuple[User, User, Service]: # Updated return types
 
-    client = db.get(UserTenant, str(client_id))  # Convert UUID to string for MySQL compatibility
-    professional = db.get(UserTenant, str(professional_id))  # Convert UUID to string for MySQL compatibility
-    service = db.get(Service, str(service_id))  # Convert UUID to string for MySQL compatibility
+    client = db.get(User, str(client_id))  # Changed UserTenant to User
+    professional = db.get(User, str(professional_id))  # Changed UserTenant to User
+    service = db.get(Service, str(service_id))
 
-    if not (client and client.tenant_id == str(tenant_id)): # Client must exist and belong to the tenant
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found in this tenant.")
-    # Role check for client can be done here if UserTenant has a generic role or a specific CLIENT role
+    if not client: # client.tenant_id check removed
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found.") # Updated detail
+    # Role check for client can be done here if User has a generic role or a specific CLIENT role
     # if client.role != UserRole.CLIENTE: # Assuming CLIENTE role exists
     #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User specified as client does not have the 'CLIENTE' role.")
 
 
-    if not (professional and professional.tenant_id == str(tenant_id) and professional.role == UserRole.PROFISSIONAL):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found or invalid role in this tenant.")
+    if not (professional and professional.role == UserRole.PROFISSIONAL): # professional.tenant_id check removed
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found or invalid role.") # Updated detail
 
-    if not (service and service.tenant_id == str(tenant_id)): # Service must exist and belong to the tenant
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found in this tenant.")
+    if not service: # service.tenant_id check removed (it was already removed from Service model)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.") # Updated detail
 
     # TODO: Validate if the professional offers the service
     # Commented out due to circular import issues with relationships
@@ -58,20 +58,20 @@ def validate_and_get_appointment_dependencies(
 def create_appointment(
     db: Session,
     appointment_data: AppointmentCreate,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> Appointment:
 
     # 1. Validate dependencies and permissions
     if requesting_user.role not in [UserRole.GESTOR, UserRole.ATENDENTE]:
         # If client is booking for themselves, their ID must match appointment_data.client_id
-        if requesting_user.user_id != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE:
+        if str(requesting_user.id) != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE: # Use .id for User
              raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only book appointments for themselves.")
-    # If Gestor/Atendente is booking, they can book for any client_id within their tenant.
+    # If Gestor/Atendente is booking, they can book for any client_id.
     # The client_id in appointment_data will be used.
 
     client, professional, service = validate_and_get_appointment_dependencies(
-        db, appointment_data.client_id, appointment_data.professional_id, appointment_data.service_id, tenant_id
+        db, appointment_data.client_id, appointment_data.professional_id, appointment_data.service_id # tenant_id argument removed
     )
 
     # 2. Calculate end_time and get service price
@@ -79,16 +79,16 @@ def create_appointment(
     price_at_booking = service.price # Price from the Service model
 
     # 3. Check professional's availability for the entire duration of the service
-    block_size_minutes = get_tenant_block_size(db, tenant_id)
+    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
 
     # Generate fine-grained slots for the professional on the target date.
     # Appointments belonging to the same client at the exact start time are
     # ignored so a client can book multiple services simultaneously.
     daily_availability_response = get_daily_time_slots_for_professional(
         db,
-        professional.id,
+        UUID(str(professional.id)), # Ensure UUID type if professional.id is string from DB
         appointment_data.appointment_date,
-        tenant_id,
+        # tenant_id, # Argument removed
         ignore_client_id=appointment_data.client_id,
         ignore_start_time=appointment_data.start_time,
     )
@@ -118,10 +118,10 @@ def create_appointment(
 
     # 4. Create and save the appointment
     db_appointment = Appointment(
-        client_id=str(client.id),  # Convert UUID to string for MySQL compatibility
-        professional_id=str(professional.id),  # Convert UUID to string for MySQL compatibility
-        service_id=str(service.id),  # Convert UUID to string for MySQL compatibility
-        tenant_id=str(tenant_id),  # Convert UUID to string for MySQL compatibility
+        client_id=str(client.id),
+        professional_id=str(professional.id),
+        service_id=str(service.id),
+        # tenant_id=str(tenant_id), # tenant_id field removed from Appointment model
         appointment_date=appointment_data.appointment_date,
         start_time=appointment_data.start_time,
         end_time=calculated_end_time,
@@ -153,8 +153,8 @@ def create_appointment(
 
 def get_appointments(
     db: Session,
-    tenant_id: UUID,
-    requesting_user: UserTenant,
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User, # Updated type
     professional_id: Optional[UUID] = None,
     client_id: Optional[UUID] = None,
     date_from: Optional[date] = None,
@@ -164,22 +164,22 @@ def get_appointments(
     limit: int = 100
 ) -> List[Appointment]:
 
-    stmt = select(Appointment).where(Appointment.tenant_id == str(tenant_id))
+    stmt = select(Appointment) # Initial query without tenant_id
 
     # Permission-based filtering
     if requesting_user.role == UserRole.CLIENTE:
-        if client_id and str(client_id) != str(requesting_user.user_id): # Client trying to query for another client
+        if client_id and str(client_id) != str(requesting_user.id): # Client trying to query for another client. Use .id
              raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only view their own appointments.")
-        stmt = stmt.where(Appointment.client_id == str(requesting_user.user_id))  # Convert to string
+        stmt = stmt.where(Appointment.client_id == str(requesting_user.id))  # Use .id
     elif requesting_user.role == UserRole.PROFISSIONAL:
-        if professional_id and str(professional_id) != str(requesting_user.user_id): # Prof trying to query for another prof
+        if professional_id and str(professional_id) != str(requesting_user.id): # Prof trying to query for another prof. Use .id
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only view their own appointments.")
-        stmt = stmt.where(Appointment.professional_id == str(requesting_user.user_id))  # Convert to string
-    else: # GESTOR, ATENDENTE can use filters
+        stmt = stmt.where(Appointment.professional_id == str(requesting_user.id))  # Use .id
+    else: # GESTOR, ATENDENTE can use filters (potentially all appointments if no other filters)
         if professional_id:
-            stmt = stmt.where(Appointment.professional_id == str(professional_id))  # Convert UUID to string
+            stmt = stmt.where(Appointment.professional_id == str(professional_id))
         if client_id:
-            stmt = stmt.where(Appointment.client_id == str(client_id))  # Convert UUID to string
+            stmt = stmt.where(Appointment.client_id == str(client_id))
 
     # Optional filters
     if date_from:
@@ -200,13 +200,13 @@ def get_appointments(
 def get_appointment_by_id(
     db: Session,
     appointment_id: UUID,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> Appointment | None:
 
     stmt = select(Appointment).where(
-        Appointment.id == str(appointment_id),  # Convert UUID to string for MySQL compatibility
-        Appointment.tenant_id == str(tenant_id)  # Convert UUID to string for MySQL compatibility
+        Appointment.id == str(appointment_id) # Convert UUID to string for MySQL compatibility
+        # Appointment.tenant_id == str(tenant_id) # Filter removed
     )
     # Relationships are commented out, so no eager loading
     appointment = db.execute(stmt).scalars().first()
@@ -215,10 +215,10 @@ def get_appointment_by_id(
         return None # Handled as 404 in route
 
     # Permission check
-    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != str(requesting_user.user_id):
+    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client can only view their own appointment details.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professional can only view their own appointment details.")
-    # GESTOR and ATENDENTE can view any appointment in their tenant (already filtered by tenant_id)
+    # GESTOR and ATENDENTE can view any appointment (as tenant_id filter is removed)
 
     return appointment

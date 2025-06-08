@@ -11,12 +11,10 @@ from .constants import UserRole
 # or its string name "fully.qualified.path:table_object" or just "table_name" if in same metadata.
 # from Modules.Services.models import service_professionals_association (This would be circular)
 
-class UserTenant(Base):
-    __tablename__ = 'users_tenant'
+class User(Base):
+    __tablename__ = 'users'
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    # Keep tenant_id for legacy compatibility but no longer enforce constraints
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
     
     email = Column(String(120), unique=True, index=True, nullable=False)  # Now globally unique
     hashed_password = Column(String(255), nullable=False)
@@ -77,4 +75,4 @@ class UserTenant(Base):
     # )
 
     def __repr__(self):
-        return f"<UserTenant(id={self.id}, email='{self.email}', tenant_id='{self.tenant_id}', role='{self.role.value}')>"
+        return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"

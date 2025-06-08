@@ -23,7 +23,7 @@ class ProfessionalAvailabilityCreate(ProfessionalAvailabilityBase):
 class ProfessionalAvailabilitySchema(ProfessionalAvailabilityBase):
     id: UUID
     professional_user_id: UUID
-    tenant_id: UUID # Included for completeness, may be omitted in actual responses if contextually clear
+    # tenant_id: UUID # Removed
 
     class Config:
         from_attributes = True
@@ -48,7 +48,7 @@ class ProfessionalBreakCreate(ProfessionalBreakBase):
 class ProfessionalBreakSchema(ProfessionalBreakBase):
     id: UUID
     professional_user_id: UUID
-    tenant_id: UUID
+    # tenant_id: UUID # Removed
 
     class Config:
         from_attributes = True
@@ -69,7 +69,7 @@ class ProfessionalBlockedTimeCreate(ProfessionalBlockedTimeBase):
 class ProfessionalBlockedTimeSchema(ProfessionalBlockedTimeBase):
     id: UUID
     professional_user_id: UUID
-    tenant_id: UUID
+    # tenant_id: UUID # Removed
 
     class Config:
         from_attributes = True

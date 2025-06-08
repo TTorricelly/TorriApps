@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from Modules.Tenants.models import Tenant
+# from Modules.Tenants.models import Tenant # Tenant model removed
 
 
 def calculate_end_time(start_time: time, duration_minutes: int) -> time:
@@ -16,15 +16,5 @@ def calculate_end_time(start_time: time, duration_minutes: int) -> time:
     end_datetime = start_datetime + timedelta(minutes=duration_minutes)
     return end_datetime.time()
 
-
-def get_tenant_block_size(db: Session, tenant_id: UUID) -> int:
-    """Fetches the tenant's block_size_minutes."""
-    try:
-        tenant = db.get(Tenant, str(tenant_id))  # Convert UUID to string for MySQL compatibility
-        if not tenant:
-            # Return default block size if tenant not found
-            return 30
-        return tenant.block_size_minutes
-    except Exception:
-        # Return default block size if there are model relationship issues
-        return 30
+# Function get_tenant_block_size removed as tenant concept is deprecated.
+# Consumers of this function should use a default or alternative configuration for block size.

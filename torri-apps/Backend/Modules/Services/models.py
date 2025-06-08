@@ -15,8 +15,8 @@ service_professionals_association = Table(
     "service_professionals_association",
     Base.metadata, # Use tenant-specific Base.metadata
     Column("service_id", CHAR(36), ForeignKey("services.id", ondelete="CASCADE"), primary_key=True),
-    Column("professional_user_id", CHAR(36), ForeignKey("users_tenant.id", ondelete="CASCADE"), primary_key=True),
-    # No explicit tenant_id here as both services and users_tenant are implicitly tenant-scoped.
+    Column("professional_user_id", CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    # No explicit tenant_id here as both services and users are implicitly tenant-scoped.
     # The FKs ensure data integrity within the tenant.
     # Adding a UniqueConstraint to prevent duplicate entries for the same service and professional
     UniqueConstraint('service_id', 'professional_user_id', name='uq_service_professional')
@@ -29,8 +29,6 @@ class Category(Base):
     name = Column(String(100), nullable=False, unique=True)  # Now globally unique in single schema
     display_order = Column(Integer, nullable=False, default=0)
     icon_path = Column(String(255), nullable=True)
-    # Keep tenant_id for legacy compatibility but no longer enforce constraints
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
@@ -55,14 +53,12 @@ class Service(Base):
     image_crespo = Column(String(255), nullable=True)
 
     category_id = Column(CHAR(36), ForeignKey("service_categories.id"), nullable=False, index=True)
-    # Keep tenant_id for legacy compatibility but no longer enforce constraints
-    tenant_id = Column(CHAR(36), nullable=True, index=True)  # Legacy field, optional
 
     category = relationship("Category", back_populates="services")
 
-    # Many-to-many relationship with UserTenant (Professionals)
+    # Many-to-many relationship with User (Professionals)
     professionals = relationship(
-        "UserTenant",
+        "User",
         secondary=service_professionals_association,
         back_populates="services_offered"
     )

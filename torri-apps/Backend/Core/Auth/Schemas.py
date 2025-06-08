@@ -2,18 +2,15 @@ from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from .constants import UserRole
 
-class UserTenantBase(BaseModel):
+class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr
     full_name: str | None = None
 
-class UserTenantCreate(UserTenantBase):
+class UserCreate(UserBase): # Renamed from UserTenantCreate
     password: str
     role: UserRole
-    # tenant_id will likely be injected by the service/route based on authenticated user or path parameter
-    # For now, not including it here, assuming it's handled during creation contextually.
-    # If a scenario requires explicit tenant_id input during creation by AdminMaster, it can be added.
 
-class UserTenantUpdate(BaseModel): # Schema for updating a user
+class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     email: EmailStr | None = None
     full_name: str | None = None
     # Password update should be a separate endpoint/process for security best practices.
@@ -21,13 +18,10 @@ class UserTenantUpdate(BaseModel): # Schema for updating a user
     role: UserRole | None = None
     is_active: bool | None = None
 
-class UserTenant(UserTenantBase):
+class User(UserBase): # Renamed from UserTenant
     id: UUID
     role: UserRole
     is_active: bool
-    # tenant_id is not typically returned in the UserTenant schema itself,
-    # as it's often implicit in the context of the request (e.g., data for a specific tenant).
-    # If needed for specific responses, it can be added.
 
     class Config:
         from_attributes = True
@@ -58,20 +52,20 @@ class EnhancedToken(BaseModel):
     tenant: TenantInfo  # Complete tenant data
     user: UserInfo      # Complete user data
 
-class TokenData(BaseModel):
+class TokenData(BaseModel): # Represents data to be encoded in the token
     # 'sub' (subject) is often the user's email or ID
     # For this application, let's assume 'sub' will store the email.
     sub: EmailStr | None = None
-    tenant_id: UUID | None = None
+    # tenant_id removed
     role: UserRole | None = None
-    # Add any other data you want to store in the token payload
+    # Add any other data you want to store in the token payload, e.g., user_id
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-    # tenant_id is passed via header X-Tenant-ID, so not in the login body.
+    # tenant_id was previously passed via header, now removed system-wide.
 
-class EnhancedLoginRequest(BaseModel):
+class EnhancedLoginRequest(BaseModel): # Consider if this schema is still needed or can be merged/simplified
     email: EmailStr
     password: str
-    tenant_id: UUID | None = None  # Optional tenant_id for enhanced login
+    # tenant_id removed

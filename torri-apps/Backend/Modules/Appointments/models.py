@@ -21,12 +21,10 @@ class Appointment(Base):
     # This table will reside in the tenant's schema.
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    # Cross-schema foreign keys are handled at application level for multi-tenant isolation
-    tenant_id = Column(CHAR(36), nullable=False, index=True)
 
-    # ForeignKeys point to users_tenant.id for both client and professional
-    client_id = Column(CHAR(36), ForeignKey("users_tenant.id"), nullable=False, index=True)
-    professional_id = Column(CHAR(36), ForeignKey("users_tenant.id"), nullable=False, index=True)
+    # ForeignKeys point to users.id for both client and professional
+    client_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
+    professional_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
     service_id = Column(CHAR(36), ForeignKey("services.id"), nullable=False, index=True)
 
     appointment_date = Column(Date, nullable=False, index=True)

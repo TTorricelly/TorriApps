@@ -10,7 +10,7 @@ from sqlalchemy import select
 from .models import Appointment
 from Modules.Availability.models import ProfessionalBlockedTime
 from Modules.Services.models import Service
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 
 # Schemas
 from .schemas import (
@@ -24,18 +24,18 @@ from Core.Auth.constants import UserRole
 from Config.Settings import settings
 
 
-def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -> DailyScheduleResponseSchema:
+def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleResponseSchema: # tenant_id parameter removed
     """
-    Fetches the daily schedule for all active professionals in a tenant,
+    Fetches the daily schedule for all active professionals,
     including their appointments and blocked time slots for a given date.
     """
 
-    # Fetch active professionals for the tenant
-    stmt_professionals = select(UserTenant).where(
-        UserTenant.tenant_id == str(tenant_id),
-        UserTenant.is_active == True,
-        UserTenant.role == UserRole.PROFISSIONAL # Ensure only professionals are included
-    ).order_by(UserTenant.full_name) # Optional: order professionals by name
+    # Fetch active professionals
+    stmt_professionals = select(User).where( # Changed UserTenant to User
+        # UserTenant.tenant_id == str(tenant_id), # Filter removed
+        User.is_active == True, # Changed UserTenant to User
+        User.role == UserRole.PROFISSIONAL # Ensure only professionals are included. Changed UserTenant to User
+    ).order_by(User.full_name) # Optional: order professionals by name. Changed UserTenant to User
 
     active_professionals = db.execute(stmt_professionals).scalars().all()
 
@@ -45,8 +45,8 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
         # Fetch appointments for the professional on the given date
         stmt_appts = select(Appointment).where(
             Appointment.professional_id == str(prof.id),
-            Appointment.appointment_date == schedule_date,
-            Appointment.tenant_id == str(tenant_id) # Should be redundant if professional is correctly filtered by tenant
+            Appointment.appointment_date == schedule_date
+            # Appointment.tenant_id == str(tenant_id) # Filter removed
         ).order_by(Appointment.start_time)
 
         appointments_for_prof = db.execute(stmt_appts).scalars().all()
@@ -54,7 +54,7 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
         appointment_details: List[AppointmentDetailSchema] = []
         for appt in appointments_for_prof:
             # Manually load client data since relationships are commented out
-            client = db.get(UserTenant, appt.client_id) if appt.client_id else None
+            client = db.get(User, appt.client_id) if appt.client_id else None # Changed UserTenant to User
             service = db.get(Service, appt.service_id) if appt.service_id else None
             
             if not service: # Should not happen if data is consistent
@@ -84,8 +84,8 @@ def get_daily_schedule_data(db: Session, schedule_date: date, tenant_id: UUID) -
         # Fetch blocked slots for the professional on the given date
         stmt_blocks = select(ProfessionalBlockedTime).where(
             ProfessionalBlockedTime.professional_user_id == str(prof.id),
-            ProfessionalBlockedTime.blocked_date == schedule_date,
-            ProfessionalBlockedTime.tenant_id == str(tenant_id) # Ensure tenant context
+            ProfessionalBlockedTime.blocked_date == schedule_date
+            # ProfessionalBlockedTime.tenant_id == str(tenant_id) # Filter removed (tenant_id already removed from model)
         ).order_by(ProfessionalBlockedTime.start_time)
 
         blocked_slots_for_prof = db.execute(stmt_blocks).scalars().all()

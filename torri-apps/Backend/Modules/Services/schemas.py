@@ -5,9 +5,9 @@ from decimal import Decimal
 
 # Schema for UserTenant (Professional) to be nested in ServiceWithProfessionals response
 # This is a simplified version. You might want to import the actual UserTenant schema
-# from Core.Auth.Schemas import UserTenant as UserTenantSchema
+# from Core.Auth.Schemas import User as UserSchema # Updated comment
 # For now, defining a minimal one here to avoid deeper import complexities in this step.
-class ProfessionalBase(BaseModel): # Minimal representation of a professional for service listing
+class UserBaseMinimal(BaseModel): # Renamed from ProfessionalBase. Minimal representation of a user for service listing
     id: UUID
     full_name: Optional[str] = None
     email: str # Using str for email, can use EmailStr if Pydantic's EmailStr is imported
@@ -30,7 +30,7 @@ class CategoryUpdate(BaseModel): # All fields optional for update
 
 class CategorySchema(CategoryBase): # Renamed from Category to CategorySchema
     id: UUID
-    tenant_id: Optional[UUID] = None  # Optional for single schema architecture
+    # tenant_id removed
     icon_path: Optional[str] = None
     icon_url: Optional[str] = None  # Computed field for frontend
 
@@ -66,7 +66,7 @@ class ServiceUpdate(BaseModel): # All fields optional for update
 
 class ServiceSchema(ServiceBase): # Renamed from Service to ServiceSchema. Standard service response model
     id: UUID
-    tenant_id: Optional[UUID] = None  # Optional for single schema architecture
+    # tenant_id removed
     image_liso: Optional[str] = None
     image_ondulado: Optional[str] = None
     image_cacheado: Optional[str] = None
@@ -77,9 +77,9 @@ class ServiceSchema(ServiceBase): # Renamed from Service to ServiceSchema. Stand
         from_attributes = True
 
 class ServiceWithProfessionalsResponse(ServiceSchema): # For responses that include professionals
-    # `professionals` here would ideally be List[UserTenantSchema] from Auth.Schemas
-    # Using ProfessionalBase for now.
-    professionals: List[ProfessionalBase] = Field(default_factory=list)
+    # `professionals` here would ideally be List[UserSchema] from Core.Auth.Schemas
+    # Using UserBaseMinimal for now.
+    professionals: List[UserBaseMinimal] = Field(default_factory=list) # Updated type
 
     class Config:
         from_attributes = True

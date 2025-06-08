@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 # Models
 from .models import Appointment
 from Modules.Services.models import Service
-from Core.Auth.models import UserTenant
+from Core.Auth.models import User # Updated import
 
 # Schemas
 from .schemas import AppointmentUpdate, AppointmentCreate, AppointmentSchema
@@ -18,7 +18,7 @@ from .constants import AppointmentStatus
 from Core.Auth.constants import UserRole
 
 # Utils
-from .appointment_utils import calculate_end_time, get_tenant_block_size
+from .appointment_utils import calculate_end_time # get_tenant_block_size removed
 from .availability_service import get_daily_time_slots_for_professional
 from .appointment_crud import get_appointment_by_id, create_appointment
 
@@ -26,8 +26,8 @@ from .appointment_crud import get_appointment_by_id, create_appointment
 def get_appointment_for_modification(
     db: Session,
     appointment_id: UUID,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
     # Removed allowed_to_modify_roles, direct checks below
 ) -> Appointment:
     """
@@ -36,7 +36,7 @@ def get_appointment_for_modification(
     """
     # Use the existing get_appointment_by_id which already applies basic view permissions
     # and eager loads relationships.
-    appointment = get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_by_id(db, appointment_id, requesting_user) # tenant_id argument removed
 
     if not appointment: # get_appointment_by_id would have raised 403 if view denied, or returns None if not found
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found or access denied.")
@@ -45,9 +45,9 @@ def get_appointment_for_modification(
     can_modify = False
     if requesting_user.role in [UserRole.GESTOR, UserRole.ATENDENTE]:
         can_modify = True
-    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == str(requesting_user.user_id):
+    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == str(requesting_user.id): # Use .id
         can_modify = True
-    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == str(requesting_user.user_id):
+    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == str(requesting_user.id): # Use .id
         can_modify = True
 
     if not can_modify:
@@ -61,12 +61,12 @@ def get_appointment_for_modification(
 def cancel_appointment(
     db: Session,
     appointment_id: UUID,
-    tenant_id: UUID,
-    requesting_user: UserTenant,
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User, # Updated type
     reason: Optional[str] = None
 ) -> Appointment:
 
-    appointment = get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_for_modification(db, appointment_id, requesting_user) # tenant_id argument removed
 
     if appointment.status not in [AppointmentStatus.SCHEDULED]:
         raise HTTPException(
@@ -87,7 +87,7 @@ def cancel_appointment(
     db.commit()
 
     # Removed audit logging
-    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user) # Re-fetch with relations
+    return get_appointment_by_id(db, appointment_id, requesting_user) # Re-fetch with relations, tenant_id argument removed
 
 
 def reschedule_appointment(
@@ -95,12 +95,12 @@ def reschedule_appointment(
     appointment_id: UUID,
     new_date: date,
     new_start_time: time,
-    tenant_id: UUID,
-    requesting_user: UserTenant,
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User, # Updated type
     reason: Optional[str] = None
 ) -> Appointment:
 
-    appointment = get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_for_modification(db, appointment_id, requesting_user) # tenant_id argument removed
 
     original_date = appointment.appointment_date
     original_start_time = appointment.start_time
@@ -122,14 +122,14 @@ def reschedule_appointment(
     # so rescheduling can stack services for the client.
     daily_availability_response = get_daily_time_slots_for_professional(
         db,
-        appointment.professional_id,
+        UUID(str(appointment.professional_id)), # Ensure UUID
         new_date,
-        tenant_id,
-        ignore_client_id=appointment.client_id,
+        # tenant_id, # Argument removed
+        ignore_client_id=UUID(str(appointment.client_id)), # Ensure UUID
         ignore_start_time=new_start_time,
     )
 
-    block_size_minutes = get_tenant_block_size(db, tenant_id)
+    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
     current_check_time_dt = datetime.combine(new_date, new_start_time)
     service_end_dt = datetime.combine(new_date, new_end_time)
 
@@ -165,20 +165,20 @@ def reschedule_appointment(
     db.commit()
 
     # Removed audit logging
-    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+    return get_appointment_by_id(db, appointment_id, requesting_user) # tenant_id argument removed
 
 
 def complete_appointment(
     db: Session,
     appointment_id: UUID,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> Appointment:
-    appointment = get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_for_modification(db, appointment_id, requesting_user) # tenant_id argument removed
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as completed.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only complete their own appointments.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:
@@ -193,20 +193,20 @@ def complete_appointment(
     db.commit()
 
     # Removed audit logging
-    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+    return get_appointment_by_id(db, appointment_id, requesting_user) # tenant_id argument removed
 
 
 def mark_appointment_as_no_show(
     db: Session,
     appointment_id: UUID,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> Appointment:
-    appointment = get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_for_modification(db, appointment_id, requesting_user) # tenant_id argument removed
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as No Show.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.user_id):
+    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only mark their own appointments as No Show.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:
@@ -219,38 +219,38 @@ def mark_appointment_as_no_show(
     db.commit()
 
     # Removed audit logging
-    return get_appointment_by_id(db, appointment_id, tenant_id, requesting_user)
+    return get_appointment_by_id(db, appointment_id, requesting_user) # tenant_id argument removed
 
 
 def update_appointment_details(
     db: Session,
     appointment_id: UUID,
     update_data: AppointmentUpdate,
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> Optional[Appointment]:
     """
     Update appointment details (client info, professional, service, time, notes, status).
     This is a general update function that handles various appointment modifications.
     """
     # Get the appointment and validate permissions
-    appointment = get_appointment_for_modification(db, appointment_id, tenant_id, requesting_user)
+    appointment = get_appointment_for_modification(db, appointment_id, requesting_user) # tenant_id argument removed
     
     # Track what changed for audit logging
     changes = []
     
     # Update client_id if provided and valid
     if update_data.client_id is not None:
-        # Validate client belongs to tenant
-        client = db.query(UserTenant).filter(
-            UserTenant.id == str(update_data.client_id),
-            UserTenant.tenant_id == str(tenant_id),
-            UserTenant.role == UserRole.CLIENTE
+        # Validate client
+        client = db.query(User).filter( # Changed UserTenant to User
+            User.id == str(update_data.client_id), # Changed UserTenant to User
+            # UserTenant.tenant_id == str(tenant_id), # Filter removed
+            User.role == UserRole.CLIENTE # Changed UserTenant to User
         ).first()
         if not client:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Client not found in this tenant."
+                detail="Client not found." # Updated detail
             )
         if appointment.client_id != str(update_data.client_id):
             changes.append(f"client_id: {appointment.client_id} -> {update_data.client_id}")
@@ -258,16 +258,16 @@ def update_appointment_details(
     
     # Update professional_id if provided and valid
     if update_data.professional_id is not None:
-        # Validate professional belongs to tenant
-        professional = db.query(UserTenant).filter(
-            UserTenant.id == str(update_data.professional_id),
-            UserTenant.tenant_id == str(tenant_id),
-            UserTenant.role == UserRole.PROFISSIONAL
+        # Validate professional
+        professional = db.query(User).filter( # Changed UserTenant to User
+            User.id == str(update_data.professional_id), # Changed UserTenant to User
+            # UserTenant.tenant_id == str(tenant_id), # Filter removed
+            User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
         ).first()
         if not professional:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Professional not found in this tenant."
+                detail="Professional not found." # Updated detail
             )
         if appointment.professional_id != str(update_data.professional_id):
             changes.append(f"professional_id: {appointment.professional_id} -> {update_data.professional_id}")
@@ -275,15 +275,15 @@ def update_appointment_details(
     
     # Update service_id if provided and valid
     if update_data.service_id is not None:
-        # Validate service belongs to tenant
+        # Validate service
         service = db.query(Service).filter(
-            Service.id == str(update_data.service_id),
-            Service.tenant_id == str(tenant_id)
+            Service.id == str(update_data.service_id)
+            # Service.tenant_id == str(tenant_id) # Filter removed (Service model already updated)
         ).first()
         if not service:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Service not found in this tenant."
+                detail="Service not found." # Updated detail
             )
         if appointment.service_id != str(update_data.service_id):
             changes.append(f"service_id: {appointment.service_id} -> {update_data.service_id}")
@@ -367,8 +367,8 @@ def update_appointment_with_multiple_services(
     db: Session,
     appointment_id: UUID,
     update_data: dict,  # Contains services as array of service names
-    tenant_id: UUID,
-    requesting_user: UserTenant
+    # tenant_id: UUID, # Parameter removed
+    requesting_user: User # Updated type
 ) -> List[AppointmentSchema]:
     """
     Update appointment to handle multiple services properly.
@@ -384,8 +384,8 @@ def update_appointment_with_multiple_services(
     
     # Get the existing appointment
     appointment = db.query(Appointment).filter(
-        Appointment.id == str(appointment_id),
-        Appointment.tenant_id == str(tenant_id)
+        Appointment.id == str(appointment_id)
+        # Appointment.tenant_id == str(tenant_id) # Filter removed
     ).first()
     
     if not appointment:
@@ -405,8 +405,8 @@ def update_appointment_with_multiple_services(
     # Get service objects from names
     from Modules.Services.models import Service
     services = db.query(Service).filter(
-        Service.name.in_(service_names),
-        Service.tenant_id == str(tenant_id)
+        Service.name.in_(service_names)
+        # Service.tenant_id == str(tenant_id) # Filter removed (Service model already updated)
     ).all()
     
     if len(services) != len(service_names):
@@ -437,7 +437,7 @@ def update_appointment_with_multiple_services(
             db=db,
             appointment_id=appointment_id,
             update_data=appointment_update_schema,
-            tenant_id=tenant_id,
+            # tenant_id=tenant_id, # Argument removed
             requesting_user=requesting_user
         )
         updated_appointments.append(updated_first)
@@ -462,7 +462,7 @@ def update_appointment_with_multiple_services(
                 new_appointment = create_appointment(
                     db=db,
                     appointment_data=appointment_create_schema,
-                    tenant_id=tenant_id,
+                    # tenant_id=tenant_id, # Argument removed
                     requesting_user=requesting_user
                 )
                 updated_appointments.append(new_appointment)
