@@ -1005,7 +1005,7 @@ const DailySchedulePage = () => {
                                           {item.clientName}
                                         </Typography>
                                         {!hasSpaceForServices && (
-                                          <span className={`w-2 h-2 rounded-full ${statusInfo.color.replace('border-', 'bg-')}`} title={statusInfo.label}></span>
+                                          <span className={`w-2 h-2 rounded-full ${statusInfo.color.replace('border-', 'bg-')}`} title={statusInfo.label}>we </span>
                                         )}
                                       </div>
                                       <Typography variant="small" className="text-text-secondary text-small">
