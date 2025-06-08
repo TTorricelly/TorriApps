@@ -41,7 +41,7 @@ def _add_photo_url_to_professional(professional: User, db: Session = None, base_
             services_offered = []
     
     professional_data = Professional(
-        id=professional.id,
+        id=UUID(str(professional.id)),
         full_name=professional.full_name or "",
         email=professional.email,
         is_active=professional.is_active,
