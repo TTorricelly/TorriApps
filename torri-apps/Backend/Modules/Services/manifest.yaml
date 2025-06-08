@@ -1,0 +1,33 @@
+module: services
+path: torri-apps/Backend/Modules/Services/
+description: |
+  Manages service categories and the services offered by the salon.
+  This includes service details like name, description, duration, price,
+  and associations with professionals. It also handles image uploads for
+  services and category icons.
+entities:
+  - Category                      # Represents a category for services
+  - Service                       # Represents a specific service offered
+  - service_professionals_association # Association table linking services to professionals
+key_endpoints:
+  categories: # Prefixed with /categories
+    - POST /                      # Create a new service category
+    - GET /                       # List all service categories
+    - GET /{category_id}          # Get a specific service category
+    - PUT /{category_id}          # Update a service category
+    - DELETE /{category_id}       # Delete a service category
+  services:   # Prefixed with /services
+    - POST /                      # Create a new service
+    - GET /                       # List services
+    - GET /{service_id}           # Get a specific service
+    - PUT /{service_id}           # Update a service
+    - DELETE /{service_id}        # Delete a service
+    - POST /{service_id}/images   # Upload images for a service
+dependencies:
+  - fastapi
+  - sqlalchemy
+  - Core.Database             # Internal
+  - Core.Auth                 # Internal (for User model, roles, auth)
+  - Core.Utils.file_handler   # Internal
+  - Config.Settings           # Internal
+  - Modules.Appointments      # Internal (for model relationship)
