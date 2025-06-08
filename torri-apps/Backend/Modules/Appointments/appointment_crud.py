@@ -142,9 +142,17 @@ def create_appointment(
     # Manually trigger loading of relationships if not configured for auto-loading in schema/model
     # This is often better done via options(joinedload(...)) in the query that fetches for response,
     # but since we are returning the created object directly:
-    # from sqlalchemy.orm import selectinload # Moved import to top
-    # Since relationships are commented out, just return the appointment without eager loading
-    stmt_for_response = select(Appointment).where(Appointment.id == db_appointment.id)
+    from sqlalchemy.orm import joinedload # Added import
+    # Relationships are now defined, so eager load them for the response.
+    stmt_for_response = (
+        select(Appointment)
+        .where(Appointment.id == db_appointment.id)
+        .options(
+            joinedload(Appointment.client),
+            joinedload(Appointment.professional),
+            joinedload(Appointment.service)
+        )
+    )
     refreshed_appointment_with_relations = db.execute(stmt_for_response).scalar_one()
 
     # Removed audit logging

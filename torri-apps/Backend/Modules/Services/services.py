@@ -208,7 +208,7 @@ def get_services( # Renamed from get_services_by_tenant
         joinedload(Service.category)
     )
     if category_id:
-        stmt = stmt.where(Service.category_id == str(category_id)) # Convert UUID to string
+        stmt = stmt.where(Service.category_id == category_id) # Use UUID directly
 
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
@@ -224,7 +224,7 @@ def get_all_services( # This can be deprecated or used internally if its logic d
         joinedload(Service.category)
     )
     if category_id:
-        stmt = stmt.where(Service.category_id == str(category_id)) # Convert UUID to string
+        stmt = stmt.where(Service.category_id == category_id) # Use UUID directly
 
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
