@@ -31,26 +31,28 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class TenantInfo(BaseModel):
-    id: UUID
-    name: str
-    slug: str
-    logo_url: str | None = None
-    primary_color: str | None = None
-    block_size_minutes: int = 30
+# TenantInfo schema removed as it was only used by the deleted EnhancedToken
+# class TenantInfo(BaseModel):
+#     id: UUID
+#     name: str
+#     slug: str
+#     logo_url: str | None = None
+#     primary_color: str | None = None
+#     block_size_minutes: int = 30
 
-class UserInfo(BaseModel):
+class UserInfo(BaseModel): # This schema might still be useful elsewhere
     id: UUID
     email: str
     full_name: str | None = None
     role: str
 
-class EnhancedToken(BaseModel):
-    access_token: str
-    token_type: str
-    tenant_id: UUID
-    tenant: TenantInfo  # Complete tenant data
-    user: UserInfo      # Complete user data
+# EnhancedToken schema removed as the /enhanced-login route was deleted
+# class EnhancedToken(BaseModel):
+#     access_token: str
+#     token_type: str
+#     tenant_id: UUID
+#     tenant: TenantInfo  # Complete tenant data
+#     user: UserInfo      # Complete user data
 
 class TokenData(BaseModel): # Represents data to be encoded in the token
     # 'sub' (subject) is often the user's email or ID
@@ -65,7 +67,8 @@ class LoginRequest(BaseModel):
     password: str
     # tenant_id was previously passed via header, now removed system-wide.
 
-class EnhancedLoginRequest(BaseModel): # Consider if this schema is still needed or can be merged/simplified
-    email: EmailStr
-    password: str
-    # tenant_id removed
+# EnhancedLoginRequest schema removed as the /enhanced-login route was deleted
+# class EnhancedLoginRequest(BaseModel): # Consider if this schema is still needed or can be merged/simplified
+#     email: EmailStr
+#     password: str
+#     # tenant_id removed
