@@ -1,0 +1,41 @@
+module: professionals
+path: torri-apps/Backend/Modules/Professionals/
+description: |
+  Manages professional users within the system. This includes their core profile
+  information (extending the base User model), association with services they
+  offer, and their specific availability schedules (recurring weekly
+  availability, breaks, and one-off blocked times).
+entities:
+  - User (Core entity from Core.Auth, where role is PROFISSIONAL)
+  - ProfessionalAvailability  # Stores recurring weekly working slots
+  - ProfessionalBreak         # Stores recurring weekly breaks
+  - ProfessionalBlockedTime   # Stores specific one-off blocked times or days off
+  - Service (from Modules.Services, for service association)
+key_endpoints:
+  # All endpoints are prefixed with /professionals
+  - GET /                         # List all professionals
+  - POST /                        # Create a new professional
+  - GET /{professional_id}        # Get a specific professional
+  - PUT /{professional_id}        # Update a professional
+  - DELETE /{professional_id}     # Delete a professional
+  - POST /{professional_id}/photo # Upload a photo for a professional
+  - GET /{professional_id}/services    # Get services associated with a professional
+  - PUT /{professional_id}/services    # Update services associated with a professional
+  - GET /{professional_id}/availability # Get professional's availability schedule
+  - PUT /{professional_id}/availability # Update professional's availability schedule
+  - GET /{professional_id}/blocked_times   # Get professional's blocked time periods
+  - POST /{professional_id}/blocked_times  # Create a new blocked time period
+  - PUT /{professional_id}/blocked_times/{blocked_time_id}  # Update a blocked time period
+  - DELETE /{professional_id}/blocked_times/{blocked_time_id} # Delete a blocked time period
+  - GET /{professional_id}/breaks      # Get professional's recurring breaks
+  - POST /{professional_id}/breaks     # Create a new recurring break
+  - PUT /{professional_id}/breaks/{break_id} # Update a recurring break
+  - DELETE /{professional_id}/breaks/{break_id} # Delete a recurring break
+dependencies:
+  - fastapi
+  - sqlalchemy
+  - Core.Database             # Internal
+  - Core.Auth                 # Internal (for User model, roles, auth dependencies)
+  - Core.Security.hashing     # Internal
+  - Core.Utils.file_handler   # Internal
+  - Modules.Services          # Internal (for Service model)
