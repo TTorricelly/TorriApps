@@ -745,9 +745,7 @@ const DailySchedulePage = () => {
         : professionalsWithGroupedAppointments.length === 0 && searchTerm ? ( <Typography color="blue-gray" className="text-center py-l text-text-secondary text-small sm:text-body"> Nenhum profissional encontrado para "{searchTerm}". </Typography> )
         : (
           <>
-            <Typography variant="h2" color="blue-gray" className="mb-s sm:mb-m text-h3 sm:text-h2 text-text-primary"> {/* Responsive typography */}
-              Horários
-            </Typography>
+           
             {professionalsWithGroupedAppointments.length > 0 && clientSearchTerm && !professionalsWithGroupedAppointments.some(p => p.appointments?.some(a => a.clientName.toLowerCase().includes(clientSearchTerm.toLowerCase()))) &&
              ( <Typography color="blue-gray" className="text-center py-m text-text-secondary text-small sm:text-body"> Nenhum agendamento encontrado para o cliente "{clientSearchTerm}". </Typography> )
             }
