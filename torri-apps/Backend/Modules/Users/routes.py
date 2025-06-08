@@ -22,7 +22,7 @@ router = APIRouter(
     # For routes accessible by multiple roles, specific checks might be needed if behavior differs.
 )
 
-@router.post("/", response_model=UserTenantSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
 def create_new_user(
     user_data: UserCreate, # Updated schema
     db: Annotated[Session, Depends(get_db)],
