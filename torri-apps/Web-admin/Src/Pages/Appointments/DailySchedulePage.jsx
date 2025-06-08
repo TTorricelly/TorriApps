@@ -1220,7 +1220,7 @@ const DailySchedulePage = () => {
                     label="Nome do Cliente *"
                     value={appointmentForm.clientName}
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientName: e.target.value }))}
-                    className="bg-bg-primary border-bg-tertiary text-text-primary"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary disabled:bg-bg-primary disabled:text-text-primary disabled:border-bg-tertiary"
                     labelProps={{ className: "text-text-secondary" }}
                     containerProps={{ className: "text-text-primary" }}
                     error={!!formErrors.clientName}
@@ -1236,7 +1236,7 @@ const DailySchedulePage = () => {
                     label="Telefone"
                     value={appointmentForm.clientPhone}
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientPhone: e.target.value }))}
-                    className="bg-bg-primary border-bg-tertiary text-text-primary"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary disabled:bg-bg-primary disabled:text-text-primary disabled:border-bg-tertiary"
                     labelProps={{ className: "text-text-secondary" }}
                     containerProps={{ className: "text-text-primary" }}
                     disabled={editingAppointment} // Can't change client when editing
@@ -1247,7 +1247,7 @@ const DailySchedulePage = () => {
                     type="email"
                     value={appointmentForm.clientEmail}
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientEmail: e.target.value }))}
-                    className="bg-bg-primary border-bg-tertiary text-text-primary"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary disabled:bg-bg-primary disabled:text-text-primary disabled:border-bg-tertiary"
                     labelProps={{ className: "text-text-secondary" }}
                     containerProps={{ className: "text-text-primary" }}
                     error={!!formErrors.clientEmail}
