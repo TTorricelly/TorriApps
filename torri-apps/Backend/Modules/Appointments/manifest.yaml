@@ -1,0 +1,33 @@
+module: appointments
+path: torri-apps/Backend/Modules/Appointments/
+description: |
+  Handles the creation, management, and availability lookup for appointments
+  within the salon management system. It allows users to book services with
+  professionals, manage their schedules, and view daily availability.
+entities:
+  - Appointment
+  - User (Client/Professional, via Core.Auth)
+  - Service (via Modules.Services)
+  - ProfessionalAvailability (via Modules.Availability)
+  - ProfessionalBreak (via Modules.Availability)
+  - ProfessionalBlockedTime (via Modules.Availability)
+key_endpoints:
+  - GET /daily-schedule/{schedule_date}
+  - GET /professional/{professional_id}/availability?date={target_date}
+  - POST /services/availability
+  - POST /
+  - GET /
+  - GET /{appointment_id}
+  - PATCH /{appointment_id}/cancel
+  - PATCH /{appointment_id}/reschedule
+  - PATCH /{appointment_id}/complete
+  - PATCH /{appointment_id}/no-show
+  - PUT /{appointment_id}
+  - PUT /{appointment_id}/multiple-services
+dependencies:
+  - fastapi
+  - sqlalchemy
+  - Core.Database  # Internal
+  - Core.Auth      # Internal
+  - Modules.Services    # Internal
+  - Modules.Availability # Internal
