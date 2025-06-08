@@ -1,0 +1,23 @@
+module: users
+path: torri-apps/Backend/Modules/Users/
+description: |
+  Provides CRUD (Create, Read, Update, Delete) operations for user management,
+  extending the core user functionalities defined in Core.Auth. It allows
+  administrators (Gestor role) to manage all users in the system.
+entities:
+  - User (Primary entity from Core.Auth.models, representing clients,
+    professionals, attendants, and gestors)
+key_endpoints:
+  # All endpoints are prefixed with /users
+  - POST /          # Create a new user (Gestor role required)
+  - GET /me         # Get details of the currently authenticated user
+  - GET /           # List all users (Gestor role required)
+  - GET /{user_id}  # Get a specific user by ID (Gestor role required)
+  - PUT /{user_id}  # Update a user's details (Gestor role required)
+  - DELETE /{user_id} # Delete a user (Gestor role required)
+dependencies:
+  - fastapi
+  - sqlalchemy
+  - Core.Auth       # Internal (for User model, UserRole, schemas, auth dependencies)
+  - Core.Database   # Internal (for DB session)
+  - Core.Security.hashing # Internal (for password management)
