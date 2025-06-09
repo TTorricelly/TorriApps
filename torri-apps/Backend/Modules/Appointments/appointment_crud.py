@@ -19,30 +19,30 @@ from .constants import AppointmentStatus
 from Core.Auth.constants import UserRole
 
 # Utils
-from .appointment_utils import calculate_end_time # get_tenant_block_size removed
+from .appointment_utils import calculate_end_time 
 from .availability_service import get_daily_time_slots_for_professional
 
 
 def validate_and_get_appointment_dependencies(
-    db: Session, client_id: UUID, professional_id: UUID, service_id: UUID # tenant_id: UUID parameter removed
-) -> Tuple[User, User, Service]: # Updated return types
+    db: Session, client_id: UUID, professional_id: UUID, service_id: UUID
+) -> Tuple[User, User, Service]: 
 
-    client = db.get(User, str(client_id))  # Changed UserTenant to User
-    professional = db.get(User, str(professional_id))  # Changed UserTenant to User
+    client = db.get(User, str(client_id)) 
+    professional = db.get(User, str(professional_id)) 
     service = db.get(Service, str(service_id))
 
-    if not client: # client.tenant_id check removed
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found.") # Updated detail
+    if not client: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found.") 
     # Role check for client can be done here if User has a generic role or a specific CLIENT role
     # if client.role != UserRole.CLIENTE: # Assuming CLIENTE role exists
     #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User specified as client does not have the 'CLIENTE' role.")
 
 
-    if not (professional and professional.role == UserRole.PROFISSIONAL): # professional.tenant_id check removed
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found or invalid role.") # Updated detail
+    if not (professional and professional.role == UserRole.PROFISSIONAL): 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found or invalid role.") 
 
-    if not service: # service.tenant_id check removed (it was already removed from Service model)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.") # Updated detail
+    if not service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.") 
 
     # TODO: Validate if the professional offers the service
     # Commented out due to circular import issues with relationships
@@ -58,8 +58,7 @@ def validate_and_get_appointment_dependencies(
 def create_appointment(
     db: Session,
     appointment_data: AppointmentCreate,
-    # tenant_id: UUID, # Parameter removed
-    requesting_user: User # Updated type
+    requesting_user: User
 ) -> Appointment:
 
     # 1. Validate dependencies and permissions
@@ -71,15 +70,15 @@ def create_appointment(
     # The client_id in appointment_data will be used.
 
     client, professional, service = validate_and_get_appointment_dependencies(
-        db, appointment_data.client_id, appointment_data.professional_id, appointment_data.service_id # tenant_id argument removed
+        db, appointment_data.client_id, appointment_data.professional_id, appointment_data.service_id
     )
 
     # 2. Calculate end_time and get service price
     calculated_end_time = calculate_end_time(appointment_data.start_time, service.duration_minutes)
-    price_at_booking = service.price # Price from the Service model
+    price_at_booking = service.price 
 
     # 3. Check professional's availability for the entire duration of the service
-    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
+    block_size_minutes = 30 # Default block size, TO DO: put his on a parameter
 
     # Generate fine-grained slots for the professional on the target date.
     # Appointments belonging to the same client at the exact start time are

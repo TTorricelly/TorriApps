@@ -1,0 +1,26 @@
+module: availability
+path: torri-apps/Backend/Modules/Availability/
+description: |
+  Manages the recurring weekly availability, breaks, and specific date-based 
+  blocked times (like vacations or day-offs) for professionals. This module 
+  is crucial for determining when a professional is available for appointments.
+entities:
+  - ProfessionalAvailability  # Stores recurring weekly working slots
+  - ProfessionalBreak         # Stores recurring weekly breaks
+  - ProfessionalBlockedTime   # Stores specific one-off blocked times or entire days off
+key_endpoints:
+  # All endpoints are prefixed with /professional/{professional_user_id_managed}
+  - POST /slots                 # Create a new weekly availability slot
+  - GET /slots                  # Get all weekly availability slots
+  - DELETE /slots/{slot_id}     # Delete a weekly availability slot
+  - POST /breaks                # Create a new weekly break
+  - GET /breaks                 # Get all weekly breaks
+  - DELETE /breaks/{break_id}   # Delete a weekly break
+  - POST /blocked-times         # Create a new specific blocked time or day off
+  - GET /blocked-times          # Get all specific blocked times
+  - DELETE /blocked-times/{blocked_time_id} # Delete a specific blocked time
+dependencies:
+  - fastapi
+  - sqlalchemy
+  - Core.Database  # Internal
+  - Core.Auth      # Internal (for User model and permissions)

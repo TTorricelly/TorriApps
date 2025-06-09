@@ -21,7 +21,7 @@ from .constants import AppointmentStatus
 from Modules.Availability.constants import DayOfWeek, AvailabilityBlockType
 
 # Utils
-# from .appointment_utils import get_tenant_block_size # Removed as tenant concept is deprecated
+# from .appointment_utils import get_tenant_block_size
 from .appointment_utils import calculate_end_time
 
 
@@ -29,7 +29,6 @@ def get_daily_time_slots_for_professional(
     db: Session,
     professional_id: UUID,
     target_date: date,
-    # tenant_id: UUID, # Parameter removed
     ignore_client_id: Optional[UUID] = None,
     ignore_start_time: Optional[time] = None
 ) -> ProfessionalDailyAvailabilityResponse:
@@ -44,7 +43,7 @@ def get_daily_time_slots_for_professional(
     used by the filtering logic if ``ignore_client_id`` is present.
     The granularity of slots is determined by a default block size.
     """
-    block_size_minutes = 30 # Default block size, was get_tenant_block_size(db, tenant_id)
+    block_size_minutes = 30 # Default block size, TO DO: get from a parameter
     
     # Convert Python weekday (0=Monday, 1=Tuesday, etc.) to our DayOfWeek enum
     weekday_mapping = {
@@ -64,7 +63,6 @@ def get_daily_time_slots_for_professional(
     stmt_avail = select(ProfessionalAvailability).where(
         ProfessionalAvailability.professional_user_id == str(professional_id),
         ProfessionalAvailability.day_of_week == target_day_of_week
-        # ProfessionalAvailability.tenant_id == str(tenant_id) # Filter removed
     ).order_by(ProfessionalAvailability.start_time)
     working_hours_today = db.execute(stmt_avail).scalars().all()
 
@@ -75,15 +73,13 @@ def get_daily_time_slots_for_professional(
     stmt_breaks = select(ProfessionalBreak).where(
         ProfessionalBreak.professional_user_id == str(professional_id),
         ProfessionalBreak.day_of_week == target_day_of_week
-        # ProfessionalBreak.tenant_id == str(tenant_id) # Filter removed
     )
     breaks_today = db.execute(stmt_breaks).scalars().all()
 
-    # 3. Get specific date-based blocked times (includes DAY_OFF)
+    # 3. Get specific date-based blocked times 
     stmt_blocks = select(ProfessionalBlockedTime).where(
         ProfessionalBlockedTime.professional_user_id == str(professional_id),
         ProfessionalBlockedTime.blocked_date == target_date
-        # ProfessionalBlockedTime.tenant_id == str(tenant_id) # Filter removed
     )
     specific_blocks_today = db.execute(stmt_blocks).scalars().all()
 
@@ -97,8 +93,7 @@ def get_daily_time_slots_for_professional(
     stmt_appts = select(Appointment).where(
         Appointment.professional_id == str(professional_id),
         Appointment.appointment_date == target_date,
-        # Appointment.tenant_id == str(tenant_id), # Filter removed
-        Appointment.status.in_([AppointmentStatus.SCHEDULED]) # Only scheduled appointments block time
+        Appointment.status.in_([AppointmentStatus.SCHEDULED,AppointmentStatus.CONFIRMED,AppointmentStatus.IN_PROGRESS])
     )
     appointments_today = db.execute(stmt_appts).scalars().all()
 
