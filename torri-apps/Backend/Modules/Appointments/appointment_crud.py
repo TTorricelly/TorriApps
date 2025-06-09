@@ -87,7 +87,6 @@ def create_appointment(
         db,
         UUID(str(professional.id)), # Ensure UUID type if professional.id is string from DB
         appointment_data.appointment_date,
-        # tenant_id, # Argument removed
         ignore_client_id=appointment_data.client_id,
         ignore_start_time=appointment_data.start_time,
     )

@@ -2,7 +2,7 @@ module: availability
 path: torri-apps/Backend/Modules/Availability/
 description: |
   Manages the recurring weekly availability, breaks, and specific date-based 
-  blocked times (like vacations or day-offs) for professionals. This module 
+  blocked times (like vacations or breaks) for professionals. This module 
   is crucial for determining when a professional is available for appointments.
 entities:
   - ProfessionalAvailability  # Stores recurring weekly working slots
