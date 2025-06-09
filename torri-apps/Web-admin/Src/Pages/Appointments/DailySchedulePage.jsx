@@ -236,6 +236,7 @@ const DailySchedulePage = () => {
         } else if (selectedClient) {
           currentAppointmentClientId = selectedClient.id;
         }
+        console.log('Validating appointment. Current client ID determined:', currentAppointmentClientId);
 
         // Check for conflicts with existing appointments (exclude current appointment when editing)
         const conflictingAppointment = professional.appointments.find(apt => {
@@ -253,7 +254,10 @@ const DailySchedulePage = () => {
             (appointmentStart <= existingStart && appointmentEnd >= existingEnd)
           );
 
+          if (timeOverlap) { console.log('Time overlap detected with apt:', JSON.stringify(apt)); }
           if (timeOverlap) {
+            console.log('Existing apt.client_id:', apt.client_id, '| Current client ID:', currentAppointmentClientId, '| Are they different?:', apt.client_id !== currentAppointmentClientId);
+            console.log('Condition for conflict (!currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId)):', !currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId));
             // If current client ID is unknown, or if existing apt client ID is different from current.
             // Assumes apt.client_id exists for existing appointments.
             if (!currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId)) {
