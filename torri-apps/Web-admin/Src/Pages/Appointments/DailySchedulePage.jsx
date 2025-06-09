@@ -229,6 +229,14 @@ const DailySchedulePage = () => {
         const appointmentStart = new Date(`${appointmentForm.date}T${appointmentForm.startTime}:00`);
         const appointmentEnd = new Date(appointmentStart.getTime() + appointmentForm.duration * 60000);
         
+        // Determine current client ID
+        let currentAppointmentClientId = null;
+        if (editingAppointment) {
+          currentAppointmentClientId = editingAppointment.client_id || editingAppointment.clientId;
+        } else if (selectedClient) {
+          currentAppointmentClientId = selectedClient.id;
+        }
+
         // Check for conflicts with existing appointments (exclude current appointment when editing)
         const conflictingAppointment = professional.appointments.find(apt => {
           if (editingAppointment && apt.id === editingAppointment.id) {
@@ -239,15 +247,25 @@ const DailySchedulePage = () => {
           const existingEnd = new Date(apt.endTimeISO);
           
           // Check if time slots overlap
-          return (
+          const timeOverlap = (
             (appointmentStart >= existingStart && appointmentStart < existingEnd) ||
             (appointmentEnd > existingStart && appointmentEnd <= existingEnd) ||
             (appointmentStart <= existingStart && appointmentEnd >= existingEnd)
           );
+
+          if (timeOverlap) {
+            // If current client ID is unknown, or if existing apt client ID is different from current.
+            // Assumes apt.client_id exists for existing appointments.
+            if (!currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId)) {
+              return true; // Conflict
+            }
+          }
+          return false; // No conflict or same client
         });
         
         if (conflictingAppointment) {
-          errors.startTime = `Conflito com agendamento existente às ${conflictingAppointment.startTime}`;
+          // Updated error message for conflict with a different client
+          errors.startTime = "Conflito: Horário ocupado por outro cliente.";
         }
         
         // Check for conflicts with blocked slots
