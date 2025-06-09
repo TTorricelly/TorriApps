@@ -229,14 +229,15 @@ const DailySchedulePage = () => {
         const appointmentStart = new Date(`${appointmentForm.date}T${appointmentForm.startTime}:00`);
         const appointmentEnd = new Date(appointmentStart.getTime() + appointmentForm.duration * 60000);
         
-        // Determine current client ID
-        let currentAppointmentClientId = null;
+        // Determine current client name
+        let currentAppointmentClientName = null;
         if (editingAppointment) {
-          currentAppointmentClientId = editingAppointment.client_id || editingAppointment.clientId;
+          currentAppointmentClientName = editingAppointment.clientName;
         } else if (selectedClient) {
-          currentAppointmentClientId = selectedClient.id;
+          currentAppointmentClientName = selectedClient.full_name; // Matches apt.clientName source
+        } else if (isNewClient) {
+          currentAppointmentClientName = appointmentForm.clientName;
         }
-        console.log('Validating appointment. Current client ID determined:', currentAppointmentClientId);
 
         // Check for conflicts with existing appointments (exclude current appointment when editing)
         const conflictingAppointment = professional.appointments.find(apt => {
@@ -254,13 +255,10 @@ const DailySchedulePage = () => {
             (appointmentStart <= existingStart && appointmentEnd >= existingEnd)
           );
 
-          if (timeOverlap) { console.log('Time overlap detected with apt:', JSON.stringify(apt)); }
           if (timeOverlap) {
-            console.log('Existing apt.client_id:', apt.client_id, '| Current client ID:', currentAppointmentClientId, '| Are they different?:', apt.client_id !== currentAppointmentClientId);
-            console.log('Condition for conflict (!currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId)):', !currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId));
-            // If current client ID is unknown, or if existing apt client ID is different from current.
-            // Assumes apt.client_id exists for existing appointments.
-            if (!currentAppointmentClientId || (apt.client_id !== currentAppointmentClientId)) {
+            // If current client name is unknown, or if existing apt client name is different from current.
+            // Existing appointments on schedule use apt.clientName.
+            if (!currentAppointmentClientName || (apt.clientName !== currentAppointmentClientName)) {
               return true; // Conflict
             }
           }
@@ -268,7 +266,6 @@ const DailySchedulePage = () => {
         });
         
         if (conflictingAppointment) {
-          // Updated error message for conflict with a different client
           errors.startTime = "Conflito: Horário ocupado por outro cliente.";
         }
         
