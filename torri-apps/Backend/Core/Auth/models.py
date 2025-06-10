@@ -1,11 +1,11 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship # Added for relationships
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
 from Config.Settings import settings # Adjusted import path
-from .constants import UserRole
+from .constants import UserRole, HairType, Gender # Import Gender
 # To prevent circular imports with type hinting, we can use string references for relationship models
 # or forward references if needed, but for `secondary` argument, the table object itself might be needed
 # or its string name "fully.qualified.path:table_object" or just "table_name" if in same metadata.
@@ -20,6 +20,10 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(100), nullable=True)
+    phone_number = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    hair_type = Column(SAEnum(HairType), nullable=True)
+    gender = Column(SAEnum(Gender), nullable=True)
     is_active = Column(Boolean, default=True)
     
     # Photo fields for professionals

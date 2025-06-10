@@ -1,14 +1,24 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
-from .constants import UserRole
+from .constants import UserRole, HairType, Gender # Import Gender
+from datetime import date # Import date
+from typing import Optional
 
 class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr
     full_name: str | None = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
 
 class UserCreate(UserBase): # Renamed from UserTenantCreate
     password: str
     role: UserRole
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
 
 class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     email: EmailStr | None = None
@@ -17,11 +27,19 @@ class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     # password: str | None = None
     role: UserRole | None = None
     is_active: bool | None = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
 
 class User(UserBase): # Renamed from UserTenant
     id: UUID
     role: UserRole
     is_active: bool
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
 
     class Config:
         from_attributes = True

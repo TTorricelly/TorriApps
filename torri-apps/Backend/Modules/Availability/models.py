@@ -16,7 +16,6 @@ class ProfessionalAvailability(Base):
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
@@ -38,9 +37,9 @@ class ProfessionalBreak(Base):
     # This table stores recurring breaks within a professional's availability.
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey("users_tenant.id", ondelete="CASCADE"), nullable=False, index=True)
+    professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # Cross-schema foreign keys are handled at application level for multi-tenant isolation
-    tenant_id = Column(CHAR(36), nullable=False, index=True)
+    tenant_id = Column(CHAR(36), nullable=False, index=True) # This field might be redundant now if users table is global
 
     day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
