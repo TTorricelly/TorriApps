@@ -131,14 +131,11 @@ export default function Sidebar() {
         <div className="flex justify-center mb-s">
           <img 
             src="/src/assets/logo-torriapps.png" 
-            alt="TorriApps" 
-            className="h-20 w-auto"
+            alt="Reilo" 
+            className="h-28 w-auto"
           />
         </div>
-        {/* Tenant Name */}
-        <div className="text-center">
-          <h2 className="text-h3 font-semibold text-text-primary">{displayTenantName()}</h2>
-        </div>
+       
       </div>
 
       {/* Navigation Menu */}
