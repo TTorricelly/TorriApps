@@ -29,3 +29,65 @@
     @apply bg-bg-input border border-bg-tertiary text-text-primary placeholder-text-secondary px-m py-s rounded-input transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary;
   }
 }
+
+/* ========================================================================== */
+/* Custom overrides for Material Tailwind Disabled Inputs in Dark Theme       */
+/* ========================================================================== */
+
+/*
+  Targeting disabled Material Tailwind input fields.
+  These selectors attempt to cover different ways the disabled state might be represented
+  by the component library (e.g., data attributes, aria attributes, or classes on the input itself).
+  Using #1A1A2E for bg-bg-primary (input background).
+  Using #E0E0E0 for text-text-primary (input text).
+  Using #2A2A4A for border-bg-tertiary (input border).
+  Using #A0A0A0 for text-text-secondary (label text).
+  Using #606060 for text-text-tertiary (placeholder text).
+*/
+
+/* General wrapper for disabled input - for the input element itself */
+/* This targets the <input> tag directly when it's disabled or within a disabled MT wrapper. */
+div[class*="mt-input"][data-disabled="true"] input,
+div[class*="mt-input"][aria-disabled="true"] input,
+input[class*="mt-input-"][disabled],
+input.peer[disabled], /* Common class for MT's actual input elements */
+input[data-testid*="input"][disabled] /* Fallback for test IDs if classes are obfuscated */
+{
+  background-color: #1A1A2E !important;
+  color: #E0E0E0 !important;
+  -webkit-text-fill-color: #E0E0E0 !important; /* Override for WebKit text color */
+  border-color: #2A2A4A !important;
+  opacity: 0.75 !important; /* Standard opacity for disabled, adjust if too faint */
+}
+
+/* Ensure the border of the wrapper also reflects disabled state if applicable */
+/* This targets the div that often wraps the input and label. */
+div[class*="mt-input"][data-disabled="true"],
+div[class*="mt-input"][aria-disabled="true"] {
+  border-color: #2A2A4A !important; /* Ensure wrapper border matches */
+}
+
+/* Styling for the label of a disabled input */
+/* This targets the <label> element associated with a disabled MT input. */
+div[class*="mt-input"][data-disabled="true"] label,
+div[class*="mt-input"][aria-disabled="true"] label,
+label[data-peer-disabled="true"] /* Common MT pattern for label styling based on peer input's state */
+{
+  color: #A0A0A0 !important; /* text-text-secondary for disabled label */
+  opacity: 0.75 !important;
+}
+
+/* Remove any box-shadow or specific styling that might make it look raised or different on focus (even if disabled) */
+div[class*="mt-input"][data-disabled="true"] input:focus,
+input.peer[disabled]:focus {
+  box-shadow: none !important;
+  border-color: #2A2A4A !important; /* Keep border color consistent */
+}
+
+/* Ensure placeholder text is also styled correctly if visible in disabled state */
+div[class*="mt-input"][data-disabled="true"] input::placeholder,
+input.peer[disabled]::placeholder {
+  color: #606060 !important; /* text-text-tertiary */
+  -webkit-text-fill-color: #606060 !important;
+  opacity: 0.75 !important;
+}
