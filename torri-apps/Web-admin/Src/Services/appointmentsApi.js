@@ -158,6 +158,10 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
 export const getAppointmentById = async (appointmentId) => {
   try {
     const response = await apiClient.get(`/appointments/${appointmentId}`);
+
+    // Temporary log to inspect the raw API response
+    console.log('API response from getAppointmentById for ID ' + appointmentId + ':', JSON.stringify(response.data, null, 2));
+
     return response.data;
   } catch (error) {
     console.error("Error fetching appointment:", error.response?.data || error.message);
