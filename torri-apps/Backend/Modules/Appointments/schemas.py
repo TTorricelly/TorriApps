@@ -142,6 +142,7 @@ class AppointmentDetailSchema(BaseModel):
     # Added new fields
     notes_by_client: Optional[str] = None
     client_email: Optional[str] = None
+    client_phone_number: Optional[str] = None  # Added field
 
     class Config:
         from_attributes = True

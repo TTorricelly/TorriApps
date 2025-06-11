@@ -79,7 +79,8 @@ def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleRe
                     services=service_tags,
                     status=appt.status.value if isinstance(appt.status, Enum) else str(appt.status), # Handle Enum or string status
                     notes_by_client=appt.notes_by_client,
-                    client_email=client.email if client else None
+                    client_email=client.email if client else None,
+                    client_phone_number=client.phone_number if client else None
                 )
             )
 

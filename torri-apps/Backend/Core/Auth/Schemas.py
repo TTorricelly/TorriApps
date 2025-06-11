@@ -40,6 +40,7 @@ class User(UserBase): # Renamed from UserTenant
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
+    photo_path: Optional[str] = None # Added field
 
     class Config:
         from_attributes = True
@@ -63,6 +64,7 @@ class UserInfo(BaseModel): # This schema might still be useful elsewhere
     email: str
     full_name: str | None = None
     role: str
+    phone_number: Optional[str] = None # Added field
 
 # EnhancedToken schema removed as the /enhanced-login route was deleted
 # class EnhancedToken(BaseModel):
