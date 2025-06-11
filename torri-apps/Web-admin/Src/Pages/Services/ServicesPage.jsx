@@ -130,6 +130,7 @@ export default function ServicesPage() {
   };
 
   const handleEditService = (serviceId) => {
+    console.log('[ServicesPage] handleEditService - serviceId to edit:', serviceId); // Added log
     navigate(`/services/edit/${serviceId}`);
   };
 

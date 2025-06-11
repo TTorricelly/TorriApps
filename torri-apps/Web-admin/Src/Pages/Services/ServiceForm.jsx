@@ -417,6 +417,7 @@ export default function ServiceForm() {
   
   // Load data on component mount
   useEffect(() => {
+    console.log('[ServiceForm] serviceId from useParams():', serviceId); // Added log
     if (isEdit) {
       loadService();
     } else if (categoryIdFromUrl) {
@@ -479,6 +480,7 @@ export default function ServiceForm() {
   const loadService = async () => {
     try {
       setIsLoading(true);
+      console.log('[ServiceForm] loadService - Calling servicesApi.getById with serviceId:', serviceId); // Added log
       const serviceData = await servicesApi.getById(serviceId);
       
       
