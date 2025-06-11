@@ -160,7 +160,7 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
  * @param {string} appointmentId - The ID of the appointment to fetch.
  * @returns {Promise<object>} The appointment data.
  * @throws {Error} If the API call fails.
- */
+ *//* this function iis not being called anywhere in the codebase
 export const getAppointmentById = async (appointmentId) => {
   try {
     const response = await apiClient.get(`/appointments/${appointmentId}`);
@@ -172,3 +172,4 @@ export const getAppointmentById = async (appointmentId) => {
     throw new Error(errorMessage);
   }
 };
+*/
