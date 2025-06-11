@@ -40,13 +40,19 @@ export const getDailySchedule = async (date) => {
           photoUrl: prof_schedule.professional_photo_url, // Ensure this matches the schema field `professional_photo_url`
           appointments: prof_schedule.appointments.map(apt => ({
             id: apt.id,
-            clientName: apt.client_name,
+            clientName: apt.client_name, // From backend's AppointmentDetailSchema
+
+            // Added fields, assuming 'apt' (from AppointmentDetailSchema) will contain them.
+            notes_by_client: apt.notes_by_client || null,
+            clientEmail: apt.client_email || '',
+            clientPhone: apt.client_phone_number || '',
+
             startTime: new Date(apt.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), // Formatted for display
             startTimeISO: apt.start_time, // Raw ISO string from backend
             duration: apt.duration_minutes,
-            services: apt.services.map(service => service.name),
+            services: apt.services.map(service => service.name), // From backend's ServiceTagSchema
             status: apt.status,
-            _originalServices: apt.services,
+            _originalServices: apt.services, // Keep if used by UI
             // Calculate end_time ISO string. Backend sends start_time (datetime) and duration_minutes.
             endTimeISO: new Date(new Date(apt.start_time).getTime() + apt.duration_minutes * 60000).toISOString()
           })),
@@ -158,9 +164,6 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
 export const getAppointmentById = async (appointmentId) => {
   try {
     const response = await apiClient.get(`/appointments/${appointmentId}`);
-
-    // Temporary log to inspect the raw API response
-    console.log('API response from getAppointmentById for ID ' + appointmentId + ':', JSON.stringify(response.data, null, 2));
 
     return response.data;
   } catch (error) {

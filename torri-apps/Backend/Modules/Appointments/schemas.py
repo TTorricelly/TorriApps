@@ -139,6 +139,9 @@ class AppointmentDetailSchema(BaseModel):
     duration_minutes: int
     services: List[ServiceTagSchema]
     status: str
+    # Added new fields
+    notes_by_client: Optional[str] = None
+    client_email: Optional[str] = None
 
     class Config:
         from_attributes = True
