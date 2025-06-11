@@ -10,6 +10,22 @@ import { professionalsApi } from '../../Services/professionals'; // Added import
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
 import SearchableServiceSelect from '../../Components/SearchableServiceSelect';
 
+// Helper function to format date as YYYY-MM-DD in local time
+const formatDateToYYYYMMDD = (date) => {
+  if (!(date instanceof Date) || isNaN(date)) {
+    // Default to today if date is invalid
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const DailySchedulePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState({ professionals: [] });
@@ -325,9 +341,8 @@ const DailySchedulePage = () => {
           appointmentData.start_time = appointmentForm.startTime;
         }
         
-        if (appointmentForm.notes) {
-          appointmentData.notes_by_client = appointmentForm.notes;
-        }
+        // Always include notes in the update payload, sending null if empty
+        appointmentData.notes_by_client = appointmentForm.notes || null;
         
         if (appointmentForm.status) {
           appointmentData.status = appointmentForm.status;
@@ -707,7 +722,7 @@ const DailySchedulePage = () => {
               <CalendarDaysIcon className="h-7 w-7 sm:h-8 sm:w-8 text-text-secondary" />
               <input
                 type="date"
-                value={selectedDate.toISOString().split('T')[0]}
+                value={formatDateToYYYYMMDD(selectedDate)}
                 onChange={handleDateInputChange}
                 className="p-s border border-bg-tertiary rounded-input text-text-primary bg-bg-primary hover:border-accent-primary focus:ring-1 focus:ring-accent-primary focus:border-accent-primary outline-none appearance-none text-xs sm:text-small"
                 style={{ minWidth: '150px', maxWidth: '180px' }}
@@ -1376,7 +1391,7 @@ const DailySchedulePage = () => {
                     step="15"
                     value={appointmentForm.duration}
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                    className="bg-bg-primary border-bg-tertiary text-text-primary"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary disabled:bg-bg-primary disabled:text-text-primary disabled:border-bg-tertiary"
                     labelProps={{ className: "text-text-secondary" }}
                     containerProps={{ className: "text-text-primary" }}
                     error={!!formErrors.duration}
