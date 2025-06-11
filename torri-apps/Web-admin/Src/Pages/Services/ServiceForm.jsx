@@ -184,7 +184,7 @@ const RichTextEditor = ({ value, onChange, placeholder, error }) => {
   };
 
   return (
-    <div className="border border-bg-tertiary rounded-lg bg-bg-primary">
+    <div className="rich-text-display border border-bg-tertiary rounded-lg bg-bg-primary">
       {/* Toolbar */}
       <div className="border-b border-bg-tertiary p-2 flex flex-wrap gap-1">
         <button
@@ -246,35 +246,6 @@ const RichTextEditor = ({ value, onChange, placeholder, error }) => {
         placeholder={!focused && !value ? placeholder : ''}
         suppressContentEditableWarning={true}
       />
-      
-      {/* Custom CSS for editor styling */}
-      <style jsx>{`
-        [contenteditable] h2 {
-          font-size: 1.5em;
-          font-weight: 600;
-          margin: 0.83em 0;
-          color: #E0E0E0;
-        }
-        [contenteditable] h3 {
-          font-size: 1.17em;
-          font-weight: 600;
-          margin: 1em 0;
-          color: #E0E0E0;
-        }
-        [contenteditable] p {
-          margin: 0.5em 0;
-          color: #E0E0E0;
-        }
-        [contenteditable] strong {
-          font-weight: 600;
-        }
-        [contenteditable] em {
-          font-style: italic;
-        }
-        [contenteditable] u {
-          text-decoration: underline;
-        }
-      `}</style>
       
       {/* Character count */}
       <div className="border-t border-bg-tertiary p-2 flex justify-between items-center text-sm">
@@ -417,7 +388,6 @@ export default function ServiceForm() {
   
   // Load data on component mount
   useEffect(() => {
-    console.log('[ServiceForm] serviceId from useParams():', serviceId); // Added log
     if (isEdit) {
       loadService();
     } else if (categoryIdFromUrl) {
@@ -480,7 +450,6 @@ export default function ServiceForm() {
   const loadService = async () => {
     try {
       setIsLoading(true);
-      console.log('[ServiceForm] loadService - Calling servicesApi.getById with serviceId:', serviceId); // Added log
       const serviceData = await servicesApi.getById(serviceId);
       
       

@@ -91,3 +91,54 @@ input.peer[disabled]::placeholder {
   -webkit-text-fill-color: #606060 !important;
   opacity: 0.75 !important;
 }
+
+/* RichTextEditor Content Styles (moved from ServiceForm.jsx) */
+/* These styles apply to elements *within* the contenteditable area, or direct children if applicable */
+
+.rich-text-display [contenteditable] h2,
+.rich-text-display h2 { /* For cases where h2 might be a direct child */
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.83em 0;
+  color: #E0E0E0; /* text-text-primary */
+}
+
+.rich-text-display [contenteditable] h3,
+.rich-text-display h3 {
+  font-size: 1.17em;
+  font-weight: 600;
+  margin: 1em 0;
+  color: #E0E0E0; /* text-text-primary */
+}
+
+.rich-text-display [contenteditable] p,
+.rich-text-display p {
+  margin: 0.5em 0;
+  color: #E0E0E0; /* text-text-primary */
+  line-height: 1.6;
+}
+
+.rich-text-display [contenteditable] strong,
+.rich-text-display strong {
+  font-weight: 600;
+  /* Text color will be inherited, typically from the parent <p> or the .rich-text-display itself */
+}
+
+.rich-text-display [contenteditable] em,
+.rich-text-display em {
+  font-style: italic;
+}
+
+.rich-text-display [contenteditable] u,
+.rich-text-display u {
+  text-decoration: underline;
+}
+
+/* Ensure proper spacing for rich text content, if not already handled by Tailwind utilities */
+.rich-text-display > *:first-child {
+  margin-top: 0;
+}
+
+.rich-text-display > *:last-child {
+  margin-bottom: 0;
+}
