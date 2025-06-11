@@ -15,7 +15,7 @@ from Core.Auth.models import User # Changed from UserTenant
 from Modules.Services.models import Service, Category
 from Modules.Appointments.models import Appointment
 from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
-from Modules.AdminMaster.models import AdminMasterUser
+# from Modules.AdminMaster.models import AdminMasterUser # Commented out due to ModuleNotFoundError
 # from Modules.Tenants.models import Tenant # Tenant model removed
 
 # this is the Alembic Config object, which provides

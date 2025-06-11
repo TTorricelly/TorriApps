@@ -42,6 +42,10 @@ def create_user(db: Session, user_data: UserCreate) -> User: # Removed tenant_id
         hashed_password=hashed_password,
         role=user_data.role,
         full_name=user_data.full_name,
+        phone_number=user_data.phone_number,
+        date_of_birth=user_data.date_of_birth,
+        hair_type=user_data.hair_type,
+        gender=user_data.gender,
         # tenant_id removed
         is_active=True # New users default to active
     )

@@ -48,6 +48,19 @@ const ClientDataForm = ({
   // Removed getInitials function (if not used elsewhere, or keep if a simple avatar placeholder is desired without photo upload)
   // For now, assuming no avatar display in this simplified form. If needed, it can be added back.
 
+  const hairTypeOptions = [
+    { label: "Liso", value: "LISO" },
+    { label: "Ondulado", value: "ONDULADO" },
+    { label: "Cacheado", value: "CACHEADO" },
+    { label: "Crespo", value: "CRESPO" },
+  ];
+
+  const genderOptions = [
+    { label: "Masculino", value: "MASCULINO" },
+    { label: "Feminino", value: "FEMININO" },
+    { label: "Outros", value: "OUTROS" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Basic Information */}
@@ -85,6 +98,7 @@ const ClientDataForm = ({
                 name="email"
                 label="E-mail"
                 type="email"
+                autoComplete="off"
                 placeholder="cliente@exemplo.com"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
@@ -121,6 +135,75 @@ const ClientDataForm = ({
             </div>
           </div>
 
+          {/* Date of Birth */}
+          <div>
+            <Input
+              name="date_of_birth"
+              label="Data de Nascimento"
+              type="date"
+              value={formData.date_of_birth || ''}
+              onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+              error={!!errors.date_of_birth}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.date_of_birth && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.date_of_birth}
+              </Typography>
+            )}
+          </div>
+
+          {/* Hair Type */}
+          <div>
+            <Select
+              name="hair_type"
+              label="Tipo de Cabelo"
+              value={formData.hair_type}
+              onChange={(value) => handleInputChange('hair_type', value)}
+              error={!!errors.hair_type}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              // containerProps is not a direct prop for Select, styling might need to be applied differently if needed
+            >
+              {hairTypeOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+            {errors.hair_type && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.hair_type}
+              </Typography>
+            )}
+          </div>
+
+          {/* Gender */}
+          <div>
+            <Select
+              name="gender"
+              label="Gênero"
+              value={formData.gender}
+              onChange={(value) => handleInputChange('gender', value)}
+              error={!!errors.gender}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+            >
+              {genderOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+            {errors.gender && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.gender}
+              </Typography>
+            )}
+          </div>
+
           {/* Password (only for create mode) */}
           {!isEditMode && (
             <div>
@@ -128,6 +211,7 @@ const ClientDataForm = ({
                 name="password"
                 label="Senha"
                 type="password"
+                autoComplete="new-password"
                 placeholder="Mínimo 6 caracteres"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
@@ -193,6 +277,9 @@ export default function ClientForm() { // Renamed component
     full_name: '',
     email: '',
     phone_number: '', // Added phone_number
+    date_of_birth: '', // Added date_of_birth
+    hair_type: '', // Added hair_type
+    gender: '', // Added gender
     password: '', // Kept for creation
     is_active: true,
     // Removed services_ids, bio, etc.
@@ -254,6 +341,10 @@ export default function ClientForm() { // Renamed component
         full_name: data.full_name || '',
         email: data.email || '',
         phone_number: data.phone_number || '', // Added phone_number
+        // Format date_of_birth to YYYY-MM-DD for the date input
+        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth).toISOString().split('T')[0] : '',
+        hair_type: data.hair_type || '',
+        gender: data.gender || '',
         password: '', // Never load password
         is_active: data.is_active ?? true,
       };
@@ -292,6 +383,29 @@ export default function ClientForm() { // Renamed component
       newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
     }
 
+    // Date of Birth validation (optional)
+    if (formData.date_of_birth) {
+      const dob = new Date(formData.date_of_birth);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Compare dates only
+
+      if (isNaN(dob.getTime())) {
+        newErrors.date_of_birth = 'Data de nascimento inválida.';
+      } else if (dob > today) {
+        newErrors.date_of_birth = 'Data de nascimento não pode ser no futuro.';
+      }
+    }
+
+    // Hair Type validation (optional)
+    if (formData.hair_type && !["LISO", "ONDULADO", "CACHEADO", "CRESPO"].includes(formData.hair_type)) {
+      newErrors.hair_type = 'Tipo de cabelo inválido.';
+    }
+
+    // Gender validation (optional)
+    if (formData.gender && !["MASCULINO", "FEMININO", "OUTROS"].includes(formData.gender)) {
+      newErrors.gender = 'Gênero inválido.';
+    }
+
     // Optional: Phone number validation (basic example)
     // if (formData.phone_number && !/^\(\d{2}\) \d{4,5}-\d{4}$/.test(formData.phone_number)) {
     //   newErrors.phone_number = 'Formato de telefone inválido. Use (XX) XXXXX-XXXX';
@@ -325,6 +439,9 @@ export default function ClientForm() { // Renamed component
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
         phone_number: formData.phone_number?.trim() || null, // Send null if empty
+        date_of_birth: formData.date_of_birth || null, // Send null if empty
+        hair_type: formData.hair_type || null, // Send null if empty
+        gender: formData.gender || null, // Send null if empty
         is_active: formData.is_active,
       };
 

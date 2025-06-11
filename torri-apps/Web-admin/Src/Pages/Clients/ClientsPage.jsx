@@ -236,7 +236,8 @@ function ClientsPage() { // Renamed component and removed default export from he
                 labelProps={{ className: "text-text-secondary" }}
                 containerProps={{ className: "text-text-primary" }}
                 menuProps={{
-                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50"
+                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
+                  style: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 9999 }
                 }}
               >
                 <Option value="" className="text-text-primary hover:bg-bg-tertiary">
