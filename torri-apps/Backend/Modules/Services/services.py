@@ -213,21 +213,22 @@ def get_services( # Renamed from get_services_by_tenant
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
 
-def get_all_services( # This can be deprecated or used internally if its logic differs.
+def get_all_services(
     db: Session,
     skip: int = 0,
     limit: int = 100,
     category_id: Optional[UUID] = None
 ) -> List[Service]:
-    # SIMPLIFIED: Get all services (no tenant filtering)
     stmt = select(Service).options(
         joinedload(Service.category)
     )
     if category_id:
-        stmt = stmt.where(Service.category_id == category_id) # Use UUID directly
+        stmt = stmt.where(Service.category_id == str(category_id)) # Corrected line
 
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
-    return list(db.execute(stmt).scalars().all())
+    # Ensure the return is a list of Service model instances
+    services_list = list(db.execute(stmt).scalars().all())
+    return services_list
 
 def update_service(db: Session, db_service: Service, service_data: ServiceUpdate) -> Service:
     update_dict = service_data.model_dump(exclude_unset=True, exclude={'professional_ids'})
