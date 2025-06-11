@@ -59,15 +59,11 @@ export default function ServicesPage() {
     try {
       setIsLoadingCategories(true);
       const data = await categoriesApi.getAll();
-      console.log('[ServicesPage] Categories fetched:', JSON.stringify(data, null, 2));
       setCategories(data);
       
       // Auto-select first category if available
       if (data.length > 0) {
         setSelectedCategoryId(data[0].id);
-        console.log('[ServicesPage] Auto-selected categoryId:', data[0].id);
-      } else {
-        console.log('[ServicesPage] No categories found, selectedCategoryId reset.');
       }
     } catch (error) {
       console.error('[ServicesPage] Error loading categories:', error);
@@ -78,16 +74,13 @@ export default function ServicesPage() {
   };
 
   const loadServices = async () => {
-    console.log('[ServicesPage] loadServices called with selectedCategoryId:', selectedCategoryId);
     if (!selectedCategoryId) {
-      console.log('[ServicesPage] No selectedCategoryId, skipping service load.');
       return;
     }
     
     try {
       setIsLoadingServices(true);
       const data = await servicesApi.getAll(selectedCategoryId);
-      console.log(`[ServicesPage] Services fetched for category ${selectedCategoryId}:`, JSON.stringify(data, null, 2));
       
       // Convert relative image paths to full URLs
       const servicesWithFullUrls = data.map(service => ({
@@ -172,11 +165,6 @@ export default function ServicesPage() {
         <Spinner className="h-8 w-8" />
       </div>
     );
-  }
-
-  console.log('[ServicesPage] Data for rendering - isLoadingCategories:', isLoadingCategories, 'isLoadingServices:', isLoadingServices, 'selectedCategoryId:', selectedCategoryId, 'filteredServices count:', filteredServices.length);
-  if (filteredServices.length > 0) {
-      console.log('[ServicesPage] First few filteredServices:', JSON.stringify(filteredServices.slice(0,2), null, 2));
   }
 
   return (
