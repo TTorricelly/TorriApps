@@ -190,7 +190,7 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
 
 def get_service_with_details_by_id(db: Session, service_id: UUID) -> Service | None:
     # SIMPLIFIED: Get service by ID only (no tenant filtering)
-    stmt = select(Service).where(Service.id == service_id).options( # Use UUID directly
+    stmt = select(Service).where(Service.id == str(service_id)).options( # MODIFIED: Explicitly cast service_id to string
         joinedload(Service.category)
     )
     return db.execute(stmt).scalars().first()
