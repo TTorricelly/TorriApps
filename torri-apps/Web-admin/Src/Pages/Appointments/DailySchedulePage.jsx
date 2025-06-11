@@ -144,7 +144,7 @@ const DailySchedulePage = () => {
       startTime: appointment.startTimeISO ? new Date(appointment.startTimeISO).toTimeString().slice(0, 5) : '',
       duration: appointment.duration || 60,
       status: appointment.status || 'SCHEDULED',
-      notes: appointment.notes || ''
+      notes: appointment.notes_by_client || ''
     });
     setFormErrors({});
     setShowAppointmentModal(true);
