@@ -1,9 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StatusBar,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
-    // Simulate app initialization
     const timer = setTimeout(() => {
       navigation.replace('Login');
     }, 2000);
@@ -12,12 +17,16 @@ const SplashScreen = ({ navigation }) => {
   }, [navigation]);
 
   return (
-    <View className="flex-1 bg-primary justify-center items-center">
+    <SafeAreaView className="flex-1 bg-primary justify-center items-center">
+      <StatusBar
+        backgroundColor="#d7197f"  // or use your theme’s primary color
+        barStyle="light-content"
+      />
       <Text className="text-white text-brand-2xl font-brand-bold mb-brand-lg">
-        TorriApps
+        Reilo
       </Text>
-      <ActivityIndicator size="large" color="white" />
-    </View>
+      <ActivityIndicator size="large" color="#FFFFFF" />
+    </SafeAreaView>
   );
 };
 

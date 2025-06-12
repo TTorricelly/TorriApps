@@ -1,15 +1,14 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, StatusBar } from 'react-native';
-import { styled } from 'nativewind';
-import ServiceCategoryCard from '../components/ServiceCategoryCard'; // Added import
-
-// Styled components for Tailwind RN
-const StyledView = styled(View);
-const StyledText = styled(Text);
-const StyledScrollView = styled(ScrollView);
+import {
+  View,
+  Text,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
+import ServiceCategoryCard from '../components/ServiceCategoryCard';
 
 const serviceCategoriesData = [
-  { id: '1', name: 'Cabelo', iconColor: '#FFC0CB' }, // Example color, replace later
+  { id: '1', name: 'Cabelo', iconColor: '#FFC0CB' },
   { id: '2', name: 'Barba', iconColor: '#ADD8E6' },
   { id: '3', name: 'Unhas', iconColor: '#90EE90' },
   { id: '4', name: 'Massoterapia', iconColor: '#FFD700' },
@@ -19,37 +18,35 @@ const serviceCategoriesData = [
 
 const CategoriesScreen = () => {
   return (
-    <StyledView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       <StatusBar backgroundColor="#d7197f" barStyle="light-content" />
-      {/* Header */}
-      <StyledView style={{ backgroundColor: '#d7197f', height: 72 }} className="justify-center items-center">
-        <StyledText className="text-white font-bold text-2xl" style={{ fontSize: 28 /* sp */ }}>
-          Nome do Salão
-        </StyledText>
-      </StyledView>
 
-      <StyledScrollView>
+      {/* Header */}
+      <View className="h-18 bg-[#d7197f] justify-center items-center">
+        <Text className="text-white font-bold text-2xl">
+          Nome do Salão
+        </Text>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
         {/* Section Title */}
-        <StyledText
-          className="text-slate-800 font-bold text-center mt-6 mb-4"
-          style={{ fontSize: 24 /* sp */, color: '#374151' }}
-        >
+        <Text className="text-center font-bold text-xl text-slate-800 mt-6 mb-4">
           Nossos Serviços
-        </StyledText>
+        </Text>
 
         {/* Content Grid */}
-        <StyledView className="flex-row flex-wrap justify-center px-2" style={{ paddingHorizontal: 8 /* to achieve 16dp gap effectively */}}>
-          {serviceCategoriesData.map((category) => (
+        <View className="flex-row flex-wrap justify-center px-2">
+          {serviceCategoriesData.map(category => (
             <ServiceCategoryCard
               key={category.id}
               categoryName={category.name}
               iconColor={category.iconColor}
-              onPress={(categoryName) => console.log(`Navigating to ${categoryName} services...`)} // Example action
+              onPress={name => console.log(`Navigating to ${name} services…`)}
             />
           ))}
-        </StyledView>
-      </StyledScrollView>
-    </StyledView>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 

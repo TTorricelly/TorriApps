@@ -13,7 +13,8 @@ const LoginScreen = ({ navigation }) => {
     }
     
     // Simulate login
-    navigation.replace('Home');
+    //navigation.replace('Home');
+    navigation.replace('MainApp');
   };
 
   return (

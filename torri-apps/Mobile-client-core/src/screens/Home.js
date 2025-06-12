@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HomeScreen = ({ navigation }) => {
-  const handleLogout = () => {
-    navigation.replace('Login');
-  };
+  const handleLogout = () => navigation.replace('Login');
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1">
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         {/* Header */}
         <View className="flex-row justify-between items-center px-brand-lg py-brand-md bg-primary">
           <Text className="text-white text-brand-xl font-brand-bold">
@@ -27,14 +30,14 @@ const HomeScreen = ({ navigation }) => {
           <Text className="text-brand-2xl font-brand-bold text-text mb-brand-xs">
             Welcome to Your Salon
           </Text>
-          <Text className="text-brand-md text-text-muted">
+          <Text className="text-brand-md text-text-secondary">
             Manage your appointments and services with ease
           </Text>
         </View>
 
         {/* Quick Actions */}
         <View className="px-brand-lg">
-          <Text className="text-brand-lg font-brand-semibold text-text mb-brand-md">
+          <Text className="text-brand-lg font-brand-medium text-text mb-brand-md">
             Quick Actions
           </Text>
           
@@ -43,7 +46,7 @@ const HomeScreen = ({ navigation }) => {
               <Text className="text-brand-md font-brand-medium text-text">
                 📅 View Appointments
               </Text>
-              <Text className="text-brand-sm text-text-muted mt-brand-xs">
+              <Text className="text-brand-sm text-text-secondary mt-brand-xs">
                 Check your upcoming bookings
               </Text>
             </TouchableOpacity>
@@ -52,7 +55,7 @@ const HomeScreen = ({ navigation }) => {
               <Text className="text-brand-md font-brand-medium text-text">
                 ✂️ Services
               </Text>
-              <Text className="text-brand-sm text-text-muted mt-brand-xs">
+              <Text className="text-brand-sm text-text-secondary mt-brand-xs">
                 Browse available services
               </Text>
             </TouchableOpacity>
@@ -61,7 +64,7 @@ const HomeScreen = ({ navigation }) => {
               <Text className="text-brand-md font-brand-medium text-text">
                 👤 Profile
               </Text>
-              <Text className="text-brand-sm text-text-muted mt-brand-xs">
+              <Text className="text-brand-sm text-text-secondary mt-brand-xs">
                 Manage your account settings
               </Text>
             </TouchableOpacity>
