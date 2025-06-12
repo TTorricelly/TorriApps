@@ -22,15 +22,15 @@ const CategoriesScreen = () => {
       <StatusBar backgroundColor="#d7197f" barStyle="light-content" />
 
       {/* Header */}
-      <View className="h-18 bg-[#d7197f] justify-center items-center">
-        <Text className="text-white font-bold text-2xl">
+      <View className="h-18 bg-[#d7197f] justify-center items-center shadow-md">
+        <Text className="text-white font-extrabold text-3xl">
           Nome do Salão
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
         {/* Section Title */}
-        <Text className="text-center font-bold text-xl text-slate-800 mt-6 mb-4">
+        <Text className="text-center font-extrabold text-2xl text-slate-900 mt-6 mb-4">
           Nossos Serviços
         </Text>
 

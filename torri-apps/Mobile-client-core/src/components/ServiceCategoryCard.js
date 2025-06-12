@@ -27,35 +27,23 @@ const ServiceCategoryCard = ({ categoryName, iconColor = '#CCCCCC', onPress }) =
   return (
     <TouchableOpacity
       onPress={handlePress}
-      className="m-2 shadow-md"
+      className="m-2 shadow-md w-[46%] h-48 rounded-2xl"
       style={{
-        width: 140,
-        height: 180,
         backgroundColor: cardBackgroundColor,
-        borderRadius: 16,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.41,
       }}
     >
       <View className="flex-1 items-center pt-4">
         {/* Circular icon */}
         <View
-          className="mb-3"
+          className="mb-3 w-18 h-18 rounded-full"
           style={{
-            width: 72,
-            height: 72,
-            borderRadius: 36,
             backgroundColor: iconColor,
           }}
         />
 
         {/* Category Name */}
         <Text
-          className="text-center text-slate-800 font-medium"
-          style={{ fontSize: 18, paddingHorizontal: 4 }}
+          className="text-center text-slate-800 font-medium text-lg px-1"
           numberOfLines={2}
         >
           {categoryName}

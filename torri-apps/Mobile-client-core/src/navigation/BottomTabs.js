@@ -5,6 +5,29 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 // Import screen components (placeholders for now)
 import CategoriesScreen from '../screens/CategoriesScreen';
 import AppointmentsScreen from '../screens/AppointmentsScreen';
+
+// --- ICON TROUBLESHOOTING ---
+// If you are not seeing the icons below, it's likely an issue with
+// react-native-vector-icons setup. Please ensure the following:
+//
+// 1. `react-native-vector-icons` is in your `package.json`.
+// 2. Autolinking should handle most cases, but if issues persist:
+//    - For iOS:
+//      - Run `cd ios && pod install && cd ..`
+//      - Ensure `Ionicons.ttf` (and other fonts if used) are part of "Copy Bundle Resources" in Xcode.
+//    - For Android:
+//      - Check `android/app/build.gradle` for:
+//        `apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"`
+//      - Ensure the app is rebuilt: `npx react-native run-android`
+// 3. After any of these steps, restart your Metro bundler and rebuild/rerun your app.
+// 4. Verify the icon names used are correct for the version of Ionicons bundled
+//    with react-native-vector-icons. Common names like 'ios-apps', 'ios-calendar',
+//    'ios-person' and their '-outline' variants are generally safe.
+//
+// For more details, consult the react-native-vector-icons installation guide:
+// https://github.com/oblador/react-native-vector-icons#installation
+// --- END ICON TROUBLESHOOTING ---
+
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
