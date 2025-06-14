@@ -9,7 +9,6 @@ Tech stack dependencies mobile
     * import gesture handler located at the app root in index.js:
 		import 'react-native-gesture-handler';
 - Use functional components + hooks (useState, useEffect)
-- Semicolons on every statement and import
 - Prefer SafeAreaView from react-native-safe-area-context at your app root or on full-screen layouts
 
 2. Navigation (React Navigation v7)

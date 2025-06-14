@@ -2,15 +2,15 @@
  * Main Application entry point.
  */
 import React from 'react';
-import Navigation from './src/navigation';   // Adjust path as needed
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import 'react-native-gesture-handler';
+import Navigation from './src/Navigation';
+import { StatusBar } from 'react-native';
 
-const App = () => {
+export default function App() {
   return (
-    <SafeAreaProvider>
-        <Navigation />
-    </SafeAreaProvider>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#ec4899" />
+      <Navigation />
+    </>
   );
-};
-
-export default App;
+}

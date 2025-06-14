@@ -7,13 +7,12 @@
       "@brand/*": ["./src/brand/*"],
       "@shared/*": ["../Shared/*"]
     },
-    "types": ["jest", "react-native", "tamagui"]
+    "types": ["jest", "react-native", "nativewind/types"]
   },
   "include": [
     "src/**/*",
     "App.tsx",
-    "index.js",
-    "tamagui.config.ts"
+    "index.js"
   ],
   "exclude": [
     "node_modules",

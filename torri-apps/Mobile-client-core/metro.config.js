@@ -15,13 +15,19 @@ const config = {
   resolver: {
     // Support for yarn workspaces
     unstable_enablePackageExports: true,
-    // Add support for CSS files (nativewind)
-    assetExts: ['bin', 'txt', 'jpg', 'png', 'json', 'css'],
-    sourceExts: ['js', 'json', 'ts', 'tsx', 'jsx'],
+    // Add support for SVG files
+    assetExts: ['bin', 'txt', 'jpg', 'png', 'json'],
+    sourceExts: ['js', 'json', 'ts', 'tsx', 'jsx', 'svg'],
   },
   transformer: {
-    // Add CSS support for nativewind
+    // Support for SVG files
     babelTransformerPath: require.resolve('react-native-svg-transformer'),
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
   },
 };
 

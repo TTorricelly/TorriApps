@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import SplashScreen from '../screens/Splash';
 import LoginScreen from '../screens/Login';
-import BottomTabs from './BottomTabs'; // Added import for BottomTabs
+import BottomTabs from './screens/MainAppNavigator'; 
 
 const Stack = createStackNavigator();
 
@@ -19,7 +19,7 @@ const RootStack = () => {
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="MainApp" component={BottomTabs} />
+      <Stack.Screen name="MainApp" component={MainAppNavigator} />
     </Stack.Navigator>
   );
 };
