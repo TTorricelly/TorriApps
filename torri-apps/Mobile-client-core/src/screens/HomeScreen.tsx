@@ -3,7 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Scissors, User, Fingerprint, Gift, Footprints, Sparkles } from 'lucide-react-native';
 
-
 interface HomeScreenProps {
   navigation: any;
 }
@@ -13,84 +12,117 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     {
       id: 'cabelo',
       name: 'Cabelo',
-      color: "bg-pink-100",
-      icon: (props: any) => <Scissors {...props} />,
+      backgroundColor: '#fce7f3',
+      iconColor: '#ec4899',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <Scissors {...props} />,
     },
     {
       id: 'barba',
       name: 'Barba',
-      color: "bg-blue-100",
-      icon: (props: any) => <User {...props} />,
+      backgroundColor: '#dbeafe',
+      iconColor: '#3b82f6',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <User {...props} />,
     },
     {
       id: 'unhas',
       name: 'Unhas',
-      color: "bg-purple-100",
-      icon: (props: any) => <Fingerprint {...props} />,
+      backgroundColor: '#f3e8ff',
+      iconColor: '#a855f7',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <Fingerprint {...props} />,
     },
     {
       id: 'massoterapia',
       name: 'Massoterapia',
-      color: "bg-green-100",
-      icon: (props: any) => <Gift {...props} />,
+      backgroundColor: '#dcfce7',
+      iconColor: '#22c55e',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <Gift {...props} />,
     },
     {
       id: 'podologia',
       name: 'Podologia',
-      color: "bg-teal-100",
-      icon: (props: any) => <Footprints {...props} />,
+      backgroundColor: '#ccfbf1',
+      iconColor: '#14b8a6',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <Footprints {...props} />,
     },
     {
       id: 'unhas-gel',
       name: 'Unhas em Gel',
-      color: "bg-red-100",
-      icon: (props: any) => <Sparkles {...props} />,
+      backgroundColor: '#fee2e2',
+      iconColor: '#ef4444',
       image: "https://via.placeholder.com/100",
+      icon: (props: any) => <Sparkles {...props} />,
     },
   ]
-
-  // Map color strings to actual color values
-  const colorMap: Record<string, string> = {
-    "bg-pink-100": "#fce7f3",
-    "bg-blue-100": "#dbeafe",
-    "bg-purple-100": "#f3e8ff",
-    "bg-green-100": "#dcfce7",
-    "bg-teal-100": "#ccfbf1",
-    "bg-red-100": "#fee2e2",
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1 px-4 pt-4 pb-20">
-        <Text className="text-3xl font-bold text-center text-gray-700 mb-8">Nossos Serviços</Text>
+        <Text style={{
+          fontSize: 30,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          color: '#374151',
+          marginBottom: 32
+        }}>
+          Nossos Serviços
+        </Text>
 
-        <View className="flex-row flex-wrap justify-between">
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
           {categories.map((category) => (
             <TouchableOpacity
               key={category.id}
-              className="w-[48%] mb-4"
-              style={{ backgroundColor: colorMap[category.color] }}
+              style={{ 
+                width: '47%',
+                backgroundColor: category.backgroundColor,
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                marginBottom: 16
+              }}
               activeOpacity={0.7}
               onPress={() => console.log(`Selected ${category.name}`)}
             >
-              <View className="p-4 rounded-lg items-center relative">
-                <View className="relative mb-2">
-                  <View className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md">
-                    <Image
-                      source={{ uri: category.image }}
-                      className="w-full h-full"
-                      style={{ width: 96, height: 96 }}
-                    />
-                  </View>
-                  <View className="absolute bottom-0 right-0">{category.icon({ size: 24, color: "#ec4899" })}</View>
+              <View style={{ position: 'relative', marginBottom: 8 }}>
+                <View style={{ 
+                  width: 96, 
+                  height: 96, 
+                  borderRadius: 48, 
+                  overflow: 'hidden', 
+                  borderWidth: 4, 
+                  borderColor: 'white',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  elevation: 5
+                }}>
+                  <Image
+                    source={{ uri: category.image }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
                 </View>
-                <Text className="text-lg font-medium text-gray-700">{category.name}</Text>
+                <View style={{ 
+                  position: 'absolute', 
+                  bottom: 8, 
+                  right: 8 
+                }}>
+                  {category.icon({ size: 32, color: category.iconColor })}
+                </View>
               </View>
+              <Text style={{ 
+                fontSize: 18, 
+                fontWeight: '500', 
+                color: '#374151',
+                textAlign: 'center'
+              }}>
+                {category.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
