@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Home, Grid, Calendar, User } from "lucide-react-native";
@@ -9,28 +9,32 @@ import AppointmentsScreen from '../screens/AppointmentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 
+interface HomeScreenRef {
+  resetToCategories: () => void;
+  navigateToOrders: () => void;
+}
+
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 
-function HomeStackNavigator() {
+function HomeStackNavigator({ homeScreenRef }: { homeScreenRef: React.RefObject<HomeScreenRef> }) {
   return (
     <HomeStack.Navigator>
       <HomeStack.Screen
         name="Services"
-        component={HomeScreen}
         options={{
-          headerStyle: { backgroundColor: "#ec4899" },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontWeight: "bold" },
-          headerTitle: "Nome do Salão",
-          headerTitleAlign: "center",
+          headerShown: false,
         }}
-      />
+      >
+        {(props) => <HomeScreen {...props} ref={homeScreenRef} />}
+      </HomeStack.Screen>
     </HomeStack.Navigator>
   )
 };
 
 const BottomTabs = () => {
+  const homeScreenRef = useRef<HomeScreenRef>(null);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -54,8 +58,29 @@ const BottomTabs = () => {
         tabBarStyle: { paddingBottom: 5, height: 60 },
         headerShown: false,
       })}
+      screenListeners={({ navigation }) => ({
+        tabPress: (e) => {
+          const routeName = e.target?.split('-')[0];
+          
+          // Handle Categories tab press - reset to categories screen
+          if (routeName === 'Categorias' && homeScreenRef.current) {
+            e.preventDefault();
+            navigation.navigate('Início');
+            homeScreenRef.current?.resetToCategories();
+          }
+          
+          // Handle Orders tab press - navigate to orders screen
+          if (routeName === 'Pedidos' && homeScreenRef.current) {
+            e.preventDefault();
+            navigation.navigate('Início');
+            homeScreenRef.current?.navigateToOrders();
+          }
+        },
+      })}
     >
-      <Tab.Screen name="Início" component={HomeStackNavigator} />
+      <Tab.Screen name="Início">
+        {(props) => <HomeStackNavigator {...props} homeScreenRef={homeScreenRef} />}
+      </Tab.Screen>
       <Tab.Screen name="Categorias" component={CategoriesScreen} />
       <Tab.Screen name="Pedidos" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
