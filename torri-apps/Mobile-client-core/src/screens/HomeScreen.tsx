@@ -683,90 +683,52 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
         <ScrollView style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
-        {/* Service Section */}
+        {/* Appointment Details */}
         <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#ec4899', marginBottom: 12 }}>
-            Serviço Selecionado
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ec4899', marginBottom: 24 }}>
+            Detalhes do Agendamento
           </Text>
-          <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Scissors size={20} color="#ec4899" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, fontWeight: '500', color: '#1f2937' }}>
-                {selectedService?.name}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Clock size={20} color="#ec4899" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 14, color: '#6b7280' }}>
-                Duração: {selectedService?.duration}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <DollarSign size={20} color="#ec4899" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 14, color: '#6b7280' }}>
-                Preço: {selectedService?.price}
-              </Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Date and Time Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#ec4899', marginBottom: 12 }}>
-            Data e Horário
-          </Text>
           <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Calendar size={20} color="#ec4899" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, color: '#1f2937' }}>
-                {formatDateForDisplay(selectedDate)}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Clock size={20} color="#ec4899" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, color: '#1f2937' }}>
-                {selectedTime}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Professional Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#ec4899', marginBottom: 12 }}>
-            Profissional
-          </Text>
-          <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ 
-              width: 48, 
-              height: 48, 
-              borderRadius: 24, 
-              overflow: 'hidden', 
-              marginRight: 12, 
-              backgroundColor: '#f3f4f6' 
-            }}>
-              <Image
-                source={{ uri: selectedProfessional?.image }}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-            </View>
-            <Text style={{ fontSize: 16, fontWeight: '500', color: '#1f2937' }}>
-              {selectedProfessional?.name}
-            </Text>
-          </View>
-        </View>
-
-        {/* Location Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#ec4899', marginBottom: 12 }}>
-            Local
-          </Text>
-          <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <MapPin size={20} color="#ec4899" style={{ marginRight: 12, marginTop: 2 }} />
+            {/* Service */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+              <Scissors size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
               <View>
-                <Text style={{ fontSize: 16, fontWeight: '500', color: '#1f2937' }}>
+                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Serviço:</Text>
+                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
+                  {selectedService?.name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Date and Time */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+              <Calendar size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
+              <View>
+                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Data e Hora:</Text>
+                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
+                  {selectedDate && selectedTime && `${formatDateForDisplay(selectedDate)} às ${selectedTime}`}
+                </Text>
+              </View>
+            </View>
+
+            {/* Professional */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+              <User size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
+              <View>
+                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Profissional:</Text>
+                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
+                  {selectedProfessional?.name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Location */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <MapPin size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
+              <View>
+                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Local:</Text>
+                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
                   {salonInfo.name}
                 </Text>
                 <Text style={{ fontSize: 14, color: '#6b7280' }}>
@@ -950,7 +912,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
               }}
             >
               <Text style={{ color: '#374151', fontSize: 16, fontWeight: 'bold' }}>
-                Adicionar ao Calendário
+                Adicionar mais um serviço
               </Text>
             </TouchableOpacity>
 
