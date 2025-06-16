@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Stat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAuthStore from '../store/authStore'; // Import auth store
 import { getUserProfile } from '../services/userService'; // Import user service
+import { getCategories } from '../services/categoryService'; // Import category service
 import { 
   Scissors,
   User, 
@@ -41,8 +42,14 @@ interface Category {
   name: string;
   backgroundColor: string;
   iconColor: string;
-  image: string;
-  icon: (props: any) => JSX.Element;
+  icon_url: string | null; // From API (was image)
+  // Add display_order if needed for sorting, otherwise it can be omitted from the interface if not used.
+  // backgroundColor, iconColor, icon can be removed or made optional if not supplied by API / used with defaults.
+  // For this step, we'll make them optional and handle defaults in the rendering step.
+  backgroundColor?: string;
+  iconColor?: string;
+  icon?: (props: any) => JSX.Element;
+  display_order?: number;
 }
 
 interface Service {
@@ -79,6 +86,11 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [observations, setObservations] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // For image carousel in service details
+
+  // State for categories
+  const [fetchedCategories, setFetchedCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   // Auth store integration
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
@@ -127,6 +139,41 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
     fetchProfile();
   }, [isAuthenticated, user, setProfile, storeLogout]);
 
+  // Define loadCategories outside useEffect so it can be called by a retry button
+  const loadCategories = async () => {
+    try {
+      setIsLoadingCategories(true);
+      setCategoryError(null);
+      const data = await getCategories();
+      if (Array.isArray(data)) {
+        const sortedData = data.sort((a, b) => {
+          if (a.display_order !== undefined && b.display_order !== undefined) {
+            if (a.display_order !== b.display_order) {
+              return a.display_order - b.display_order;
+            }
+          }
+          return a.name.localeCompare(b.name);
+        });
+        setFetchedCategories(sortedData);
+      } else {
+        console.warn("getCategories did not return an array:", data);
+        setFetchedCategories([]);
+      }
+    } catch (err: any) { // Explicitly type err
+      console.error('[HomeScreen] Error fetching categories:', err);
+      // Ensure err.message is a string
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load categories.';
+      setCategoryError(errorMessage);
+      setFetchedCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []); // Empty dependency array to run once on mount
+
 
   // Helper function to scroll to top
   const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
@@ -152,56 +199,56 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
     },
   }));
 
-  const categories: Category[] = [
-    {
-      id: 'cabelo',
-      name: 'Cabelo',
-      backgroundColor: '#fce7f3',
-      iconColor: '#ec4899',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <Scissors {...props} />,
-    },
-    {
-      id: 'barba',
-      name: 'Barba',
-      backgroundColor: '#dbeafe',
-      iconColor: '#3b82f6',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <User {...props} />,
-    },
-    {
-      id: 'unhas',
-      name: 'Unhas',
-      backgroundColor: '#f3e8ff',
-      iconColor: '#a855f7',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <Fingerprint {...props} />,
-    },
-    {
-      id: 'massoterapia',
-      name: 'Massoterapia',
-      backgroundColor: '#dcfce7',
-      iconColor: '#22c55e',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <Gift {...props} />,
-    },
-    {
-      id: 'podologia',
-      name: 'Podologia',
-      backgroundColor: '#ccfbf1',
-      iconColor: '#14b8a6',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <Footprints {...props} />,
-    },
-    {
-      id: 'unhas-gel',
-      name: 'Unhas em Gel',
-      backgroundColor: '#fee2e2',
-      iconColor: '#ef4444',
-      image: "https://via.placeholder.com/100",
-      icon: (props: any) => <Sparkles {...props} />,
-    },
-  ];
+  // const categories: Category[] = [
+  //   {
+  //     id: 'cabelo',
+  //     name: 'Cabelo',
+  //     backgroundColor: '#fce7f3',
+  //     iconColor: '#ec4899',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <Scissors {...props} />,
+  //   },
+  //   {
+  //     id: 'barba',
+  //     name: 'Barba',
+  //     backgroundColor: '#dbeafe',
+  //     iconColor: '#3b82f6',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <User {...props} />,
+  //   },
+  //   {
+  //     id: 'unhas',
+  //     name: 'Unhas',
+  //     backgroundColor: '#f3e8ff',
+  //     iconColor: '#a855f7',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <Fingerprint {...props} />,
+  //   },
+  //   {
+  //     id: 'massoterapia',
+  //     name: 'Massoterapia',
+  //     backgroundColor: '#dcfce7',
+  //     iconColor: '#22c55e',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <Gift {...props} />,
+  //   },
+  //   {
+  //     id: 'podologia',
+  //     name: 'Podologia',
+  //     backgroundColor: '#ccfbf1',
+  //     iconColor: '#14b8a6',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <Footprints {...props} />,
+  //   },
+  //   {
+  //     id: 'unhas-gel',
+  //     name: 'Unhas em Gel',
+  //     backgroundColor: '#fee2e2',
+  //     iconColor: '#ef4444',
+  //     icon_url: "https://via.placeholder.com/100",
+  //     icon: (props: any) => <Sparkles {...props} />,
+  //   },
+  // ];
 
   const servicesData: Record<string, Service[]> = {
     cabelo: [
@@ -309,10 +356,32 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
     setTimeout(() => scrollToTop(servicesScrollRef), 0);
   };
 
-  const renderCategoriesScreen = () => (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* User Info Header - Displayed on Categories Screen */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+  const renderCategoriesScreen = () => {
+    if (isLoadingCategories) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+          <ActivityIndicator size="large" color="#ec4899" />
+          <Text style={{ marginTop: 10, color: '#374151' }}>Carregando categorias...</Text>
+        </View>
+      );
+    }
+
+    if (categoryError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16, backgroundColor: 'white' }}>
+          <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>Erro ao carregar categorias:</Text>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{categoryError}</Text>
+          <TouchableOpacity onPress={loadCategories} style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#ec4899', borderRadius: 8 }}>
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>Tentar Novamente</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+        {/* User Info Header - Displayed on Categories Screen */}
+        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={styles.headerContainer}>
           <View>
             <Text style={styles.headerWelcome}>Bem-vindo(a)!</Text>
@@ -344,17 +413,30 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
           Nossos Serviços
         </Text>
 
+        {fetchedCategories.length === 0 && !isLoadingCategories && !categoryError && (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 50 }}>
+            <Text style={{ color: '#6b7280', fontSize: 16 }}>Nenhuma categoria encontrada.</Text>
+          </View>
+        )}
+
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-          {categories.map((category) => (
+          {fetchedCategories.map((category) => (
             <TouchableOpacity
               key={category.id}
               style={{ 
                 width: '47%',
-                backgroundColor: category.backgroundColor,
+                backgroundColor: '#FFFFFF', // White background for cards
                 borderRadius: 12,
                 padding: 16,
                 alignItems: 'center',
-                marginBottom: 16
+                marginBottom: 16,
+                borderWidth: 1, // Add a border
+                borderColor: '#E5E7EB', // Light gray border color
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 }, // Subtle shadow
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+                elevation: 1 // For Android
               }}
               activeOpacity={0.7}
               onPress={() => handleCategoryClick(category)}
@@ -371,20 +453,14 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.25,
                   shadowRadius: 3.84,
-                  elevation: 5
+                  elevation: 5,
+                  backgroundColor: '#f3f4f6' // Fallback background for image
                 }}>
                   <Image
-                    source={{ uri: category.image }}
+                    source={{ uri: category.icon_url || 'https://via.placeholder.com/100' }}
                     style={{ width: '100%', height: '100%' }}
                     resizeMode="cover"
                   />
-                </View>
-                <View style={{ 
-                  position: 'absolute', 
-                  bottom: 8, 
-                  right: 8 
-                }}>
-                  {category.icon({ size: 32, color: category.iconColor })}
                 </View>
               </View>
               <Text style={{ 
@@ -402,7 +478,8 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
         </ScrollView>
       </View>
     </View>
-  );
+    )
+  };
 
   const renderServicesScreen = () => (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
