@@ -47,7 +47,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
     setProfile: state.setProfile,
   }));
 
-  console.log('[ProfileScreen] Rendering with user data from store:', JSON.stringify(storeUser, null, 2));
+  // console.log('[ProfileScreen] Rendering with user data from store:', JSON.stringify(storeUser, null, 2)); // Removed log
 
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
 
@@ -340,10 +340,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
             color: '#1f2937', 
             marginBottom: 4 
           }}>
-            {storeUser?.fullName || 'Nome não disponível'}
+            {String(storeUser?.fullName || 'Nome não disponível')}
           </Text>
           <Text style={{ fontSize: 16, color: '#6b7280' }}>
-            {storeUser?.email || 'Email não disponível'}
+            {String(storeUser?.email || 'Email não disponível')}
           </Text>
         </View>
 
@@ -370,7 +370,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>Nome</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {storeUser?.fullName || 'Não informado'}
+                    {String(storeUser?.fullName || 'Não informado')}
                   </Text>
                 </View>
               </View>
@@ -381,7 +381,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>E-mail</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {storeUser?.email || 'Não informado'}
+                    {String(storeUser?.email || 'Não informado')}
                   </Text>
                 </View>
               </View>
@@ -394,7 +394,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>Telefone</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {storeUser?.phone_number || 'Não informado'}
+                    {String(storeUser?.phone_number || 'Não informado')}
                   </Text>
                 </View>
               </View>
@@ -405,7 +405,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   <View>
                     <Text style={{ fontSize: 14, color: '#6b7280' }}>Perfil</Text>
                     <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                      {storeUser.role}
+                      {String(storeUser.role)}
                     </Text>
                   </View>
                 </View>
