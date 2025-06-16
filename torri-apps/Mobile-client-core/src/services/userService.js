@@ -1,4 +1,5 @@
 import apiClient from '../config/api'; // Path to the configured Axios instance
+import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // Corrected import path
 
 /**
  * Fetches the current authenticated user's profile.
@@ -14,7 +15,9 @@ export const getUserProfile = async () => {
     // For now, hardcoding '/users/me' is safer if such a constant isn't available.
     // const profilePath = API_ENDPOINTS.USERS ? `${API_ENDPOINTS.USERS}/me` : '/users/me';
 
-    const response = await apiClient.get('/users/me');
+    // Use the USERS constant and append /me as per standard practice for a "current user" endpoint.
+    // The backend route for /users/me is GET /users/me, and API_ENDPOINTS.USERS is /api/v1/users
+    const response = await apiClient.get(`${API_ENDPOINTS.USERS}/me`);
     return response.data; // The backend returns the user profile object directly
   } catch (error) {
     if (error.response) {
