@@ -7,8 +7,11 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  Image, // Added for photo display
+  StyleSheet, // Added for styles
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // For potential photo URL construction
 import {
   User,
   Mail,
@@ -17,6 +20,7 @@ import {
   HelpCircle,
   LogOut,
 } from 'lucide-react-native';
+import useAuthStore from '../store/authStore'; // Import the auth store
 
 // Phone icon component (since lucide-react-native doesn't have a good phone icon)
 const PhoneIcon = ({ size = 20, color = "#6b7280" }) => (
@@ -29,32 +33,80 @@ interface ProfileScreenProps {
   onLogout: () => void;
 }
 
-interface UserProfile {
-  name: string;
+// Updated UserProfile interface for form editing
+interface EditableUserProfile {
+  fullName: string; // Changed from name to fullName to match storeUser
   email: string;
-  phone: string;
+  phone_number: string; // Changed from phone to phone_number
+  // photo_path could be part of editing in a more advanced version
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
+  const { user: storeUser, setProfile: updateStoreProfile } = useAuthStore((state) => ({ // get setProfile for updates
+    user: state.user,
+    setProfile: state.setProfile,
+  }));
+
+  console.log('[ProfileScreen] Rendering with user data from store:', JSON.stringify(storeUser, null, 2));
+
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'João Silva',
-    email: 'joao@email.com',
-    phone: '(11) 99999-9999',
+
+  // editData state now uses EditableUserProfile and is initialized from storeUser
+  const [editData, setEditData] = useState<EditableUserProfile>({
+    fullName: storeUser?.fullName || '',
+    email: storeUser?.email || '',
+    phone_number: storeUser?.phone_number || '',
   });
 
-  // Temporary state for editing
-  const [editData, setEditData] = useState<UserProfile>(userProfile);
+  // Effect to update editData when storeUser changes (e.g., after initial fetch or if updated elsewhere)
+  React.useEffect(() => {
+    if (storeUser) {
+      setEditData({
+        fullName: storeUser.fullName || '',
+        email: storeUser.email || '',
+        phone_number: storeUser.phone_number || '',
+      });
+    }
+  }, [storeUser]);
 
-  const handleUpdateProfile = () => {
-    if (!editData.name || !editData.email || !editData.phone) {
+  const handleUpdateProfile = async () => { // Made async for potential API call
+    if (!editData.fullName || !editData.email || !editData.phone_number) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
     
-    setUserProfile(editData);
+    // Here, you would typically call an API to update the user's profile on the backend
+    // For now, we'll just update the local Zustand store as if it were successful.
+    // This simulates the frontend part of the update.
+    // The actual API call to PUT /api/v1/users/{user_id} or /api/v1/users/me would be needed.
+
+    // Create a partial user object with only the fields that are being updated
+    const updatedProfileData = {
+        // id: storeUser?.id, // Important if API needs it
+        full_name: editData.fullName,
+        email: editData.email, // Assuming email can be updated, though often it's fixed or has a separate flow
+        phone_number: editData.phone_number,
+        // Include other fields from storeUser that are not part of editData but should be preserved
+        role: storeUser?.role,
+        is_active: storeUser?.is_active,
+        photo_path: storeUser?.photo_path, // Preserve existing photo path
+        // id is crucial and should come from storeUser.id
+    };
+
+    // Update the Zustand store. The store's setProfile will handle merging.
+    // Note: setProfile in authStore is designed to merge, so we pass the changed fields.
+    // However, for a real update, we'd likely pass just { fullName, email, phone_number } to an API,
+    // then on success, either re-fetch /users/me or have the API return the full updated user.
+    // For this simulation, we update the store directly with the intended changes.
+    if (storeUser?.id) { // Ensure user id exists
+        await updateStoreProfile({
+            ...storeUser, // spread existing store user to keep id, role etc.
+            ...updatedProfileData // apply changes from edit form
+        });
+    }
+
     setCurrentView('profile');
-    Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+    Alert.alert('Sucesso', 'Perfil atualizado (localmente).'); // Changed message
   };
 
   const handleLogoutPress = () => {
@@ -131,8 +183,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
               }}
               placeholder="Seu nome completo"
-              value={editData.name}
-              onChangeText={(text) => setEditData({ ...editData, name: text })}
+            value={editData.fullName}
+            onChangeText={(text) => setEditData({ ...editData, fullName: text })}
               autoCapitalize="words"
             />
           </View>
@@ -170,8 +222,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
               }}
               placeholder="(11) 99999-9999"
-              value={editData.phone}
-              onChangeText={(text) => setEditData({ ...editData, phone: text })}
+            value={editData.phone_number}
+            onChangeText={(text) => setEditData({ ...editData, phone_number: text })}
               keyboardType="phone-pad"
             />
           </View>
@@ -232,7 +284,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               backgroundColor: 'white',
             }}
             onPress={() => {
-              setEditData(userProfile); // Reset to original data
+              // Reset editData to current storeUser state when canceling
+              if (storeUser) {
+                setEditData({
+                  fullName: storeUser.fullName || '',
+                  email: storeUser.email || '',
+                  phone_number: storeUser.phone_number || '',
+                });
+              }
               setCurrentView('profile');
             }}
           >
@@ -265,27 +324,26 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
       <View style={{ padding: 24 }}>
         {/* Profile Header */}
         <View style={{ alignItems: 'center', marginBottom: 32 }}>
-          <View style={{ 
-            width: 96, 
-            height: 96, 
-            backgroundColor: '#fce7f3', 
-            borderRadius: 48, 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            marginBottom: 16
-          }}>
-            <User size={48} color="#ec4899" />
-          </View>
+          {storeUser?.photo_path ? (
+            <Image
+              source={{ uri: storeUser.photo_path }} // Directly use if full URL, or construct if relative
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={styles.profileImagePlaceholder}>
+              <User size={48} color="#ec4899" />
+            </View>
+          )}
           <Text style={{ 
             fontSize: 24, 
             fontWeight: 'bold', 
             color: '#1f2937', 
             marginBottom: 4 
           }}>
-            {userProfile.name}
+            {storeUser?.fullName || 'Nome não disponível'}
           </Text>
           <Text style={{ fontSize: 16, color: '#6b7280' }}>
-            {userProfile.email}
+            {storeUser?.email || 'Email não disponível'}
           </Text>
         </View>
 
@@ -312,7 +370,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>Nome</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {userProfile.name}
+                    {storeUser?.fullName || 'Não informado'}
                   </Text>
                 </View>
               </View>
@@ -323,7 +381,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>E-mail</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {userProfile.email}
+                    {storeUser?.email || 'Não informado'}
                   </Text>
                 </View>
               </View>
@@ -336,10 +394,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 <View>
                   <Text style={{ fontSize: 14, color: '#6b7280' }}>Telefone</Text>
                   <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                    {userProfile.phone}
+                    {storeUser?.phone_number || 'Não informado'}
                   </Text>
                 </View>
               </View>
+              {/* Display other fields from storeUser as needed, e.g., role */}
+              {storeUser?.role && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <User size={20} color="#6b7280" style={{ marginRight: 12 }} /> {/* Placeholder icon */}
+                  <View>
+                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Perfil</Text>
+                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
+                      {storeUser.role}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -453,5 +523,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  profileImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    marginBottom: 16,
+    backgroundColor: '#e0e0e0', // Placeholder background
+  },
+  profileImagePlaceholder: {
+    width: 96,
+    height: 96,
+    backgroundColor: '#fce7f3',
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  // Add other styles if needed
+});
 
 export default ProfileScreen;

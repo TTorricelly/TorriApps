@@ -104,12 +104,14 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
     const fetchProfile = async () => {
       // Check if user is authenticated and if detailed profile info (e.g., phone_number) is missing
       if (isAuthenticated && user && !user.phone_number) {
+        console.log('[HomeScreen] Attempting to fetch profile. isAuthenticated:', isAuthenticated, 'User from store:', JSON.stringify(user, null, 2));
         setIsProfileLoading(true);
         try {
-          const profileData = await getUserProfile();
-          setProfile(profileData); // Update store with detailed profile
+          const rawProfileData = await getUserProfile();
+          console.log('[HomeScreen] Profile data fetched successfully (raw):', JSON.stringify(rawProfileData, null, 2));
+          setProfile(rawProfileData); // Update store with detailed profile
         } catch (error) {
-          console.error("HomeScreen: Failed to fetch user profile", error);
+          console.error('[HomeScreen] Error fetching profile:', error);
           Alert.alert("Erro de Perfil", "Não foi possível carregar os detalhes do seu perfil.");
           // Optional: Handle specific errors, e.g., 401 could trigger logout
           // The Axios interceptor should ideally handle global 401s.

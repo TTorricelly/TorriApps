@@ -69,11 +69,16 @@ const useAuthStore = create((set, get) => ({
 
   // Action to update user profile data from /users/me endpoint
   setProfile: async (profileData) => {
+    console.log('[authStore] setProfile called with profileData:', JSON.stringify(profileData, null, 2));
     try {
       // Merge new profile data with existing user data (especially from JWT)
       // Ensure essential fields from JWT (like id, email, role) are not overwritten if not present in profileData
       // and that profileData (like phone_number, photo_path) is added/updated.
+
+      // Get current user data for logging and merging
       const currentUserData = get().user;
+      console.log('[authStore] Current user state before setProfile merge:', JSON.stringify(currentUserData, null, 2));
+
       const updatedUserData = {
         ...currentUserData, // existing data from JWT
         ...profileData,     // data from /users/me
@@ -81,15 +86,22 @@ const useAuthStore = create((set, get) => ({
         email: profileData.email || currentUserData?.email, // Prioritize email from profile data
       };
 
+      // Log the data that will be set
+      console.log('[authStore] New user state after setProfile merge (before setting to AsyncStorage and state):', JSON.stringify(updatedUserData, null, 2));
+
       // Persist the updated user data
       await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(updatedUserData));
 
-      set((state) => ({
-        user: updatedUserData,
+      set((state) => {
+        // This log is tricky because `set` doesn't immediately give you the newState object
+        // to log directly here in the same way. We've already logged updatedUserData which is what user will become.
+        // For direct confirmation of what set actually does, you'd typically log outside or use `subscribe`.
+        // However, `updatedUserData` is what's being set.
+        return { user: updatedUserData };
         // isLoading might be set to false here if a global profile loading state is used
-      }));
+      });
     } catch (error) {
-      console.error("Failed to set profile data in store:", error);
+      console.error("[authStore] Failed to set profile data in store:", error);
       // Decide if we need to do anything else on error, e.g., partial update or nothing
     }
   },
