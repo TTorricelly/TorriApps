@@ -18,28 +18,17 @@ import {
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
+  onNavigateToCreateAccount: () => void;
 }
 
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  phone: string;
-}
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ 
+  onLoginSuccess, 
+  onNavigateToCreateAccount 
+}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showRegister, setShowRegister] = useState(false);
-  const [registerData, setRegisterData] = useState<RegisterData>({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-  });
 
   const handleLogin = () => {
     if (email && password) {
@@ -54,24 +43,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     onLoginSuccess();
   };
 
-  const handleRegister = () => {
-    if (
-      registerData.name &&
-      registerData.email &&
-      registerData.password &&
-      registerData.confirmPassword &&
-      registerData.phone
-    ) {
-      if (registerData.password === registerData.confirmPassword) {
-        setShowRegister(false);
-        onLoginSuccess();
-      } else {
-        Alert.alert('Erro', 'As senhas não coincidem!');
-      }
-    } else {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-    }
-  };
 
   const renderLoginForm = () => (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
@@ -290,199 +261,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     </ScrollView>
   );
 
-  const renderRegisterForm = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={{ padding: 24 }}>
-        {/* Header Text */}
-        <View style={{ marginBottom: 24, alignItems: 'center' }}>
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: 'bold', 
-            color: '#1f2937', 
-            marginBottom: 8 
-          }}>
-            Criar nova conta
-          </Text>
-          <Text style={{ fontSize: 16, color: '#6b7280', textAlign: 'center' }}>
-            Preencha os dados para se cadastrar
-          </Text>
-        </View>
-
-        {/* Name Field */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ 
-            fontSize: 14, 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: 8 
-          }}>
-            Nome completo
-          </Text>
-          <TextInput
-            style={{
-              width: '100%',
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              fontSize: 16,
-              backgroundColor: 'white',
-            }}
-            placeholder="Seu nome completo"
-            value={registerData.name}
-            onChangeText={(text) => setRegisterData({ ...registerData, name: text })}
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Email Field */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ 
-            fontSize: 14, 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: 8 
-          }}>
-            E-mail
-          </Text>
-          <TextInput
-            style={{
-              width: '100%',
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              fontSize: 16,
-              backgroundColor: 'white',
-            }}
-            placeholder="seu@email.com"
-            value={registerData.email}
-            onChangeText={(text) => setRegisterData({ ...registerData, email: text })}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        {/* Phone Field */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ 
-            fontSize: 14, 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: 8 
-          }}>
-            Telefone
-          </Text>
-          <TextInput
-            style={{
-              width: '100%',
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              fontSize: 16,
-              backgroundColor: 'white',
-            }}
-            placeholder="(11) 99999-9999"
-            value={registerData.phone}
-            onChangeText={(text) => setRegisterData({ ...registerData, phone: text })}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        {/* Password Field */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ 
-            fontSize: 14, 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: 8 
-          }}>
-            Senha
-          </Text>
-          <TextInput
-            style={{
-              width: '100%',
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              fontSize: 16,
-              backgroundColor: 'white',
-            }}
-            placeholder="Mínimo 6 caracteres"
-            value={registerData.password}
-            onChangeText={(text) => setRegisterData({ ...registerData, password: text })}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        {/* Confirm Password Field */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ 
-            fontSize: 14, 
-            fontWeight: '500', 
-            color: '#374151', 
-            marginBottom: 8 
-          }}>
-            Confirmar senha
-          </Text>
-          <TextInput
-            style={{
-              width: '100%',
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              fontSize: 16,
-              backgroundColor: 'white',
-            }}
-            placeholder="Digite a senha novamente"
-            value={registerData.confirmPassword}
-            onChangeText={(text) => setRegisterData({ ...registerData, confirmPassword: text })}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        {/* Register Button */}
-        <TouchableOpacity
-          style={{
-            width: '100%',
-            paddingVertical: 16,
-            backgroundColor: '#ec4899',
-            borderRadius: 12,
-            alignItems: 'center',
-            marginBottom: 24,
-          }}
-          onPress={handleRegister}
-        >
-          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-            Criar conta
-          </Text>
-        </TouchableOpacity>
-
-        {/* Register Help */}
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ color: '#6b7280', fontSize: 14, textAlign: 'center' }}>
-            Ao criar uma conta, você aceita nossos{' '}
-            <Text style={{ color: '#ec4899', fontWeight: '500' }}>
-              Termos de Uso
-            </Text>
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
@@ -499,49 +277,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             Nome do Salão
           </Text>
           <View style={{ marginTop: 12, alignItems: 'center' }}>
-            {!showRegister ? (
-              <>
-                <Text style={{ 
-                  fontSize: 16, 
-                  color: '#fce7f3', 
-                  textAlign: 'center',
-                  marginBottom: 4
-                }}>
-                  Acabou de baixar o app?
-                </Text>
-                <TouchableOpacity onPress={() => setShowRegister(true)}>
-                  <Text style={{ 
-                    fontSize: 18, 
-                    color: 'white', 
-                    fontWeight: 'bold',
-                    textDecorationLine: 'underline'
-                  }}>
-                    Criar conta
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={{ 
-                  fontSize: 16, 
-                  color: '#fce7f3', 
-                  textAlign: 'center',
-                  marginBottom: 4
-                }}>
-                  Já tem uma conta?
-                </Text>
-                <TouchableOpacity onPress={() => setShowRegister(false)}>
-                  <Text style={{ 
-                    fontSize: 18, 
-                    color: 'white', 
-                    fontWeight: 'bold',
-                    textDecorationLine: 'underline'
-                  }}>
-                    Fazer login
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <Text style={{ 
+              fontSize: 16, 
+              color: '#fce7f3', 
+              textAlign: 'center',
+              marginBottom: 4
+            }}>
+              Acabou de baixar o app?
+            </Text>
+            <TouchableOpacity onPress={onNavigateToCreateAccount}>
+              <Text style={{ 
+                fontSize: 18, 
+                color: 'white', 
+                fontWeight: 'bold',
+                textDecorationLine: 'underline'
+              }}>
+                Criar conta
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -554,7 +307,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         borderTopRightRadius: 24,
         marginTop: 16,
       }}>
-        {showRegister ? renderRegisterForm() : renderLoginForm()}
+        {renderLoginForm()}
       </View>
     </View>
   );

@@ -14,6 +14,10 @@ interface HomeScreenRef {
   navigateToOrders: () => void;
 }
 
+interface MainAppNavigatorProps {
+  onLogout: () => void;
+}
+
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 
@@ -32,7 +36,7 @@ function HomeStackNavigator({ homeScreenRef }: { homeScreenRef: React.RefObject<
   )
 };
 
-const BottomTabs = () => {
+const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
   const homeScreenRef = useRef<HomeScreenRef>(null);
 
   return (
@@ -83,7 +87,9 @@ const BottomTabs = () => {
       </Tab.Screen>
       <Tab.Screen name="Categorias" component={CategoriesScreen} />
       <Tab.Screen name="Pedidos" component={AppointmentsScreen} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
+      <Tab.Screen name="Perfil">
+        {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 };
