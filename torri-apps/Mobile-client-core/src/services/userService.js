@@ -34,3 +34,30 @@ export const getUserProfile = async () => {
     }
   }
 };
+
+/**
+ * Updates the current authenticated user's profile.
+ * @param {object} profileData - The profile data to update (fullName, email, phone_number, etc.)
+ * @returns {Promise<object>} The updated user profile data.
+ * @throws {Error} If the request fails or the server returns an error.
+ */
+export const updateUserProfile = async (profileData) => {
+  try {
+    // Make PUT request to update user profile
+    const response = await apiClient.put(`${API_ENDPOINTS.USERS}/me`, profileData);
+    return response.data; // The backend returns the updated user profile object
+  } catch (error) {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      const errorMessage = error.response.data.detail || error.response.data.message || `Failed to update profile: ${error.response.status}`;
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      // The request was made but no response was received
+      throw new Error('Failed to update profile: No response from server.');
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      throw new Error(`Failed to update profile: ${error.message}`);
+    }
+  }
+};

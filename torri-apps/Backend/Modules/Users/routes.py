@@ -46,6 +46,40 @@ def read_users_me(
     """
     return current_user
 
+@router.put("/me", response_model=UserSchema)
+def update_current_user_profile(
+    user_update_data: UserUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user_from_db)]
+):
+    """
+    Update current authenticated user's profile.
+    Allows any authenticated user to update their own information.
+    Note: Users cannot change their own role or is_active status for security.
+    """
+    # For security, prevent users from changing their own role or active status
+    # Create a new UserUpdate object with only the safe fields
+    # Don't include role and is_active at all (don't even set them to None)
+    safe_update_data = UserUpdate(
+        email=user_update_data.email,
+        full_name=user_update_data.full_name,
+        phone_number=user_update_data.phone_number,
+        date_of_birth=user_update_data.date_of_birth,
+        hair_type=user_update_data.hair_type,
+        gender=user_update_data.gender
+        # role and is_active are intentionally omitted
+    )
+    
+    updated_user = user_services.update_user(
+        db, user_id=current_user.id, user_data=safe_update_data
+    )
+    if updated_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User profile update failed"
+        )
+    return updated_user
+
 @router.get("/", response_model=List[UserSchema]) # Updated schema
 def read_users_in_tenant( # Function name might be misleading now, consider renaming to read_all_users
     db: Annotated[Session, Depends(get_db)],

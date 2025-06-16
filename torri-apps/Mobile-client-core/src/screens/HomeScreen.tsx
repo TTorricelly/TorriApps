@@ -399,13 +399,6 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
           ))}
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={storeLogout} // Use the logout action from the store
-        >
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
@@ -1108,21 +1101,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#f8bbd0', // Even lighter pink or white
     marginTop: 2,
-  },
-  logoutButton: {
-    marginVertical: 20,
-    marginHorizontal: 16, // Match padding of ScrollView
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#ef4444', // Red color for logout
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   // ... (keep other styles if any, or add new ones as needed)
 });
