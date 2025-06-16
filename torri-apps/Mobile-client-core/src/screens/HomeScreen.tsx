@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -64,6 +64,19 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const [observations, setObservations] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // ScrollView refs for each screen
+  const categoriesScrollRef = useRef<ScrollView>(null);
+  const servicesScrollRef = useRef<ScrollView>(null);
+  const serviceDetailsScrollRef = useRef<ScrollView>(null);
+  const schedulingScrollRef = useRef<ScrollView>(null);
+  const confirmationScrollRef = useRef<ScrollView>(null);
+  const ordersScrollRef = useRef<ScrollView>(null);
+
+  // Helper function to scroll to top
+  const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
     resetToCategories: () => {
@@ -74,9 +87,11 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
       setSelectedProfessional(null);
       setSelectedTime(null);
       setObservations('');
+      setTimeout(() => scrollToTop(categoriesScrollRef), 0);
     },
     navigateToOrders: () => {
       setCurrentScreen('orders');
+      setTimeout(() => scrollToTop(ordersScrollRef), 0);
     },
   }));
 
@@ -234,6 +249,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
     setSelectedCategory(category);
     setCurrentScreen('services');
     setSelectedService(null);
+    setTimeout(() => scrollToTop(servicesScrollRef), 0);
   };
 
   const renderCategoriesScreen = () => (
@@ -249,7 +265,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 }}>
+        <ScrollView ref={categoriesScrollRef} style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 }}>
         <Text style={{
           fontSize: 30,
           fontWeight: 'bold',
@@ -324,7 +340,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Header - Extends to top of screen */}
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen('categories')} style={{ marginRight: 16 }}>
+          <TouchableOpacity onPress={() => {
+            setCurrentScreen('categories');
+            setTimeout(() => scrollToTop(categoriesScrollRef), 0);
+          }} style={{ marginRight: 16 }}>
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
           <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
@@ -335,7 +354,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Services List */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
+        <ScrollView ref={servicesScrollRef} style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
           {servicesData[selectedCategory?.id || '']?.map((service) => (
             <TouchableOpacity
               key={service.id}
@@ -395,6 +414,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
             onPress={() => {
               if (selectedService) {
                 setCurrentScreen('service-details');
+                setTimeout(() => scrollToTop(serviceDetailsScrollRef), 0);
               }
             }}
           >
@@ -412,7 +432,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Header - Extends to top of screen */}
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen('services')} style={{ marginRight: 16 }}>
+          <TouchableOpacity onPress={() => {
+            setCurrentScreen('services');
+            setTimeout(() => scrollToTop(servicesScrollRef), 0);
+          }} style={{ marginRight: 16 }}>
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
           <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white', flex: 1 }} numberOfLines={1}>
@@ -423,7 +446,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, paddingBottom: 100 }}>
+        <ScrollView ref={serviceDetailsScrollRef} style={{ flex: 1, paddingBottom: 100 }}>
           {/* Image Carousel */}
           <View style={{ padding: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
@@ -509,7 +532,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
               borderRadius: 12,
               alignItems: 'center'
             }}
-            onPress={() => setCurrentScreen('scheduling')}
+            onPress={() => {
+              setCurrentScreen('scheduling');
+              setTimeout(() => scrollToTop(schedulingScrollRef), 0);
+            }}
           >
             <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
               Continuar
@@ -525,7 +551,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Header - Extends to top of screen */}
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen('service-details')} style={{ marginRight: 16 }}>
+          <TouchableOpacity onPress={() => {
+            setCurrentScreen('service-details');
+            setTimeout(() => scrollToTop(serviceDetailsScrollRef), 0);
+          }} style={{ marginRight: 16 }}>
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
           <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
@@ -536,7 +565,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, paddingBottom: 100 }}>
+        <ScrollView ref={schedulingScrollRef} style={{ flex: 1, paddingBottom: 100 }}>
           {/* Date Selection */}
           <View style={{ padding: 16 }}>
             <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
@@ -654,6 +683,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
             onPress={() => {
               if (selectedDate && selectedProfessional && selectedTime) {
                 setCurrentScreen('confirmation');
+                setTimeout(() => scrollToTop(confirmationScrollRef), 0);
               }
             }}
           >
@@ -671,7 +701,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Header - Extends to top of screen */}
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen('scheduling')} style={{ marginRight: 16 }}>
+          <TouchableOpacity onPress={() => {
+            setCurrentScreen('scheduling');
+            setTimeout(() => scrollToTop(schedulingScrollRef), 0);
+          }} style={{ marginRight: 16 }}>
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'white' }}>
@@ -682,7 +715,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
+        <ScrollView ref={confirmationScrollRef} style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
         {/* Appointment Details */}
         <View style={{ marginBottom: 24 }}>
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ec4899', marginBottom: 24 }}>
@@ -786,7 +819,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
             borderRadius: 12,
             alignItems: 'center'
           }}
-          onPress={() => setCurrentScreen('orders')}
+          onPress={() => {
+            setCurrentScreen('orders');
+            setTimeout(() => scrollToTop(ordersScrollRef), 0);
+          }}
         >
           <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
             Confirmar Agendamento
@@ -810,7 +846,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView style={{ flex: 1, paddingBottom: 100 }}>
+        <ScrollView ref={ordersScrollRef} style={{ flex: 1, paddingBottom: 100 }}>
         <View style={{ padding: 16, alignItems: 'center' }}>
           {/* Success Icon */}
           <View style={{ 
@@ -931,6 +967,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
                 setSelectedProfessional(null);
                 setSelectedTime(null);
                 setObservations('');
+                setTimeout(() => scrollToTop(categoriesScrollRef), 0);
               }}
             >
               <Text style={{ color: '#374151', fontSize: 16, fontWeight: 'bold' }}>
