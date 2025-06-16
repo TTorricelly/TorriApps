@@ -1,8 +1,10 @@
-import React, { useState, forwardRef, useImperativeHandle, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar } from 'react-native';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; // Added useEffect
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar, ActivityIndicator, Alert, StyleSheet } from 'react-native'; // Added ActivityIndicator, Alert, StyleSheet
 import { SafeAreaView } from 'react-native-safe-area-context';
+import useAuthStore from '../store/authStore'; // Import auth store
+import { getUserProfile } from '../services/userService'; // Import user service
 import { 
-  Scissors, 
+  Scissors,
   User, 
   Fingerprint, 
   Gift, 
@@ -10,15 +12,29 @@ import {
   Sparkles, 
   ArrowLeft, 
   Clock, 
-  DollarSign, 
+  DollarSign,
   MapPin,
   Calendar,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react-native';
 
 interface HomeScreenProps {
-  navigation: any;
+  navigation: any; // This is usually provided by react-navigation
+  // onLogout?: () => void; // Optional: if logout is handled via props passed from navigator
 }
+
+// Define a type for the user object from the store for better type safety
+type UserType = {
+  id?: string;
+  email?: string;
+  fullName?: string;
+  role?: string;
+  isActive?: boolean;
+  phone_number?: string; // Example of a field fetched by /users/me
+  photo_path?: string;   // Example of a field fetched by /users/me
+  // Add other fields that your user object might contain
+} | null;
+
 
 interface Category {
   id: string;
@@ -62,7 +78,17 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [observations, setObservations] = useState('');
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // For image carousel in service details
+
+  // Auth store integration
+  const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
+    user: state.user as UserType, // Cast user to UserType
+    isAuthenticated: state.isAuthenticated,
+    setProfile: state.setProfile,
+    logout: state.logout,
+  }));
+
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // ScrollView refs for each screen
   const categoriesScrollRef = useRef<ScrollView>(null);
@@ -72,12 +98,40 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const confirmationScrollRef = useRef<ScrollView>(null);
   const ordersScrollRef = useRef<ScrollView>(null);
 
+
+  // Effect to fetch user profile details when authenticated
+  useEffect(() => {
+    const fetchProfile = async () => {
+      // Check if user is authenticated and if detailed profile info (e.g., phone_number) is missing
+      if (isAuthenticated && user && !user.phone_number) {
+        setIsProfileLoading(true);
+        try {
+          const profileData = await getUserProfile();
+          setProfile(profileData); // Update store with detailed profile
+        } catch (error) {
+          console.error("HomeScreen: Failed to fetch user profile", error);
+          Alert.alert("Erro de Perfil", "Não foi possível carregar os detalhes do seu perfil.");
+          // Optional: Handle specific errors, e.g., 401 could trigger logout
+          // The Axios interceptor should ideally handle global 401s.
+          // if (error.message.includes("401")) { // Simplistic check
+          //   storeLogout(); // Logout if token is invalid/expired
+          // }
+        } finally {
+          setIsProfileLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [isAuthenticated, user, setProfile, storeLogout]);
+
+
   // Helper function to scroll to top
   const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
-  // Expose methods to parent component via ref
+  // Expose methods to parent component via ref (MainAppNavigator)
   useImperativeHandle(ref, () => ({
     resetToCategories: () => {
       setCurrentScreen('categories');
@@ -91,6 +145,7 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
     },
     navigateToOrders: () => {
       setCurrentScreen('orders');
+      // Potentially pass some order confirmation data to this screen in the future
       setTimeout(() => scrollToTop(ordersScrollRef), 0);
     },
   }));
@@ -254,12 +309,23 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
 
   const renderCategoriesScreen = () => (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Salon Header - Extends to top of screen */}
+      {/* User Info Header - Displayed on Categories Screen */}
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-        <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
-            Nome do Salão
-          </Text>
+        <View style={styles.headerContainer}>
+          <View>
+            <Text style={styles.headerWelcome}>Bem-vindo(a)!</Text>
+            {isProfileLoading && !user?.fullName ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.headerUserName}>
+                {user?.fullName || 'Carregando nome...'}
+              </Text>
+            )}
+            <Text style={styles.headerUserEmail}>
+              {user?.email || 'Carregando email...'}
+            </Text>
+          </View>
+          {/* Placeholder for a potential profile picture or icon */}
         </View>
       </SafeAreaView>
 
@@ -330,6 +396,14 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={storeLogout} // Use the logout action from the store
+        >
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
@@ -1006,6 +1080,49 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
   }
 
   return renderCategoriesScreen();
+});
+
+const styles = StyleSheet.create({
+  // Header styles for user info
+  headerContainer: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerWelcome: {
+    fontSize: 16,
+    color: '#fce7f3', // Lighter pink for "Bem-vindo(a)!"
+  },
+  headerUserName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 2,
+  },
+  headerUserEmail: {
+    fontSize: 14,
+    color: '#f8bbd0', // Even lighter pink or white
+    marginTop: 2,
+  },
+  logoutButton: {
+    marginVertical: 20,
+    marginHorizontal: 16, // Match padding of ScrollView
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#ef4444', // Red color for logout
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // ... (keep other styles if any, or add new ones as needed)
 });
 
 export default HomeScreen;

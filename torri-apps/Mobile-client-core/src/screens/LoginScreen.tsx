@@ -7,8 +7,11 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  ActivityIndicator, // Added for loading indication
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as authService from '../services/authService'; // Adjusted import
+import useAuthStore from '../store/authStore'; // Adjusted import
 import {
   Mail,
   Lock,
@@ -23,24 +26,41 @@ interface LoginScreenProps {
 
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ 
-  onLoginSuccess, 
-  onNavigateToCreateAccount 
+  onLoginSuccess,
+  onNavigateToCreateAccount
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Added for loading state
+  const storeLogin = useAuthStore((state) => state.login); // Get the login action from the store
 
-  const handleLogin = () => {
-    if (email && password) {
-      onLoginSuccess();
-    } else {
+  const handleLogin = async () => { // Made async
+    if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const tokenData = await authService.login(email, password);
+      // The authStore's login action will handle decoding and setting user data
+      await storeLogin(tokenData);
+      // onLoginSuccess prop is likely used by the navigator to switch screens
+      onLoginSuccess();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+      Alert.alert('Falha no Login', errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSocialLogin = (provider: string) => {
-    // Simulate social login
-    onLoginSuccess();
+    // Simulate social login - This would also need to be updated
+    // For now, it might call the store's login with mock data or a social token
+    Alert.alert('Social Login', `Social login com ${provider} não implementado.`);
+    // onLoginSuccess();
   };
 
 
@@ -177,16 +197,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
           style={{
             width: '100%',
             paddingVertical: 16,
-            backgroundColor: '#ec4899',
+            backgroundColor: isLoading ? '#f8bbd0' : '#ec4899', // Change color when loading
             borderRadius: 12,
             alignItems: 'center',
             marginBottom: 24,
           }}
           onPress={handleLogin}
+          disabled={isLoading} // Disable button when loading
         >
-          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-            Entrar
-          </Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+              Entrar
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Divider */}
