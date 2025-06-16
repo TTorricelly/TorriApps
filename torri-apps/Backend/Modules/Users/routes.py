@@ -11,7 +11,8 @@ from Core.Database.dependencies import get_db
 # User services
 from Modules.Users import services as user_services
 # Auth dependencies and constants
-from Core.Auth.dependencies import get_current_user_tenant, require_role # get_current_user_tenant might need an update if it returns UserTenant model
+# Updated: get_current_user_from_db is now used for /me endpoint
+from Core.Auth.dependencies import get_current_user_from_db, require_role
 from Core.Auth.constants import UserRole
 from Core.Auth.models import User # For type hinting current_user. Updated import
 
@@ -37,9 +38,8 @@ def create_new_user(
 
 @router.get("/me", response_model=UserSchema) # Updated schema
 def read_users_me(
-    # get_current_user_tenant now effectively returns User payload data or User model based on its implementation after refactor.
-    # Assuming get_current_user_tenant returns an object compatible with UserSchema.
-    current_user: Annotated[User, Depends(get_current_user_tenant)] # Updated type
+    # Changed dependency to get_current_user_from_db
+    current_user: Annotated[User, Depends(get_current_user_from_db)]
 ):
     """
     Get current authenticated user's details.
