@@ -1,9 +1,11 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; // Added useEffect
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar, ActivityIndicator, Alert, StyleSheet } from 'react-native'; // Added ActivityIndicator, Alert, StyleSheet
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar, ActivityIndicator, Alert, StyleSheet, useWindowDimensions } from 'react-native'; // Added ActivityIndicator, Alert, StyleSheet, useWindowDimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
+import RenderHtml from 'react-native-render-html';
 import useAuthStore from '../store/authStore'; // Import auth store
 import { getUserProfile } from '../services/userService'; // Import user service
 import { getCategories, getServicesByCategory } from '../services/categoryService'; // Import category service
+import { API_BASE_URL } from '../config/environment'; // Import environment config
 import { 
   Scissors,
   User, 
@@ -104,9 +106,21 @@ const formatPrice = (priceStr: string | undefined | null) => {
   return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
 };
 
+// Helper function to construct full image URLs from relative paths
+const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
+  if (!relativePath) return null;
+  // If it's already a full URL, return as is
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath;
+  }
+  // Construct full URL by prepending base URL from environment config
+  return `${API_BASE_URL}${relativePath}`;
+};
+
 // Define the inner component function with explicit types for props and ref
 const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (props, ref) => {
   const { navigation } = props; // Destructure navigation here
+  const { width } = useWindowDimensions(); // For HTML renderer
 
   // All existing state, useEffect, helper functions, useImperativeHandle, and render logic
   // from the original HomeScreen component body goes here.
@@ -228,6 +242,9 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
           description: service.description,
           category_id: service.category_id,
           image_liso: service.image_liso,
+          image_ondulado: service.image_ondulado,
+          image_cacheado: service.image_cacheado,
+          image_crespo: service.image_crespo,
         })));
       } else {
         console.warn("getServicesByCategory did not return an array:", data);
@@ -695,14 +712,39 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
 
     const imagesForCarousel = [];
-    if (selectedService?.image_liso) imagesForCarousel.push({ src: selectedService.image_liso, caption: "Liso" });
-    if (selectedService?.image_ondulado) imagesForCarousel.push({ src: selectedService.image_ondulado, caption: "Ondulado" });
-    if (selectedService?.image_cacheado) imagesForCarousel.push({ src: selectedService.image_cacheado, caption: "Cacheado" });
-    if (selectedService?.image_crespo) imagesForCarousel.push({ src: selectedService.image_crespo, caption: "Crespo" });
-
-    if (imagesForCarousel.length === 0) {
-        imagesForCarousel.push({ src: 'https://via.placeholder.com/300', caption: selectedService?.name || "Serviço" });
+    if (selectedService?.image_liso) {
+      const fullUrl = getFullImageUrl(selectedService.image_liso);
+      if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Liso" });
     }
+    if (selectedService?.image_ondulado) {
+      const fullUrl = getFullImageUrl(selectedService.image_ondulado);
+      if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Ondulado" });
+    }
+    if (selectedService?.image_cacheado) {
+      const fullUrl = getFullImageUrl(selectedService.image_cacheado);
+      if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Cacheado" });
+    }
+    if (selectedService?.image_crespo) {
+      const fullUrl = getFullImageUrl(selectedService.image_crespo);
+      if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Crespo" });
+    }
+
+    const hasImages = imagesForCarousel.length > 0;
+    
+    // Debug logging
+    console.log('[HomeScreen] Service images debug:', {
+      serviceName: selectedService?.name,
+      hasImages,
+      imageCount: imagesForCarousel.length,
+      fullImageUrls: imagesForCarousel.map(img => img.src),
+      originalPaths: {
+        image_liso: selectedService?.image_liso,
+        image_ondulado: selectedService?.image_ondulado,
+        image_cacheado: selectedService?.image_cacheado,
+        image_crespo: selectedService?.image_crespo,
+      },
+      baseUrl: API_BASE_URL,
+    });
 
     const descriptionText = selectedService?.description || "Descrição não disponível.";
 
@@ -726,78 +768,80 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
         <ScrollView ref={serviceDetailsScrollRef} style={{ flex: 1, paddingBottom: 100 }}>
-          {/* Image Carousel */}
-          <View style={{ padding: 16 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
-              {imagesForCarousel.map((image, index) => (
-                <View key={index} style={{ width: 300, alignItems: 'center', marginRight: 16 }}>
-                  <View style={{ 
-                    width: 128, 
-                    height: 128, 
-                    borderRadius: 12, 
-                    overflow: 'hidden', 
-                    backgroundColor: '#f3f4f6' 
-                  }}>
-                    <Image
-                      source={{ uri: image.src }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
+          {/* Image Carousel - Only show if service has images */}
+          {hasImages && (
+            <View style={{ padding: 16 }}>
+              <Text style={{ 
+                fontSize: 16, 
+                fontWeight: '600', 
+                color: '#1f2937', 
+                marginBottom: 12,
+                paddingHorizontal: 4
+              }}>
+                Exemplos para diferentes tipos de cabelo:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
+                {imagesForCarousel.map((image, index) => (
+                  <View key={index} style={{ width: 140, alignItems: 'center', marginRight: 16 }}>
+                    <View style={{ 
+                      width: 128, 
+                      height: 128, 
+                      borderRadius: 12, 
+                      overflow: 'hidden', 
+                      backgroundColor: '#f3f4f6',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3
+                    }}>
+                      <Image
+                        source={{ uri: image.src }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('Image load error:', error);
+                        }}
+                      />
+                    </View>
+                    <Text style={{ 
+                      textAlign: 'center', 
+                      marginTop: 8, 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      fontSize: 14
+                    }}>
+                      {image.caption}
+                    </Text>
                   </View>
-                  <Text style={{ 
-                    textAlign: 'center', 
-                    marginTop: 8, 
-                    fontWeight: '500', 
-                    color: '#374151' 
-                  }}>
-                    {image.caption}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Service Description */}
           <View style={{ padding: 16 }}>
             <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-              {descriptionText.split('\n').map((paragraph, index) => {
-                if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                  return (
-                    <Text key={index} style={{ 
-                      fontWeight: 'bold', 
-                      color: '#1f2937', 
-                      marginTop: 16, 
-                      marginBottom: 8,
-                      fontSize: 16
-                    }}>
-                      {paragraph.replace(/\*\*/g, '')}
-                    </Text>
-                  );
-                } else if (paragraph.startsWith('- ')) {
-                  return (
-                    <Text key={index} style={{ 
-                      color: '#6b7280', 
-                      marginLeft: 16, 
-                      marginBottom: 4,
-                      fontSize: 14
-                    }}>
-                      • {paragraph.substring(2)}
-                    </Text>
-                  );
-                } else if (paragraph.trim()) {
-                  return (
-                    <Text key={index} style={{ 
-                      color: '#6b7280', 
-                      marginBottom: 12,
-                      fontSize: 14,
-                      lineHeight: 20
-                    }}>
-                      {paragraph}
-                    </Text>
-                  );
-                }
-                return null;
-              })}
+              <RenderHtml
+                contentWidth={width - 64} // Account for padding
+                source={{ html: descriptionText }}
+                tagsStyles={{
+                  h1: { color: '#1f2937', fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+                  h2: { color: '#1f2937', fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
+                  h3: { color: '#1f2937', fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
+                  p: { color: '#6b7280', fontSize: 14, lineHeight: 20, marginBottom: 12 },
+                  strong: { fontWeight: 'bold', color: '#1f2937' },
+                  b: { fontWeight: 'bold', color: '#1f2937' },
+                  em: { fontStyle: 'italic' },
+                  i: { fontStyle: 'italic' },
+                  ul: { marginBottom: 12 },
+                  ol: { marginBottom: 12 },
+                  li: { color: '#6b7280', fontSize: 14, marginBottom: 4 },
+                  a: { color: '#ec4899', textDecorationLine: 'underline' },
+                  br: { height: 8 },
+                }}
+                systemFonts={['System']}
+              />
             </View>
           </View>
         </ScrollView>
@@ -823,7 +867,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
         </View>
       </View>
     </View>
-    )
+    );
   };
 
   const renderSchedulingScreen = () => (

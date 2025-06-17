@@ -2,7 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import SplashScreen from '../screens/Splash';
-import LoginScreen from '../screens/Login';
+import LoginScreen from '../screens/LoginScreen';
 import BottomTabs from './screens/MainAppNavigator'; 
 
 const Stack = createStackNavigator();
