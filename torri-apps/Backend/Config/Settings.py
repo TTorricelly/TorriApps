@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # API configuration
     API_V1_PREFIX: str = "/api/v1"
-    SERVER_HOST: str = "http://localhost:8000" # Base URL for serving static files etc.
+    SERVER_HOST: str = "http://localhost:8000" # Base URL for serving static files etc. - Override with SERVER_HOST env var
     
     # Schema configuration (from environment variable)
     default_schema_name: str = "public"  # Read from DEFAULT_SCHEMA_NAME env var

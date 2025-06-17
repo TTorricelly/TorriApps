@@ -2,7 +2,9 @@
 // This file handles environment-specific settings for different deployment targets
 
 const developmentConfig = {
-  API_BASE_URL: 'http://localhost:8000',
+  // Use IP address for physical devices, localhost for simulators
+  // If you need to switch back to localhost for simulator, change this to 'localhost'
+  API_BASE_URL: 'http://192.168.1.7:8000', // Use laptop's IP for physical device testing
   ENVIRONMENT: 'development',
 };
 

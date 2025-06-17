@@ -10,17 +10,22 @@ from .schemas import CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdat
 from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
 from Core.Utils.file_handler import file_handler
+from Config.Settings import settings
 
 # --- Helper Functions ---
-def _add_icon_url_to_category(category: Category, base_url: str = "http://localhost:8000") -> CategorySchema:
+def _add_icon_url_to_category(category: Category, base_url: str = None) -> CategorySchema:
     """Convert Category model to CategorySchema with icon_url."""
+    if base_url is None:
+        base_url = settings.SERVER_HOST
     category_data = CategorySchema.model_validate(category)
     if category.icon_path:
         category_data.icon_url = file_handler.get_public_url(category.icon_path, base_url)
     return category_data
 
-def _add_image_urls_to_service(service: Service, base_url: str = "http://localhost:8000") -> dict:
+def _add_image_urls_to_service(service: Service, base_url: str = None) -> dict:
     """Convert Service model to dict with image URLs."""
+    if base_url is None:
+        base_url = settings.SERVER_HOST
     service_dict = {
         'id': service.id,
         'name': service.name,

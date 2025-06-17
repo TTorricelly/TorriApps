@@ -533,7 +533,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                   backgroundColor: '#f3f4f6' // Fallback background for image
                 }}>
                   <Image
-                    source={{ uri: category.icon_url || 'https://via.placeholder.com/100' }}
+                    source={{ uri: getFullImageUrl(category.icon_url) || 'https://via.placeholder.com/100' }}
                     style={{ width: '100%', height: '100%' }}
                     resizeMode="cover"
                   />
@@ -731,20 +731,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 
     const hasImages = imagesForCarousel.length > 0;
     
-    // Debug logging
-    console.log('[HomeScreen] Service images debug:', {
-      serviceName: selectedService?.name,
-      hasImages,
-      imageCount: imagesForCarousel.length,
-      fullImageUrls: imagesForCarousel.map(img => img.src),
-      originalPaths: {
-        image_liso: selectedService?.image_liso,
-        image_ondulado: selectedService?.image_ondulado,
-        image_cacheado: selectedService?.image_cacheado,
-        image_crespo: selectedService?.image_crespo,
-      },
-      baseUrl: API_BASE_URL,
-    });
 
     const descriptionText = selectedService?.description || "Descrição não disponível.";
 
@@ -799,9 +785,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                         source={{ uri: image.src }}
                         style={{ width: '100%', height: '100%' }}
                         resizeMode="cover"
-                        onError={(error) => {
-                          console.log('Image load error:', error);
-                        }}
                       />
                     </View>
                     <Text style={{ 
