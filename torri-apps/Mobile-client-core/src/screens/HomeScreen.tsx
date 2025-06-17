@@ -1,11 +1,11 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; // Added useEffect
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, ActivityIndicator, Alert, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, ActivityIndicator, Alert, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RenderHtml from 'react-native-render-html';
-import useAuthStore from '../store/authStore'; // Import auth store
-import { getUserProfile } from '../services/userService'; // Import user service
-import { getCategories, getServicesByCategory } from '../services/categoryService'; // Import category service
-import { API_BASE_URL } from '../config/environment'; // Import environment config
+import useAuthStore from '../store/authStore';
+import { getUserProfile } from '../services/userService';
+import { getCategories, getServicesByCategory } from '../services/categoryService';
+import { API_BASE_URL } from '../config/environment';
 import { 
   Scissors,
   User, 
@@ -16,6 +16,20 @@ import {
   X,
 } from 'lucide-react-native';
 
+// Import shared types and new components
+import { 
+  UserType, 
+  Category, 
+  Service, 
+  Professional, 
+  DateOption, 
+  SalonInfo, 
+  ScreenType,
+  AppointmentState 
+} from '../types';
+import AppointmentScreen from './AppointmentScreen';
+import AppointmentConfirmationScreen from './AppointmentConfirmationScreen';
+
 interface HomeScreenProps {
   navigation: any; // This is usually provided by react-navigation
   // onLogout?: () => void; // Optional: if logout is handled via props passed from navigator
@@ -24,61 +38,6 @@ interface HomeScreenProps {
 interface HomeScreenRef {
   resetToCategories: () => void;
   navigateToOrders: () => void;
-}
-
-// Define a type for the user object from the store for better type safety
-type UserType = {
-  id?: string;
-  email?: string;
-  fullName?: string;
-  role?: string;
-  isActive?: boolean;
-  phone_number?: string; // Example of a field fetched by /users/me
-  photo_path?: string;   // Example of a field fetched by /users/me
-  // Add other fields that your user object might contain
-} | null;
-
-
-interface Category {
-  id: string;
-  name: string;
-  icon_url: string | null; // From API (was image)
-  backgroundColor?: string;
-  iconColor?: string;
-  icon?: (props: any) => JSX.Element;
-  display_order?: number;
-}
-
-interface Service {
-  id: string; // Changed from number to string for UUID
-  name: string;
-  duration_minutes: number; // Changed from duration: string
-  price: string; // Keep as string for now, formatting will be handled in UI. API returns decimal.
-  description?: string | null;
-  category_id?: string; // UUID as string
-  image_liso?: string | null;
-  image_ondulado?: string | null;
-  image_cacheado?: string | null;
-  image_crespo?: string | null;
-  // Add other fields from ServiceSchema if they will be used directly.
-}
-
-// interface ServiceDetail { // Commenting out as per plan for now // Removing entirely now
-//   images: { src: string; caption: string }[];
-//   description: string;
-// }
-
-interface Professional {
-  id: number;
-  name: string;
-  image: string;
-}
-
-interface DateOption {
-  day: string;
-  date: string;
-  month: string;
-  fullDate: string;
 }
 
 // Helper functions for formatting
@@ -111,17 +70,24 @@ const getFullImageUrl = (relativePath: string | null | undefined): string | null
 const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (props, ref) => {
   const { width } = useWindowDimensions(); // For HTML renderer
 
-  // All existing state, useEffect, helper functions, useImperativeHandle, and render logic
-  // from the original HomeScreen component body goes here.
-  const [currentScreen, setCurrentScreen] = useState('categories');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('categories');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<DateOption | null>(null);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [observations, setObservations] = useState('');
-  const [imagePopupVisible, setImagePopupVisible] = useState(false); // For image popup modal
-  const [selectedImageForPopup, setSelectedImageForPopup] = useState<string | null>(null); // Selected image URL for popup
+  const [imagePopupVisible, setImagePopupVisible] = useState(false);
+  const [selectedImageForPopup, setSelectedImageForPopup] = useState<string | null>(null);
+
+  // Create appointment state object for new components
+  const appointmentState: AppointmentState = {
+    selectedService,
+    selectedDate,
+    selectedProfessional,
+    selectedTime,
+    observations,
+  };
 
   // State for categories
   const [fetchedCategories, setFetchedCategories] = useState<Category[]>([]);
@@ -401,9 +367,14 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     "12:00", "12:30", "14:00", "14:30", "15:00", "15:30",
   ];
 
-  const salonInfo = {
+  const salonInfo: SalonInfo = {
     name: "Salão Charme & Estilo",
     address: "Rua das Palmeiras, 123 - Bairro Flores, Cidade - UF",
+  };
+
+  // Navigation helper function
+  const handleNavigate = (screen: ScreenType) => {
+    setCurrentScreen(screen);
   };
 
   const formatDateForDisplay = (date: DateOption | null): string => {
@@ -857,292 +828,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     );
   };
 
-  const renderSchedulingScreen = () => (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Header - Extends to top of screen */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-        <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => {
-            setCurrentScreen('service-details');
-            setTimeout(() => scrollToTop(serviceDetailsScrollRef), 0);
-          }} style={{ marginRight: 16 }}>
-            <ArrowLeft size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-            Agendamento
-          </Text>
-        </View>
-      </SafeAreaView>
-
-      {/* Main Content */}
-      <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView ref={schedulingScrollRef} style={{ flex: 1, paddingBottom: 100 }}>
-          {/* Date Selection */}
-          <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
-              Selecione o dia do agendamento
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {availableDates.map((date, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedDate?.fullDate === date.fullDate ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedDate?.fullDate === date.fullDate ? '#fdf2f8' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    marginRight: 12,
-                    minWidth: 70,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedDate(date)}
-                >
-                  <Text style={{ fontSize: 12, color: '#6b7280' }}>{date.day}</Text>
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1f2937' }}>{date.date}</Text>
-                  <Text style={{ fontSize: 12, color: '#6b7280' }}>{date.month}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Professional Selection */}
-          <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
-              Escolha o(a) profissional
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {professionals.map((professional) => (
-                <TouchableOpacity
-                  key={professional.id}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedProfessional?.id === professional.id ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedProfessional?.id === professional.id ? '#fdf2f8' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    marginRight: 16,
-                    minWidth: 100,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedProfessional(professional)}
-                >
-                  <View style={{ 
-                    width: 64, 
-                    height: 64, 
-                    borderRadius: 32, 
-                    overflow: 'hidden', 
-                    marginBottom: 8, 
-                    backgroundColor: '#f3f4f6' 
-                  }}>
-                    <Image
-                      source={{ uri: professional.image }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                  </View>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: '#1f2937', textAlign: 'center' }}>
-                    {professional.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Time Selection */}
-          <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
-              Horários disponíveis
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {availableTimes.map((time, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedTime === time ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedTime === time ? '#ec4899' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    minWidth: 80,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedTime(time)}
-                >
-                  <Text style={{ 
-                    fontWeight: '500', 
-                    color: selectedTime === time ? 'white' : '#374151' 
-                  }}>
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Continue Button */}
-        <View style={{ padding: 16, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: selectedDate && selectedProfessional && selectedTime ? '#ec4899' : '#d1d5db',
-              padding: 16,
-              borderRadius: 12,
-              alignItems: 'center'
-            }}
-            disabled={!selectedDate || !selectedProfessional || !selectedTime}
-            onPress={() => {
-              if (selectedDate && selectedProfessional && selectedTime) {
-                setCurrentScreen('confirmation');
-                setTimeout(() => scrollToTop(confirmationScrollRef), 0);
-              }
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-              Continuar
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderConfirmationScreen = () => (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Header - Extends to top of screen */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-        <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => {
-            setCurrentScreen('scheduling');
-            setTimeout(() => scrollToTop(schedulingScrollRef), 0);
-          }} style={{ marginRight: 16 }}>
-            <ArrowLeft size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'white' }}>
-            Confirmar Agendamento
-          </Text>
-        </View>
-      </SafeAreaView>
-
-      {/* Main Content */}
-      <View style={{ flex: 1, backgroundColor: 'white' }}>
-        <ScrollView ref={confirmationScrollRef} style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
-        {/* Appointment Details */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ec4899', marginBottom: 24 }}>
-            Detalhes do Agendamento
-          </Text>
-
-          <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-            {/* Service */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
-              <Scissors size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
-              <View>
-                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Serviço:</Text>
-                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
-                  {selectedService?.name}
-                </Text>
-              </View>
-            </View>
-
-            {/* Date and Time */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
-              <Calendar size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
-              <View>
-                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Data e Hora:</Text>
-                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
-                  {selectedDate && selectedTime && `${formatDateForDisplay(selectedDate)} às ${selectedTime}`}
-                </Text>
-              </View>
-            </View>
-
-            {/* Professional */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
-              <User size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
-              <View>
-                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Profissional:</Text>
-                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
-                  {selectedProfessional?.name}
-                </Text>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <MapPin size={24} color="#6b7280" style={{ marginRight: 16, marginTop: 4 }} />
-              <View>
-                <Text style={{ fontSize: 14, color: '#6b7280', fontWeight: '500' }}>Local:</Text>
-                <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '600' }}>
-                  {salonInfo.name}
-                </Text>
-                <Text style={{ fontSize: 14, color: '#6b7280' }}>
-                  {salonInfo.address}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Total Value */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          paddingVertical: 12, 
-          borderTopWidth: 1, 
-          borderTopColor: '#e5e7eb',
-          marginBottom: 24
-        }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937' }}>Valor Total:</Text>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#ec4899' }}>
-            {selectedService?.price}
-          </Text>
-        </View>
-
-        {/* Observations */}
-        <View>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 12 }}>
-            Observações (opcional)
-          </Text>
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              padding: 12,
-              height: 80,
-              textAlignVertical: 'top'
-            }}
-            multiline
-            placeholder="Ex: Tenho alergia a amônia, prefiro produtos sem cheiro..."
-            value={observations}
-            onChangeText={setObservations}
-          />
-        </View>
-      </ScrollView>
-
-      {/* Confirm Button */}
-      <View style={{ padding: 16, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#ec4899',
-            padding: 16,
-            borderRadius: 12,
-            alignItems: 'center'
-          }}
-          onPress={() => {
-            setCurrentScreen('orders');
-            setTimeout(() => scrollToTop(ordersScrollRef), 0);
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-            Confirmar Agendamento
-          </Text>
-        </TouchableOpacity>
-      </View>
-      </View>
-    </View>
-  );
 
   const renderOrdersScreen = () => (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
@@ -1365,11 +1050,33 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
 
     if (currentScreen === 'scheduling') {
-      return renderSchedulingScreen();
+      return (
+        <AppointmentScreen
+          appointmentState={appointmentState}
+          setSelectedDate={setSelectedDate}
+          setSelectedProfessional={setSelectedProfessional}
+          setSelectedTime={setSelectedTime}
+          availableDates={availableDates}
+          professionals={professionals}
+          availableTimes={availableTimes}
+          onNavigate={handleNavigate}
+          onScrollToTop={scrollToTop}
+          scrollRef={schedulingScrollRef}
+        />
+      );
     }
 
     if (currentScreen === 'confirmation') {
-      return renderConfirmationScreen();
+      return (
+        <AppointmentConfirmationScreen
+          appointmentState={appointmentState}
+          setObservations={setObservations}
+          salonInfo={salonInfo}
+          onNavigate={handleNavigate}
+          onScrollToTop={scrollToTop}
+          scrollRef={confirmationScrollRef}
+        />
+      );
     }
 
     if (currentScreen === 'orders') {
