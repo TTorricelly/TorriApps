@@ -1313,9 +1313,58 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   // ... (keep other styles if any, or add new ones as needed)
-});
+  // This is the end of the render logic for HomeScreenInner based on the provided structure
+  // It should return the main view based on currentScreen
+  if (currentScreen === 'categories') {
+    return renderCategoriesScreen();
+  }
+  if (currentScreen === 'services') {
+    return renderServicesScreen();
+  }
+  if (currentScreen === 'service-details') {
+    return renderServiceDetailsScreen();
+  }
+  if (currentScreen === 'scheduling') {
+    return renderSchedulingScreen();
+  }
+  if (currentScreen === 'confirmation') {
+    return renderConfirmationScreen();
+  }
+  if (currentScreen === 'orders') {
+    return renderOrdersScreen();
+  }
+  return renderCategoriesScreen(); // Default fallback
+}; // This correctly closes HomeScreenInner
 
 // Wrap the inner function with forwardRef for export
 const HomeScreen = forwardRef(HomeScreenInner);
 
 export default HomeScreen;
+
+const styles = StyleSheet.create({
+  // Header styles for user info
+  headerContainer: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerWelcome: {
+    fontSize: 16,
+    color: '#fce7f3', // Lighter pink for "Bem-vindo(a)!"
+  },
+  headerUserName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 2,
+  },
+  headerUserEmail: {
+    fontSize: 14,
+    color: '#f8bbd0', // Even lighter pink or white
+    marginTop: 2,
+  },
+  // ... (add any other styles that were previously defined or needed)
+});
