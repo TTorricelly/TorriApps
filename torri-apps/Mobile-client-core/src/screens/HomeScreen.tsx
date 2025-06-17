@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react'; // Added useEffect
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, StatusBar, ActivityIndicator, Alert, StyleSheet, useWindowDimensions } from 'react-native'; // Added ActivityIndicator, Alert, StyleSheet, useWindowDimensions
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, ActivityIndicator, Alert, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RenderHtml from 'react-native-render-html';
 import useAuthStore from '../store/authStore'; // Import auth store
@@ -9,16 +9,11 @@ import { API_BASE_URL } from '../config/environment'; // Import environment conf
 import { 
   Scissors,
   User, 
-  Fingerprint, 
-  Gift, 
-  Footprints, 
-  Sparkles, 
   ArrowLeft, 
-  Clock, 
-  DollarSign,
   MapPin,
   Calendar,
   CheckCircle,
+  X,
 } from 'lucide-react-native';
 
 interface HomeScreenProps {
@@ -47,12 +42,7 @@ type UserType = {
 interface Category {
   id: string;
   name: string;
-  backgroundColor: string;
-  iconColor: string;
   icon_url: string | null; // From API (was image)
-  // Add display_order if needed for sorting, otherwise it can be omitted from the interface if not used.
-  // backgroundColor, iconColor, icon can be removed or made optional if not supplied by API / used with defaults.
-  // For this step, we'll make them optional and handle defaults in the rendering step.
   backgroundColor?: string;
   iconColor?: string;
   icon?: (props: any) => JSX.Element;
@@ -119,7 +109,6 @@ const getFullImageUrl = (relativePath: string | null | undefined): string | null
 
 // Define the inner component function with explicit types for props and ref
 const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (props, ref) => {
-  const { navigation } = props; // Destructure navigation here
   const { width } = useWindowDimensions(); // For HTML renderer
 
   // All existing state, useEffect, helper functions, useImperativeHandle, and render logic
@@ -131,7 +120,8 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [observations, setObservations] = useState('');
-  const [currentImageIndex, setCurrentImageIndex] = useState(0); // For image carousel in service details
+  const [imagePopupVisible, setImagePopupVisible] = useState(false); // For image popup modal
+  const [selectedImageForPopup, setSelectedImageForPopup] = useState<string | null>(null); // Selected image URL for popup
 
   // State for categories
   const [fetchedCategories, setFetchedCategories] = useState<Category[]>([]);
@@ -423,6 +413,16 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       Set: "Setembro", Out: "Outubro", Nov: "Novembro", Dez: "Dezembro",
     };
     return `${date.day}, ${date.date} de ${months[date.month] || date.month}`;
+  };
+
+  const handleImagePress = (imageUrl: string) => {
+    setSelectedImageForPopup(imageUrl);
+    setImagePopupVisible(true);
+  };
+
+  const closeImagePopup = () => {
+    setImagePopupVisible(false);
+    setSelectedImageForPopup(null);
   };
 
   const handleCategoryClick = (category: Category) => {
@@ -769,24 +769,28 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
               <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
                 {imagesForCarousel.map((image, index) => (
                   <View key={index} style={{ width: 140, alignItems: 'center', marginRight: 16 }}>
-                    <View style={{ 
-                      width: 128, 
-                      height: 128, 
-                      borderRadius: 12, 
-                      overflow: 'hidden', 
-                      backgroundColor: '#f3f4f6',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 3
-                    }}>
+                    <TouchableOpacity
+                      style={{ 
+                        width: 128, 
+                        height: 128, 
+                        borderRadius: 12, 
+                        overflow: 'hidden', 
+                        backgroundColor: '#f3f4f6',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3
+                      }}
+                      onPress={() => handleImagePress(image.src)}
+                      activeOpacity={0.8}
+                    >
                       <Image
                         source={{ uri: image.src }}
                         style={{ width: '100%', height: '100%' }}
                         resizeMode="cover"
                       />
-                    </View>
+                    </TouchableOpacity>
                     <Text style={{ 
                       textAlign: 'center', 
                       marginTop: 8, 
@@ -1288,32 +1292,99 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     </View>
   );
 
-  // Main render logic for HomeScreenInner - decides which screen to show
-  if (currentScreen === 'categories') {
+  // Render the image popup modal - define this BEFORE the main render logic
+  const renderImagePopup = () => (
+    <Modal
+      visible={imagePopupVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={closeImagePopup}
+    >
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+        activeOpacity={1}
+        onPress={closeImagePopup}
+      >
+        {/* Close button */}
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            top: 60,
+            right: 20,
+            zIndex: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: 20,
+            width: 40,
+            height: 40,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          onPress={closeImagePopup}
+        >
+          <X size={24} color="#000" />
+        </TouchableOpacity>
+
+        {/* Expanded image */}
+        {selectedImageForPopup && (
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Image
+              source={{ uri: selectedImageForPopup }}
+              style={{
+                width: width * 0.9,
+                height: width * 0.9,
+                borderRadius: 12,
+              }}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  // Main render logic with modal overlay
+  const renderCurrentScreen = () => {
+    if (currentScreen === 'categories') {
+      return renderCategoriesScreen();
+    }
+
+    if (currentScreen === 'services') {
+      return renderServicesScreen();
+    }
+
+    if (currentScreen === 'service-details') {
+      return renderServiceDetailsScreen();
+    }
+
+    if (currentScreen === 'scheduling') {
+      return renderSchedulingScreen();
+    }
+
+    if (currentScreen === 'confirmation') {
+      return renderConfirmationScreen();
+    }
+
+    if (currentScreen === 'orders') {
+      return renderOrdersScreen();
+    }
+
     return renderCategoriesScreen();
-  }
+  };
 
-  if (currentScreen === 'services') {
-    return renderServicesScreen();
-  }
-
-  if (currentScreen === 'service-details') {
-    return renderServiceDetailsScreen();
-  }
-
-  if (currentScreen === 'scheduling') {
-    return renderSchedulingScreen();
-  }
-
-  if (currentScreen === 'confirmation') {
-    return renderConfirmationScreen();
-  }
-
-  if (currentScreen === 'orders') {
-    return renderOrdersScreen();
-  }
-
-  return renderCategoriesScreen();
+  return (
+    <>
+      {renderCurrentScreen()}
+      {renderImagePopup()}
+    </>
+  );
 }; // This correctly closes HomeScreenInner
 
 // Wrap the inner function with forwardRef for export
