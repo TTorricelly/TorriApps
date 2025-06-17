@@ -99,7 +99,8 @@ const formatPrice = (priceStr: string | undefined | null) => {
   return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
 };
 
-const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
+const HomeScreen = forwardRef<any, HomeScreenProps>((props: HomeScreenProps, ref) => {
+  const { navigation } = props; // Destructure navigation here
   const [currentScreen, setCurrentScreen] = useState('categories');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
