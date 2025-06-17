@@ -67,7 +67,7 @@ const getFullImageUrl = (relativePath: string | null | undefined): string | null
 };
 
 // Define the inner component function with explicit types for props and ref
-const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (props, ref) => {
+const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (_, ref) => {
   const { width } = useWindowDimensions(); // For HTML renderer
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('categories');
