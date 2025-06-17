@@ -835,7 +835,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
           <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
-            Pedidos
+            Agendamentos
           </Text>
         </View>
       </SafeAreaView>

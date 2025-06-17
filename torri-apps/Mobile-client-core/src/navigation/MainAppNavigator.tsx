@@ -1,10 +1,9 @@
 import React, { useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Home, Grid, Calendar, User } from "lucide-react-native";
+import { Home, Calendar, User } from "lucide-react-native";
 
 // Import screen components
-import CategoriesScreen from '../screens/CategoriesScreen';
 import AppointmentsScreen from '../screens/AppointmentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -42,14 +41,12 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ color, size }) => {
           let icon
 
           if (route.name === "Início") {
             icon = <Home size={size} color={color} />
-          } else if (route.name === "Categorias") {
-            icon = <Grid size={size} color={color} />
-          } else if (route.name === "Pedidos") {
+          } else if (route.name === "Agendamentos") {
             icon = <Calendar size={size} color={color} />
           } else if (route.name === "Perfil") {
             icon = <User size={size} color={color} />
@@ -66,15 +63,13 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
         tabPress: (e) => {
           const routeName = e.target?.split('-')[0];
           
-          // Handle Categories tab press - reset to categories screen
-          if (routeName === 'Categorias' && homeScreenRef.current) {
-            e.preventDefault();
-            navigation.navigate('Início');
+          // Handle Home tab press - reset to categories screen (beginning)
+          if (routeName === 'Início' && homeScreenRef.current) {
             homeScreenRef.current?.resetToCategories();
           }
           
-          // Handle Orders tab press - navigate to orders screen
-          if (routeName === 'Pedidos' && homeScreenRef.current) {
+          // Handle Appointments tab press - navigate to orders screen
+          if (routeName === 'Agendamentos' && homeScreenRef.current) {
             e.preventDefault();
             navigation.navigate('Início');
             homeScreenRef.current?.navigateToOrders();
@@ -85,8 +80,7 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
       <Tab.Screen name="Início">
         {(props) => <HomeStackNavigator {...props} homeScreenRef={homeScreenRef} />}
       </Tab.Screen>
-      <Tab.Screen name="Categorias" component={CategoriesScreen} />
-      <Tab.Screen name="Pedidos" component={AppointmentsScreen} />
+      <Tab.Screen name="Agendamentos" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil">
         {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
       </Tab.Screen>

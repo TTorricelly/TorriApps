@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const AppointmentsScreen = () => {
   return (
      <SafeAreaView className="flex-1 justify-center items-center">
-      <Text className="text-xl">Pedidos Screen</Text>
+      <Text className="text-xl">Agendamentos Screen</Text>
     </SafeAreaView>
   );
 };
