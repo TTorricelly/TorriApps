@@ -104,8 +104,12 @@ const formatPrice = (priceStr: string | undefined | null) => {
   return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
 };
 
-const HomeScreen = forwardRef<HomeScreenRef, HomeScreenProps>((props, ref) => {
+// Define the inner component function with explicit types for props and ref
+const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (props, ref) => {
   const { navigation } = props; // Destructure navigation here
+
+  // All existing state, useEffect, helper functions, useImperativeHandle, and render logic
+  // from the original HomeScreen component body goes here.
   const [currentScreen, setCurrentScreen] = useState('categories');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -1311,5 +1315,8 @@ const styles = StyleSheet.create({
   },
   // ... (keep other styles if any, or add new ones as needed)
 });
+
+// Wrap the inner function with forwardRef for export
+const HomeScreen = forwardRef(HomeScreenInner);
 
 export default HomeScreen;
