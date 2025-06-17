@@ -24,6 +24,11 @@ interface HomeScreenProps {
   // onLogout?: () => void; // Optional: if logout is handled via props passed from navigator
 }
 
+interface HomeScreenRef {
+  resetToCategories: () => void;
+  navigateToOrders: () => void;
+}
+
 // Define a type for the user object from the store for better type safety
 type UserType = {
   id?: string;
@@ -99,7 +104,7 @@ const formatPrice = (priceStr: string | undefined | null) => {
   return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
 };
 
-const HomeScreen = forwardRef<any, HomeScreenProps>((props: HomeScreenProps, ref) => {
+const HomeScreen = forwardRef<HomeScreenRef, HomeScreenProps>((props, ref) => {
   const { navigation } = props; // Destructure navigation here
   const [currentScreen, setCurrentScreen] = useState('categories');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
