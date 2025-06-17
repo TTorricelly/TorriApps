@@ -45,3 +45,34 @@ export const getCategories = async () => {
     }
   }
 };
+
+// Add this function to the existing categoryService.js
+
+/**
+ * Fetches the list of services for a given category.
+ * @param {string} categoryId - The ID of the category.
+ * @returns {Promise<Array>} A list of service objects.
+ * @throws {Error} If the request fails or the server returns an error.
+ */
+export const getServicesByCategory = async (categoryId) => {
+  try {
+    if (!categoryId) {
+      throw new Error('Category ID is required to fetch services.');
+    }
+    // The backend endpoint is GET /api/v1/services?category_id=<categoryId>
+    // API_ENDPOINTS.SERVICES is '/api/v1/services'
+    const servicesPath = `${API_ENDPOINTS.SERVICES}?category_id=${categoryId}`;
+
+    const response = await apiClient.get(servicesPath);
+    return response.data; // The backend returns a list of ServiceSchema objects
+  } catch (error) {
+    if (error.response) {
+      const errorMessage = error.response.data.detail || `Failed to fetch services for category ${categoryId}: ${error.response.status}`;
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      throw new Error(`Failed to fetch services for category ${categoryId}: No response from server.`);
+    } else {
+      throw new Error(`Failed to fetch services for category ${categoryId}: ${error.message}`);
+    }
+  }
+};

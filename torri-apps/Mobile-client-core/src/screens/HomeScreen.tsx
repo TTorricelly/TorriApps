@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Modal, Stat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAuthStore from '../store/authStore'; // Import auth store
 import { getUserProfile } from '../services/userService'; // Import user service
-import { getCategories } from '../services/categoryService'; // Import category service
+import { getCategories, getServicesByCategory } from '../services/categoryService'; // Import category service
 import { 
   Scissors,
   User, 
@@ -53,16 +53,23 @@ interface Category {
 }
 
 interface Service {
-  id: number;
+  id: string; // Changed from number to string for UUID
   name: string;
-  duration: string;
-  price: string;
+  duration_minutes: number; // Changed from duration: string
+  price: string; // Keep as string for now, formatting will be handled in UI. API returns decimal.
+  description?: string | null;
+  category_id?: string; // UUID as string
+  image_liso?: string | null;
+  image_ondulado?: string | null;
+  image_cacheado?: string | null;
+  image_crespo?: string | null;
+  // Add other fields from ServiceSchema if they will be used directly.
 }
 
-interface ServiceDetail {
-  images: { src: string; caption: string }[];
-  description: string;
-}
+// interface ServiceDetail { // Commenting out as per plan for now // Removing entirely now
+//   images: { src: string; caption: string }[];
+//   description: string;
+// }
 
 interface Professional {
   id: number;
@@ -76,6 +83,21 @@ interface DateOption {
   month: string;
   fullDate: string;
 }
+
+// Helper functions for formatting
+const formatDuration = (minutes: number | undefined) => {
+  if (minutes === undefined || minutes === null || minutes <= 0) return '-';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'min' : ''}`.trim() || '-';
+};
+
+const formatPrice = (priceStr: string | undefined | null) => {
+  if (priceStr === undefined || priceStr === null) return 'R$ -';
+  const priceNum = parseFloat(priceStr);
+  if (isNaN(priceNum)) return 'R$ -';
+  return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
+};
 
 const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const [currentScreen, setCurrentScreen] = useState('categories');
@@ -91,6 +113,11 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   const [fetchedCategories, setFetchedCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+
+  // State for services
+  const [fetchedServices, setFetchedServices] = useState<Service[]>([]); // Note: Service interface will be updated
+  const [isLoadingServices, setIsLoadingServices] = useState(false); // Start false, true when category selected
+  const [serviceError, setServiceError] = useState<string | null>(null);
 
   // Auth store integration
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
@@ -174,6 +201,48 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
     loadCategories();
   }, []); // Empty dependency array to run once on mount
 
+  // Define loadServicesForCategory outside useEffect so it can be called by a retry button
+  const loadServicesForCategory = async (categoryId: string) => {
+    if (!categoryId) return;
+    setIsLoadingServices(true);
+    setServiceError(null);
+    setFetchedServices([]);
+    try {
+      const data = await getServicesByCategory(categoryId);
+      if (Array.isArray(data)) {
+        setFetchedServices(data.map((service: any) => ({ // Use :any temporarily
+          id: service.id,
+          name: service.name,
+          duration_minutes: service.duration_minutes,
+          price: String(service.price),
+          description: service.description,
+          category_id: service.category_id,
+          image_liso: service.image_liso,
+        })));
+      } else {
+        console.warn("getServicesByCategory did not return an array:", data);
+        setFetchedServices([]);
+      }
+    } catch (err: any) { // Explicitly type err
+      console.error(`[HomeScreen] Error fetching services for category ${categoryId}:`, err);
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load services for this category.';
+      setServiceError(errorMessage);
+      setFetchedServices([]);
+    } finally {
+      setIsLoadingServices(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory?.id) {
+      loadServicesForCategory(selectedCategory.id);
+    } else {
+      setFetchedServices([]);
+      setServiceError(null);
+      setIsLoadingServices(false);
+    }
+  }, [selectedCategory]);
+
 
   // Helper function to scroll to top
   const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
@@ -250,50 +319,31 @@ const HomeScreen = forwardRef<any, HomeScreenProps>(({ navigation }, ref) => {
   //   },
   // ];
 
-  const servicesData: Record<string, Service[]> = {
-    cabelo: [
-      { id: 1, name: "Escova curta (com lavagem)", duration: "1h - 1h 30min", price: "R$ 80,00" },
-      { id: 2, name: "Escova média (com lavagem)", duration: "1h 15min - 1h 45min", price: "R$ 100,00" },
-      { id: 3, name: "Escova longa (com lavagem)", duration: "1h 30min - 2h", price: "R$ 120,00" },
-      { id: 4, name: "Corte feminino", duration: "45min - 1h", price: "R$ 60,00" },
-      { id: 5, name: "Corte masculino", duration: "30min - 45min", price: "R$ 40,00" },
-    ],
-    barba: [
-      { id: 1, name: "Barba completa", duration: "30min - 45min", price: "R$ 35,00" },
-      { id: 2, name: "Aparar barba", duration: "15min - 30min", price: "R$ 25,00" },
-      { id: 3, name: "Design de barba", duration: "45min - 1h", price: "R$ 50,00" },
-    ],
-    unhas: [
-      { id: 1, name: "Manicure simples", duration: "45min - 1h", price: "R$ 30,00" },
-      { id: 2, name: "Manicure com esmaltação", duration: "1h - 1h 15min", price: "R$ 40,00" },
-      { id: 3, name: "Pedicure completo", duration: "1h - 1h 30min", price: "R$ 45,00" },
-    ],
-    massoterapia: [
-      { id: 1, name: "Massagem relaxante", duration: "1h", price: "R$ 80,00" },
-      { id: 2, name: "Massagem terapêutica", duration: "1h 15min", price: "R$ 100,00" },
-      { id: 3, name: "Drenagem linfática", duration: "1h 30min", price: "R$ 120,00" },
-    ],
-    podologia: [
-      { id: 1, name: "Tratamento de unhas", duration: "45min - 1h", price: "R$ 60,00" },
-      { id: 2, name: "Remoção de calos", duration: "30min - 45min", price: "R$ 50,00" },
-      { id: 3, name: "Tratamento completo", duration: "1h - 1h 30min", price: "R$ 90,00" },
-    ],
-    "unhas-gel": [
-      { id: 1, name: "Aplicação de gel", duration: "1h 30min - 2h", price: "R$ 70,00" },
-      { id: 2, name: "Manutenção de gel", duration: "1h - 1h 30min", price: "R$ 50,00" },
-      { id: 3, name: "Remoção de gel", duration: "45min - 1h", price: "R$ 40,00" },
-    ],
-  };
+  // const servicesData: Record<string, Service[]> = { // Commenting out mock data
+  //   cabelo: [
+  //     { id: "1", name: "Escova curta (com lavagem)", duration_minutes: 90, price: "80.00" },
+  //     { id: "2", name: "Escova média (com lavagem)", duration_minutes: 105, price: "100.00" },
+  //     { id: "3", name: "Escova longa (com lavagem)", duration_minutes: 120, price: "120.00" },
+  //     { id: "4", name: "Corte feminino", duration_minutes: 60, price: "60.00" },
+  //     { id: "5", name: "Corte masculino", duration_minutes: 45, price: "40.00" },
+  //   ],
+  //   barba: [
+  //     { id: "6", name: "Barba completa", duration_minutes: 45, price: "35.00" },
+  //     { id: "7", name: "Aparar barba", duration_minutes: 30, price: "25.00" },
+  //     { id: "8", name: "Design de barba", duration_minutes: 60, price: "50.00" },
+  //   ],
+  //   // ... other categories
+  // };
 
-  const serviceDetails: Record<number, ServiceDetail> = {
-    1: {
-      images: [
-        { src: "https://via.placeholder.com/300", caption: "Liso" },
-        { src: "https://via.placeholder.com/300", caption: "Ondulado" },
-        { src: "https://via.placeholder.com/300", caption: "Encaracolado" },
-        { src: "https://via.placeholder.com/300", caption: "Crespo" },
-      ],
-      description: `**O que é o serviço?**
+  // const serviceDetails: Record<string, ServiceDetail> = { // Removing mock object
+  //   "1": {
+  //     images: [
+  //       { src: "https://via.placeholder.com/300", caption: "Liso" },
+  //       { src: "https://via.placeholder.com/300", caption: "Ondulado" },
+  //       { src: "https://via.placeholder.com/300", caption: "Encaracolado" },
+  //       { src: "https://via.placeholder.com/300", caption: "Crespo" },
+  //     ],
+  //     description: `**O que é o serviço?**
 
 A escova é um procedimento clássico que utiliza calor e técnica para modelar os fios, proporcionando um visual alinhado, com brilho e movimento. Ideal para quem busca praticidade e um look elegante para o dia a dia ou ocasiões especiais.
 
@@ -481,10 +531,56 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
     )
   };
 
-  const renderServicesScreen = () => (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Header - Extends to top of screen */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+  const renderServicesScreen = () => {
+    if (isLoadingServices) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+          <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+            <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => { setCurrentScreen('categories'); setTimeout(() => scrollToTop(categoriesScrollRef), 0); }} style={{ marginRight: 16 }}>
+                <ArrowLeft size={24} color="white" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                {selectedCategory?.name}
+              </Text>
+            </View>
+          </SafeAreaView>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', paddingTop: 20 }}>
+            <ActivityIndicator size="large" color="#ec4899" />
+            <Text style={{ marginTop: 10, color: '#374151' }}>Carregando serviços...</Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (serviceError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+           <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+            <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => { setCurrentScreen('categories'); setTimeout(() => scrollToTop(categoriesScrollRef), 0); }} style={{ marginRight: 16 }}>
+                <ArrowLeft size={24} color="white" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+                {selectedCategory?.name}
+              </Text>
+            </View>
+          </SafeAreaView>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16, backgroundColor: 'white', paddingTop: 20 }}>
+            <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>Erro ao carregar serviços:</Text>
+            <Text style={{ color: 'red', textAlign: 'center' }}>{serviceError}</Text>
+            <TouchableOpacity onPress={() => selectedCategory && loadServicesForCategory(selectedCategory.id)} style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#ec4899', borderRadius: 8 }}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Tentar Novamente</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+        {/* Header - Extends to top of screen */}
+        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => {
             setCurrentScreen('categories');
@@ -501,9 +597,14 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
       {/* Services List */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
         <ScrollView ref={servicesScrollRef} style={{ flex: 1, padding: 16, paddingBottom: 100 }}>
-          {servicesData[selectedCategory?.id || '']?.map((service) => (
+          {fetchedServices.length === 0 && !isLoadingServices && !serviceError && (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 50 }}>
+              <Text style={{ color: '#6b7280', fontSize: 16 }}>Nenhum serviço encontrado para esta categoria.</Text>
+            </View>
+          )}
+          {fetchedServices.map((service) => (
             <TouchableOpacity
-              key={service.id}
+              key={service.id} // Ensure service.id is string (UUID)
               style={{
                 borderWidth: 2,
                 borderColor: selectedService?.id === service.id ? '#ec4899' : '#e5e7eb',
@@ -537,10 +638,10 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
                   {service.name}
                 </Text>
                 <Text style={{ fontSize: 16, color: '#6b7280', marginBottom: 8 }}>
-                  Duração: {service.duration}
+                  Duração: {formatDuration(service.duration_minutes)}
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#ec4899' }}>
-                  {service.price}
+                  {formatPrice(service.price)}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -573,10 +674,32 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
     </View>
   );
 
-  const renderServiceDetailsScreen = () => (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Header - Extends to top of screen */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+  const renderServiceDetailsScreen = () => {
+    if (!selectedService) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+          <Text>Detalhes do serviço não disponíveis.</Text>
+          {/* Optionally, add a button to go back or select a service */}
+        </View>
+      );
+    }
+
+    const imagesForCarousel = [];
+    if (selectedService?.image_liso) imagesForCarousel.push({ src: selectedService.image_liso, caption: "Liso" });
+    if (selectedService?.image_ondulado) imagesForCarousel.push({ src: selectedService.image_ondulado, caption: "Ondulado" });
+    if (selectedService?.image_cacheado) imagesForCarousel.push({ src: selectedService.image_cacheado, caption: "Cacheado" });
+    if (selectedService?.image_crespo) imagesForCarousel.push({ src: selectedService.image_crespo, caption: "Crespo" });
+
+    if (imagesForCarousel.length === 0) {
+        imagesForCarousel.push({ src: 'https://via.placeholder.com/300', caption: selectedService?.name || "Serviço" });
+    }
+
+    const descriptionText = selectedService?.description || "Descrição não disponível.";
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+        {/* Header - Extends to top of screen */}
+        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
         <View style={{ backgroundColor: '#ec4899', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => {
             setCurrentScreen('services');
@@ -596,7 +719,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
           {/* Image Carousel */}
           <View style={{ padding: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
-              {serviceDetails[selectedService?.id || 1]?.images.map((image, index) => (
+              {imagesForCarousel.map((image, index) => (
                 <View key={index} style={{ width: 300, alignItems: 'center', marginRight: 16 }}>
                   <View style={{ 
                     width: 128, 
@@ -627,7 +750,7 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
           {/* Service Description */}
           <View style={{ padding: 16 }}>
             <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16 }}>
-              {serviceDetails[selectedService?.id || 1]?.description.split('\n').map((paragraph, index) => {
+              {descriptionText.split('\n').map((paragraph, index) => {
                 if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
                   return (
                     <Text key={index} style={{ 
@@ -690,7 +813,8 @@ Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariame
         </View>
       </View>
     </View>
-  );
+    )
+  };
 
   const renderSchedulingScreen = () => (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>

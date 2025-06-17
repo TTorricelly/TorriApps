@@ -170,7 +170,7 @@ def create_service_endpoint(
 )
 def list_services_endpoint(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))], # Allow more roles to view services
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.CLIENTE]))], # Allow more roles to view services
     category_id: Optional[UUID] = Query(None, description="Filter services by category ID."),
     skip: int = Query(0, ge=0, description="Number of items to skip."),
     limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
