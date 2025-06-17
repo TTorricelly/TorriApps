@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { AppointmentScreenProps } from '../types';
+import { isToday, isPastDate } from '../utils/dateUtils';
 
 const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
   appointmentState,
@@ -49,26 +50,62 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
               Selecione o dia do agendamento
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {availableDates.map((date, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedDate?.fullDate === date.fullDate ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedDate?.fullDate === date.fullDate ? '#fdf2f8' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    marginRight: 12,
-                    minWidth: 70,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedDate(date)}
-                >
-                  <Text style={{ fontSize: 12, color: '#6b7280' }}>{date.day}</Text>
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1f2937' }}>{date.date}</Text>
-                  <Text style={{ fontSize: 12, color: '#6b7280' }}>{date.month}</Text>
-                </TouchableOpacity>
-              ))}
+              {availableDates.map((date, index) => {
+                const isSelected = selectedDate?.fullDate === date.fullDate;
+                const isPast = isPastDate(date);
+                const isTodayDate = isToday(date);
+
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      borderWidth: 2,
+                      borderColor: isSelected ? '#ec4899' : isPast ? '#d1d5db' : isTodayDate ? '#3b82f6' : '#e5e7eb',
+                      backgroundColor: isSelected ? '#fdf2f8' : isPast ? '#f9fafb' : isTodayDate ? '#eff6ff' : 'white',
+                      borderRadius: 12,
+                      padding: 12,
+                      marginRight: 12,
+                      minWidth: 70,
+                      alignItems: 'center',
+                      opacity: isPast ? 0.5 : 1
+                    }}
+                    onPress={() => !isPast && setSelectedDate(date)}
+                    disabled={isPast}
+                  >
+                    <Text style={{ 
+                      fontSize: 12, 
+                      color: isSelected ? '#ec4899' : isTodayDate ? '#3b82f6' : '#6b7280',
+                      fontWeight: isTodayDate ? '600' : 'normal'
+                    }}>
+                      {date.day}
+                    </Text>
+                    <Text style={{ 
+                      fontSize: 20, 
+                      fontWeight: 'bold', 
+                      color: isSelected ? '#ec4899' : isTodayDate ? '#3b82f6' : isPast ? '#9ca3af' : '#1f2937'
+                    }}>
+                      {date.date}
+                    </Text>
+                    <Text style={{ 
+                      fontSize: 12, 
+                      color: isSelected ? '#ec4899' : isTodayDate ? '#3b82f6' : '#6b7280',
+                      fontWeight: isTodayDate ? '600' : 'normal'
+                    }}>
+                      {date.month}
+                    </Text>
+                    {isTodayDate && (
+                      <Text style={{ 
+                        fontSize: 10, 
+                        color: '#3b82f6', 
+                        fontWeight: '600',
+                        marginTop: 2
+                      }}>
+                        Hoje
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
 

@@ -27,6 +27,7 @@ import {
   ScreenType,
   AppointmentState 
 } from '../types';
+import { generateAvailableDates, formatDateForDisplay as formatDateUtil } from '../utils/dateUtils';
 import AppointmentScreen from './AppointmentScreen';
 import AppointmentConfirmationScreen from './AppointmentConfirmationScreen';
 
@@ -343,16 +344,8 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 //     },
 //   };
 
-  const availableDates: DateOption[] = [
-    { day: "Sáb", date: "31", month: "Mai", fullDate: "2024-05-31" },
-    { day: "Dom", date: "1", month: "Jun", fullDate: "2024-06-01" },
-    { day: "Seg", date: "2", month: "Jun", fullDate: "2024-06-02" },
-    { day: "Ter", date: "3", month: "Jun", fullDate: "2024-06-03" },
-    { day: "Qua", date: "4", month: "Jun", fullDate: "2024-06-04" },
-    { day: "Qui", date: "5", month: "Jun", fullDate: "2024-06-05" },
-    { day: "Sex", date: "6", month: "Jun", fullDate: "2024-06-06" },
-    { day: "Sáb", date: "7", month: "Jun", fullDate: "2024-06-07" },
-  ];
+  // Generate available dates dynamically (today + next 30 days)
+  const availableDates: DateOption[] = generateAvailableDates(30);
 
   const professionals: Professional[] = [
     { id: 1, name: "Ana Silva", image: "https://via.placeholder.com/80" },
@@ -377,14 +370,8 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     setCurrentScreen(screen);
   };
 
-  const formatDateForDisplay = (date: DateOption | null): string => {
-    if (!date) return "";
-    const months: Record<string, string> = {
-      Mai: "Maio", Jun: "Junho", Jul: "Julho", Ago: "Agosto",
-      Set: "Setembro", Out: "Outubro", Nov: "Novembro", Dez: "Dezembro",
-    };
-    return `${date.day}, ${date.date} de ${months[date.month] || date.month}`;
-  };
+  // Use the utility function for consistent date formatting
+  const formatDateForDisplay = formatDateUtil;
 
   const handleImagePress = (imageUrl: string) => {
     setSelectedImageForPopup(imageUrl);
