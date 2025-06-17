@@ -353,23 +353,22 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   //       { src: "https://via.placeholder.com/300", caption: "Encaracolado" },
   //       { src: "https://via.placeholder.com/300", caption: "Crespo" },
   //     ],
-  //     description: `**O que é o serviço?**
-
-A escova é um procedimento clássico que utiliza calor e técnica para modelar os fios, proporcionando um visual alinhado, com brilho e movimento. Ideal para quem busca praticidade e um look elegante para o dia a dia ou ocasiões especiais.
-
-**Benefícios:**
-
-- Alinhamento dos fios
-- Redução de frizz
-- Brilho intenso
-- Maciez e sedosidade
-- Facilidade para pentear
-
-**Indicado para:**
-
-Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariamente. Ótimo para eventos, ou para quem gosta de variar o estilo.`,
-    },
-  };
+  //     description: `**O que é o serviço?** \
+// A escova é um procedimento clássico que utiliza calor e técnica para modelar os fios, proporcionando um visual alinhado, com brilho e movimento. Ideal para quem busca praticidade e um look elegante para o dia a dia ou ocasiões especiais. \
+// \
+// **Benefícios:** \
+// \
+// - Alinhamento dos fios \
+// - Redução de frizz \
+// - Brilho intenso \
+// - Maciez e sedosidade \
+// - Facilidade para pentear \
+// \
+// **Indicado para:** \
+// \
+// Todos os tipos de cabelo que desejam um visual mais liso e modelado temporariamente. Ótimo para eventos, ou para quem gosta de variar o estilo.`
+//     },
+//   };
 
   const availableDates: DateOption[] = [
     { day: "Sáb", date: "31", month: "Mai", fullDate: "2024-05-31" },
