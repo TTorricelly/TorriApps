@@ -21,11 +21,12 @@ from . import services as professional_services
 
 router = APIRouter(prefix="/professionals", tags=["Professionals"])
 
+
 # Professional CRUD endpoints
 @router.get("/", response_model=List[Professional])
 def list_professionals(
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.CLIENTE]))],
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=200, description="Number of items to return")
 ):

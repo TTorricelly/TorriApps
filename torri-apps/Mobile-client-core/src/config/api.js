@@ -35,24 +35,23 @@ apiClient.interceptors.response.use(
 
     // Check for 401 Unauthorized
     if (error.response?.status === 401) {
-      // Avoid retry loops for token refresh if that's ever implemented here
-      // For now, just logout
-      if (!originalRequest._retry) { // originalRequest._retry is a common flag for retry attempts
-        originalRequest._retry = true;
-
-        try {
-          // Dynamically import the store to avoid circular dependencies if store imports apiClient
-          // Or ensure store is initialized and accessible.
-          // This is a common pattern: get the store's logout function.
-          const useAuthStore = (await import('../store/authStore')).default;
-          console.log('Interceptor: Detected 401, attempting logout.');
-          await useAuthStore.getState().logout();
-          // Optionally, navigate to login screen or show a message
-          // This might be better handled by a navigation listener reacting to isAuthenticated changing.
-        } catch (e) {
-          console.error('Interceptor: Error during logout on 401:', e);
-        }
-      }
+      // Temporarily disable automatic logout for debugging
+      console.log('Interceptor: Detected 401, but NOT logging out for debugging');
+      console.log('Request URL:', originalRequest.url);
+      console.log('Request headers:', originalRequest.headers);
+      console.log('Error response:', error.response.data);
+      
+      // TODO: Re-enable automatic logout after debugging
+      // if (!originalRequest._retry) {
+      //   originalRequest._retry = true;
+      //   try {
+      //     const useAuthStore = (await import('../store/authStore')).default;
+      //     console.log('Interceptor: Detected 401, attempting logout.');
+      //     await useAuthStore.getState().logout();
+      //   } catch (e) {
+      //     console.error('Interceptor: Error during logout on 401:', e);
+      //   }
+      // }
     }
     return Promise.reject(error);
   }

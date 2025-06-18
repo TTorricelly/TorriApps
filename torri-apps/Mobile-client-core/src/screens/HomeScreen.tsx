@@ -28,6 +28,7 @@ import {
   AppointmentState 
 } from '../types';
 import { generateAvailableDates, formatDateForDisplay as formatDateUtil } from '../utils/dateUtils';
+import { getProfessionalsForService } from '../services/professionalService';
 import AppointmentScreen from './AppointmentScreen';
 import AppointmentConfirmationScreen from './AppointmentConfirmationScreen';
 
@@ -59,9 +60,10 @@ const formatPrice = (priceStr: string | undefined | null) => {
 // Helper function to construct full image URLs from relative paths
 const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
   if (!relativePath) return null;
-  // If it's already a full URL, return as is
+  // If it's already a full URL, check if it needs localhost replacement
   if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    return relativePath;
+    // Replace localhost with the actual server IP for mobile device compatibility
+    return relativePath.replace('http://localhost:8000', API_BASE_URL);
   }
   // Construct full URL by prepending base URL from environment config
   return `${API_BASE_URL}${relativePath}`;
@@ -99,6 +101,11 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const [fetchedServices, setFetchedServices] = useState<Service[]>([]); // Note: Service interface will be updated
   const [isLoadingServices, setIsLoadingServices] = useState(false); // Start false, true when category selected
   const [serviceError, setServiceError] = useState<string | null>(null);
+
+  // State for professionals
+  const [fetchedProfessionals, setFetchedProfessionals] = useState<Professional[]>([]);
+  const [isLoadingProfessionals, setIsLoadingProfessionals] = useState(false);
+  const [professionalsError, setProfessionalsError] = useState<string | null>(null);
 
   // Auth store integration
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
@@ -227,6 +234,60 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
   }, [selectedCategory]);
 
+  // Define loadProfessionalsForService function
+  const loadProfessionalsForService = async (serviceId: string) => {
+    if (!serviceId) return;
+    
+    // Debug: Check authentication state before making API call
+    console.log('[HomeScreen] Loading professionals for service:', serviceId);
+    console.log('[HomeScreen] Is authenticated:', isAuthenticated);
+    console.log('[HomeScreen] User data:', user);
+    
+    if (!isAuthenticated) {
+      console.warn('[HomeScreen] User is not authenticated, cannot load professionals');
+      setProfessionalsError('User not authenticated');
+      return;
+    }
+    
+    setIsLoadingProfessionals(true);
+    setProfessionalsError(null);
+    setFetchedProfessionals([]);
+    try {
+      const data = await getProfessionalsForService(serviceId);
+      if (Array.isArray(data)) {
+        // Transform backend data to match existing component expectations
+        const transformedProfessionals = data.map((prof: any) => ({
+          ...prof,
+          // Legacy support for existing components
+          name: prof.full_name,
+          image: getFullImageUrl(prof.photo_url) || 'https://via.placeholder.com/80',
+        }));
+        setFetchedProfessionals(transformedProfessionals);
+      } else {
+        console.warn("getProfessionalsForService did not return an array:", data);
+        setFetchedProfessionals([]);
+      }
+    } catch (err: any) {
+      console.error(`[HomeScreen] Error fetching professionals for service ${serviceId}:`, err);
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load professionals for this service.';
+      setProfessionalsError(errorMessage);
+      setFetchedProfessionals([]);
+    } finally {
+      setIsLoadingProfessionals(false);
+    }
+  };
+
+  // Load professionals when user navigates to scheduling screen
+  useEffect(() => {
+    if (currentScreen === 'scheduling' && selectedService?.id) {
+      loadProfessionalsForService(selectedService.id);
+    } else if (currentScreen !== 'scheduling') {
+      // Clear professionals when leaving scheduling screen
+      setFetchedProfessionals([]);
+      setProfessionalsError(null);
+      setIsLoadingProfessionals(false);
+    }
+  }, [currentScreen, selectedService]);
 
   // Helper function to scroll to top
   const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
@@ -346,14 +407,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 
   // Generate available dates dynamically (today + next 30 days)
   const availableDates: DateOption[] = generateAvailableDates(30);
-
-  const professionals: Professional[] = [
-    { id: 1, name: "Ana Silva", image: "https://via.placeholder.com/80" },
-    { id: 2, name: "Carlos Lima", image: "https://via.placeholder.com/80" },
-    { id: 3, name: "Maria Santos", image: "https://via.placeholder.com/80" },
-    { id: 4, name: "João Costa", image: "https://via.placeholder.com/80" },
-    { id: 5, name: "Lucia Ferreira", image: "https://via.placeholder.com/80" },
-  ];
 
   const availableTimes = [
     "9:00", "9:30", "10:00", "10:30", "11:00", "11:30",
@@ -1044,11 +1097,14 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
           setSelectedProfessional={setSelectedProfessional}
           setSelectedTime={setSelectedTime}
           availableDates={availableDates}
-          professionals={professionals}
+          professionals={fetchedProfessionals}
           availableTimes={availableTimes}
           onNavigate={handleNavigate}
           onScrollToTop={scrollToTop}
           scrollRef={schedulingScrollRef}
+          isLoadingProfessionals={isLoadingProfessionals}
+          professionalsError={professionalsError}
+          onRetryProfessionals={() => selectedService && loadProfessionalsForService(selectedService.id)}
         />
       );
     }

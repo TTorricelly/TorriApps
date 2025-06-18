@@ -39,9 +39,26 @@ export interface Service {
 
 // Professional interface for service providers
 export interface Professional {
-  id: number;
-  name: string;
-  image: string;
+  id: string; // UUID from backend
+  full_name: string;
+  email?: string;
+  is_active?: boolean;
+  role?: string;
+  services_offered?: Service[];
+  photo_url?: string; // Full URL from backend
+  
+  // Legacy support for existing components
+  name?: string; // Computed from full_name for backward compatibility
+  image?: string; // Computed from photo_url for backward compatibility
+}
+
+// Professional with additional appointment context
+export interface ProfessionalWithSchedule extends Professional {
+  professional_id: string;
+  professional_name: string;
+  professional_photo_url?: string;
+  appointments?: any[];
+  blocked_slots?: any[];
 }
 
 // Date option for appointment scheduling
@@ -92,6 +109,9 @@ export interface AppointmentScreenProps extends BaseScreenProps {
   professionals: Professional[];
   availableTimes: string[];
   scrollRef: React.RefObject<any>;
+  isLoadingProfessionals?: boolean;
+  professionalsError?: string | null;
+  onRetryProfessionals?: () => void;
 }
 
 export interface AppointmentConfirmationProps extends BaseScreenProps {

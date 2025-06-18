@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, AlertCircle } from 'lucide-react-native';
 import { AppointmentScreenProps } from '../types';
 import { isToday, isPastDate } from '../utils/dateUtils';
 
@@ -16,6 +16,9 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
   onNavigate,
   onScrollToTop,
   scrollRef,
+  isLoadingProfessionals = false,
+  professionalsError = null,
+  onRetryProfessionals,
 }) => {
   const { selectedDate, selectedProfessional, selectedTime } = appointmentState;
 
@@ -114,42 +117,78 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
             <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
               Escolha o(a) profissional
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {professionals.map((professional) => (
-                <TouchableOpacity
-                  key={professional.id}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedProfessional?.id === professional.id ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedProfessional?.id === professional.id ? '#fdf2f8' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    marginRight: 16,
-                    minWidth: 100,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedProfessional(professional)}
-                >
-                  <View style={{ 
-                    width: 64, 
-                    height: 64, 
-                    borderRadius: 32, 
-                    overflow: 'hidden', 
-                    marginBottom: 8, 
-                    backgroundColor: '#f3f4f6' 
-                  }}>
-                    <Image
-                      source={{ uri: professional.image }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                  </View>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: '#1f2937', textAlign: 'center' }}>
-                    {professional.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            
+            {isLoadingProfessionals ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <ActivityIndicator size="large" color="#ec4899" />
+                <Text style={{ marginTop: 10, color: '#6b7280' }}>
+                  Carregando profissionais...
+                </Text>
+              </View>
+            ) : professionalsError ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <AlertCircle size={32} color="#ef4444" />
+                <Text style={{ color: '#ef4444', textAlign: 'center', marginTop: 8, marginBottom: 12 }}>
+                  {professionalsError}
+                </Text>
+                {onRetryProfessionals && (
+                  <TouchableOpacity 
+                    onPress={onRetryProfessionals}
+                    style={{ 
+                      paddingVertical: 8, 
+                      paddingHorizontal: 16, 
+                      backgroundColor: '#ec4899', 
+                      borderRadius: 6 
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '500' }}>Tentar Novamente</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : professionals.length === 0 ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: '#6b7280', textAlign: 'center' }}>
+                  Nenhum profissional disponível para este serviço.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {professionals.map((professional) => (
+                  <TouchableOpacity
+                    key={professional.id}
+                    style={{
+                      borderWidth: 2,
+                      borderColor: selectedProfessional?.id === professional.id ? '#ec4899' : '#e5e7eb',
+                      backgroundColor: selectedProfessional?.id === professional.id ? '#fdf2f8' : 'white',
+                      borderRadius: 12,
+                      padding: 12,
+                      marginRight: 16,
+                      minWidth: 100,
+                      alignItems: 'center'
+                    }}
+                    onPress={() => setSelectedProfessional(professional)}
+                  >
+                    <View style={{ 
+                      width: 64, 
+                      height: 64, 
+                      borderRadius: 32, 
+                      overflow: 'hidden', 
+                      marginBottom: 8, 
+                      backgroundColor: '#f3f4f6' 
+                    }}>
+                      <Image
+                        source={{ uri: professional.image || professional.photo_url || 'https://via.placeholder.com/80' }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#1f2937', textAlign: 'center' }}>
+                      {professional.name || professional.full_name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           {/* Time Selection */}
