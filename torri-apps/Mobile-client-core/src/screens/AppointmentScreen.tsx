@@ -286,7 +286,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
                 </Text>
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                 {availableTimes.map((time, index) => (
                   <TouchableOpacity
                     key={index}
