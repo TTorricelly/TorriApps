@@ -46,6 +46,9 @@ class Service(Base):
     commission_percentage = Column(Numeric(5, 2), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     
+    # General service image
+    image = Column(String(255), nullable=True)
+    
     # Image paths for different hair types
     image_liso = Column(String(255), nullable=True)
     image_ondulado = Column(String(255), nullable=True)

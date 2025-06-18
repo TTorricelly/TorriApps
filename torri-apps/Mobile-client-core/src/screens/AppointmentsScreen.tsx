@@ -5,21 +5,49 @@ import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle } from
 import { getUserAppointments, cancelAppointment } from '../services/appointmentService';
 import { formatDateForDisplay } from '../utils/dateUtils';
 import { DateOption } from '../types';
+import useAuthStore from '../store/authStore';
+
+interface UserBasicInfo {
+  id: string;
+  full_name?: string;
+  email: string;
+}
+
+interface ServiceBasicInfo {
+  id: string;
+  name: string;
+  duration_minutes: number;
+}
 
 interface Appointment {
   id: string;
-  service_name: string;
-  professional_name: string;
+  client_id: string;
+  professional_id: string;
+  service_id: string;
   appointment_date: string;
   start_time: string;
   end_time: string;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: 'SCHEDULED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  price_at_booking?: number;
+  paid_manually?: boolean;
+  notes_by_client?: string;
+  notes_by_professional?: string;
+  
+  // Nested objects from backend
+  client?: UserBasicInfo;
+  professional?: UserBasicInfo;
+  service?: ServiceBasicInfo;
+  
+  // Legacy fields for backward compatibility (might not be populated)
+  service_name?: string;
+  professional_name?: string;
   observations?: string;
   salon_name?: string;
   salon_address?: string;
 }
 
 const AppointmentsScreen = () => {
+  const { isAuthenticated, isLoading: authLoading, user } = useAuthStore();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,6 +55,15 @@ const AppointmentsScreen = () => {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
 
   const loadAppointments = async (showRefreshLoader = false) => {
+    // Check if user is authenticated before making API call
+    if (!isAuthenticated || !user) {
+      console.log('[AppointmentsScreen] User not authenticated, skipping appointments load');
+      setIsLoading(false);
+      setRefreshing(false);
+      setError('User not authenticated');
+      return;
+    }
+
     try {
       if (showRefreshLoader) {
         setRefreshing(true);
@@ -35,7 +72,10 @@ const AppointmentsScreen = () => {
       }
       setError(null);
       
+      console.log('[AppointmentsScreen] Loading appointments for user:', user.id);
       const data = await getUserAppointments();
+      // Temporary debugging - remove once confirmed working
+      console.log('[AppointmentsScreen] Raw appointment data:', JSON.stringify(data, null, 2));
       setAppointments(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('[AppointmentsScreen] Error loading appointments:', err);
@@ -48,8 +88,11 @@ const AppointmentsScreen = () => {
   };
 
   useEffect(() => {
-    loadAppointments();
-  }, []);
+    // Only load appointments when auth loading is complete and user is authenticated
+    if (!authLoading) {
+      loadAppointments();
+    }
+  }, [authLoading, isAuthenticated]);
 
   const handleRefresh = () => {
     loadAppointments(true);
@@ -97,14 +140,17 @@ const AppointmentsScreen = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'scheduled':
+      case 'SCHEDULED':
+      case 'CONFIRMED':
         return <Clock size={20} color="#3b82f6" />;
-      case 'completed':
+      case 'COMPLETED':
         return <CheckCircle size={20} color="#22c55e" />;
-      case 'cancelled':
+      case 'CANCELLED':
         return <XCircle size={20} color="#ef4444" />;
-      case 'no_show':
+      case 'NO_SHOW':
         return <AlertCircle size={20} color="#f59e0b" />;
+      case 'IN_PROGRESS':
+        return <Clock size={20} color="#f59e0b" />;
       default:
         return <Clock size={20} color="#6b7280" />;
     }
@@ -112,13 +158,17 @@ const AppointmentsScreen = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'scheduled':
+      case 'SCHEDULED':
         return 'Agendado';
-      case 'completed':
+      case 'CONFIRMED':
+        return 'Confirmado';
+      case 'IN_PROGRESS':
+        return 'Em Andamento';
+      case 'COMPLETED':
         return 'Concluído';
-      case 'cancelled':
+      case 'CANCELLED':
         return 'Cancelado';
-      case 'no_show':
+      case 'NO_SHOW':
         return 'Faltou';
       default:
         return status;
@@ -127,13 +177,16 @@ const AppointmentsScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'scheduled':
+      case 'SCHEDULED':
+      case 'CONFIRMED':
         return '#3b82f6';
-      case 'completed':
+      case 'IN_PROGRESS':
+        return '#f59e0b';
+      case 'COMPLETED':
         return '#22c55e';
-      case 'cancelled':
+      case 'CANCELLED':
         return '#ef4444';
-      case 'no_show':
+      case 'NO_SHOW':
         return '#f59e0b';
       default:
         return '#6b7280';
@@ -145,12 +198,14 @@ const AppointmentsScreen = () => {
     const today = now.toISOString().split('T')[0];
     
     if (activeTab === 'upcoming') {
+      // Check for both SCHEDULED and CONFIRMED as upcoming appointments
       return appointments.filter(apt => 
-        apt.status === 'scheduled' && apt.appointment_date >= today
+        (apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED') && apt.appointment_date >= today
       );
     } else {
+      // History includes completed, cancelled, no-show appointments, or past appointments
       return appointments.filter(apt => 
-        apt.status !== 'scheduled' || apt.appointment_date < today
+        (apt.status === 'COMPLETED' || apt.status === 'CANCELLED' || apt.status === 'NO_SHOW') || apt.appointment_date < today
       );
     }
   };
@@ -172,7 +227,7 @@ const AppointmentsScreen = () => {
       {/* Header with service name and status */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', flex: 1 }}>
-          {appointment.service_name}
+          {appointment.service?.name || appointment.service_name || 'Serviço não informado'}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
           {getStatusIcon(appointment.status)}
@@ -199,7 +254,7 @@ const AppointmentsScreen = () => {
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <User size={16} color="#6b7280" />
         <Text style={{ marginLeft: 8, fontSize: 14, color: '#6b7280' }}>
-          {appointment.professional_name}
+          {appointment.professional?.full_name || appointment.professional_name || 'Profissional não informado'}
         </Text>
       </View>
 
@@ -214,7 +269,7 @@ const AppointmentsScreen = () => {
       )}
 
       {/* Observations */}
-      {appointment.observations && (
+      {(appointment.notes_by_client || appointment.observations) && (
         <View style={{ 
           backgroundColor: '#f9fafb', 
           borderRadius: 8, 
@@ -222,13 +277,13 @@ const AppointmentsScreen = () => {
           marginBottom: 12 
         }}>
           <Text style={{ fontSize: 14, color: '#6b7280', fontStyle: 'italic' }}>
-            Observações: {appointment.observations}
+            Observações: {appointment.notes_by_client || appointment.observations}
           </Text>
         </View>
       )}
 
       {/* Action buttons for scheduled appointments */}
-      {appointment.status === 'scheduled' && (
+      {(appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') && (
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
           <TouchableOpacity
             style={{
@@ -248,6 +303,25 @@ const AppointmentsScreen = () => {
       )}
     </View>
   );
+
+  // Show loading while authentication is being verified
+  if (authLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
+        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
+          <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
+              Meus Agendamentos
+            </Text>
+          </View>
+        </SafeAreaView>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+          <ActivityIndicator size="large" color="#ec4899" />
+          <Text style={{ marginTop: 10, color: '#374151' }}>Verificando autenticação...</Text>
+        </View>
+      </View>
+    );
+  }
 
   if (isLoading && !refreshing) {
     return (

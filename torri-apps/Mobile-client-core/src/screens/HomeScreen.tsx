@@ -71,7 +71,7 @@ const getFullImageUrl = (relativePath: string | null | undefined): string | null
 };
 
 // Define the inner component function with explicit types for props and ref
-const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = (_, ref) => {
+const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenProps> = ({ navigation }, ref) => {
   const { width } = useWindowDimensions(); // For HTML renderer
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('categories');
@@ -209,6 +209,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
           price: String(service.price),
           description: service.description,
           category_id: service.category_id,
+          image: service.image, // Add general service image
           image_liso: service.image_liso,
           image_ondulado: service.image_ondulado,
           image_cacheado: service.image_cacheado,
@@ -757,6 +758,14 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
 
     const imagesForCarousel = [];
+    
+    // Add general service image first if available
+    if (selectedService?.image) {
+      const fullUrl = getFullImageUrl(selectedService.image);
+      if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Imagem do Serviço" });
+    }
+    
+    // Add hair type images
     if (selectedService?.image_liso) {
       const fullUrl = getFullImageUrl(selectedService.image_liso);
       if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Liso" });
@@ -809,7 +818,22 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                 marginBottom: 12,
                 paddingHorizontal: 4
               }}>
-                Exemplos para diferentes tipos de cabelo:
+                {(() => {
+                  // Check if we have only general image or mix of images
+                  const hasGeneralImage = selectedService?.image;
+                  const hasHairImages = selectedService?.image_liso || 
+                                       selectedService?.image_ondulado || 
+                                       selectedService?.image_cacheado || 
+                                       selectedService?.image_crespo;
+                  
+                  if (hasGeneralImage && hasHairImages) {
+                    return "Exemplos e variações do serviço:";
+                  } else if (hasGeneralImage && !hasHairImages) {
+                    return "Imagens do serviço:";
+                  } else {
+                    return "Exemplos para diferentes tipos de cabelo:";
+                  }
+                })()}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} pagingEnabled>
                 {imagesForCarousel.map((image, index) => (
@@ -836,15 +860,27 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                         resizeMode="cover"
                       />
                     </TouchableOpacity>
-                    <Text style={{ 
-                      textAlign: 'center', 
-                      marginTop: 8, 
-                      fontWeight: '500', 
-                      color: '#374151',
-                      fontSize: 14
-                    }}>
-                      {image.caption}
-                    </Text>
+                    {(() => {
+                      // Only show captions when we have multiple types of images (hair types)
+                      const hasGeneralImage = selectedService?.image;
+                      const hasHairImages = selectedService?.image_liso || 
+                                           selectedService?.image_ondulado || 
+                                           selectedService?.image_cacheado || 
+                                           selectedService?.image_crespo;
+                      const showCaptions = hasHairImages || (hasGeneralImage && hasHairImages);
+                      
+                      return showCaptions ? (
+                        <Text style={{ 
+                          textAlign: 'center', 
+                          marginTop: 8, 
+                          fontWeight: '500', 
+                          color: '#374151',
+                          fontSize: 14
+                        }}>
+                          {image.caption}
+                        </Text>
+                      ) : null;
+                    })()}
                   </View>
                 ))}
               </ScrollView>
@@ -1002,6 +1038,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                 alignItems: 'center',
                 marginBottom: 12
               }}
+              onPress={() => navigation.navigate('Agendamentos')}
             >
               <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
                 Ver Meus Agendamentos
@@ -1016,9 +1053,19 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                 alignItems: 'center',
                 marginBottom: 12
               }}
+              onPress={() => {
+                setCurrentScreen('categories');
+                setSelectedCategory(null);
+                setSelectedService(null);
+                setSelectedDate(null);
+                setSelectedProfessional(null);
+                setSelectedTime(null);
+                setObservations('');
+                setTimeout(() => scrollToTop(categoriesScrollRef), 0);
+              }}
             >
               <Text style={{ color: '#374151', fontSize: 16, fontWeight: 'bold' }}>
-                Adicionar mais um serviço
+                Agendar outro serviço
               </Text>
             </TouchableOpacity>
 

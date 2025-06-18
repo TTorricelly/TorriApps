@@ -370,6 +370,7 @@ export default function ServiceForm() {
   });
   
   // Image state
+  const [generalImage, setGeneralImage] = useState(null);
   const [images, setImages] = useState({
     liso: null,
     ondulado: null,
@@ -399,14 +400,38 @@ export default function ServiceForm() {
   
   // Track initial state for comparison
   const [initialFormData, setInitialFormData] = useState(null);
+  const [initialGeneralImage, setInitialGeneralImage] = useState(null);
   const [initialImages, setInitialImages] = useState(null);
   
   // Helper function to compare states properly
   const hasStateChanged = () => {
-    if (!initialFormData || !initialImages) return false;
+    if (!initialFormData || !initialImages || initialGeneralImage === null) return false;
     
     // Compare form data
     const formDataChanged = JSON.stringify(formData) !== JSON.stringify(initialFormData);
+    
+    // Compare general image
+    const generalImageChanged = (() => {
+      const current = generalImage;
+      const initial = initialGeneralImage;
+      
+      // If both are null/undefined, no change
+      if (!current && !initial) return false;
+      
+      // If one is null and other isn't, it's a change
+      if (!current || !initial) return true;
+      
+      // If current is a File object (new upload), it's a change
+      if (current instanceof File) return true;
+      
+      // If both are strings (URLs), compare them
+      if (typeof current === 'string' && typeof initial === 'string') {
+        return current !== initial;
+      }
+      
+      // Any other case, consider it a change
+      return true;
+    })();
     
     // Compare images more carefully (File objects vs URLs)
     const imageKeys = ['liso', 'ondulado', 'cacheado', 'crespo'];
@@ -432,15 +457,15 @@ export default function ServiceForm() {
       return true;
     });
     
-    return formDataChanged || imagesChanged;
+    return formDataChanged || generalImageChanged || imagesChanged;
   };
 
   // Track changes by comparing with initial state
   useEffect(() => {
-    if (initialFormData && initialImages) {
+    if (initialFormData && initialImages && initialGeneralImage !== null) {
       setHasUnsavedChanges(hasStateChanged());
     }
-  }, [formData, images, initialFormData, initialImages]);
+  }, [formData, generalImage, images, initialFormData, initialGeneralImage, initialImages]);
   
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
@@ -470,6 +495,7 @@ export default function ServiceForm() {
         return `http://localhost:8000${imagePath}`; // Add base URL
       };
 
+      const loadedGeneralImage = getFullImageUrl(serviceData.image);
       const loadedImages = {
         liso: getFullImageUrl(serviceData.image_liso),
         ondulado: getFullImageUrl(serviceData.image_ondulado),
@@ -479,10 +505,12 @@ export default function ServiceForm() {
       
       
       setFormData(loadedFormData);
+      setGeneralImage(loadedGeneralImage);
       setImages(loadedImages);
       
       // Save initial state for comparison
       setInitialFormData(loadedFormData);
+      setInitialGeneralImage(loadedGeneralImage);
       setInitialImages(loadedImages);
       
       // Load category info
@@ -510,6 +538,7 @@ export default function ServiceForm() {
       // For new services, save the initial empty state for comparison
       if (!isEdit) {
         setInitialFormData(formData);
+        setInitialGeneralImage(null);
         setInitialImages(images);
         setHasUnsavedChanges(false);
       }
@@ -603,7 +632,17 @@ export default function ServiceForm() {
         showAlert('Serviço criado com sucesso!', 'success');
       }
       
-      // Handle image uploads if any files were selected
+      // Handle general image upload if a file was selected
+      if (generalImage && typeof generalImage === 'object' && generalImage.name) {
+        try {
+          await servicesApi.uploadImage(result.id, generalImage);
+        } catch (error) {
+          console.warn('Erro ao fazer upload da imagem:', error);
+          showAlert('Serviço salvo, mas houve erro no upload da imagem', 'warning');
+        }
+      }
+      
+      // Handle hair type image uploads if any files were selected
       const imageFiles = {};
       Object.keys(images).forEach(type => {
         if (images[type] && typeof images[type] === 'object' && images[type].name) {
@@ -824,13 +863,33 @@ export default function ServiceForm() {
               </div>
             </div>
             
+            {/* General Image Section */}
+            <div>
+              <Typography variant="h6" className="text-text-primary mb-2">
+                Imagem Principal do Serviço
+              </Typography>
+              <Typography className="text-text-secondary text-sm mb-4">
+                Faça upload de uma imagem principal para este serviço (JPG/PNG máximo 2 MB). Tamanho recomendado: 800×800px. Esta imagem será usada para serviços que não são relacionados a tipos de cabelo.
+              </Typography>
+              
+              <div className="max-w-xs">
+                <ImageUpload
+                  label="Imagem Principal"
+                  value={generalImage}
+                  onChange={setGeneralImage}
+                  error={errors.generalImage}
+                  showAlert={showAlert}
+                />
+              </div>
+            </div>
+            
             {/* Images Section */}
             <div>
               <Typography variant="h6" className="text-text-primary mb-2">
                 Imagens (por Tipo de Cabelo)
               </Typography>
               <Typography className="text-text-secondary text-sm mb-4">
-                Faça upload de até 4 imagens (JPG/PNG máximo 2 MB), uma para cada tipo de cabelo. Tamanho recomendado: 800×800px.
+                Faça upload de até 4 imagens (JPG/PNG máximo 2 MB), uma para cada tipo de cabelo. Tamanho recomendado: 800×800px. Use esta seção apenas para serviços relacionados a cabelo.
               </Typography>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

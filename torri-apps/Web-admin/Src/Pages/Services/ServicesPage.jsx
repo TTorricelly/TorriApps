@@ -85,6 +85,7 @@ export default function ServicesPage() {
       // Convert relative image paths to full URLs
       const servicesWithFullUrls = data.map(service => ({
         ...service,
+        image: service.image ? `http://localhost:8000${service.image}` : null,
         image_liso: service.image_liso ? `http://localhost:8000${service.image_liso}` : null,
         image_ondulado: service.image_ondulado ? `http://localhost:8000${service.image_ondulado}` : null,
         image_cacheado: service.image_cacheado ? `http://localhost:8000${service.image_cacheado}` : null,
@@ -315,12 +316,16 @@ export default function ServicesPage() {
                       <td className="p-4">
                         <div className="w-16 h-16 bg-bg-tertiary rounded-lg flex items-center justify-center">
                           {(() => {
-                            // Find the first available image from any hair type
-                            const firstImage = service.image_liso || service.image_ondulado || service.image_cacheado || service.image_crespo;
+                            // Prioritize general image, then fall back to hair type images
+                            const displayImage = service.image || 
+                                                 service.image_liso || 
+                                                 service.image_ondulado || 
+                                                 service.image_cacheado || 
+                                                 service.image_crespo;
                             
-                            return firstImage ? (
+                            return displayImage ? (
                               <img
-                                src={firstImage}
+                                src={displayImage}
                                 alt={service.name}
                                 className="w-full h-full object-cover rounded-lg"
                               />

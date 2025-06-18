@@ -31,6 +31,7 @@ export interface Service {
   price: string; // Keep as string for now, formatting handled in UI
   description?: string | null;
   category_id?: string; // UUID as string
+  image?: string | null; // General service image
   image_liso?: string | null;
   image_ondulado?: string | null;
   image_cacheado?: string | null;

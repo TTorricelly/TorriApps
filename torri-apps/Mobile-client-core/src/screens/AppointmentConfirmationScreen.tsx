@@ -56,7 +56,7 @@ const AppointmentConfirmationScreen: React.FC<AppointmentConfirmationProps> = ({
         service_id: selectedService.id,
         appointment_date: selectedDate.fullDate, // YYYY-MM-DD format
         start_time: selectedTime, // HH:MM format
-        notes_by_client: observations.trim() || null,
+        notes_by_client: observations.trim() || '',
       };
 
       console.log('Creating appointment with data:', appointmentData);
@@ -65,7 +65,7 @@ const AppointmentConfirmationScreen: React.FC<AppointmentConfirmationProps> = ({
       
       console.log('Appointment created successfully:', createdAppointment);
 
-      // Navigate to success screen
+      // Navigate to success/confirmation screen (orders screen shows the appointment details)
       onNavigate('orders');
       if (onScrollToTop && scrollRef) {
         setTimeout(() => onScrollToTop(scrollRef), 0);

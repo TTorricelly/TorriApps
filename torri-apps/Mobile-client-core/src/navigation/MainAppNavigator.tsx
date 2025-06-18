@@ -68,12 +68,7 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
             homeScreenRef.current?.resetToCategories();
           }
           
-          // Handle Appointments tab press - navigate to orders screen
-          if (routeName === 'Agendamentos' && homeScreenRef.current) {
-            e.preventDefault();
-            navigation.navigate('Início');
-            homeScreenRef.current?.navigateToOrders();
-          }
+          // Note: Removed Agendamentos tab press handler to allow normal navigation to AppointmentsScreen
         },
       })}
     >

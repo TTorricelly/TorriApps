@@ -172,11 +172,26 @@ export const createAppointment = async (appointmentData) => {
 export const getUserAppointments = async (status = null) => {
   try {
     const params = status ? { status } : {};
-    const response = await apiClient.get(`${API_ENDPOINTS.APPOINTMENTS}/my-appointments`, {
+    console.log('getUserAppointments - Making request to:', API_ENDPOINTS.APPOINTMENTS);
+    console.log('getUserAppointments - With params:', params);
+    
+    // Use the main appointments endpoint without trailing slash to avoid 307 redirect
+    const response = await apiClient.get(API_ENDPOINTS.APPOINTMENTS, {
       params
     });
+    
+    console.log('getUserAppointments - Response received:', response.data);
     return response.data;
   } catch (error) {
+    console.error('getUserAppointments error:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      url: error.config?.url,
+      headers: error.config?.headers
+    });
+    
     if (error.response) {
       throw new Error(error.response.data.detail || 'Failed to fetch appointments');
     } else if (error.request) {

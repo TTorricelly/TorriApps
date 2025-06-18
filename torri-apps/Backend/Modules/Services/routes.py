@@ -235,6 +235,39 @@ def delete_service_endpoint(
     return None # For 204 No Content
 
 @services_router.post(
+    "/{service_id}/image",
+    response_model=ServiceWithProfessionalsResponse,
+    summary="Upload general image for a service."
+)
+async def upload_service_image_endpoint(
+    service_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    image: UploadFile = File(...)
+):
+    # Check if service exists
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
+    if not db_service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
+    
+    # Delete old image if exists
+    if db_service.image:
+        file_handler.delete_file(db_service.image)
+    
+    # Save new image
+    image_path = await file_handler.save_uploaded_file(
+        file=image,
+        tenant_id="default",  # Use default for single schema
+        subdirectory="services"
+    )
+    
+    # Update service with new image path
+    db_service.image = image_path
+    db.commit()
+    
+    return db_service
+
+@services_router.post(
     "/{service_id}/images",
     response_model=ServiceWithProfessionalsResponse,
     summary="Upload images for a service (by hair type)."

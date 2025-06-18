@@ -67,6 +67,7 @@ class ServiceUpdate(BaseModel): # All fields optional for update
 class ServiceSchema(ServiceBase): # Renamed from Service to ServiceSchema. Standard service response model
     id: UUID
     # tenant_id removed
+    image: Optional[str] = None
     image_liso: Optional[str] = None
     image_ondulado: Optional[str] = None
     image_cacheado: Optional[str] = None

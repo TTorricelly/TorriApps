@@ -39,6 +39,19 @@ export const servicesApi = {
     await api.delete(`/services/${id}`);
   },
 
+  // Upload general service image
+  uploadImage: async (serviceId, imageFile) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    const response = await api.post(`/services/${serviceId}/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   // Upload service images
   uploadImages: async (serviceId, imageFiles) => {
     const formData = new FormData();
