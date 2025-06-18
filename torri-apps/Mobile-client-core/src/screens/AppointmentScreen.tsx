@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, AlertCircle } from 'lucide-react-native';
@@ -24,6 +24,27 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
   onRetryTimeSlots,
 }) => {
   const { selectedDate, selectedProfessional, selectedTime } = appointmentState;
+  const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({});
+
+  // Utility function to get initials from a full name
+  const getInitials = (fullName: string | undefined): string => {
+    if (!fullName) return '?';
+    return fullName
+      .split(' ')
+      .map(name => name.charAt(0))
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
+  // Utility function to check if professional has a valid image
+  const hasValidImage = (professional: any): boolean => {
+    const imageUrl = professional.image || professional.photo_url;
+    return imageUrl && 
+           imageUrl.trim() !== '' && 
+           !imageUrl.includes('placeholder') &&
+           imageUrl !== 'https://via.placeholder.com/80';
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
@@ -177,13 +198,37 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
                       borderRadius: 32, 
                       overflow: 'hidden', 
                       marginBottom: 8, 
-                      backgroundColor: '#f3f4f6' 
+                      backgroundColor: '#f3f4f6',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}>
-                      <Image
-                        source={{ uri: professional.image || professional.photo_url || 'https://via.placeholder.com/80' }}
-                        style={{ width: '100%', height: '100%' }}
-                        resizeMode="cover"
-                      />
+                      {hasValidImage(professional) && !imageErrors[professional.id] ? (
+                        <Image
+                          source={{ uri: professional.image || professional.photo_url }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                          onError={() => {
+                            setImageErrors(prev => ({ ...prev, [professional.id]: true }));
+                          }}
+                        />
+                      ) : (
+                        <View style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: '#ec4899',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 32
+                        }}>
+                          <Text style={{
+                            color: 'white',
+                            fontSize: 20,
+                            fontWeight: 'bold'
+                          }}>
+                            {getInitials(professional.name || professional.full_name)}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '500', color: '#1f2937', textAlign: 'center' }}>
                       {professional.name || professional.full_name}

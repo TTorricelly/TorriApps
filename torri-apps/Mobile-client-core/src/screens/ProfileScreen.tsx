@@ -464,44 +464,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               </Text>
             </TouchableOpacity>
 
-            {/* My Appointments */}
-            <TouchableOpacity
-              style={{
-                width: '100%',
-                paddingVertical: 18,
-                backgroundColor: '#f3f4f6',
-                borderRadius: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onPress={() => Alert.alert('Em breve', 'Funcionalidade será implementada em breve.')}
-            >
-              <Calendar size={20} color="#374151" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#374151', fontSize: 18, fontWeight: 'bold' }}>
-                Meus Agendamentos
-              </Text>
-            </TouchableOpacity>
-
-            {/* Help & Support */}
-            <TouchableOpacity
-              style={{
-                width: '100%',
-                paddingVertical: 18,
-                backgroundColor: '#f3f4f6',
-                borderRadius: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onPress={() => Alert.alert('Ajuda', 'Entre em contato conosco pelo WhatsApp: (11) 99999-9999')}
-            >
-              <HelpCircle size={20} color="#374151" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#374151', fontSize: 18, fontWeight: 'bold' }}>
-                Ajuda e Suporte
-              </Text>
-            </TouchableOpacity>
-
             {/* Logout */}
             <TouchableOpacity
               style={{

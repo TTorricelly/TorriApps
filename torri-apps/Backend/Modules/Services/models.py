@@ -29,6 +29,7 @@ class Category(Base):
     name = Column(String(100), nullable=False, unique=True)  # Now globally unique in single schema
     display_order = Column(Integer, nullable=False, default=0)
     icon_path = Column(String(255), nullable=True)
+    tenant_id = Column(CHAR(36), nullable=True)  # Keep for database compatibility
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
@@ -68,7 +69,7 @@ class Service(Base):
 
     appointments = relationship(
         "Modules.Appointments.models.Appointment", # String type hint
-        foreign_keys="[Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
+        foreign_keys="[Modules.Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
         back_populates="service"
     )
 

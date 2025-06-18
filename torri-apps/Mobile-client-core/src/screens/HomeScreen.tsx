@@ -313,6 +313,22 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
   }, [currentScreen, selectedService]);
 
+  // Auto-select today's date when navigating to scheduling screen for the first time
+  useEffect(() => {
+    if (currentScreen === 'scheduling' && !selectedDate && availableDates.length > 0) {
+      // Find today's date in the available dates
+      const todayDate = availableDates.find(date => {
+        const today = new Date().toISOString().split('T')[0];
+        return date.fullDate === today;
+      });
+      
+      // Select today's date if it exists and is available
+      if (todayDate) {
+        setSelectedDate(todayDate);
+      }
+    }
+  }, [currentScreen, selectedDate, availableDates]);
+
   // Load time slots when professional and date are selected
   useEffect(() => {
     if (selectedProfessional?.id && selectedDate?.fullDate) {

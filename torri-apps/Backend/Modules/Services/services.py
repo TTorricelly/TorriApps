@@ -36,6 +36,7 @@ def _add_image_urls_to_service(service: Service, base_url: str = None) -> dict:
         'is_active': service.is_active,
         'category_id': service.category_id,
         # 'tenant_id': service.tenant_id, # Removed tenant_id
+        'image': file_handler.get_public_url(service.image, base_url) if service.image else None,
         'image_liso': file_handler.get_public_url(service.image_liso, base_url) if service.image_liso else None,
         'image_ondulado': file_handler.get_public_url(service.image_ondulado, base_url) if service.image_ondulado else None,
         'image_cacheado': file_handler.get_public_url(service.image_cacheado, base_url) if service.image_cacheado else None,
@@ -96,7 +97,7 @@ def create_category(db: Session, category_data: CategoryCreate, icon_path: Optio
 
 def get_category_by_id(db: Session, category_id: UUID) -> Category | None:
     # SIMPLIFIED: Get category by ID only (no tenant filtering)
-    stmt = select(Category).where(Category.id == category_id) # Use UUID directly
+    stmt = select(Category).where(Category.id == str(category_id)) # Convert UUID to string for MySQL
     return db.execute(stmt).scalars().first()
 
 def get_all_categories(db: Session, skip: int = 0, limit: int = 100) -> List[CategorySchema]:

@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     # Schema configuration (from environment variable)
     default_schema_name: str = "public"  # Read from DEFAULT_SCHEMA_NAME env var
     
+    # Timezone configuration (from environment variable)
+    # Examples: "America/Sao_Paulo", "America/New_York", "Europe/London", "UTC"
+    # Add TIMEZONE=America/Sao_Paulo to .env file for Brazil timezone
+    timezone: str = "UTC"  # Read from TIMEZONE env var, defaults to UTC
+    
     # Legacy multi-tenant settings (deprecated but kept for compatibility)
     public_database_url: str = ""  # Will use database_url if empty
     tenant_url_template: str = ""  # Will use database_url if empty

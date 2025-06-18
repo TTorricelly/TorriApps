@@ -2,10 +2,14 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date, time, datetime, timedelta
 import calendar
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException, status
+
+# Config
+from Config.Settings import settings
 
 # Models
 from .models import Appointment
@@ -117,6 +121,22 @@ def get_daily_time_slots_for_professional(
                 break
 
             slot = TimeSlot(start_time=slot_start_time, end_time=slot_end_time, is_available=True)
+
+            # Check if slot is in the past (only for today's date in the configured timezone)
+            timezone = ZoneInfo(settings.timezone)
+            current_datetime_tz = datetime.now(timezone)
+            today_in_tz = current_datetime_tz.date()
+            
+            if target_date == today_in_tz:
+                slot_datetime = datetime.combine(target_date, slot_start_time).replace(tzinfo=timezone)
+                if slot_datetime <= current_datetime_tz:
+                    slot.is_available = False
+                    print(f"[DEBUG] Marking slot {slot_start_time} as unavailable (past time). Current: {current_datetime_tz}, Slot: {slot_datetime}")
+            
+            if not slot.is_available: 
+                slots.append(slot)
+                current_time += timedelta(minutes=block_size_minutes)
+                continue
 
             # Check against breaks
             for br in breaks_today:
