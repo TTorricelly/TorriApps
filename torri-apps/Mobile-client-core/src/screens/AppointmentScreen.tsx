@@ -19,6 +19,9 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
   isLoadingProfessionals = false,
   professionalsError = null,
   onRetryProfessionals,
+  isLoadingTimeSlots = false,
+  timeSlotsError = null,
+  onRetryTimeSlots,
 }) => {
   const { selectedDate, selectedProfessional, selectedTime } = appointmentState;
 
@@ -196,30 +199,73 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({
             <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 16 }}>
               Horários disponíveis
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {availableTimes.map((time, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedTime === time ? '#ec4899' : '#e5e7eb',
-                    backgroundColor: selectedTime === time ? '#ec4899' : 'white',
-                    borderRadius: 12,
-                    padding: 12,
-                    minWidth: 80,
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setSelectedTime(time)}
-                >
-                  <Text style={{ 
-                    fontWeight: '500', 
-                    color: selectedTime === time ? 'white' : '#374151' 
-                  }}>
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            
+            {/* Show message if no professional or date selected */}
+            {(!selectedProfessional || !selectedDate) ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: '#6b7280', textAlign: 'center' }}>
+                  Selecione um profissional e uma data para ver os horários disponíveis.
+                </Text>
+              </View>
+            ) : isLoadingTimeSlots ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <ActivityIndicator size="large" color="#ec4899" />
+                <Text style={{ marginTop: 10, color: '#6b7280' }}>
+                  Carregando horários disponíveis...
+                </Text>
+              </View>
+            ) : timeSlotsError ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <AlertCircle size={32} color="#ef4444" />
+                <Text style={{ color: '#ef4444', textAlign: 'center', marginTop: 8, marginBottom: 12 }}>
+                  {timeSlotsError}
+                </Text>
+                {onRetryTimeSlots && (
+                  <TouchableOpacity 
+                    onPress={onRetryTimeSlots}
+                    style={{ 
+                      paddingVertical: 8, 
+                      paddingHorizontal: 16, 
+                      backgroundColor: '#ec4899', 
+                      borderRadius: 6 
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '500' }}>Tentar Novamente</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : availableTimes.length === 0 ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <Text style={{ color: '#6b7280', textAlign: 'center' }}>
+                  Nenhum horário disponível para esta data.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                {availableTimes.map((time, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      borderWidth: 2,
+                      borderColor: selectedTime === time ? '#ec4899' : '#e5e7eb',
+                      backgroundColor: selectedTime === time ? '#ec4899' : 'white',
+                      borderRadius: 12,
+                      padding: 12,
+                      minWidth: 80,
+                      alignItems: 'center'
+                    }}
+                    onPress={() => setSelectedTime(time)}
+                  >
+                    <Text style={{ 
+                      fontWeight: '500', 
+                      color: selectedTime === time ? 'white' : '#374151' 
+                    }}>
+                      {time}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </ScrollView>
 

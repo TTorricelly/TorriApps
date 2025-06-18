@@ -5,6 +5,7 @@ import RenderHtml from 'react-native-render-html';
 import useAuthStore from '../store/authStore';
 import { getUserProfile } from '../services/userService';
 import { getCategories, getServicesByCategory } from '../services/categoryService';
+import { getAvailableTimeSlots } from '../services/appointmentService';
 import { API_BASE_URL } from '../config/environment';
 import { 
   Scissors,
@@ -107,6 +108,11 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const [isLoadingProfessionals, setIsLoadingProfessionals] = useState(false);
   const [professionalsError, setProfessionalsError] = useState<string | null>(null);
 
+  // State for time slots
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
+  const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null);
+
   // Auth store integration
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
     user: state.user as UserType, // Cast user to UserType
@@ -131,11 +137,9 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     const fetchProfile = async () => {
       // Check if user is authenticated and if detailed profile info (e.g., phone_number) is missing
       if (isAuthenticated && user && !user.phone_number) {
-        console.log('[HomeScreen] Attempting to fetch profile. isAuthenticated:', isAuthenticated, 'User from store:', JSON.stringify(user, null, 2));
         setIsProfileLoading(true);
         try {
           const rawProfileData = await getUserProfile();
-          console.log('[HomeScreen] Profile data fetched successfully (raw):', JSON.stringify(rawProfileData, null, 2));
           setProfile(rawProfileData); // Update store with detailed profile
         } catch (error) {
           console.error('[HomeScreen] Error fetching profile:', error);
@@ -238,13 +242,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const loadProfessionalsForService = async (serviceId: string) => {
     if (!serviceId) return;
     
-    // Debug: Check authentication state before making API call
-    console.log('[HomeScreen] Loading professionals for service:', serviceId);
-    console.log('[HomeScreen] Is authenticated:', isAuthenticated);
-    console.log('[HomeScreen] User data:', user);
-    
     if (!isAuthenticated) {
-      console.warn('[HomeScreen] User is not authenticated, cannot load professionals');
       setProfessionalsError('User not authenticated');
       return;
     }
@@ -264,7 +262,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
         }));
         setFetchedProfessionals(transformedProfessionals);
       } else {
-        console.warn("getProfessionalsForService did not return an array:", data);
         setFetchedProfessionals([]);
       }
     } catch (err: any) {
@@ -277,6 +274,28 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     }
   };
 
+  // Function to load available time slots for a professional on a specific date
+  const loadTimeSlots = async (professionalId: string, date: string) => {
+    if (!professionalId || !date || !selectedService?.id) {
+      setAvailableTimes([]);
+      return;
+    }
+    
+    setIsLoadingTimeSlots(true);
+    setTimeSlotsError(null);
+    try {
+      const timeSlots = await getAvailableTimeSlots(selectedService.id, professionalId, date);
+      setAvailableTimes(Array.isArray(timeSlots) ? timeSlots : []);
+    } catch (err: any) {
+      console.error(`[HomeScreen] Error fetching time slots for professional ${professionalId} on ${date}:`, err);
+      const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load available time slots.';
+      setTimeSlotsError(errorMessage);
+      setAvailableTimes([]);
+    } finally {
+      setIsLoadingTimeSlots(false);
+    }
+  };
+
   // Load professionals when user navigates to scheduling screen
   useEffect(() => {
     if (currentScreen === 'scheduling' && selectedService?.id) {
@@ -286,8 +305,24 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setFetchedProfessionals([]);
       setProfessionalsError(null);
       setIsLoadingProfessionals(false);
+      // Clear time slots as well
+      setAvailableTimes([]);
+      setTimeSlotsError(null);
+      setIsLoadingTimeSlots(false);
     }
   }, [currentScreen, selectedService]);
+
+  // Load time slots when professional and date are selected
+  useEffect(() => {
+    if (selectedProfessional?.id && selectedDate?.fullDate) {
+      loadTimeSlots(selectedProfessional.id, selectedDate.fullDate);
+    } else {
+      // Clear time slots if either professional or date is not selected
+      setAvailableTimes([]);
+      setTimeSlotsError(null);
+      setIsLoadingTimeSlots(false);
+    }
+  }, [selectedProfessional, selectedDate, selectedService]);
 
   // Helper function to scroll to top
   const scrollToTop = (scrollRef: React.RefObject<ScrollView>) => {
@@ -304,6 +339,10 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setSelectedProfessional(null);
       setSelectedTime(null);
       setObservations('');
+      // Clear time slots
+      setAvailableTimes([]);
+      setTimeSlotsError(null);
+      setIsLoadingTimeSlots(false);
       setTimeout(() => scrollToTop(categoriesScrollRef), 0);
     },
     navigateToOrders: () => {
@@ -407,11 +446,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 
   // Generate available dates dynamically (today + next 30 days)
   const availableDates: DateOption[] = generateAvailableDates(30);
-
-  const availableTimes = [
-    "9:00", "9:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "14:00", "14:30", "15:00", "15:30",
-  ];
 
   const salonInfo: SalonInfo = {
     name: "Salão Charme & Estilo",
@@ -1105,6 +1139,9 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
           isLoadingProfessionals={isLoadingProfessionals}
           professionalsError={professionalsError}
           onRetryProfessionals={() => selectedService && loadProfessionalsForService(selectedService.id)}
+          isLoadingTimeSlots={isLoadingTimeSlots}
+          timeSlotsError={timeSlotsError}
+          onRetryTimeSlots={() => selectedProfessional && selectedDate && loadTimeSlots(selectedProfessional.id, selectedDate.fullDate)}
         />
       );
     }

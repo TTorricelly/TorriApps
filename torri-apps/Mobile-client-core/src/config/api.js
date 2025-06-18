@@ -35,23 +35,18 @@ apiClient.interceptors.response.use(
 
     // Check for 401 Unauthorized
     if (error.response?.status === 401) {
-      // Temporarily disable automatic logout for debugging
-      console.log('Interceptor: Detected 401, but NOT logging out for debugging');
-      console.log('Request URL:', originalRequest.url);
-      console.log('Request headers:', originalRequest.headers);
-      console.log('Error response:', error.response.data);
+      // Don't auto-logout for appointment availability endpoint (expected 401 with fallback)
+      const isAppointmentAvailabilityEndpoint = originalRequest.url?.includes('/appointments/professional/') && originalRequest.url?.includes('/availability');
       
-      // TODO: Re-enable automatic logout after debugging
-      // if (!originalRequest._retry) {
-      //   originalRequest._retry = true;
-      //   try {
-      //     const useAuthStore = (await import('../store/authStore')).default;
-      //     console.log('Interceptor: Detected 401, attempting logout.');
-      //     await useAuthStore.getState().logout();
-      //   } catch (e) {
-      //     console.error('Interceptor: Error during logout on 401:', e);
-      //   }
-      // }
+      if (!isAppointmentAvailabilityEndpoint && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          const useAuthStore = (await import('../store/authStore')).default;
+          await useAuthStore.getState().logout();
+        } catch (e) {
+          console.error('Interceptor: Error during logout on 401:', e);
+        }
+      }
     }
     return Promise.reject(error);
   }

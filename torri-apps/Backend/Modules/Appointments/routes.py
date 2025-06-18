@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_db
-from Core.Auth.dependencies import get_current_user_tenant, get_current_user_from_db, require_role # get_current_user_tenant might need update if it still hints UserTenant
-from Core.Auth.models import User # Updated import UserTenant to User
+from Core.Auth.dependencies import get_current_user_tenant, get_current_user_from_db, require_role
+from Core.Auth.models import User
 from Core.Auth.constants import UserRole
+from Core.Security.jwt import TokenPayload
 
 from . import services as appointments_services # Alias
 from .schemas import (

@@ -112,6 +112,9 @@ export interface AppointmentScreenProps extends BaseScreenProps {
   isLoadingProfessionals?: boolean;
   professionalsError?: string | null;
   onRetryProfessionals?: () => void;
+  isLoadingTimeSlots?: boolean;
+  timeSlotsError?: string | null;
+  onRetryTimeSlots?: () => void;
 }
 
 export interface AppointmentConfirmationProps extends BaseScreenProps {
