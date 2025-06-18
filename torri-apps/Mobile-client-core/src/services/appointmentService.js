@@ -51,7 +51,7 @@ export const getProfessionalWeeklyAvailability = async (professionalId) => {
  */
 export const getProfessionalDailyAvailability = async (professionalId, date) => {
   try {
-    const response = await apiClient.get(`/api/v1/appointments/professional/${professionalId}/availability/`, {
+    const response = await apiClient.get(`/api/v1/appointments/professional/${professionalId}/availability`, {
       params: { date }
     });
     return response.data;
@@ -78,15 +78,19 @@ export const getAvailableTimeSlots = async (serviceId, professionalId, date) => 
   try {
     // First try the appointment endpoint for precise daily availability
     try {
+      console.log(`[DEBUG] Attempting to get daily availability for professional ${professionalId} on ${date}`);
       const dailyAvailability = await getProfessionalDailyAvailability(professionalId, date);
+      console.log(`[DEBUG] Daily availability response:`, dailyAvailability);
       
       // Transform the slots data to return only available time slots as strings
       const availableSlots = dailyAvailability.slots
         .filter(slot => slot.is_available)
         .map(slot => slot.start_time);
       
+      console.log(`[DEBUG] Available slots after filtering:`, availableSlots);
       return availableSlots;
     } catch (dailyError) {
+      console.log(`[DEBUG] Daily availability failed, falling back to weekly. Error:`, dailyError.message);
       // Fallback: Use weekly availability and generate basic time slots
       const weeklyAvailability = await getProfessionalWeeklyAvailability(professionalId);
       

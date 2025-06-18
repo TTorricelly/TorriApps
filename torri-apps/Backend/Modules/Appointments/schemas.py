@@ -50,6 +50,9 @@ class TimeSlot(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            time: lambda v: v.strftime('%H:%M') if v else None
+        }
 
 class DatedTimeSlot(BaseModel):
     date: date
@@ -58,6 +61,9 @@ class DatedTimeSlot(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            time: lambda v: v.strftime('%H:%M') if v else None
+        }
 
 class ProfessionalDailyAvailabilityResponse(BaseModel):
     date: date

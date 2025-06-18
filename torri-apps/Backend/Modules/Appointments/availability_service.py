@@ -131,9 +131,9 @@ def get_daily_time_slots_for_professional(
                 slot_datetime = datetime.combine(target_date, slot_start_time).replace(tzinfo=timezone)
                 if slot_datetime <= current_datetime_tz:
                     slot.is_available = False
-                    print(f"[DEBUG] Marking slot {slot_start_time} as unavailable (past time). Current: {current_datetime_tz}, Slot: {slot_datetime}")
             
-            if not slot.is_available: 
+            # If slot is already unavailable (due to past time), skip other checks but still append the slot
+            if not slot.is_available:
                 slots.append(slot)
                 current_time += timedelta(minutes=block_size_minutes)
                 continue

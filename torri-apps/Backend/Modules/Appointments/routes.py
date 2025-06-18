@@ -74,10 +74,9 @@ def get_professional_daily_availability_endpoint(
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission: Any authenticated user can view this.
-    # Service layer should validate professional_id exists.
-    # A quick check here:
-    prof_check = db.query(User.id).filter(User.id == professional_id).first() # Removed tenant_id check
-    if not prof_check:
+    # Validate professional exists and has the correct role
+    prof_check = db.query(User).filter(User.id == str(professional_id)).first() # Removed tenant_id check
+    if not prof_check or prof_check.role != UserRole.PROFISSIONAL:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professional not found.") # Updated detail
 
     return appointments_services.get_daily_time_slots_for_professional(
