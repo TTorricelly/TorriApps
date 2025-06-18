@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Scissors, Calendar, User, MapPin } from 'lucide-react-native';
 import { AppointmentConfirmationProps } from '../types';
+import { createAppointment } from '../services/appointmentService';
+import useAuthStore from '../store/authStore';
 
 // Helper function to format date for display
 const formatDateForDisplay = (date: any): string => {
@@ -31,6 +33,54 @@ const AppointmentConfirmationScreen: React.FC<AppointmentConfirmationProps> = ({
   scrollRef,
 }) => {
   const { selectedService, selectedDate, selectedProfessional, selectedTime, observations } = appointmentState;
+  const [isConfirming, setIsConfirming] = useState(false);
+  const { user } = useAuthStore();
+
+  const handleConfirmAppointment = async () => {
+    // Validate all required data is present
+    if (!selectedService || !selectedDate || !selectedProfessional || !selectedTime || !user?.id) {
+      Alert.alert(
+        'Erro de Validação',
+        'Alguns dados necessários estão faltando. Por favor, verifique suas seleções.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsConfirming(true);
+
+    try {
+      const appointmentData = {
+        client_id: user.id, // Current authenticated user
+        professional_id: selectedProfessional.id,
+        service_id: selectedService.id,
+        appointment_date: selectedDate.fullDate, // YYYY-MM-DD format
+        start_time: selectedTime, // HH:MM format
+        notes_by_client: observations.trim() || null,
+      };
+
+      console.log('Creating appointment with data:', appointmentData);
+
+      const createdAppointment = await createAppointment(appointmentData);
+      
+      console.log('Appointment created successfully:', createdAppointment);
+
+      // Navigate to success screen
+      onNavigate('orders');
+      if (onScrollToTop && scrollRef) {
+        setTimeout(() => onScrollToTop(scrollRef), 0);
+      }
+    } catch (error: any) {
+      console.error('Failed to create appointment:', error);
+      Alert.alert(
+        'Erro ao Criar Agendamento',
+        error.message || 'Não foi possível criar o agendamento. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
@@ -155,20 +205,25 @@ const AppointmentConfirmationScreen: React.FC<AppointmentConfirmationProps> = ({
         <View style={{ padding: 16, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
           <TouchableOpacity
             style={{
-              backgroundColor: '#ec4899',
+              backgroundColor: isConfirming ? '#d1d5db' : '#ec4899',
               padding: 16,
               borderRadius: 12,
-              alignItems: 'center'
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
             }}
-            onPress={() => {
-              onNavigate('orders');
-              if (onScrollToTop && scrollRef) {
-                setTimeout(() => onScrollToTop(scrollRef), 0);
-              }
-            }}
+            onPress={handleConfirmAppointment}
+            disabled={isConfirming}
           >
+            {isConfirming && (
+              <ActivityIndicator 
+                size="small" 
+                color="white" 
+                style={{ marginRight: 8 }} 
+              />
+            )}
             <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-              Confirmar Agendamento
+              {isConfirming ? 'Confirmando...' : 'Confirmar Agendamento'}
             </Text>
           </TouchableOpacity>
         </View>

@@ -41,7 +41,7 @@ router = APIRouter(
 )
 def get_daily_schedule_endpoint(
     schedule_date: date = Path(..., description="The target date for the schedule (YYYY-MM-DD)."),
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission: Any authenticated user can view this.
@@ -70,7 +70,7 @@ def get_daily_schedule_endpoint(
 def get_professional_daily_availability_endpoint(
     professional_id: UUID = Path(..., description="ID of the professional."),
     target_date: date = Query(..., description="The target date for availability (YYYY-MM-DD).", alias="date"),
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission: Any authenticated user can view this.
@@ -94,7 +94,7 @@ def get_professional_daily_availability_endpoint(
 )
 def get_service_availability_for_professional_endpoint(
     availability_request: AvailabilityRequest = Body(...),
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None, # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission: Any authenticated user can view this.
@@ -119,7 +119,7 @@ def get_service_availability_for_professional_endpoint(
 )
 def create_new_appointment_endpoint(
     appointment_data: AppointmentCreate,
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)], # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)]
 ):
     # The service `create_appointment` handles permission logic:
@@ -144,7 +144,7 @@ def create_new_appointment_endpoint(
     summary="List appointments based on filters and user role." # Updated summary
 )
 def list_appointments_endpoint(
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)], # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     professional_id: Optional[UUID] = Query(None, description="Filter by professional ID."),
     client_id: Optional[UUID] = Query(None, description="Filter by client ID."),
@@ -175,7 +175,7 @@ def list_appointments_endpoint(
     summary="Get a specific appointment by its ID."
 )
 def get_appointment_by_id_endpoint(
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)], # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to retrieve.")
 ):
@@ -197,7 +197,7 @@ def get_appointment_by_id_endpoint(
     summary="Cancel an appointment."
 )
 def cancel_appointment_endpoint(
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)], # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to cancel."),
     payload: Optional[AppointmentCancelPayload] = Body(None, description="Optional reason for cancellation.")
@@ -218,7 +218,7 @@ def cancel_appointment_endpoint(
     summary="Reschedule an appointment."
 )
 def reschedule_appointment_endpoint(
-    requesting_user: Annotated[User, Depends(get_current_user_tenant)], # Updated UserTenant to User
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     payload: AppointmentReschedulePayload = Body(...),
     appointment_id: UUID = Path(..., description="ID of the appointment to reschedule.")

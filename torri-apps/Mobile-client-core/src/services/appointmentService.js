@@ -130,18 +130,28 @@ export const getAvailableTimeSlots = async (serviceId, professionalId, date) => 
 };
 
 /**
- * Create a new appointment
+ * Create a new appointment for the authenticated user
  * @param {Object} appointmentData - Appointment details
  * @param {string} appointmentData.service_id - Service ID
  * @param {string} appointmentData.professional_id - Professional ID
  * @param {string} appointmentData.appointment_date - Date in YYYY-MM-DD format
  * @param {string} appointmentData.start_time - Start time in HH:MM format
- * @param {string} appointmentData.observations - Optional observations
+ * @param {string} appointmentData.notes_by_client - Optional notes from client
  * @returns {Promise<Object>} Created appointment object
  */
 export const createAppointment = async (appointmentData) => {
   try {
-    const response = await apiClient.post(API_ENDPOINTS.APPOINTMENTS, appointmentData);
+    // Create the payload with the exact structure expected by the backend
+    const payload = {
+      client_id: appointmentData.client_id, // This should be the authenticated user's ID
+      professional_id: appointmentData.professional_id,
+      service_id: appointmentData.service_id,
+      appointment_date: appointmentData.appointment_date,
+      start_time: appointmentData.start_time,
+      notes_by_client: appointmentData.notes_by_client || null
+    };
+
+    const response = await apiClient.post(API_ENDPOINTS.APPOINTMENTS, payload);
     return response.data;
   } catch (error) {
     if (error.response) {
