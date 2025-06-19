@@ -34,7 +34,10 @@ export default function ServicesPage() {
   // State management
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(() => {
+    // Initialize from localStorage or empty string
+    return localStorage.getItem('services_selected_category_id') || '';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
@@ -61,9 +64,22 @@ export default function ServicesPage() {
       const data = await categoriesApi.getAll();
       setCategories(data);
       
-      // Auto-select first category if available
-      if (data.length > 0) {
-        setSelectedCategoryId(data[0].id);
+      // Check if stored category still exists, otherwise auto-select first category
+      const storedCategoryId = localStorage.getItem('services_selected_category_id');
+      const storedCategoryExists = data.some(cat => cat.id === storedCategoryId);
+      
+      if (storedCategoryExists) {
+        // Keep the stored category (selectedCategoryId state is already initialized with it)
+        // No need to update state, just ensure localStorage is in sync
+      } else if (data.length > 0) {
+        // Stored category doesn't exist or no stored category, select first available
+        const firstCategoryId = data[0].id;
+        setSelectedCategoryId(firstCategoryId);
+        localStorage.setItem('services_selected_category_id', firstCategoryId);
+      } else {
+        // No categories available, clear stored selection
+        setSelectedCategoryId('');
+        localStorage.removeItem('services_selected_category_id');
       }
     } catch (error) {
       console.error('[ServicesPage] Error loading categories:', error);
@@ -120,6 +136,13 @@ export default function ServicesPage() {
   const handleCategoryChange = (categoryId) => {
     setSelectedCategoryId(categoryId);
     setSearchQuery(''); // Clear search when changing category
+    
+    // Persist selected category to localStorage
+    if (categoryId) {
+      localStorage.setItem('services_selected_category_id', categoryId);
+    } else {
+      localStorage.removeItem('services_selected_category_id');
+    }
   };
 
   const handleCreateService = () => {
@@ -300,6 +323,7 @@ export default function ServicesPage() {
                     <th className="text-left p-4 text-text-primary font-semibold">Duração (min)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Comissão (%)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Preço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Paralelo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Status</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
                   </tr>
@@ -361,6 +385,21 @@ export default function ServicesPage() {
                         <Typography className="text-text-primary font-medium">
                           {formatPrice(service.price)}
                         </Typography>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <Badge 
+                            color={service.parallelable ? "blue" : "gray"}
+                            className="text-xs w-fit"
+                          >
+                            {service.parallelable ? "Sim" : "Não"}
+                          </Badge>
+                          {service.parallelable && (
+                            <Typography className="text-text-secondary text-xs">
+                              Máx: {service.max_parallel_pros}
+                            </Typography>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <Badge 

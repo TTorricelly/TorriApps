@@ -5,12 +5,11 @@ from typing import List, Optional
 
 # --- StationType Schemas ---
 class StationTypeBase(BaseModel):
-    code: str = Field(..., min_length=1, max_length=50, example="hair_chair")
     name: str = Field(..., min_length=1, max_length=100, example="Cadeira de Corte")
 
 
 class StationTypeCreate(StationTypeBase):
-    pass
+    code: Optional[str] = Field(None, min_length=1, max_length=50, example="hair_chair")
 
 
 class StationTypeUpdate(BaseModel):
@@ -20,6 +19,7 @@ class StationTypeUpdate(BaseModel):
 
 class StationTypeSchema(StationTypeBase):
     id: UUID
+    code: str  # Code is always present in response
 
     class Config:
         from_attributes = True
@@ -66,7 +66,6 @@ class ServiceStationRequirementUpdate(BaseModel):
 
 
 class ServiceStationRequirementSchema(ServiceStationRequirementBase):
-    service: Optional[dict] = None  # Simplified service info
     station_type: Optional[StationTypeSchema] = None
 
     class Config:

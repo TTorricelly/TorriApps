@@ -10,6 +10,8 @@ import {
   UsersRoutes,
   ProfessionalsPage,
   ProfessionalForm,
+  StationTypesPage,
+  StationsPage,
   Login
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
@@ -55,6 +57,10 @@ function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/create" element={<ClientForm />} />
           <Route path="/clients/edit/:clientId" element={<ClientForm />} />
+          
+          {/* Stations Routes */}
+          <Route path="/stations/types" element={<StationTypesPage />} />
+          <Route path="/stations" element={<StationsPage />} />
           
           {/* Settings Routes */}
           <Route path="/settings/salon-profile" element={<SalonProfile />} />

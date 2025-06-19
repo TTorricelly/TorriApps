@@ -1,17 +1,18 @@
+from uuid import uuid4
 from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Text
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
-from Core.Database.base import BaseModel
+from Config.Database import Base
 
 
-class StationType(BaseModel):
+class StationType(Base):
     """
     Describes the kind of resource a service needs.
     Examples: hair_chair, mani_table, pedi_chair, spa_room
     """
     __tablename__ = "station_types"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
     code = Column(String(50), nullable=False, unique=True, index=True)  # 'hair_chair'
     name = Column(String(100), nullable=False)  # 'Cadeira de Corte'
 
@@ -20,7 +21,7 @@ class StationType(BaseModel):
     service_requirements = relationship("ServiceStationRequirement", back_populates="station_type", cascade="all, delete-orphan")
 
 
-class Station(BaseModel):
+class Station(Base):
     """
     The physical seat/room that can be booked.
     Examples: Hair Chair #1, Hair Chair #2, Spa Room A, Spa Room B
@@ -36,7 +37,7 @@ class Station(BaseModel):
     station_type = relationship("StationType", back_populates="stations")
 
 
-class ServiceStationRequirement(BaseModel):
+class ServiceStationRequirement(Base):
     """
     Defines which station types are required for a service and in what quantity.
     """

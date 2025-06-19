@@ -9,6 +9,7 @@ from Modules.Services.routes import categories_router, services_router
 from Modules.Availability.routes import router as availability_router
 from Modules.Appointments.routes import router as appointments_router
 from Modules.Professionals.routes import router as professionals_router
+from Modules.Stations.routes import router as stations_router
 import Modules.Professionals  # Import module to register models
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 # Placeholder for other routers:
@@ -69,6 +70,7 @@ app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["S
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
 app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
 app.include_router(professionals_router, prefix=API_V1_PREFIX, tags=["Professionals Management"])
+app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

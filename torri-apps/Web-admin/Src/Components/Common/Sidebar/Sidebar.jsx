@@ -13,7 +13,8 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   UserCircleIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
@@ -53,6 +54,15 @@ const menuItems = [
     items: [
       { title: 'Equipe', path: '/professionals/team' },
       { title: 'Disponibilidades', path: '/professionals/availability' }
+    ]
+  },
+  {
+    id: 'stations',
+    title: 'Estações',
+    icon: BuildingStorefrontIcon,
+    items: [
+      { title: 'Tipos de Estação', path: '/stations/types' },
+      { title: 'Estações', path: '/stations' }
     ]
   },
   {
