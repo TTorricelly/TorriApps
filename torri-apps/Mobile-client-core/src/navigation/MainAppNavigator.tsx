@@ -1,12 +1,13 @@
 import React, { useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Home, Calendar, User } from "lucide-react-native";
+import { Home, Calendar, User, ShoppingCart } from "lucide-react-native";
 
 // Import screen components
 import AppointmentsScreen from '../screens/AppointmentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
+import ServicesScreen from '../screens/ServicesScreen';
 
 interface HomeScreenRef {
   resetToCategories: () => void;
@@ -46,6 +47,8 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
 
           if (route.name === "Início") {
             icon = <Home size={size} color={color} />
+          } else if (route.name === "Serviços") {
+            icon = <ShoppingCart size={size} color={color} />
           } else if (route.name === "Agendamentos") {
             icon = <Calendar size={size} color={color} />
           } else if (route.name === "Perfil") {
@@ -75,6 +78,7 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
       <Tab.Screen name="Início">
         {(props) => <HomeStackNavigator {...props} homeScreenRef={homeScreenRef} />}
       </Tab.Screen>
+      <Tab.Screen name="Serviços" component={ServicesScreen} />
       <Tab.Screen name="Agendamentos" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil">
         {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
