@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { View, Text, StyleSheet } from 'react-native';
 import { Home, Calendar, User, ShoppingCart } from "lucide-react-native";
+import useServicesStore from '../store/servicesStore';
 
 // Import screen components
 import AppointmentsScreen from '../screens/AppointmentsScreen';
@@ -37,6 +39,25 @@ function HomeStackNavigator({ homeScreenRef }: { homeScreenRef: React.RefObject<
   )
 };
 
+// Custom Shopping Cart Icon with Badge
+const ShoppingCartWithBadge = ({ color, size }: { color: string; size: number }) => {
+  const { selectedServices } = useServicesStore();
+  const count = selectedServices.length;
+
+  return (
+    <View style={styles.iconContainer}>
+      <ShoppingCart size={size} color={color} />
+      {count > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {count > 99 ? '99+' : count.toString()}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
   const homeScreenRef = useRef<HomeScreenRef>(null);
 
@@ -49,7 +70,7 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
           if (route.name === "Início") {
             icon = <Home size={size} color={color} />
           } else if (route.name === "Serviços") {
-            icon = <ShoppingCart size={size} color={color} />
+            icon = <ShoppingCartWithBadge color={color} size={size} />
           } else if (route.name === "Agendamentos") {
             icon = <Calendar size={size} color={color} />
           } else if (route.name === "Perfil") {
@@ -89,5 +110,32 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+  },
+  badge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
 
 export default BottomTabs;
