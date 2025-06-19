@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Image, useWindowDimensions, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ShoppingCart, Trash2, Info, X } from 'lucide-react-native';
+import { ShoppingCart, Trash2, Info, X, ChevronDown, ChevronRight } from 'lucide-react-native';
+import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
 import ServiceDetailsView from '../components/ServiceDetailsView';
+import { API_BASE_URL } from '../config/environment';
 
 interface Service {
   id: string;
@@ -24,6 +26,8 @@ const ServicesScreen = () => {
   const [selectedServiceForDetails, setSelectedServiceForDetails] = useState<Service | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
 
   const formatDuration = (minutes: number | undefined) => {
     if (!minutes) return '-';
@@ -48,13 +52,28 @@ const ServicesScreen = () => {
     setImageModalVisible(true);
   };
 
+  const toggleExpanded = (serviceId: string) => {
+    // If clicking the same service, collapse it. Otherwise, expand the new one (auto-collapse previous)
+    setExpandedServiceId(expandedServiceId === serviceId ? null : serviceId);
+  };
+
+  // Helper function to construct full image URLs
+  const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
+    if (!relativePath) return null;
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+      return relativePath.replace('http://localhost:8000', API_BASE_URL);
+    }
+    return `${API_BASE_URL}${relativePath}`;
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1">
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeAreaTop} />
+      <View style={styles.content}>
         {/* Header */}
-        <View className="bg-white border-b border-gray-200 px-4 py-4">
-          <Text className="text-2xl font-bold text-gray-900">Serviços Selecionados</Text>
-          <Text className="text-sm text-gray-600 mt-1">
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Serviços Selecionados</Text>
+          <Text style={styles.headerSubtitle}>
             {selectedServices.length === 0 
               ? 'Nenhum serviço selecionado' 
               : `${selectedServices.length} ${selectedServices.length === 1 ? 'serviço' : 'serviços'} selecionado${selectedServices.length === 1 ? '' : 's'}`
@@ -63,86 +82,191 @@ const ServicesScreen = () => {
         </View>
 
         {/* Content */}
-        <ScrollView className="flex-1">
+        <ScrollView style={styles.scrollView}>
           {selectedServices.length === 0 ? (
-            <View className="flex-1 items-center justify-center py-20">
+            <View style={styles.emptyState}>
               <ShoppingCart size={64} color="#e5e7eb" />
-              <Text className="text-gray-500 text-center mt-4">
+              <Text style={styles.emptyStateText}>
                 Nenhum serviço selecionado ainda.{'\n'}
                 Adicione serviços a partir da tela inicial.
               </Text>
             </View>
           ) : (
-            <View className="px-4 py-4">
-              {/* Services list */}
-              {selectedServices.map((service: Service) => (
-                <View 
-                  key={service.id}
-                  className="bg-gray-50 rounded-lg p-4 mb-3 flex-row items-start"
-                >
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900 mb-1">
-                      {service.name}
-                    </Text>
-                    <Text className="text-sm text-gray-600 mb-1">
-                      Duração: {formatDuration(service.duration_minutes)}
-                    </Text>
-                    <Text className="text-lg font-bold text-pink-500">
-                      {formatPrice(service.price)}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center ml-2">
-                    <TouchableOpacity
-                      onPress={() => handleShowDetails(service)}
-                      className="p-2 rounded-full hover:bg-gray-100"
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Info size={20} color="#3b82f6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => removeService(service.id)}
-                      className="p-2 rounded-full hover:bg-red-50"
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Trash2 size={20} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
+            <View style={styles.servicesContainer}>
+              {/* Expandable Services Cards */}
+              {selectedServices.map((service: Service) => {
+                const isExpanded = expandedServiceId === service.id;
+                
+                // Prepare images for carousel
+                const imagesForCarousel = [];
+                if (service?.image) {
+                  const fullUrl = getFullImageUrl(service.image);
+                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Imagem do Serviço" });
+                }
+                if (service?.image_liso) {
+                  const fullUrl = getFullImageUrl(service.image_liso);
+                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Liso" });
+                }
+                if (service?.image_ondulado) {
+                  const fullUrl = getFullImageUrl(service.image_ondulado);
+                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Ondulado" });
+                }
+                if (service?.image_cacheado) {
+                  const fullUrl = getFullImageUrl(service.image_cacheado);
+                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Cacheado" });
+                }
+                if (service?.image_crespo) {
+                  const fullUrl = getFullImageUrl(service.image_crespo);
+                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Crespo" });
+                }
 
-              {/* Total summary */}
-              <View className="mt-6 pt-6 border-t border-gray-200">
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-gray-600">Total de serviços:</Text>
-                  <Text className="font-semibold text-gray-900">{selectedServices.length}</Text>
-                </View>
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-gray-600">Duração total:</Text>
-                  <Text className="font-semibold text-gray-900">{formatDuration(getTotalDuration())}</Text>
-                </View>
-                <View className="flex-row justify-between">
-                  <Text className="text-lg font-semibold text-gray-900">Total:</Text>
-                  <Text className="text-lg font-bold text-pink-500">{formatPrice(getTotalPrice())}</Text>
-                </View>
-              </View>
+                return (
+                  <View 
+                    key={service.id}
+                    style={styles.serviceCard}
+                  >
+                    {/* Service Card Header - Always Visible */}
+                    <TouchableOpacity
+                      onPress={() => toggleExpanded(service.id)}
+                      style={styles.cardHeader}
+                    >
+                      <View style={styles.serviceInfo}>
+                        <Text style={styles.serviceName}>
+                          {service.name}
+                        </Text>
+                        <Text style={styles.serviceDuration}>
+                          Duração: {formatDuration(service.duration_minutes)}
+                        </Text>
+                        <Text style={styles.servicePrice}>
+                          {formatPrice(service.price)}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.cardActions}>
+                        {/* Expand/Collapse Chevron */}
+                        <TouchableOpacity
+                          onPress={() => toggleExpanded(service.id)}
+                          style={styles.chevronButton}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown size={20} color="#6b7280" />
+                          ) : (
+                            <ChevronRight size={20} color="#6b7280" />
+                          )}
+                        </TouchableOpacity>
+                        
+                        {/* Remove Button */}
+                        <TouchableOpacity
+                          onPress={() => removeService(service.id)}
+                          style={styles.removeButton}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Trash2 size={20} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Expandable Content */}
+                    {isExpanded && (
+                      <View style={styles.expandedContent}>
+                        {/* Image Carousel */}
+                        {imagesForCarousel.length > 0 && (
+                          <View style={styles.imagesSection}>
+                            <Text style={styles.imagesLabel}>
+                              {(() => {
+                                const hasGeneralImage = service?.image;
+                                const hasHairImages = service?.image_liso || service?.image_ondulado || service?.image_cacheado || service?.image_crespo;
+                                
+                                if (hasGeneralImage && hasHairImages) {
+                                  return "Exemplos e variações do serviço:";
+                                } else if (hasGeneralImage && !hasHairImages) {
+                                  return "Imagens do serviço:";
+                                } else {
+                                  return "Exemplos para diferentes tipos de cabelo:";
+                                }
+                              })()}
+                            </Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                              {imagesForCarousel.map((image, index) => (
+                                <View key={index} style={styles.imageItem}>
+                                  <TouchableOpacity
+                                    onPress={() => handleImagePress(image.src)}
+                                    style={styles.imageContainer}
+                                  >
+                                    <Image
+                                      source={{ uri: image.src }}
+                                      style={styles.image}
+                                      resizeMode="cover"
+                                    />
+                                  </TouchableOpacity>
+                                  {image.caption !== "Imagem do Serviço" && (
+                                    <Text style={styles.imageCaption}>
+                                      {image.caption}
+                                    </Text>
+                                  )}
+                                </View>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        )}
+
+                        {/* Service Description */}
+                        {service.description && (
+                          <View style={styles.descriptionSection}>
+                            <Text style={styles.descriptionLabel}>
+                              Descrição:
+                            </Text>
+                            <View style={styles.descriptionContainer}>
+                              <RenderHtml
+                                contentWidth={width - 64}
+                                source={{ html: service.description }}
+                                tagsStyles={{
+                                  p: { color: '#6b7280', fontSize: 14, lineHeight: 18, margin: 0 },
+                                  strong: { fontWeight: 'bold', color: '#374151' },
+                                  b: { fontWeight: 'bold', color: '#374151' },
+                                }}
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+
             </View>
           )}
         </ScrollView>
 
-        {/* Action Button */}
+        {/* Bottom Action Bar - Similar to service list */}
         {selectedServices.length > 0 && (
-          <View className="px-4 py-4 border-t border-gray-200">
-            <TouchableOpacity 
-              className="bg-pink-500 py-4 rounded-lg items-center"
-              onPress={() => {
-                // Navigate to appointment booking
-                console.log('Proceed to booking');
-              }}
-            >
-              <Text className="text-white font-semibold text-lg">
-                Continuar para Agendamento
+          <View style={styles.bottomActionBar}>
+            {/* Total Price Display */}
+            <View style={styles.totalPriceDisplay}>
+              <Text style={styles.totalLabel}>
+                Total ({selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}):
               </Text>
-            </TouchableOpacity>
+              <Text style={styles.totalPriceValue}>
+                R$ {getTotalPrice().toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+
+            {/* Continue Button */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={styles.continueButton}
+                onPress={() => {
+                  // Navigate to appointment booking
+                  console.log('Proceed to booking');
+                }}
+              >
+                <Text style={styles.continueButtonText}>
+                  Continuar ({selectedServices.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -154,16 +278,16 @@ const ServicesScreen = () => {
         transparent={false}
         onRequestClose={() => setModalVisible(false)}
       >
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
           {/* Modal Header */}
-          <View className="bg-pink-500 px-4 py-4 flex-row items-center">
+          <View style={{ backgroundColor: '#ec4899', paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity 
               onPress={() => setModalVisible(false)}
-              className="mr-3"
+              style={{ marginRight: 12 }}
             >
               <X size={24} color="white" />
             </TouchableOpacity>
-            <Text className="text-white text-lg font-bold flex-1" numberOfLines={1}>
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', flex: 1 }} numberOfLines={1}>
               {selectedServiceForDetails?.name}
             </Text>
           </View>
@@ -186,13 +310,24 @@ const ServicesScreen = () => {
         onRequestClose={() => setImageModalVisible(false)}
       >
         <TouchableOpacity
-          className="flex-1 bg-black/90 justify-center items-center"
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}
           activeOpacity={1}
           onPress={() => setImageModalVisible(false)}
         >
           {/* Close button */}
           <TouchableOpacity
-            className="absolute top-16 right-5 z-10 bg-white/90 rounded-full w-10 h-10 justify-center items-center"
+            style={{ 
+              position: 'absolute', 
+              top: 64, 
+              right: 20, 
+              zIndex: 10, 
+              backgroundColor: 'rgba(255,255,255,0.9)', 
+              borderRadius: 20, 
+              width: 40, 
+              height: 40, 
+              justifyContent: 'center', 
+              alignItems: 'center' 
+            }}
             onPress={() => setImageModalVisible(false)}
           >
             <X size={24} color="#000" />
@@ -206,15 +341,204 @@ const ServicesScreen = () => {
             >
               <Image
                 source={{ uri: selectedImage }}
-                className="w-80 h-80 rounded-xl"
+                style={{ width: 320, height: 320, borderRadius: 12 }}
                 resizeMode="contain"
               />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  safeAreaTop: {
+    backgroundColor: '#ec4899',
+  },
+  content: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#fce7f3',
+    marginTop: 4,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  emptyStateText: {
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 16,
+  },
+  servicesContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  serviceCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardHeader: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  serviceInfo: {
+    flex: 1,
+  },
+  serviceName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  serviceDuration: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  servicePrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ec4899',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  chevronButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  removeButton: {
+    padding: 8,
+  },
+  expandedContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  imagesSection: {
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  imagesLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  imageItem: {
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  imageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  imageCaption: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  descriptionSection: {
+    marginTop: 8,
+  },
+  descriptionLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  descriptionContainer: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
+  },
+  bottomActionBar: {
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  totalPriceDisplay: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  totalPriceValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ec4899',
+  },
+  buttonContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  continueButton: {
+    backgroundColor: '#ec4899',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  continueButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
 
 export default ServicesScreen;
