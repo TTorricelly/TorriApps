@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Image, useWindowDimensions, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Image, useWindowDimensions, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { ShoppingCart, Trash2, X, ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
 import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
@@ -26,18 +27,26 @@ interface HomeScreenRef {
   navigateToOrders: () => void;
 }
 
-const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeScreenRef?: React.RefObject<HomeScreenRef> }) => {
-  const { selectedServices, removeService, getTotalPrice } = useServicesStore();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedServiceForDetails, setSelectedServiceForDetails] = useState<Service | null>(null);
-  const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
-  const { width } = useWindowDimensions();
-  
-  // Ref for ScrollView and service card positions
-  const scrollViewRef = useRef<ScrollView>(null);
-  const serviceCardRefs = useRef<{ [key: string]: View | null }>({});
+// Swipeable Service Card Component
+const SwipeableServiceCard = ({ 
+  service, 
+  isExpanded, 
+  onToggleExpanded, 
+  onRemove, 
+  onImagePress, 
+  serviceCardRef,
+  width 
+}: {
+  service: Service;
+  isExpanded: boolean;
+  onToggleExpanded: (serviceId: string) => void;
+  onRemove: (serviceId: string) => void;
+  onImagePress: (imageUrl: string) => void;
+  serviceCardRef: (ref: View | null) => void;
+  width: number;
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   const formatDuration = (minutes: number | undefined) => {
     if (!minutes) return '-';
@@ -51,6 +60,249 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
     if (isNaN(priceNum)) return 'R$ -';
     return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
   };
+
+  const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
+    if (!relativePath) return null;
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+      return relativePath.replace('http://localhost:8000', API_BASE_URL);
+    }
+    return `${API_BASE_URL}${relativePath}`;
+  };
+
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: translateX } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX: tx } = event.nativeEvent;
+      
+      // If swiped left more than 120px, remove the item
+      if (tx < -120) {
+        // Animate out and remove
+        Animated.parallel([
+          Animated.timing(translateX, {
+            toValue: -width,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          onRemove(service.id);
+        });
+      } else {
+        // Snap back to original position
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  };
+
+  // Prepare images for carousel
+  const imagesForCarousel = [];
+  if (service?.image) {
+    const fullUrl = getFullImageUrl(service.image);
+    if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Imagem do Serviço" });
+  }
+  if (service?.image_liso) {
+    const fullUrl = getFullImageUrl(service.image_liso);
+    if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Liso" });
+  }
+  if (service?.image_ondulado) {
+    const fullUrl = getFullImageUrl(service.image_ondulado);
+    if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Ondulado" });
+  }
+  if (service?.image_cacheado) {
+    const fullUrl = getFullImageUrl(service.image_cacheado);
+    if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Cacheado" });
+  }
+  if (service?.image_crespo) {
+    const fullUrl = getFullImageUrl(service.image_crespo);
+    if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Crespo" });
+  }
+
+  return (
+    <View style={styles.swipeContainer}>
+      {/* Red background with "Remover" text that appears behind the card */}
+      <Animated.View
+        style={[
+          styles.deleteBackground,
+          {
+            opacity: translateX.interpolate({
+              inputRange: [-width, -60, 0],
+              outputRange: [1, 0.7, 0],
+              extrapolate: 'clamp',
+            }),
+          }
+        ]}
+      >
+        <Text style={styles.deleteText}>Remover</Text>
+        <Trash2 size={24} color="white" />
+      </Animated.View>
+
+      <PanGestureHandler
+        onGestureEvent={onGestureEvent}
+        onHandlerStateChange={onHandlerStateChange}
+        activeOffsetX={[-10, 10]}
+      >
+        <Animated.View
+          ref={serviceCardRef}
+          style={[
+            styles.serviceCard,
+            {
+              transform: [{ translateX }],
+              opacity,
+            }
+          ]}
+        >
+        {/* Service Card Header - Always Visible */}
+        <TouchableOpacity
+          onPress={() => onToggleExpanded(service.id)}
+          style={styles.cardHeader}
+          activeOpacity={0.7}
+        >
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceName}>
+              {service.name}
+            </Text>
+            <Text style={styles.serviceDuration}>
+              Duração: {formatDuration(service.duration_minutes)}
+            </Text>
+            <Text style={styles.servicePrice}>
+              {formatPrice(service.price)}
+            </Text>
+            
+            {/* Tap hint for non-tech users */}
+            <Text style={styles.tapHint}>
+              {isExpanded ? 'Toque para recolher detalhes' : 'Toque para ver detalhes'}
+            </Text>
+            
+            {/* Swipe hint */}
+            <Text style={styles.swipeHint}>
+              ← Deslize para remover
+            </Text>
+          </View>
+          
+          <View style={styles.cardActions}>
+            {/* More prominent expand/collapse button */}
+            <View style={styles.expandButton}>
+              {isExpanded ? (
+                <>
+                  <ChevronDown size={18} color="#ec4899" />
+                  <Text style={styles.expandButtonText}>Menos</Text>
+                </>
+              ) : (
+                <>
+                  <ChevronRight size={18} color="#ec4899" />
+                  <Text style={styles.expandButtonText}>Mais</Text>
+                </>
+              )}
+            </View>
+            
+            {/* Remove Button */}
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation(); // Prevent accordion toggle when removing
+                onRemove(service.id);
+              }}
+              style={styles.removeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Trash2 size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+        {/* Expandable Content */}
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {/* Image Carousel */}
+            {imagesForCarousel.length > 0 && (
+              <View style={styles.imagesSection}>
+                <Text style={styles.imagesLabel}>
+                  {(() => {
+                    const hasGeneralImage = service?.image;
+                    const hasHairImages = service?.image_liso || service?.image_ondulado || service?.image_cacheado || service?.image_crespo;
+                    
+                    if (hasGeneralImage && hasHairImages) {
+                      return "Exemplos e variações do serviço:";
+                    } else if (hasGeneralImage && !hasHairImages) {
+                      return "Imagens do serviço:";
+                    } else {
+                      return "Exemplos para diferentes tipos de cabelo:";
+                    }
+                  })()}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {imagesForCarousel.map((image, index) => (
+                    <View key={index} style={styles.imageItem}>
+                      <TouchableOpacity
+                        onPress={() => onImagePress(image.src)}
+                        style={styles.imageContainer}
+                      >
+                        <Image
+                          source={{ uri: image.src }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                      {image.caption !== "Imagem do Serviço" && (
+                        <Text style={styles.imageCaption}>
+                          {image.caption}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Service Description */}
+            {service.description && (
+              <View style={styles.descriptionSection}>
+                <Text style={styles.descriptionLabel}>
+                  Descrição:
+                </Text>
+                <View style={styles.descriptionContainer}>
+                  <RenderHtml
+                    contentWidth={width - 64}
+                    source={{ html: service.description }}
+                    tagsStyles={{
+                      p: { color: '#6b7280', fontSize: 14, lineHeight: 18, margin: 0 },
+                      strong: { fontWeight: 'bold', color: '#374151' },
+                      b: { fontWeight: 'bold', color: '#374151' },
+                    }}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+        </Animated.View>
+      </PanGestureHandler>
+    </View>
+  );
+};
+
+const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeScreenRef?: React.RefObject<HomeScreenRef> }) => {
+  const { selectedServices, removeService, getTotalPrice } = useServicesStore();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedServiceForDetails, setSelectedServiceForDetails] = useState<Service | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
+  
+  // Ref for ScrollView and service card positions
+  const scrollViewRef = useRef<ScrollView>(null);
+  const serviceCardRefs = useRef<{ [key: string]: View | null }>({});
 
   const handleImagePress = (imageUrl: string) => {
     setSelectedImage(imageUrl);
@@ -84,15 +336,6 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
         );
       }, 100); // Small delay to let expansion animation start
     }
-  };
-
-  // Helper function to construct full image URLs
-  const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-    if (!relativePath) return null;
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-      return relativePath.replace('http://localhost:8000', API_BASE_URL);
-    }
-    return `${API_BASE_URL}${relativePath}`;
   };
 
   return (
@@ -145,160 +388,19 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
                   Adicionar outro serviço
                 </Text>
               </TouchableOpacity>
-              {/* Expandable Services Cards */}
-              {selectedServices.map((service: Service) => {
-                const isExpanded = expandedServiceId === service.id;
-                
-                // Prepare images for carousel
-                const imagesForCarousel = [];
-                if (service?.image) {
-                  const fullUrl = getFullImageUrl(service.image);
-                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Imagem do Serviço" });
-                }
-                if (service?.image_liso) {
-                  const fullUrl = getFullImageUrl(service.image_liso);
-                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Liso" });
-                }
-                if (service?.image_ondulado) {
-                  const fullUrl = getFullImageUrl(service.image_ondulado);
-                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Ondulado" });
-                }
-                if (service?.image_cacheado) {
-                  const fullUrl = getFullImageUrl(service.image_cacheado);
-                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Cacheado" });
-                }
-                if (service?.image_crespo) {
-                  const fullUrl = getFullImageUrl(service.image_crespo);
-                  if (fullUrl) imagesForCarousel.push({ src: fullUrl, caption: "Crespo" });
-                }
-
-                return (
-                  <View 
-                    key={service.id}
-                    ref={(ref) => (serviceCardRefs.current[service.id] = ref)}
-                    style={styles.serviceCard}
-                  >
-                    {/* Service Card Header - Always Visible */}
-                    <TouchableOpacity
-                      onPress={() => toggleExpanded(service.id)}
-                      style={styles.cardHeader}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.serviceInfo}>
-                        <Text style={styles.serviceName}>
-                          {service.name}
-                        </Text>
-                        <Text style={styles.serviceDuration}>
-                          Duração: {formatDuration(service.duration_minutes)}
-                        </Text>
-                        <Text style={styles.servicePrice}>
-                          {formatPrice(service.price)}
-                        </Text>
-                        
-                        {/* Tap hint for non-tech users */}
-                        <Text style={styles.tapHint}>
-                          {isExpanded ? 'Toque para recolher detalhes' : 'Toque para ver detalhes'}
-                        </Text>
-                      </View>
-                      
-                      <View style={styles.cardActions}>
-                        {/* More prominent expand/collapse button */}
-                        <View style={styles.expandButton}>
-                          {isExpanded ? (
-                            <>
-                              <ChevronDown size={18} color="#ec4899" />
-                              <Text style={styles.expandButtonText}>Menos</Text>
-                            </>
-                          ) : (
-                            <>
-                              <ChevronRight size={18} color="#ec4899" />
-                              <Text style={styles.expandButtonText}>Mais</Text>
-                            </>
-                          )}
-                        </View>
-                        
-                        {/* Remove Button */}
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation(); // Prevent accordion toggle when removing
-                            removeService(service.id);
-                          }}
-                          style={styles.removeButton}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Trash2 size={20} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Expandable Content */}
-                    {isExpanded && (
-                      <View style={styles.expandedContent}>
-                        {/* Image Carousel */}
-                        {imagesForCarousel.length > 0 && (
-                          <View style={styles.imagesSection}>
-                            <Text style={styles.imagesLabel}>
-                              {(() => {
-                                const hasGeneralImage = service?.image;
-                                const hasHairImages = service?.image_liso || service?.image_ondulado || service?.image_cacheado || service?.image_crespo;
-                                
-                                if (hasGeneralImage && hasHairImages) {
-                                  return "Exemplos e variações do serviço:";
-                                } else if (hasGeneralImage && !hasHairImages) {
-                                  return "Imagens do serviço:";
-                                } else {
-                                  return "Exemplos para diferentes tipos de cabelo:";
-                                }
-                              })()}
-                            </Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                              {imagesForCarousel.map((image, index) => (
-                                <View key={index} style={styles.imageItem}>
-                                  <TouchableOpacity
-                                    onPress={() => handleImagePress(image.src)}
-                                    style={styles.imageContainer}
-                                  >
-                                    <Image
-                                      source={{ uri: image.src }}
-                                      style={styles.image}
-                                      resizeMode="cover"
-                                    />
-                                  </TouchableOpacity>
-                                  {image.caption !== "Imagem do Serviço" && (
-                                    <Text style={styles.imageCaption}>
-                                      {image.caption}
-                                    </Text>
-                                  )}
-                                </View>
-                              ))}
-                            </ScrollView>
-                          </View>
-                        )}
-
-                        {/* Service Description */}
-                        {service.description && (
-                          <View style={styles.descriptionSection}>
-                            <Text style={styles.descriptionLabel}>
-                              Descrição:
-                            </Text>
-                            <View style={styles.descriptionContainer}>
-                              <RenderHtml
-                                contentWidth={width - 64}
-                                source={{ html: service.description }}
-                                tagsStyles={{
-                                  p: { color: '#6b7280', fontSize: 14, lineHeight: 18, margin: 0 },
-                                  strong: { fontWeight: 'bold', color: '#374151' },
-                                  b: { fontWeight: 'bold', color: '#374151' },
-                                }}
-                              />
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
+              {/* Swipeable Services Cards */}
+              {selectedServices.map((service: Service) => (
+                <SwipeableServiceCard
+                  key={service.id}
+                  service={service}
+                  isExpanded={expandedServiceId === service.id}
+                  onToggleExpanded={toggleExpanded}
+                  onRemove={removeService}
+                  onImagePress={handleImagePress}
+                  serviceCardRef={(ref) => (serviceCardRefs.current[service.id] = ref)}
+                  width={width}
+                />
+              ))}
 
             </View>
           )}
@@ -503,6 +605,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
+  swipeHint: {
+    fontSize: 11,
+    color: '#d1d5db',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -656,6 +764,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  swipeContainer: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  deleteBackground: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: '#ef4444',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingRight: 20,
+    borderRadius: 12,
+  },
+  deleteText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 12,
   },
 });
 
