@@ -47,6 +47,10 @@ class Service(Base):
     commission_percentage = Column(Numeric(5, 2), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     
+    # Parallel service execution fields
+    parallelable = Column(Boolean, nullable=False, default=False)  # Can run concurrently with other services
+    max_parallel_pros = Column(Integer, nullable=False, default=1)  # Max professionals that can work simultaneously
+    
     # General service image
     image = Column(String(255), nullable=True)
     
@@ -71,6 +75,13 @@ class Service(Base):
         "Modules.Appointments.models.Appointment", # String type hint
         foreign_keys="[Modules.Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
         back_populates="service"
+    )
+
+    # Station requirements relationship
+    station_requirements = relationship(
+        "Modules.Stations.models.ServiceStationRequirement",
+        back_populates="service",
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self):

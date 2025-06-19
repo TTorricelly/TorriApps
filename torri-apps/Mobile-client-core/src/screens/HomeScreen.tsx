@@ -45,6 +45,7 @@ interface HomeScreenRef {
   resetToCategories: () => void;
   navigateToCategories: () => void;
   navigateToOrders: () => void;
+  navigateToCategoryServices: (categoryId: string) => void;
 }
 
 // Helper functions for formatting
@@ -397,6 +398,25 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setCurrentScreen('orders');
       // Potentially pass some order confirmation data to this screen in the future
       setTimeout(() => scrollToTop(ordersScrollRef), 0);
+    },
+    navigateToCategoryServices: (categoryId: string) => {
+      // Find the category by ID
+      const category = fetchedCategories.find(cat => cat.id === categoryId);
+      if (category) {
+        setSelectedCategory(category);
+        setCurrentScreen('services');
+        setSelectedService(null);
+        // DON'T clear services - preserve the cart
+        setSelectedDate(null);
+        setSelectedProfessional(null);
+        setSelectedTime(null);
+        setObservations('');
+        // Clear time slots
+        setAvailableTimes([]);
+        setTimeSlotsError(null);
+        setIsLoadingTimeSlots(false);
+        setTimeout(() => scrollToTop(servicesScrollRef), 0);
+      }
     },
   }));
 

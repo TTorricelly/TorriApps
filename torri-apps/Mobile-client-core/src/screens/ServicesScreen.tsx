@@ -7,6 +7,7 @@ import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
 import ServiceDetailsView from '../components/ServiceDetailsView';
 import { API_BASE_URL } from '../config/environment';
+import { getCategories } from '../services/categoryService';
 
 interface Service {
   id: string;
@@ -25,6 +26,7 @@ interface HomeScreenRef {
   resetToCategories: () => void;
   navigateToCategories: () => void;
   navigateToOrders: () => void;
+  navigateToCategoryServices: (categoryId: string) => void;
 }
 
 // Swipeable Service Card Component
@@ -291,6 +293,15 @@ const SwipeableServiceCard = ({
   );
 };
 
+interface Category {
+  id: string;
+  name: string;
+  icon_url?: string;
+  backgroundColor?: string;
+  iconColor?: string;
+  display_order?: number;
+}
+
 const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeScreenRef?: React.RefObject<HomeScreenRef> }) => {
   const { selectedServices, removeService, getTotalPrice } = useServicesStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -298,6 +309,9 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
+  const [categoriesModalVisible, setCategoriesModalVisible] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const { width } = useWindowDimensions();
   
   // Ref for ScrollView and service card positions
@@ -336,6 +350,56 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
         );
       }, 100); // Small delay to let expansion animation start
     }
+  };
+
+  const loadCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const data = await getCategories();
+      if (Array.isArray(data)) {
+        const sortedData = data.sort((a, b) => {
+          if (a.display_order !== undefined && b.display_order !== undefined) {
+            if (a.display_order !== b.display_order) {
+              return a.display_order - b.display_order;
+            }
+          }
+          return a.name.localeCompare(b.name);
+        });
+        setCategories(sortedData);
+      } else {
+        setCategories([]);
+      }
+    } catch (err) {
+      console.error('Error loading categories:', err);
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  const handleAddMoreServices = () => {
+    setCategoriesModalVisible(true);
+    if (categories.length === 0) {
+      loadCategories();
+    }
+  };
+
+  const handleCategorySelect = (category: Category) => {
+    setCategoriesModalVisible(false);
+    // Navigate to home and directly show the selected category's services
+    navigation?.navigate('Início');
+    // Small delay to ensure navigation completes, then navigate to category services
+    setTimeout(() => {
+      homeScreenRef?.current?.navigateToCategoryServices(category.id);
+    }, 100);
+  };
+
+  const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
+    if (!relativePath) return null;
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+      return relativePath.replace('http://localhost:8000', API_BASE_URL);
+    }
+    return `${API_BASE_URL}${relativePath}`;
   };
 
   return (
@@ -382,20 +446,6 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
             </View>
           ) : (
             <View style={styles.servicesContainer}>
-              {/* Add Another Service Button */}
-              <TouchableOpacity
-                style={styles.addServiceButton}
-                onPress={() => {
-                  // Navigate to home tab and ensure it shows categories
-                  navigation?.navigate('Início');
-                  homeScreenRef?.current?.navigateToCategories();
-                }}
-              >
-                <Plus size={20} color="#ec4899" />
-                <Text style={styles.addServiceButtonText}>
-                  Adicionar outro serviço
-                </Text>
-              </TouchableOpacity>
               {/* Swipeable Services Cards */}
               {selectedServices.map((service: Service) => (
                 <SwipeableServiceCard
@@ -427,19 +477,32 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
               </Text>
             </View>
 
-            {/* Continue Button */}
+            {/* Action Buttons */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={styles.continueButton}
-                onPress={() => {
-                  // Navigate to appointment booking
-                  console.log('Proceed to booking');
-                }}
-              >
-                <Text style={styles.continueButtonText}>
-                  Escolher data
-                </Text>
-              </TouchableOpacity>
+              {/* Two-button layout */}
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.addMoreButton}
+                  onPress={handleAddMoreServices}
+                >
+                  <Plus size={18} color="#ec4899" />
+                  <Text style={styles.addMoreButtonText} numberOfLines={1}>
+                    Serviços
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.continueButton}
+                  onPress={() => {
+                    // Navigate to appointment booking
+                    console.log('Proceed to booking');
+                  }}
+                >
+                  <Text style={styles.continueButtonText}>
+                    Escolher data
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -521,6 +584,71 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
             </TouchableOpacity>
           )}
         </TouchableOpacity>
+      </Modal>
+
+      {/* Categories Bottom Sheet Modal */}
+      <Modal
+        visible={categoriesModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCategoriesModalVisible(false)}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableOpacity 
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setCategoriesModalVisible(false)}
+          />
+          <View style={styles.bottomSheetContainer}>
+            {/* Handle bar */}
+            <View style={styles.bottomSheetHandle} />
+            
+            {/* Header */}
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Escolher Categoria</Text>
+              <TouchableOpacity
+                onPress={() => setCategoriesModalVisible(false)}
+                style={styles.bottomSheetCloseButton}
+              >
+                <X size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Categories Grid */}
+            <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false}>
+              {isLoadingCategories ? (
+                <View style={styles.bottomSheetLoading}>
+                  <Text style={styles.loadingText}>Carregando categorias...</Text>
+                </View>
+              ) : (
+                <View style={styles.categoriesGrid}>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={styles.categoryTile}
+                      onPress={() => handleCategorySelect(category)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.categoryTileImageContainer}>
+                        <Image
+                          source={{ uri: getFullImageUrl(category.icon_url) || 'https://via.placeholder.com/80' }}
+                          style={styles.categoryTileImage}
+                          resizeMode="cover"
+                        />
+                      </View>
+                      <Text style={styles.categoryTileName}>
+                        {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              
+              {/* Bottom padding for safe area */}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -739,7 +867,29 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 8,
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  addMoreButton: {
+    flex: 1.2,
+    backgroundColor: 'white',
+    borderWidth: 2,
+    borderColor: '#ec4899',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  addMoreButtonText: {
+    color: '#ec4899',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
   continueButton: {
+    flex: 2,
     backgroundColor: '#ec4899',
     padding: 16,
     borderRadius: 12,
@@ -807,6 +957,95 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 12,
+  },
+  // Bottom Sheet Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    flex: 1,
+  },
+  bottomSheetContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    minHeight: '70%',
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#d1d5db',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  bottomSheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  bottomSheetCloseButton: {
+    padding: 4,
+  },
+  bottomSheetContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  bottomSheetLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+  },
+  categoryTile: {
+    width: 110,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  categoryTileImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryTileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryTileName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
 

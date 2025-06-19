@@ -15,6 +15,7 @@ interface HomeScreenRef {
   resetToCategories: () => void;
   navigateToCategories: () => void;
   navigateToOrders: () => void;
+  navigateToCategoryServices: (categoryId: string) => void;
 }
 
 interface MainAppNavigatorProps {
