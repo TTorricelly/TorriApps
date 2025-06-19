@@ -11,6 +11,7 @@ import ServicesScreen from '../screens/ServicesScreen';
 
 interface HomeScreenRef {
   resetToCategories: () => void;
+  navigateToCategories: () => void;
   navigateToOrders: () => void;
 }
 
@@ -66,9 +67,9 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
         tabPress: (e) => {
           const routeName = e.target?.split('-')[0];
           
-          // Handle Home tab press - reset to categories screen (beginning)
+          // Handle Home tab press - navigate to categories without clearing cart
           if (routeName === 'Início' && homeScreenRef.current) {
-            homeScreenRef.current?.resetToCategories();
+            homeScreenRef.current?.navigateToCategories();
           }
           
           // Note: Removed Agendamentos tab press handler to allow normal navigation to AppointmentsScreen

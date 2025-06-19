@@ -44,6 +44,7 @@ interface HomeScreenProps {
 
 interface HomeScreenRef {
   resetToCategories: () => void;
+  navigateToCategories: () => void;
   navigateToOrders: () => void;
 }
 
@@ -367,6 +368,22 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setSelectedCategory(null);
       setSelectedService(null);
       clearServices();
+      setSelectedDate(null);
+      setSelectedProfessional(null);
+      setSelectedTime(null);
+      setObservations('');
+      // Clear time slots
+      setAvailableTimes([]);
+      setTimeSlotsError(null);
+      setIsLoadingTimeSlots(false);
+      setTimeout(() => scrollToTop(categoriesScrollRef), 0);
+    },
+    navigateToCategories: () => {
+      // Navigate to categories without clearing the cart
+      setCurrentScreen('categories');
+      setSelectedCategory(null);
+      setSelectedService(null);
+      // DON'T clear services - preserve the cart
       setSelectedDate(null);
       setSelectedProfessional(null);
       setSelectedTime(null);
