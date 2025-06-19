@@ -78,6 +78,7 @@ const menuItems = [
     title: 'Configurações',
     icon: Cog6ToothIcon,
     items: [
+      { title: 'Configurações do App', path: '/settings' },
       { title: 'Perfil do Salão', path: '/settings/salon-profile' },
       { title: 'Usuários', path: '/settings/users' },
       { title: 'Plano & Pagamento', path: '/settings/billing' }

@@ -12,6 +12,7 @@ import {
   ProfessionalForm,
   StationTypesPage,
   StationsPage,
+  SettingsPage,
   Login
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
@@ -63,6 +64,7 @@ function App() {
           <Route path="/stations" element={<StationsPage />} />
           
           {/* Settings Routes */}
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/salon-profile" element={<SalonProfile />} />
           <Route path="/settings/users" element={<SettingsUsers />} />
           <Route path="/settings/billing" element={<Billing />} />
