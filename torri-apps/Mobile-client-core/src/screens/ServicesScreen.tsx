@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Image, useWindowDimensions, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { ShoppingCart, Trash2, X, ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
+import { ShoppingCart, Trash2, X, ChevronDown, ChevronRight, Plus, ArrowLeft } from 'lucide-react-native';
 import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
 import ServiceDetailsView from '../components/ServiceDetailsView';
@@ -344,7 +344,15 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation?.navigate('Início')}
+            style={styles.backButton}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <ArrowLeft size={24} color="white" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Serviços Selecionados</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         {/* Content */}
@@ -429,7 +437,7 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
                 }}
               >
                 <Text style={styles.continueButtonText}>
-                  Continuar ({selectedServices.length})
+                  Escolher data
                 </Text>
               </TouchableOpacity>
             </View>
@@ -533,11 +541,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ec4899',
     paddingHorizontal: 16,
     paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40, // Same width as back button to center the title
   },
   headerSubtitle: {
     fontSize: 14,
