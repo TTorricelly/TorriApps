@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Image, useWindowDimensions, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ShoppingCart, Trash2, Info, X, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { ShoppingCart, Trash2, X, ChevronDown, ChevronRight, Plus } from 'lucide-react-native';
 import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
 import ServiceDetailsView from '../components/ServiceDetailsView';
@@ -20,14 +20,24 @@ interface Service {
   image_crespo?: string;
 }
 
-const ServicesScreen = () => {
-  const { selectedServices, removeService, getTotalPrice, getTotalDuration } = useServicesStore();
+interface HomeScreenRef {
+  resetToCategories: () => void;
+  navigateToCategories: () => void;
+  navigateToOrders: () => void;
+}
+
+const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeScreenRef?: React.RefObject<HomeScreenRef> }) => {
+  const { selectedServices, removeService, getTotalPrice } = useServicesStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedServiceForDetails, setSelectedServiceForDetails] = useState<Service | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const { width } = useWindowDimensions();
+  
+  // Ref for ScrollView and service card positions
+  const scrollViewRef = useRef<ScrollView>(null);
+  const serviceCardRefs = useRef<{ [key: string]: View | null }>({});
 
   const formatDuration = (minutes: number | undefined) => {
     if (!minutes) return '-';
@@ -42,19 +52,38 @@ const ServicesScreen = () => {
     return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
   };
 
-  const handleShowDetails = (service: Service) => {
-    setSelectedServiceForDetails(service);
-    setModalVisible(true);
-  };
-
   const handleImagePress = (imageUrl: string) => {
     setSelectedImage(imageUrl);
     setImageModalVisible(true);
   };
 
   const toggleExpanded = (serviceId: string) => {
-    // If clicking the same service, collapse it. Otherwise, expand the new one (auto-collapse previous)
-    setExpandedServiceId(expandedServiceId === serviceId ? null : serviceId);
+    const newExpandedId = expandedServiceId === serviceId ? null : serviceId;
+    setExpandedServiceId(newExpandedId);
+    
+    // If expanding a service, scroll to it after a brief delay to allow the expansion animation
+    if (newExpandedId && serviceCardRefs.current[serviceId]) {
+      setTimeout(() => {
+        serviceCardRefs.current[serviceId]?.measureLayout(
+          scrollViewRef.current as any,
+          (x, y) => {
+            // Scroll to position the expanded card in a good viewing position
+            // Offset by some margin so it's not right at the top
+            scrollViewRef.current?.scrollTo({
+              y: Math.max(0, y - 60), // 60px offset from top for better visibility
+              animated: true,
+            });
+          },
+          () => {
+            // Fallback if measureLayout fails - just scroll a bit to ensure visibility
+            scrollViewRef.current?.scrollTo({
+              y: 100,
+              animated: true,
+            });
+          }
+        );
+      }, 100); // Small delay to let expansion animation start
+    }
   };
 
   // Helper function to construct full image URLs
@@ -73,16 +102,10 @@ const ServicesScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Serviços Selecionados</Text>
-          <Text style={styles.headerSubtitle}>
-            {selectedServices.length === 0 
-              ? 'Nenhum serviço selecionado' 
-              : `${selectedServices.length} ${selectedServices.length === 1 ? 'serviço' : 'serviços'} selecionado${selectedServices.length === 1 ? '' : 's'}`
-            }
-          </Text>
         </View>
 
         {/* Content */}
-        <ScrollView style={styles.scrollView}>
+        <ScrollView ref={scrollViewRef} style={styles.scrollView}>
           {selectedServices.length === 0 ? (
             <View style={styles.emptyState}>
               <ShoppingCart size={64} color="#e5e7eb" />
@@ -90,9 +113,38 @@ const ServicesScreen = () => {
                 Nenhum serviço selecionado ainda.{'\n'}
                 Adicione serviços a partir da tela inicial.
               </Text>
+              
+              {/* Add Service Button for Empty State */}
+              <TouchableOpacity
+                style={styles.addServiceButtonEmpty}
+                onPress={() => {
+                  // Navigate to home tab and ensure it shows categories
+                  navigation?.navigate('Início');
+                  homeScreenRef?.current?.navigateToCategories();
+                }}
+              >
+                <Plus size={20} color="#ec4899" />
+                <Text style={styles.addServiceButtonEmptyText}>
+                  Adicionar Serviço
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.servicesContainer}>
+              {/* Add Another Service Button */}
+              <TouchableOpacity
+                style={styles.addServiceButton}
+                onPress={() => {
+                  // Navigate to home tab and ensure it shows categories
+                  navigation?.navigate('Início');
+                  homeScreenRef?.current?.navigateToCategories();
+                }}
+              >
+                <Plus size={20} color="#ec4899" />
+                <Text style={styles.addServiceButtonText}>
+                  Adicionar outro serviço
+                </Text>
+              </TouchableOpacity>
               {/* Expandable Services Cards */}
               {selectedServices.map((service: Service) => {
                 const isExpanded = expandedServiceId === service.id;
@@ -123,12 +175,14 @@ const ServicesScreen = () => {
                 return (
                   <View 
                     key={service.id}
+                    ref={(ref) => (serviceCardRefs.current[service.id] = ref)}
                     style={styles.serviceCard}
                   >
                     {/* Service Card Header - Always Visible */}
                     <TouchableOpacity
                       onPress={() => toggleExpanded(service.id)}
                       style={styles.cardHeader}
+                      activeOpacity={0.7}
                     >
                       <View style={styles.serviceInfo}>
                         <Text style={styles.serviceName}>
@@ -140,25 +194,35 @@ const ServicesScreen = () => {
                         <Text style={styles.servicePrice}>
                           {formatPrice(service.price)}
                         </Text>
+                        
+                        {/* Tap hint for non-tech users */}
+                        <Text style={styles.tapHint}>
+                          {isExpanded ? 'Toque para recolher detalhes' : 'Toque para ver detalhes'}
+                        </Text>
                       </View>
                       
                       <View style={styles.cardActions}>
-                        {/* Expand/Collapse Chevron */}
-                        <TouchableOpacity
-                          onPress={() => toggleExpanded(service.id)}
-                          style={styles.chevronButton}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
+                        {/* More prominent expand/collapse button */}
+                        <View style={styles.expandButton}>
                           {isExpanded ? (
-                            <ChevronDown size={20} color="#6b7280" />
+                            <>
+                              <ChevronDown size={18} color="#ec4899" />
+                              <Text style={styles.expandButtonText}>Menos</Text>
+                            </>
                           ) : (
-                            <ChevronRight size={20} color="#6b7280" />
+                            <>
+                              <ChevronRight size={18} color="#ec4899" />
+                              <Text style={styles.expandButtonText}>Mais</Text>
+                            </>
                           )}
-                        </TouchableOpacity>
+                        </View>
                         
                         {/* Remove Button */}
                         <TouchableOpacity
-                          onPress={() => removeService(service.id)}
+                          onPress={(e) => {
+                            e.stopPropagation(); // Prevent accordion toggle when removing
+                            removeService(service.id);
+                          }}
                           style={styles.removeButton}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
@@ -433,14 +497,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ec4899',
   },
+  tapHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 8,
   },
-  chevronButton: {
-    padding: 8,
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fdf2f8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f3e8ff',
     marginRight: 8,
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: '#ec4899',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   removeButton: {
     padding: 8,
@@ -538,6 +621,41 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  addServiceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fdf2f8',
+    borderWidth: 2,
+    borderColor: '#ec4899',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  addServiceButtonText: {
+    color: '#ec4899',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  addServiceButtonEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ec4899',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  addServiceButtonEmptyText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

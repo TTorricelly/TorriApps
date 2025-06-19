@@ -79,7 +79,9 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
       <Tab.Screen name="Início">
         {(props) => <HomeStackNavigator {...props} homeScreenRef={homeScreenRef} />}
       </Tab.Screen>
-      <Tab.Screen name="Serviços" component={ServicesScreen} />
+      <Tab.Screen name="Serviços">
+        {(props) => <ServicesScreen {...props} homeScreenRef={homeScreenRef} />}
+      </Tab.Screen>
       <Tab.Screen name="Agendamentos" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil">
         {(props) => <ProfileScreen {...props} onLogout={onLogout} />}

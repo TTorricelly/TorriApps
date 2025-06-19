@@ -16,7 +16,6 @@ import {
   Calendar,
   CheckCircle,
   X,
-  Check,
   Eye,
 } from 'lucide-react-native';
 
@@ -791,29 +790,8 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                   marginBottom: 16,
                 }}
               >
-                {/* Top row with checkbox and service info */}
+                {/* Top row with service info and pill toggle */}
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      toggleService(service);
-                    }}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 4,
-                      borderWidth: 2,
-                      borderColor: isSelected ? '#ec4899' : '#d1d5db',
-                      backgroundColor: isSelected ? '#ec4899' : 'white',
-                      marginRight: 16,
-                      marginTop: 4,
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {isSelected && (
-                      <Check size={16} color="white" />
-                    )}
-                  </TouchableOpacity>
                   <TouchableOpacity 
                     style={{ flex: 1 }}
                     onPress={() => {
@@ -829,6 +807,47 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#ec4899' }}>
                       {formatPrice(service.price)}
                     </Text>
+                  </TouchableOpacity>
+                  
+                  {/* Pill Toggle */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      toggleService(service);
+                    }}
+                    style={{
+                      width: 52,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? '#ec4899' : '#e5e7eb',
+                      marginLeft: 16,
+                      marginTop: 4,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      paddingHorizontal: 4,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                  >
+                    {/* Toggle Circle */}
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: 'white',
+                        position: 'absolute',
+                        left: isSelected ? 28 : 4,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 2,
+                        elevation: 3,
+                      }}
+                    />
                   </TouchableOpacity>
                 </View>
 
