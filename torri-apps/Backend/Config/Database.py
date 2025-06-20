@@ -4,6 +4,16 @@ from sqlalchemy.orm import sessionmaker
 from .Settings import settings
 
 # SIMPLIFIED: Single schema configuration - no complex multi-tenant pool management needed
+# PostgreSQL connection configuration for Codespaces
+connect_args = {}
+if settings.database_url.startswith('postgresql://'):
+    # PostgreSQL specific settings for Supabase in Codespaces
+    connect_args = {
+        "sslmode": "require",  # Required for Supabase
+        "connect_timeout": 30,  # Longer timeout for Codespaces
+        "application_name": "torriapps-backend",
+    }
+
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,          # Validates connections before use
@@ -13,14 +23,7 @@ engine = create_engine(
     pool_reset_on_return='commit',  # Reset connection state on return
     pool_timeout=30,             # Max wait time for connection from pool
     echo=settings.debug,         # Show SQL in debug mode
-    
-    # Enhanced connection arguments for MySQL
-    connect_args={
-        "charset": "utf8mb4",
-        "use_unicode": True,
-        "autocommit": False,
-        "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO",
-    }
+    connect_args=connect_args
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

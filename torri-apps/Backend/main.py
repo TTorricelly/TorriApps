@@ -29,17 +29,8 @@ app = FastAPI(
 )
 
 # --- CORS Middleware ---
-# TODO: Move origins to settings.py or .env for production/staging environments
-origins = [
-    "http://localhost",       # Common for local development
-    "http://localhost:3000",  # React default
-    "http://localhost:5173",  # Vite default port
-    "http://localhost:8080",  # Vue default
-    "http://localhost:8081",  # Often used for Vue/Angular
-    "http://localhost:4200",  # Angular default
-    # Add any other frontend origins used for development or deployed environments
-    # e.g., "https://your-frontend-domain.com"
-]
+# Dynamic CORS origins based on environment configuration
+origins = settings.cors_origins_list
 
 app.add_middleware(
     CORSMiddleware,

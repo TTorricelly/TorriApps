@@ -1,4 +1,4 @@
-import api from "./api"; // Imports the configured Axios instance
+import { api } from "../api/client"; // Imports the configured Axios instance
 
 // Interface LoginCredentials (for reference, not strictly enforced in JS)
 // Frontend sends: { email: string; password: string; }

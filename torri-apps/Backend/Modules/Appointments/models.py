@@ -4,7 +4,7 @@ from sqlalchemy import (
     Column, String, Integer, Numeric, Date, Time, DateTime, ForeignKey, Enum, Boolean,
     CheckConstraint, UniqueConstraint, Text
 )
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from Config.Database import Base # Base for tenant-specific models
@@ -24,10 +24,10 @@ class AppointmentGroup(Base):
     """
     __tablename__ = "appointment_groups"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     
     # ForeignKey to the client who booked all services
-    client_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     
     # Summary information
     total_duration_minutes = Column(Integer, nullable=False)
@@ -59,15 +59,15 @@ class Appointment(Base):
     __tablename__ = "appointments"
     # This table will reside in the tenant's schema.
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
 
     # ForeignKeys point to users.id for both client and professional
-    client_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
-    professional_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
-    service_id = Column(CHAR(36), ForeignKey("services.id"), nullable=False, index=True)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    professional_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    service_id = Column(UUID(as_uuid=True), ForeignKey("services.id"), nullable=False, index=True)
     
     # Optional group for multi-service bookings
-    group_id = Column(CHAR(36), ForeignKey("appointment_groups.id"), nullable=True, index=True)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("appointment_groups.id"), nullable=True, index=True)
 
     appointment_date = Column(Date, nullable=False, index=True)
     start_time = Column(Time, nullable=False, index=True) # Indexed for quick lookups

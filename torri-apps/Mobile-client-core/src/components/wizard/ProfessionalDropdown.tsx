@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
 import { ChevronDown, User, Check } from 'lucide-react-native';
-
-interface Professional {
-  id: string;
-  full_name: string;
-  email: string;
-  photo_path?: string;
-  services_offered: string[];
-}
+import { Professional } from '../../types';
 
 interface ProfessionalDropdownProps {
   label: string;

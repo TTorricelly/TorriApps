@@ -1,6 +1,6 @@
 from uuid import uuid4
 from sqlalchemy import Column, String, Text, Enum, DateTime
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 from Config.Database import Base
 
@@ -12,7 +12,7 @@ class AppSetting(Base):
     """
     __tablename__ = "app_settings"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     key = Column(String(100), nullable=False, unique=True, index=True)
     value = Column(Text, nullable=False)
     description = Column(String(255), nullable=True)

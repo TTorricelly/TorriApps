@@ -1,6 +1,6 @@
 from uuid import uuid4
 from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Text
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from Config.Database import Base
 
@@ -12,7 +12,7 @@ class StationType(Base):
     """
     __tablename__ = "station_types"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     code = Column(String(50), nullable=False, unique=True, index=True)  # 'hair_chair'
     name = Column(String(100), nullable=False)  # 'Cadeira de Corte'
 
@@ -28,8 +28,8 @@ class Station(Base):
     """
     __tablename__ = "stations"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    type_id = Column(CHAR(36), ForeignKey("station_types.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    type_id = Column(UUID(as_uuid=True), ForeignKey("station_types.id"), nullable=False)
     label = Column(String(100), nullable=False)  # 'Hair Chair #2'
     is_active = Column(Boolean, nullable=False, default=True)  # allow soft-hide
 
@@ -43,8 +43,8 @@ class ServiceStationRequirement(Base):
     """
     __tablename__ = "service_station_requirements"
 
-    service_id = Column(CHAR(36), ForeignKey("services.id"), primary_key=True)
-    station_type_id = Column(CHAR(36), ForeignKey("station_types.id"), primary_key=True)
+    service_id = Column(UUID(as_uuid=True), ForeignKey("services.id"), primary_key=True)
+    station_type_id = Column(UUID(as_uuid=True), ForeignKey("station_types.id"), primary_key=True)
     qty = Column(Integer, nullable=False, default=1)
 
     # Relationships

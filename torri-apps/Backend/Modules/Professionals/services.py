@@ -19,8 +19,14 @@ from .schemas import (
 )
 
 # Helper function to convert professional with photo URL
-def _add_photo_url_to_professional(professional: User, db: Session = None, base_url: str = "http://localhost:8000") -> Professional: # Changed UserTenant to User
+def _add_photo_url_to_professional(professional: User, db: Session = None, base_url: str = None) -> Professional: # Changed UserTenant to User
     """Convert User model to Professional schema with photo_url."""
+    from Config.Settings import settings
+    
+    # Use settings if base_url not provided
+    if base_url is None:
+        base_url = settings.auto_server_host
+    
     photo_url = None
     if professional.photo_path:
         photo_url = file_handler.get_public_url(professional.photo_path, base_url)

@@ -85,10 +85,8 @@ def create_schema_and_migrate(schema_name: str) -> bool:
         public_engine = create_engine(settings.public_database_url)
         
         with public_engine.connect() as conn:
-            # For MySQL, we need to handle autocommit differently
-            conn.execute(text("SET autocommit = 1"))
-            # Use backticks for MySQL schema names to handle special characters
-            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS `{schema_name}`"))
+            # For PostgreSQL, create schema if not exists (no backticks needed)
+            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
             logger.info(f"Schema '{schema_name}' creation completed")
         
         public_engine.dispose()

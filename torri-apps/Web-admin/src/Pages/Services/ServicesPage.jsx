@@ -27,6 +27,7 @@ import {
 import { categoriesApi } from '../../Services/categories';
 import { servicesApi } from '../../Services/services';
 import { htmlToPreviewText } from '../../Utils/textUtils';
+import { getAssetUrl } from '../../Utils/config';
 
 export default function ServicesPage() {
   const navigate = useNavigate();
@@ -98,14 +99,14 @@ export default function ServicesPage() {
       setIsLoadingServices(true);
       const data = await servicesApi.getAll(selectedCategoryId);
       
-      // Convert relative image paths to full URLs
+      // Convert relative image paths to full URLs using centralized helper
       const servicesWithFullUrls = data.map(service => ({
         ...service,
-        image: service.image ? `http://localhost:8000${service.image}` : null,
-        image_liso: service.image_liso ? `http://localhost:8000${service.image_liso}` : null,
-        image_ondulado: service.image_ondulado ? `http://localhost:8000${service.image_ondulado}` : null,
-        image_cacheado: service.image_cacheado ? `http://localhost:8000${service.image_cacheado}` : null,
-        image_crespo: service.image_crespo ? `http://localhost:8000${service.image_crespo}` : null,
+        image: getAssetUrl(service.image),
+        image_liso: getAssetUrl(service.image_liso),
+        image_ondulado: getAssetUrl(service.image_ondulado),
+        image_cacheado: getAssetUrl(service.image_cacheado),
+        image_crespo: getAssetUrl(service.image_crespo),
       }));
       
       setServices(servicesWithFullUrls);

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship # Added for relationships
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
@@ -14,7 +14,7 @@ from .constants import UserRole, HairType, Gender # Import Gender
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     
     email = Column(String(120), unique=True, index=True, nullable=False)  # Now globally unique
     hashed_password = Column(String(255), nullable=False)

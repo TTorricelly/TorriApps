@@ -3,7 +3,7 @@
 
 from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Table, Boolean, Time, Date, Enum as SQLEnum
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, time, date
 import enum
 
@@ -33,8 +33,8 @@ class DayOfWeek(str, enum.Enum):
 class ProfessionalAvailability(Base):
     __tablename__ = "professional_availability"
     
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     day_of_week = Column(SQLEnum(DayOfWeek), nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
@@ -46,8 +46,8 @@ class ProfessionalAvailability(Base):
 class ProfessionalBlockedTime(Base):
     __tablename__ = "professional_blocked_time"  # Match existing table name (singular)
     
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     block_date = Column(Date, nullable=False)  # Match existing column name
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
@@ -61,8 +61,8 @@ class ProfessionalBlockedTime(Base):
 class ProfessionalBreak(Base):
     __tablename__ = "professional_breaks"
     
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(__import__('uuid').uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)  # Match existing column name
     day_of_week = Column(SQLEnum(DayOfWeek), nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)

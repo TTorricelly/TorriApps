@@ -2,9 +2,11 @@
 // This file handles environment-specific settings for different deployment targets
 
 const developmentConfig = {
-  // Use IP address for physical devices, localhost for simulators
-  // If you need to switch back to localhost for simulator, change this to 'localhost'
-  API_BASE_URL: 'http://192.168.1.7:8000', // Use laptop's IP for physical device testing
+  // For Codespaces: Use the auto-generated HTTPS URL
+  // For local development: Use IP address for physical devices, localhost for simulators
+  API_BASE_URL: process.env.CODESPACE_NAME 
+    ? `https://${process.env.CODESPACE_NAME}-8000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
+    : 'http://192.168.1.7:8000', // Fallback to local IP for physical device testing
   ENVIRONMENT: 'development',
 };
 

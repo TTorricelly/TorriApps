@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ProfessionalToggle, ProfessionalDropdown } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
-import { WizardNavigationProp } from '../../Navigation/SchedulingWizardNavigator';
+import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
+import { Service, Professional } from '../../types';
 
 type SchedulingWizardProfessionalsScreenNavigationProp = WizardNavigationProp<'WizardProfessionals'>;
 
@@ -51,7 +52,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       // Calculate maximum professionals based on services
       const maxPros = Math.min(
-        ...selectedServices.map(service => service.max_parallel_pros)
+        ...selectedServices.map((service: Service) => service.max_parallel_pros || 1)
       );
       setMaxParallelPros(maxPros);
       
@@ -75,7 +76,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     clearError();
 
     try {
-      const serviceIds = selectedServices.map(service => service.id);
+      const serviceIds = selectedServices.map((service: Service) => service.id);
       const professionals = await wizardApiService.getAvailableProfessionals(
         serviceIds,
         selectedDate
@@ -118,8 +119,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const getExcludeIds = (currentIndex: number) => {
     return selectedProfessionals
-      .filter((_, index) => index !== currentIndex)
-      .map(prof => prof?.id)
+      .filter((_: Professional | null, index: number) => index !== currentIndex)
+      .map((prof: Professional | null) => prof?.id)
       .filter(Boolean);
   };
 
@@ -182,7 +183,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               })}
             </Text>
             <Text style={styles.summaryServices}>
-              Serviços: {selectedServices.map(s => s.name).join(', ')}
+              Serviços: {selectedServices.map((s: Service) => s.name).join(', ')}
             </Text>
           </View>
 
@@ -206,7 +207,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 label={professionalsRequested === 1 ? 'Profissional' : `Profissional ${index + 1}`}
                 professionals={availableProfessionals}
                 selectedProfessional={selectedProfessionals[index]}
-                onSelect={(professional) => handleProfessionalSelect(index, professional)}
+                onSelect={(professional: Professional) => handleProfessionalSelect(index, professional)}
                 excludeIds={getExcludeIds(index)}
                 placeholder="Selecione um profissional"
               />
@@ -216,13 +217,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           {/* Available Professionals Info */}
           <View style={styles.infoSection}>
             <Text style={styles.infoTitle}>Profissionais disponíveis ({availableProfessionals.length}):</Text>
-            {availableProfessionals.map((professional) => (
+            {availableProfessionals.map((professional: Professional) => (
               <View key={professional.id} style={styles.professionalInfo}>
                 <Text style={styles.professionalName}>
                   {professional.full_name || professional.email}
                 </Text>
                 <Text style={styles.professionalServices}>
-                  Serviços: {professional.services_offered.length} disponível(is)
+                  Serviços: {professional.services_offered?.length || 0} disponível(is)
                 </Text>
               </View>
             ))}
@@ -231,7 +232,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           {/* Validation Messages */}
           {professionalsRequested > 1 && selectedProfessionals.length > 0 && (
             <View style={styles.validationSection}>
-              {selectedProfessionals.some(prof => prof === null || prof === undefined) ? (
+              {selectedProfessionals.some((prof: Professional | null) => prof === null || prof === undefined) ? (
                 <Text style={styles.validationWarning}>
                   ⚠️ Selecione todos os profissionais para continuar
                 </Text>

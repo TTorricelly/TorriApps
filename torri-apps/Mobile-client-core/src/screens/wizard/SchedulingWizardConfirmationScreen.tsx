@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
-import { WizardNavigationProp } from '../../Navigation/SchedulingWizardNavigator';
+import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
+import { Service, Professional } from '../../types';
 
 type SchedulingWizardConfirmationScreenNavigationProp = WizardNavigationProp<'WizardConfirmation'>;
 
@@ -105,12 +106,12 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   const renderServicesSummary = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Serviços Selecionados</Text>
-      {selectedServices.map((service, index) => (
+      {selectedServices.map((service: Service, index: number) => (
         <View key={index} style={styles.serviceItem}>
           <View style={styles.serviceInfo}>
             <Text style={styles.serviceName}>{service.name}</Text>
             <Text style={styles.serviceDetails}>
-              {service.duration_minutes} min • {formatPrice(service.price)}
+              {service.duration_minutes} min • {formatPrice(parseFloat(service.price))}
             </Text>
             {service.description && (
               <Text style={styles.serviceDescription}>{service.description}</Text>
@@ -121,7 +122,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       
       <View style={styles.servicesTotal}>
         <Text style={styles.servicesTotalText}>
-          Total: {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} • {formatPrice(selectedServices.reduce((sum, service) => sum + service.price, 0))}
+          Total: {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} • {formatPrice(selectedServices.reduce((sum: number, service: Service) => sum + parseFloat(service.price), 0))}
         </Text>
       </View>
     </View>
@@ -156,12 +157,12 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       <Text style={styles.sectionTitle}>
         Profissional{professionalsRequested > 1 ? 'is' : ''} Selecionado{professionalsRequested > 1 ? 's' : ''}
       </Text>
-      {selectedProfessionals.map((professional, index) => (
+      {selectedProfessionals.map((professional: Professional | null, index: number) => (
         professional && (
           <View key={professional.id} style={styles.professionalItem}>
             <View style={styles.professionalAvatar}>
               <Text style={styles.professionalAvatarText}>
-                {(professional.full_name || professional.email).charAt(0).toUpperCase()}
+                {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
               </Text>
             </View>
             <View style={styles.professionalInfo}>
@@ -212,10 +213,10 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Resumo do Pagamento</Text>
       <View style={styles.pricingCard}>
-        {selectedServices.map((service, index) => (
+        {selectedServices.map((service: Service, index: number) => (
           <View key={index} style={styles.pricingRow}>
             <Text style={styles.pricingServiceName}>{service.name}</Text>
-            <Text style={styles.pricingServicePrice}>{formatPrice(service.price)}</Text>
+            <Text style={styles.pricingServicePrice}>{formatPrice(parseFloat(service.price))}</Text>
           </View>
         ))}
         

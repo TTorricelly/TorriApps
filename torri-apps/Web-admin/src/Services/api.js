@@ -1,8 +1,10 @@
 import axios from "axios";
-import { useAuthStore } from "../stores/auth"; // Corrected path if store is in auth.js
+import { useAuthStore } from "../stores/auth";
+import { API_CONFIG } from "../Utils/config";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // Vite uses import.meta.env
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
 });
 
 api.interceptors.request.use(

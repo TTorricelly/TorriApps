@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../../Components/LoginForm"; // Adjusted path
 import { useAuthStore } from "../../stores/auth"; // Adjusted path
-import logoUrl from "../../Assets/logo-torriapps.png"; // Assuming logo is in Src/Assets
+import logoUrl from "../../assets/logo-torriapps.png"; // Assuming logo is in src/assets
 
 export default function LoginPage() {
   const navigate = useNavigate();

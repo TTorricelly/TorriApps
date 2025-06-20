@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
-import { WizardNavigationProp } from '../../Navigation/SchedulingWizardNavigator';
+import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
 
 type SchedulingWizardSlotsScreenNavigationProp = WizardNavigationProp<'WizardSlots'>;
 

@@ -32,6 +32,7 @@ import {
 import { categoriesApi } from '../../Services/categories';
 import { servicesApi } from '../../Services/services';
 import { stationTypesApi, serviceStationRequirementsApi } from '../../Services/stations';
+import { getAssetUrl } from '../../Utils/config';
 
 // Rich Text Editor (simple implementation)
 const RichTextEditor = ({ value, onChange, placeholder, error }) => {
@@ -540,12 +541,8 @@ export default function ServiceForm() {
         category_id: serviceData.category_id || '',
       };
       
-      // Helper function to convert relative paths to full URLs
-      const getFullImageUrl = (imagePath) => {
-        if (!imagePath) return null;
-        if (imagePath.startsWith('http')) return imagePath; // Already full URL
-        return `http://localhost:8000${imagePath}`; // Add base URL
-      };
+      // Use centralized asset URL helper
+      const getFullImageUrl = getAssetUrl;
 
       const loadedGeneralImage = getFullImageUrl(serviceData.image);
       const loadedImages = {
@@ -1302,7 +1299,7 @@ export default function ServiceForm() {
                           </Typography>
                           
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {stationTypes
+                            {(Array.isArray(stationTypes) ? stationTypes : [])
                               .filter(type => !stationRequirements.some(req => req.station_type_id === type.id))
                               .map((stationType) => (
                                 <button

@@ -16,7 +16,8 @@ def check_user_tenant_associations():
     db = SessionLocal()
     try:
         print(f"Using schema: {settings.default_schema_name}")
-        db.execute(text(f"USE `{settings.default_schema_name}`;"))
+        # PostgreSQL: Set search_path to use specific schema
+        db.execute(text(f"SET search_path TO {settings.default_schema_name}, public"))
         
         # First check tenants
         tenants = db.query(Tenant).all()

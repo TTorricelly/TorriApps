@@ -14,9 +14,10 @@ from sqlalchemy import text
 def check_tenant_data():
     db = SessionLocal()
     try:
-        # Ensure we're using the correct schema
+        # For PostgreSQL, we can specify schema in the connection or use search_path
         print(f"Using schema: {settings.default_schema_name}")
-        db.execute(text(f"USE `{settings.default_schema_name}`;"))
+        # PostgreSQL: Set search_path to use specific schema
+        db.execute(text(f"SET search_path TO {settings.default_schema_name}, public"))
         
         print("Checking for tenant data...")
         

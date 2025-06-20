@@ -91,6 +91,9 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const [serviceDetailsModalVisible, setServiceDetailsModalVisible] = useState(false);
   const [selectedServiceForModal, setSelectedServiceForModal] = useState<Service | null>(null);
 
+  // Generate available dates dynamically (today + next 30 days)
+  const availableDates: DateOption[] = generateAvailableDates(30);
+
   // Create appointment state object for new components
   const appointmentState: AppointmentState = {
     selectedService,
@@ -512,8 +515,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 //     },
 //   };
 
-  // Generate available dates dynamically (today + next 30 days)
-  const availableDates: DateOption[] = generateAvailableDates(30);
 
   const salonInfo: SalonInfo = {
     name: "Salão Charme & Estilo",
@@ -796,8 +797,8 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
               <Text style={{ color: '#6b7280', fontSize: 16 }}>Nenhum serviço encontrado para esta categoria.</Text>
             </View>
           )}
-          {fetchedServices.map((service) => {
-            const isSelected = selectedServices.some(s => s.id === service.id);
+          {fetchedServices.map((service: Service) => {
+            const isSelected = selectedServices.some((s: Service) => s.id === service.id);
             return (
               <View
                 key={service.id} // Ensure service.id is string (UUID)
@@ -1480,7 +1481,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {/* Add/Remove Toggle Button */}
               {selectedServiceForModal && (() => {
-                const isSelected = selectedServices.some(s => s.id === selectedServiceForModal.id);
+                const isSelected = selectedServices.some((s: Service) => s.id === selectedServiceForModal.id);
                 return (
                   <TouchableOpacity
                     onPress={() => {

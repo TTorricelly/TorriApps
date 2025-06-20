@@ -13,6 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authService from '../services/authService'; // Adjusted import
 import useAuthStore from '../store/authStore'; // Adjusted import
 import * as companyService from '../services/companyService';
+
+interface CompanyInfo {
+  id?: string;
+  name?: string;
+  logo_url?: string;
+}
 import {
   Mail,
   Lock,
@@ -42,7 +48,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
   React.useEffect(() => {
     const fetchCompanyInfo = async () => {
       try {
-        const companyInfo = await companyService.getCompanyInfo();
+        const companyInfo: CompanyInfo = await companyService.getCompanyInfo();
         if (companyInfo.name) {
           setCompanyName(companyInfo.name);
         }

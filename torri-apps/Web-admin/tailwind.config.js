@@ -4,7 +4,7 @@ const withMT = require("@material-tailwind/react/utils/withMT");
 module.exports = withMT({ // Wrapped with withMT
   content: [
     './index.html', 
-    './Src/**/*.{js,jsx,ts,tsx}' // Corrected path to Src
+    './src/**/*.{js,jsx,ts,tsx}' // Corrected path to src
   ],
   theme: {
     extend: {

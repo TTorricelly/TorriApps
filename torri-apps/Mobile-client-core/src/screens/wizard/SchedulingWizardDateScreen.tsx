@@ -5,7 +5,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
-import { WizardNavigationProp, WizardStackParamList } from '../../Navigation/SchedulingWizardNavigator';
+import { WizardNavigationProp, WizardStackParamList } from '../../navigation/SchedulingWizardNavigator';
+import { Service } from '../../types';
 
 type SchedulingWizardDateScreenNavigationProp = WizardNavigationProp<'WizardDate'>;
 type SchedulingWizardDateScreenRouteProp = RouteProp<WizardStackParamList, 'WizardDate'>;
@@ -59,12 +60,12 @@ const SchedulingWizardDateScreen: React.FC = () => {
     clearError();
 
     try {
-      const serviceIds = selectedServices.map(service => service.id);
+      const serviceIds = selectedServices.map((service: Service) => service.id);
       const currentDate = new Date();
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
 
-      const dates = await wizardApiService.getAvailableDates(serviceIds, year, month);
+      const dates = await wizardApiService.getAvailableDates(serviceIds);
       setAvailableDates(dates);
     } catch (error) {
       console.error('Error loading available dates:', error);
@@ -78,7 +79,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
     const marked: {[key: string]: any} = {};
 
     // Mark available dates
-    availableDates.forEach(date => {
+    availableDates.forEach((date: string) => {
       marked[date] = {
         marked: true,
         dotColor: '#ec4899',
@@ -191,7 +192,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
           {/* Services Summary */}
           <View style={styles.servicesSummary}>
             <Text style={styles.servicesSummaryTitle}>Serviços selecionados:</Text>
-            {selectedServices.map((service, index) => (
+            {selectedServices.map((service: Service, index: number) => (
               <Text key={index} style={styles.serviceItem}>
                 • {service.name} ({service.duration_minutes} min)
               </Text>
@@ -231,7 +232,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
               disableArrowLeft={false}
               disableArrowRight={false}
               disableAllTouchEventsForDisabledDays={true}
-              renderArrow={(direction) => (
+              renderArrow={(direction: 'left' | 'right') => (
                 <Text style={styles.calendarArrow}>
                   {direction === 'left' ? '‹' : '›'}
                 </Text>

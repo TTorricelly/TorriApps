@@ -495,7 +495,7 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
                   style={styles.continueButton}
                   onPress={() => {
                     // Navigate to multi-service scheduling wizard
-                    const wizardServices = selectedServices.map(service => ({
+                    const wizardServices = selectedServices.map((service: Service) => ({
                       id: service.id,
                       name: service.name,
                       duration_minutes: service.duration_minutes,

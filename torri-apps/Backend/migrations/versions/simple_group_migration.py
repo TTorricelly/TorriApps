@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import mysql
+from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision: str = 'simple_group_migration'
@@ -23,8 +23,8 @@ def upgrade() -> None:
     
     # Create appointment_groups table
     op.create_table('appointment_groups',
-        sa.Column('id', mysql.CHAR(length=36), nullable=False),
-        sa.Column('client_id', mysql.CHAR(length=36), nullable=False),
+        sa.Column('id', UUID(as_uuid=True), nullable=False),
+        sa.Column('client_id', UUID(as_uuid=True), nullable=False),
         sa.Column('total_duration_minutes', sa.Integer(), nullable=False),
         sa.Column('total_price', sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column('start_time', sa.DateTime(), nullable=False),
@@ -43,7 +43,7 @@ def upgrade() -> None:
     op.create_index('ix_appointment_groups_status', 'appointment_groups', ['status'], unique=False)
     
     # Add group_id column to appointments table
-    op.add_column('appointments', sa.Column('group_id', mysql.CHAR(length=36), nullable=True))
+    op.add_column('appointments', sa.Column('group_id', UUID(as_uuid=True), nullable=True))
     
     # Add index for group_id
     op.create_index('ix_appointments_group_id', 'appointments', ['group_id'], unique=False)

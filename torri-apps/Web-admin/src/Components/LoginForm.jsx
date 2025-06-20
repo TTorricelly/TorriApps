@@ -113,8 +113,8 @@ export default function LoginForm() {
           disabled={!isFormValid || loginMutation.isLoading}
           className={`w-full flex justify-center font-medium transition-all duration-fast focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
             isFormValid && !loginMutation.isLoading
-              ? "btn-primary"
-              : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
+              ? "bg-accent-primary text-white px-l py-s rounded-button hover:bg-opacity-90 focus:ring-accent-primary shadow-button"
+              : "bg-bg-tertiary text-text-tertiary cursor-not-allowed px-l py-s rounded-button"
           }`}
         >
           {loginMutation.isLoading ? (

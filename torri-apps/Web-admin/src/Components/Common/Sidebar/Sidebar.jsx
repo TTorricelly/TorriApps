@@ -141,7 +141,7 @@ export default function Sidebar() {
       <div className="p-l border-b border-bg-tertiary flex-shrink-0">
         <div className="flex justify-center mb-s">
           <img 
-            src="/src/assets/logo-torriapps.png" 
+            src="/logo-torriapps.png" 
             alt="Reilo" 
             className="h-28 w-auto"
           />
