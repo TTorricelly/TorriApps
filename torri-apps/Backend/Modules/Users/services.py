@@ -12,7 +12,7 @@ def get_user_by_email(db: Session, email: str) -> User | None: # Renamed, remove
     return db.query(User).filter(User.email == email).first() # Updated query
 
 def get_user_by_id(db: Session, user_id: UUID) -> User | None: # Renamed, removed tenant_id, updated return type
-    return db.query(User).filter(User.id == str(user_id)).first() # Updated query
+    return db.query(User).filter(User.id == user_id).first() # PostgreSQL UUID comparison
 
 def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]: # Renamed, removed tenant_id, updated return type
     return db.query(User).offset(skip).limit(limit).all() # Updated query
@@ -85,7 +85,7 @@ def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> User | Non
     # Email change validation: if email is in update_data and different from current one, check uniqueness
     if 'email' in update_data and update_data['email'] != db_user.email:
         existing_user_with_new_email = get_user_by_email(db, email=update_data['email']) # Updated call
-        if existing_user_with_new_email and existing_user_with_new_email.id != str(user_id):
+        if existing_user_with_new_email and existing_user_with_new_email.id != user_id:
             db.rollback()  # Ensure clean state before exception
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

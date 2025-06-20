@@ -51,7 +51,7 @@
 | **Web Admin**        | Admin UI, tenant management, salon operations   | React, Vite, Tailwind CSS, Zustand, React Router, Axios, React Query | `torri-apps/Web-admin`            |
 | **Mobile Client Core**| Client-facing UI for appointment booking        | React Native, React Navigation, NativeWind, Tamagui, Axios, Zustand | `torri-apps/Mobile-client-core`   |
 | **Mobile Client Configs**| White-label configurations for mobile apps    | JSON configurations           | `torri-apps/Mobile-client-configs`|
-| **Database**         | Persistent storage for each tenant and system data | MySQL | Schemas: `public`, tenant-specific schemas |
+| **Database**         | Persistent storage for each tenant and system data | PostgreSQL | Single schema architecture with `public` schema |
 | **Message Broker**   | Asynchronous tasks (e.g., notifications)        | Redis (with Celery)           | Used by Backend                   |
 
 ---

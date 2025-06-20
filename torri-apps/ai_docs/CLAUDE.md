@@ -14,7 +14,7 @@ TorriApps is a salon/barbershop management SaaS platform with white-label mobile
 - **Simplified Authentication**: JWT-based auth
 
 ### Component Structure
-- **Backend**: FastAPI + SQLAlchemy + MySQL with single schema architecture
+- **Backend**: FastAPI + SQLAlchemy + PostgreSQL with single schema architecture
 - **Web-admin**: React.js administrative interface for salon owners
 - **Mobile-client-core**: React Native base application with white-label capabilities
 - **Mobile-client-configs**: Brand-specific configurations and assets for white-label apps
@@ -49,12 +49,14 @@ alembic upgrade head
 ### Environment Configuration
 Required `.env` file in Backend directory:
 ```
-DATABASE_URL=mysql+mysqlconnector://root:@localhost:3306/tenant_beauty_hub
-DEFAULT_SCHEMA_NAME=tenant_beauty_hub
+DATABASE_URL=postgresql://username:password@host:port/database
+DEFAULT_SCHEMA_NAME=public
 SECRET_KEY=your-secret-key
 REDIS_URL=redis://localhost:6379
 DEBUG=true
 ```
+
+**Note**: The project has been migrated from MySQL to PostgreSQL. UUID fields are handled natively by PostgreSQL with `UUID(as_uuid=True)` column types.
 
 ## Key Design Patterns
 

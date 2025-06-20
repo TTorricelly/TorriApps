@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 from fastapi.staticfiles import StaticFiles
 
+# Import settings configuration
+from Config.Settings import settings
+
 # Using absolute imports for main.py
 from Core.Auth.Routes import router as auth_router
 from Modules.Users.routes import router as users_router

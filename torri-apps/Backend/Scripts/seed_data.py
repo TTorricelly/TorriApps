@@ -2,11 +2,11 @@
 """
 Database Seed Script for Torri Apps Backend
 
-This script populates the multi-tenant MySQL database with sample data for development and testing.
+This script populates the single-schema PostgreSQL database with sample data for development and testing.
 
-MULTI-SCHEMA ARCHITECTURE:
-- PUBLIC SCHEMA (torri_app_public): Contains tenants and admin_master_users tables
-- TENANT SCHEMAS (tenant_*): Each tenant has their own schema with user_tenants, services, appointments, etc.
+SINGLE-SCHEMA ARCHITECTURE:
+- PUBLIC SCHEMA: Contains all tables including users, services, appointments, etc.
+- Simplified structure without multi-tenancy
 
 WHAT IT CREATES:
 1. In PUBLIC schema:
@@ -102,10 +102,11 @@ class DatabaseSeeder:
         self.public_db.close()
     
     def create_tenant_schema(self, tenant: Tenant):
-        """Create the tenant database schema if it doesn't exist"""
-        # Connect to MySQL server without specifying a database
-        mysql_url = "mysql+mysqlconnector://root:@localhost:3306/"
-        temp_engine = create_engine(mysql_url)
+        """Create the tenant database schema if it doesn't exist (DEPRECATED - now single schema)"""
+        # NOTE: This method is deprecated in the single-schema architecture
+        # PostgreSQL connection would be: postgresql://username:password@host:port/database
+        # temp_engine = create_engine("postgresql://...")
+        pass  # No-op in single schema architecture
         
         with temp_engine.connect() as connection:
             # Create database if it doesn't exist

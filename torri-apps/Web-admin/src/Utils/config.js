@@ -4,10 +4,10 @@
 
 // Get the API base URL from environment variables
 const getApiBaseUrl = () => {
-  // Priority order: VITE_API_BASE_URL > VITE_API_URL > fallback to localhost
+  // Priority order: VITE_API_BASE_URL > VITE_API_URL > empty for proxy
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 
                   import.meta.env.VITE_API_URL || 
-                  'http://localhost:8000';
+                  ''; // Empty string for Vite proxy in development
   
   // Remove trailing slash if present
   return baseUrl.replace(/\/$/, '');

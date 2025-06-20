@@ -44,10 +44,27 @@ export default function ProfessionalsPage() {
 
   // Load data on component mount
   useEffect(() => {
-    Promise.all([
-      loadProfessionals(),
-      loadAllServices()
-    ]);
+    const abortController = new AbortController();
+    
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          loadProfessionals(),
+          loadAllServices()
+        ]);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Error loading data:', error);
+        }
+      }
+    };
+    
+    loadData();
+    
+    // Cleanup function to abort requests if component unmounts
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   const loadProfessionals = async () => {
@@ -77,7 +94,7 @@ export default function ProfessionalsPage() {
 
   // Filter professionals based on search query, status, and services
   const filteredProfessionals = useMemo(() => {
-    let filtered = professionals;
+    let filtered = Array.isArray(professionals) ? professionals : [];
 
     // Filter by search query (name or email)
     if (searchQuery.trim()) {
@@ -236,7 +253,7 @@ export default function ProfessionalsPage() {
             </div>
 
             {/* Service Filter - Placeholder for future implementation */}
-            {allServices.length > 0 && (
+            {(Array.isArray(allServices) ? allServices : []).length > 0 && (
               <div className="min-w-[180px] relative">
                 <Select
                   label="Filtrar por Serviço"
@@ -248,7 +265,7 @@ export default function ProfessionalsPage() {
                   }}
                   multiple
                 >
-                  {allServices.map((service) => (
+                  {(Array.isArray(allServices) ? allServices : []).map((service) => (
                     <Option 
                       key={service.id} 
                       value={service.id}

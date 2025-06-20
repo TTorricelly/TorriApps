@@ -664,10 +664,10 @@ export default function ServiceForm() {
   };
 
   const handleStationRequirementAdd = (stationTypeId) => {
-    const existingRequirement = stationRequirements.find(req => req.station_type_id === stationTypeId);
+    const existingRequirement = (Array.isArray(stationRequirements) ? stationRequirements : []).find(req => req.station_type_id === stationTypeId);
     if (existingRequirement) return; // Already exists
 
-    const stationType = stationTypes.find(type => type.id === stationTypeId);
+    const stationType = (Array.isArray(stationTypes) ? stationTypes : []).find(type => type.id === stationTypeId);
     if (!stationType) return;
 
     const newRequirement = {
@@ -787,10 +787,21 @@ export default function ServiceForm() {
       let result;
       if (isEdit) {
         result = await servicesApi.update(serviceId, serviceData);
+        if (!result) {
+          throw new Error('Falha ao atualizar serviço - resposta vazia do servidor');
+        }
         showAlert('Serviço atualizado com sucesso!', 'success');
       } else {
         result = await servicesApi.create(serviceData);
+        if (!result) {
+          throw new Error('Falha ao criar serviço - resposta vazia do servidor');
+        }
         showAlert('Serviço criado com sucesso!', 'success');
+      }
+      
+      // Ensure we have a valid service ID before proceeding
+      if (!result || !result.id) {
+        throw new Error('Serviço salvo mas ID não encontrado');
       }
       
       // Handle general image upload if a file was selected
@@ -1300,7 +1311,7 @@ export default function ServiceForm() {
                           
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {(Array.isArray(stationTypes) ? stationTypes : [])
-                              .filter(type => !stationRequirements.some(req => req.station_type_id === type.id))
+                              .filter(type => !(Array.isArray(stationRequirements) ? stationRequirements : []).some(req => req.station_type_id === type.id))
                               .map((stationType) => (
                                 <button
                                   key={stationType.id}
@@ -1318,7 +1329,7 @@ export default function ServiceForm() {
                               ))}
                           </div>
                           
-                          {stationTypes.filter(type => !stationRequirements.some(req => req.station_type_id === type.id)).length === 0 && (
+                          {(Array.isArray(stationTypes) ? stationTypes : []).filter(type => !(Array.isArray(stationRequirements) ? stationRequirements : []).some(req => req.station_type_id === type.id)).length === 0 && (
                             <Typography className="text-text-secondary text-sm">
                               Todos os tipos de estação disponíveis já foram adicionados.
                             </Typography>
@@ -1326,13 +1337,13 @@ export default function ServiceForm() {
                         </div>
 
                         {/* Current Station Requirements */}
-                        {stationRequirements.length > 0 && (
+                        {(Array.isArray(stationRequirements) ? stationRequirements : []).length > 0 && (
                           <div className="space-y-3">
                             <Typography className="text-text-primary font-medium">
-                              Estações Necessárias ({stationRequirements.length})
+                              Estações Necessárias ({(Array.isArray(stationRequirements) ? stationRequirements : []).length})
                             </Typography>
                             
-                            {stationRequirements.map((requirement) => (
+                            {(Array.isArray(stationRequirements) ? stationRequirements : []).map((requirement) => (
                               <div
                                 key={requirement.station_type_id}
                                 className="flex items-center justify-between p-4 bg-bg-secondary border border-bg-tertiary rounded-lg"
@@ -1377,7 +1388,7 @@ export default function ServiceForm() {
                           </div>
                         )}
 
-                        {stationRequirements.length === 0 && (
+                        {(Array.isArray(stationRequirements) ? stationRequirements : []).length === 0 && (
                           <div className="text-center py-8">
                             <Typography className="text-text-secondary">
                               Nenhuma estação foi definida como necessária para este serviço.

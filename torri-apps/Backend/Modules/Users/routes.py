@@ -108,8 +108,8 @@ def update_current_user_profile(
 @router.get("/", response_model=List[UserSchema]) # Updated schema
 def read_users_in_tenant( # Function name might be misleading now, consider renaming to read_all_users
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can list all users.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))], # Updated type
+    # GESTOR and ATENDENTE can list all users (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))], # Updated type
     skip: int = 0,
     limit: int = 100
 ):
@@ -125,8 +125,8 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
 def read_user_by_id(
     user_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can fetch arbitrary users by ID.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))] # Updated type
+    # GESTOR and ATENDENTE can fetch users by ID (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))] # Updated type
 ):
     """
     Get a specific user by ID.
@@ -142,8 +142,8 @@ def update_existing_user(
     user_id: UUID,
     user_update_data: UserUpdate, # Updated schema
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can update users.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))] # Updated type
+    # GESTOR and ATENDENTE can update users (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))] # Updated type
 ):
     """
     Update a user's details (email, full_name, role, is_active).

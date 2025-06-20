@@ -41,7 +41,6 @@ api.interceptors.response.use(
       
       // Only redirect if we're not already on the login page
       if (window.location.pathname !== '/login') {
-        // Show a brief message before redirecting
         console.log('Sessão expirada. Redirecionando para login...');
         window.location.href = '/login';
       }

@@ -59,9 +59,10 @@ export default function StationTypesPage() {
 
   // Filter station types based on search query
   const filteredStationTypes = useMemo(() => {
-    if (!searchQuery.trim()) return stationTypes;
+    const safeStationTypes = Array.isArray(stationTypes) ? stationTypes : [];
+    if (!searchQuery.trim()) return safeStationTypes;
     
-    return stationTypes.filter(stationType =>
+    return safeStationTypes.filter(stationType =>
       stationType.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       stationType.code.toLowerCase().includes(searchQuery.toLowerCase())
     );

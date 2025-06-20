@@ -39,8 +39,8 @@ class ProfessionalAvailability(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     
-    # Relationships
-    professional = relationship("User", foreign_keys=[professional_user_id])
+    # Relationships - temporarily disabled to avoid circular imports
+    # professional = relationship("Core.Auth.models.User", foreign_keys=[professional_user_id])
 
 # Professional blocked times (vacations, sick days, etc.)
 class ProfessionalBlockedTime(Base):
@@ -54,8 +54,8 @@ class ProfessionalBlockedTime(Base):
     block_type = Column(String(20), nullable=False, default="BREAK")  # Using string instead of enum for compatibility
     reason = Column(Text, nullable=True)
     
-    # Relationships
-    professional = relationship("User", foreign_keys=[professional_user_id])
+    # Relationships - temporarily disabled to avoid circular imports
+    # professional = relationship("Core.Auth.models.User", foreign_keys=[professional_user_id])
 
 # Professional recurring breaks (lunch, coffee break, etc.)
 class ProfessionalBreak(Base):
@@ -68,5 +68,5 @@ class ProfessionalBreak(Base):
     end_time = Column(Time, nullable=False)
     name = Column(String(100), nullable=True)  # Match existing schema (nullable)
     
-    # Relationships  
-    professional = relationship("User", foreign_keys=[professional_user_id])
+    # Relationships - temporarily disabled to avoid circular imports
+    # professional = relationship("Core.Auth.models.User", foreign_keys=[professional_user_id])

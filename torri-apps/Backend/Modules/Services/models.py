@@ -64,25 +64,25 @@ class Service(Base):
 
     category = relationship("Category", back_populates="services")
 
-    # Many-to-many relationship with User (Professionals)
-    professionals = relationship(
-        "User",
-        secondary=service_professionals_association,
-        back_populates="services_offered"
-    )
+    # Many-to-many relationship with User (Professionals) - temporarily disabled to avoid circular imports
+    # professionals = relationship(
+    #     "Core.Auth.models.User",
+    #     secondary=service_professionals_association,
+    #     back_populates="services_offered"
+    # )
 
-    appointments = relationship(
-        "Modules.Appointments.models.Appointment", # String type hint
-        foreign_keys="[Modules.Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
-        back_populates="service"
-    )
+    # appointments = relationship(
+    #     "Modules.Appointments.models.Appointment", # String type hint - temporarily disabled
+    #     foreign_keys="[Modules.Appointments.models.Appointment.service_id]", # Module path to Appointment model and its service_id
+    #     back_populates="service"
+    # )
 
-    # Station requirements relationship
-    station_requirements = relationship(
-        "Modules.Stations.models.ServiceStationRequirement",
-        back_populates="service",
-        cascade="all, delete-orphan"
-    )
+    # Station requirements relationship - temporarily disabled
+    # station_requirements = relationship(
+    #     "Modules.Stations.models.ServiceStationRequirement",
+    #     back_populates="service",
+    #     cascade="all, delete-orphan"
+    # )
 
     def __repr__(self):
         return f"<Service(id={self.id}, name='{self.name}')>"

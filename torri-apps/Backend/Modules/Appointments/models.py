@@ -47,8 +47,8 @@ class AppointmentGroup(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
-    client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="appointment_groups")
+    # Relationships - temporarily disabled to avoid circular imports
+    # client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="appointment_groups")
     appointments = relationship("Appointment", back_populates="appointment_group", cascade="all, delete-orphan")
     
     def __repr__(self):
@@ -84,10 +84,10 @@ class Appointment(Base):
     notes_by_client = Column(String(500), nullable=True)
     notes_by_professional = Column(String(500), nullable=True) # Notes by professional or salon staff
 
-    # Relationships
-    client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="client_appointments")
-    professional = relationship("Core.Auth.models.User", foreign_keys=[professional_id], back_populates="professional_appointments")
-    service = relationship("Modules.Services.models.Service", foreign_keys=[service_id], back_populates="appointments")
+    # Relationships - temporarily disabled to avoid circular imports
+    # client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="client_appointments")
+    # professional = relationship("Core.Auth.models.User", foreign_keys=[professional_id], back_populates="professional_appointments")
+    # service = relationship("Modules.Services.models.Service", foreign_keys=[service_id], back_populates="appointments")
     appointment_group = relationship("AppointmentGroup", back_populates="appointments")
 
     __table_args__ = (
