@@ -57,6 +57,14 @@ class User(Base):
         cascade="all, delete-orphan" # Added cascade
     )
 
+    # Relationship to AppointmentGroups (multi-service bookings)
+    appointment_groups = relationship(
+        "Modules.Appointments.models.AppointmentGroup",
+        foreign_keys="[Modules.Appointments.models.AppointmentGroup.client_id]",
+        back_populates="client",
+        cascade="all, delete-orphan"
+    )
+
     # Professional-specific relationships - commented out to avoid circular imports
     # Will be added dynamically after models are loaded
     # availability_schedule = relationship(

@@ -18,7 +18,11 @@ from .schemas import (
     DailyServiceAvailabilityResponse,
     AppointmentUpdate, # For future generic update, if needed
     AppointmentReschedulePayload, AppointmentCancelPayload, # New schemas for specific actions
-    DailyScheduleResponseSchema # New schema for the daily schedule endpoint
+    DailyScheduleResponseSchema, # New schema for the daily schedule endpoint
+    # Multi-service wizard schemas
+    MultiServiceAvailabilityRequest, MultiServiceAvailabilityResponse,
+    AvailableProfessionalsRequest, AvailableProfessionalsResponse,
+    MultiServiceBookingRequest, MultiServiceBookingResponse
 )
 from .constants import AppointmentStatus
 
@@ -324,5 +328,103 @@ def update_appointment_multiple_services_endpoint(
         requesting_user=requesting_user
     )
     return updated_appointments
+
+
+# --- Multi-Service Wizard Endpoints ---
+
+@router.get(
+    "/wizard/professionals",
+    response_model=AvailableProfessionalsResponse,
+    summary="Get available professionals for multiple services on a specific date."
+)
+def get_available_professionals_for_wizard_endpoint(
+    service_ids: List[UUID] = Query(..., description="List of service IDs"),
+    target_date: date = Query(..., description="Target date for availability (YYYY-MM-DD)", alias="date"),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Get professionals who are available and qualified for the specified services on the target date.
+    """
+    return appointments_services.get_available_professionals_for_wizard(
+        db=db,
+        service_ids=service_ids,
+        target_date=target_date
+    )
+
+
+@router.get(
+    "/wizard/availability",
+    response_model=MultiServiceAvailabilityResponse,
+    summary="Get available time slots for multiple services."
+)
+def get_multi_service_availability_endpoint(
+    service_ids: List[UUID] = Query(..., description="List of service IDs"),
+    target_date: date = Query(..., description="Target date for availability (YYYY-MM-DD)", alias="date"),
+    professionals_requested: int = Query(default=1, ge=1, le=3, description="Number of professionals requested"),
+    professional_ids: Optional[List[UUID]] = Query(None, description="Optional specific professional IDs"),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Get available time slots for multiple services, considering parallel and sequential execution.
+    """
+    request = MultiServiceAvailabilityRequest(
+        service_ids=service_ids,
+        date=target_date,
+        professionals_requested=professionals_requested,
+        professional_ids=professional_ids
+    )
+    
+    return appointments_services.get_multi_service_availability(
+        db=db,
+        request=request
+    )
+
+
+@router.post(
+    "/wizard/book",
+    response_model=MultiServiceBookingResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a multi-service appointment booking."
+)
+def create_multi_service_booking_endpoint(
+    booking_data: MultiServiceBookingRequest,
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Create a multi-service appointment booking with an appointment group.
+    This creates multiple individual appointments linked to a single group.
+    """
+    return appointments_services.create_multi_service_booking(
+        db=db,
+        booking_data=booking_data,
+        requesting_user=requesting_user
+    )
+
+
+@router.get(
+    "/wizard/available-dates",
+    response_model=List[str],
+    summary="Get dates that have availability for the specified services."
+)
+def get_available_dates_for_services_endpoint(
+    service_ids: List[UUID] = Query(..., description="List of service IDs"),
+    year: int = Query(..., description="Year to check"),
+    month: int = Query(..., description="Month to check (1-12)"),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Get a list of dates in the specified month that have availability for all the requested services.
+    Returns dates in YYYY-MM-DD format.
+    """
+    return appointments_services.get_available_dates_for_services(
+        db=db,
+        service_ids=service_ids,
+        year=year,
+        month=month
+    )
 
 # Delete endpoint is intentionally omitted as per subtask notes (cancellation is logical deletion).

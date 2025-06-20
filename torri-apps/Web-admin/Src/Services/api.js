@@ -7,12 +7,11 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const { accessToken, tenantId } = useAuthStore.getState();
-    if (accessToken && tenantId) {
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) {
       config.headers = {
         ...config.headers,
         Authorization: `Bearer ${accessToken}`,
-        "X-Tenant-ID": tenantId,
       };
     }
     return config;

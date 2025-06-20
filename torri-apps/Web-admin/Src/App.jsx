@@ -13,18 +13,20 @@ import {
   StationTypesPage,
   StationsPage,
   SettingsPage,
+  SalonProfilePage,
   Login
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
 import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
 import DailySchedulePage from './Pages/Appointments/DailySchedulePage.jsx'; // Import DailySchedulePage
+// SalonProfilePage imported from ./Pages index
 
 // Placeholder components for new routes
 const AppointmentCalendar = () => <div className="p-6">Agenda - Em desenvolvimento</div>;
 const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos - Em desenvolvimento</div>;
 const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
 // const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>; // Remove placeholder
-const SalonProfile = () => <div className="p-6">Perfil do Salão - Em desenvolvimento</div>;
+// SalonProfile component moved to separate file
 const SettingsUsers = () => <div className="p-6">Usuários - Em desenvolvimento</div>;
 const Billing = () => <div className="p-6">Plano & Pagamento - Em desenvolvimento</div>;
 
@@ -65,7 +67,7 @@ function App() {
           
           {/* Settings Routes */}
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/salon-profile" element={<SalonProfile />} />
+          <Route path="/settings/salon-profile" element={<SalonProfilePage />} />
           <Route path="/settings/users" element={<SettingsUsers />} />
           <Route path="/settings/billing" element={<Billing />} />
           

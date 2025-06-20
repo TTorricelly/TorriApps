@@ -6,9 +6,10 @@ from decimal import Decimal
 
 # Attempt to import AppointmentStatus, if it fails, we'll use a string.
 try:
-    from .constants import AppointmentStatus
+    from .constants import AppointmentStatus, AppointmentGroupStatus
 except ImportError:
     AppointmentStatus = str # Fallback to string if enum not found
+    AppointmentGroupStatus = str
 
 # --- Basic Info Schemas ---
 class UserBasicInfo(BaseModel): # Renamed from UserTenantBasicInfo
@@ -175,6 +176,139 @@ class ProfessionalScheduleSchema(BaseModel):
 class DailyScheduleResponseSchema(BaseModel):
     date: date
     professionals_schedule: List[ProfessionalScheduleSchema]
+
+    class Config:
+        from_attributes = True
+
+
+# --- Multi-Service Wizard Schemas ---
+
+class ServiceInSlot(BaseModel):
+    service_id: UUID
+    service_name: str
+    professional_id: UUID
+    professional_name: str
+    station_id: Optional[UUID] = None
+    station_name: Optional[str] = None
+    duration_minutes: int
+    price: Decimal
+
+    class Config:
+        from_attributes = True
+
+class WizardTimeSlot(BaseModel):
+    id: str  # Unique identifier for this slot combination
+    start_time: time
+    end_time: time
+    total_duration_minutes: int
+    total_price: Decimal
+    execution_type: str  # "parallel" or "sequential"
+    services: List[ServiceInSlot]
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            time: lambda v: v.strftime('%H:%M') if v else None,
+            Decimal: lambda v: float(v)
+        }
+
+class MultiServiceAvailabilityRequest(BaseModel):
+    service_ids: List[UUID]
+    date: date
+    professionals_requested: int = Field(default=1, ge=1, le=3)
+    professional_ids: Optional[List[UUID]] = None  # Optional specific professional selection
+
+    class Config:
+        from_attributes = True
+
+class MultiServiceAvailabilityResponse(BaseModel):
+    date: date
+    available_slots: List[WizardTimeSlot]
+
+    class Config:
+        from_attributes = True
+
+class ProfessionalInfo(BaseModel):
+    id: UUID
+    full_name: str
+    email: str
+    photo_path: Optional[str] = None
+    services_offered: List[UUID]  # List of service IDs this professional can handle
+
+    class Config:
+        from_attributes = True
+
+class AvailableProfessionalsRequest(BaseModel):
+    service_ids: List[UUID]
+    date: date
+
+    class Config:
+        from_attributes = True
+
+class AvailableProfessionalsResponse(BaseModel):
+    date: date
+    professionals: List[ProfessionalInfo]
+
+    class Config:
+        from_attributes = True
+
+class ServiceInBooking(BaseModel):
+    service_id: UUID
+    professional_id: UUID
+    station_id: Optional[UUID] = None
+    start_time: time
+    end_time: time
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            time: lambda v: v.strftime('%H:%M') if v else None
+        }
+
+class SelectedSlot(BaseModel):
+    start_time: time
+    end_time: time
+    execution_type: str  # "parallel" or "sequential"
+    services: List[ServiceInBooking]
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            time: lambda v: v.strftime('%H:%M') if v else None
+        }
+
+class MultiServiceBookingRequest(BaseModel):
+    client_id: UUID
+    date: date
+    selected_slot: SelectedSlot
+    notes_by_client: Optional[str] = Field(None, max_length=1000)
+
+    class Config:
+        from_attributes = True
+
+class AppointmentGroupSchema(BaseModel):
+    id: UUID
+    client_id: UUID
+    total_duration_minutes: int
+    total_price: Decimal
+    start_time: datetime
+    end_time: datetime
+    status: AppointmentGroupStatus
+    notes_by_client: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    client: Optional[UserBasicInfo] = None
+    appointments: List[AppointmentSchema] = []
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            Decimal: lambda v: float(v)
+        }
+
+class MultiServiceBookingResponse(BaseModel):
+    appointment_group: AppointmentGroupSchema
+    message: str = "Agendamento multisserviço criado com sucesso"
 
     class Config:
         from_attributes = True

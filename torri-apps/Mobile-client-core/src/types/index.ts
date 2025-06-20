@@ -9,6 +9,9 @@ export type UserType = {
   isActive?: boolean;
   phone_number?: string;
   photo_path?: string;
+  hair_type?: 'LISO' | 'ONDULADO' | 'CACHEADO' | 'CRESPO';
+  gender?: 'MASCULINO' | 'FEMININO' | 'OUTROS';
+  date_of_birth?: string; // ISO date string
   // Add other fields that your user object might contain
 } | null;
 

@@ -1,10 +1,8 @@
 import api from "./api"; // Imports the configured Axios instance
 
 // Interface LoginCredentials (for reference, not strictly enforced in JS)
-// {
-//   email: string;
-//   password: string;
-// }
+// Frontend sends: { email: string; password: string; }
+// Backend expects: { email_or_phone: string; password: string; }
 
 // Interface LoginResponse (for reference)
 // {
@@ -14,8 +12,14 @@ import api from "./api"; // Imports the configured Axios instance
 
 export async function loginRequest(credentials) {
   // credentials should be an object like { email: "user@example.com", password: "password123" }
+  // Backend expects email_or_phone field, so we need to transform the email field
+  const loginPayload = {
+    email_or_phone: credentials.email,
+    password: credentials.password
+  };
+  
   // Using standard login endpoint.
-  const response = await api.post("/api/v1/auth/login", credentials);
+  const response = await api.post("/api/v1/auth/login", loginPayload);
   return response.data; // Axios automatically wraps the response in a data object
 }
 

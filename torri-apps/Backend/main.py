@@ -11,7 +11,9 @@ from Modules.Appointments.routes import router as appointments_router
 from Modules.Professionals.routes import router as professionals_router
 from Modules.Stations.routes import router as stations_router
 from Modules.Settings.routes import router as settings_router
+from Modules.Company.routes import router as company_router
 import Modules.Professionals  # Import module to register models
+import Modules.Company.models  # Import Company models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 # Placeholder for other routers:
 # from .Modules.AdminMaster.routes import router as admin_master_router
@@ -73,6 +75,7 @@ app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", 
 app.include_router(professionals_router, prefix=API_V1_PREFIX, tags=["Professionals Management"])
 app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
 app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
+app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

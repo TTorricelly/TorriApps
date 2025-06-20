@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response # Added 
 from sqlalchemy.orm import Session
 
 # Schemas
-from Core.Auth.Schemas import User as UserSchema, UserCreate, UserUpdate # Updated imports
+from Core.Auth.Schemas import User as UserSchema, UserCreate, UserUpdate, PublicRegistrationRequest # Updated imports
 # Database dependency
 from Core.Database.dependencies import get_db
 # User services
@@ -22,6 +22,31 @@ router = APIRouter(
     # The X-Tenant-ID header will be implicitly checked by get_current_user_tenant for most routes.
     # For routes accessible by multiple roles, specific checks might be needed if behavior differs.
 )
+
+@router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+def register_new_client(
+    registration_data: PublicRegistrationRequest,
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Public endpoint for client registration.
+    Creates a new user with CLIENTE role.
+    """
+    # Convert PublicRegistrationRequest to UserCreate with CLIENTE role
+    user_data = UserCreate(
+        email=registration_data.email,
+        full_name=registration_data.full_name,
+        phone_number=registration_data.phone_number,
+        password=registration_data.password,
+        role=UserRole.CLIENTE,  # Always set to CLIENTE for public registration
+        date_of_birth=registration_data.date_of_birth,
+        hair_type=registration_data.hair_type,
+        gender=registration_data.gender
+    )
+    
+    # Create the user using the existing service
+    db_user = user_services.create_user(db=db, user_data=user_data)
+    return db_user
 
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
 def create_new_user(

@@ -494,8 +494,20 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
                 <TouchableOpacity 
                   style={styles.continueButton}
                   onPress={() => {
-                    // Navigate to appointment booking
-                    console.log('Proceed to booking');
+                    // Navigate to multi-service scheduling wizard
+                    const wizardServices = selectedServices.map(service => ({
+                      id: service.id,
+                      name: service.name,
+                      duration_minutes: service.duration_minutes,
+                      price: parseFloat(service.price),
+                      parallelable: true, // Assume all services can be parallelized for now
+                      max_parallel_pros: 2, // Default max parallel professionals
+                    }));
+                    
+                    navigation?.navigate('SchedulingWizard', {
+                      screen: 'WizardDate',
+                      params: { services: wizardServices }
+                    });
                   }}
                 >
                   <Text style={styles.continueButtonText}>

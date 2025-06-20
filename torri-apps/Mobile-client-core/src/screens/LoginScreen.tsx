@@ -12,11 +12,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as authService from '../services/authService'; // Adjusted import
 import useAuthStore from '../store/authStore'; // Adjusted import
+import * as companyService from '../services/companyService';
 import {
   Mail,
   Lock,
   Eye,
   EyeOff,
+  Phone,
 } from 'lucide-react-native';
 
 interface LoginScreenProps {
@@ -30,20 +32,38 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToCreateAccount
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Added for loading state
+  const [companyName, setCompanyName] = useState('Nome do Salão'); // Default fallback
   const storeLogin = useAuthStore((state) => state.login); // Get the login action from the store
 
+  // Fetch company information when component mounts
+  React.useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const companyInfo = await companyService.getCompanyInfo();
+        if (companyInfo.name) {
+          setCompanyName(companyInfo.name);
+        }
+      } catch (error) {
+        console.log('[LoginScreen] Failed to fetch company info, using default name:', error);
+        // Keep default name on error
+      }
+    };
+
+    fetchCompanyInfo();
+  }, []);
+
   const handleLogin = async () => { // Made async
-    if (!email || !password) {
+    if (!emailOrPhone || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const tokenData = await authService.login(email, password);
+      const tokenData = await authService.login(emailOrPhone, password);
       // The authStore's login action will handle decoding and setting user data
       await storeLogin(tokenData);
       // onLoginSuccess prop is likely used by the navigator to switch screens
@@ -82,7 +102,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
           </Text>
         </View>
 
-        {/* Email Field */}
+        {/* Email or Phone Field */}
         <View style={{ marginBottom: 24 }}>
           <Text style={{ 
             fontSize: 14, 
@@ -90,19 +110,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
             color: '#374151', 
             marginBottom: 8 
           }}>
-            E-mail
+            E-mail ou Telefone
           </Text>
           <View style={{ position: 'relative' }}>
-            <Mail 
-              size={20} 
-              color="#9ca3af" 
-              style={{ 
-                position: 'absolute', 
-                left: 12, 
-                top: 18, 
-                zIndex: 1 
-              }} 
-            />
+            {emailOrPhone.includes('@') ? (
+              <Mail 
+                size={20} 
+                color="#9ca3af" 
+                style={{ 
+                  position: 'absolute', 
+                  left: 12, 
+                  top: 18, 
+                  zIndex: 1 
+                }} 
+              />
+            ) : (
+              <Phone 
+                size={20} 
+                color="#9ca3af" 
+                style={{ 
+                  position: 'absolute', 
+                  left: 12, 
+                  top: 18, 
+                  zIndex: 1 
+                }} 
+              />
+            )}
             <TextInput
               style={{
                 width: '100%',
@@ -115,10 +148,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
                 fontSize: 16,
                 backgroundColor: 'white',
               }}
-              placeholder="seu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              placeholder="seu@email.com ou (11) 99999-9999"
+              value={emailOrPhone}
+              onChangeText={setEmailOrPhone}
+              keyboardType="default"
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -299,7 +332,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
             fontWeight: 'bold', 
             color: 'white' 
           }}>
-            Nome do Salão
+            {companyName}
           </Text>
           <View style={{ marginTop: 12, alignItems: 'center' }}>
             <Text style={{ 

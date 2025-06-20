@@ -10,6 +10,7 @@ import AppointmentsScreen from '../screens/AppointmentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ServicesScreen from '../screens/ServicesScreen';
+import SchedulingWizardNavigator from './SchedulingWizardNavigator';
 
 interface HomeScreenRef {
   resetToCategories: () => void;
@@ -24,6 +25,7 @@ interface MainAppNavigatorProps {
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 
 function HomeStackNavigator({ homeScreenRef }: { homeScreenRef: React.RefObject<HomeScreenRef> }) {
   return (
@@ -112,6 +114,28 @@ const BottomTabs: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
   );
 };
 
+const MainAppNavigator: React.FC<MainAppNavigatorProps> = ({ onLogout }) => {
+  return (
+    <RootStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <RootStack.Screen name="BottomTabs">
+        {(props) => <BottomTabs {...props} onLogout={onLogout} />}
+      </RootStack.Screen>
+      <RootStack.Screen
+        name="SchedulingWizard"
+        component={SchedulingWizardNavigator}
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }}
+      />
+    </RootStack.Navigator>
+  );
+};
+
 const styles = StyleSheet.create({
   iconContainer: {
     position: 'relative',
@@ -139,4 +163,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BottomTabs;
+export default MainAppNavigator;
