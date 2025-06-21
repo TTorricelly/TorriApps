@@ -179,27 +179,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const isServiceCovered = (service: Service): boolean => {
-    // Service is only truly covered if:
-    // 1. At least one selected professional can provide this service
-    // 2. All other services can also be covered by the current selection
-    
-    const hasProviderForThisService = selectedProfessionals.some((prof: Professional | null) => 
+    // Simple check: if any selected professional can provide this service, it's covered
+    return selectedProfessionals.some((prof: Professional | null) => 
       prof && prof.services_offered?.includes(service.id)
     );
-    
-    if (!hasProviderForThisService) {
-      return false;
-    }
-    
-    // Check if ALL services can be covered by current selection
-    const allServicesCovered = selectedServices.every((selectedService: Service) => {
-      return selectedProfessionals.some((prof: Professional | null) => 
-        prof && prof.services_offered?.includes(selectedService.id)
-      );
-    });
-    
-    // Only show checkmark if this service is covered AND all other services are also covered
-    return allServicesCovered;
   };
 
   const renderServiceChip = ({ item: service }: { item: Service }) => {
@@ -289,6 +272,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return availableProfessionals.some((professional: Professional) => 
       getExclusiveServices(professional).length > 0
     );
+  };
+
+  const getUncoveredServices = (): string[] => {
+    return selectedServices
+      .filter((service: Service) => !isServiceCovered(service))
+      .map((service: Service) => service.name);
+  };
+
+  const hasCompleteServiceCoverage = (): boolean => {
+    return selectedServices.every((service: Service) => isServiceCovered(service));
   };
 
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
@@ -451,8 +444,34 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
+              {/* Floating Validation Banner */}
+              {getSelectedCount() > 0 && (
+                <View style={styles.floatingBanner}>
+                  {professionalsRequested > 1 && getSelectedCount() < professionalsRequested ? (
+                    <View style={[styles.bannerContent, styles.bannerWarning]}>
+                      <Text style={styles.bannerIcon}>⚠️</Text>
+                      <Text style={styles.bannerText}>
+                        Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  ) : !hasCompleteServiceCoverage() ? (
+                    <View style={[styles.bannerContent, styles.bannerWarning]}>
+                      <Text style={styles.bannerIcon}>⚠️</Text>
+                      <View style={styles.bannerTextContainer}>
+                        <Text style={styles.bannerText}>Serviços não cobertos:</Text>
+                        <Text style={styles.bannerSubtext}>{getUncoveredServices().join(', ')}</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={[styles.bannerContent, styles.bannerSuccess]}>
+                      <Text style={styles.bannerIcon}>✅</Text>
+                      <Text style={styles.bannerText}>Todos os serviços estão cobertos!</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
-            {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
+              {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
               <ProfessionalToggle
                 value={professionalsRequested}
@@ -500,20 +519,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               />
             </View>
 
-            {/* Validation Messages */}
-            {professionalsRequested > 1 && getSelectedCount() > 0 && (
-              <View style={styles.validationSection}>
-                {getSelectedCount() < professionalsRequested ? (
-                  <Text style={styles.validationWarning}>
-                    ⚠️ Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''} para continuar
-                  </Text>
-                ) : (
-                  <Text style={styles.validationSuccess}>
-                    ✅ Profissionais selecionados com sucesso
-                  </Text>
-                )}
-              </View>
-            )}
             </ScrollView>
           </KeyboardAvoidingView>
         </View>
@@ -803,20 +808,49 @@ const styles = StyleSheet.create({
   professionalSeparator: {
     height: 12,
   },
-  validationSection: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
+  floatingBanner: {
+    marginBottom: 16,
   },
-  validationWarning: {
-    fontSize: 14,
-    color: '#f59e0b',
-    textAlign: 'center',
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  validationSuccess: {
+  bannerWarning: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#f59e0b',
+  },
+  bannerSuccess: {
+    backgroundColor: '#d1fae5',
+    borderColor: '#10b981',
+  },
+  bannerIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  bannerTextContainer: {
+    flex: 1,
+  },
+  bannerText: {
     fontSize: 14,
-    color: '#10b981',
-    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  bannerSubtext: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
   },
   footer: {
     padding: 16,
