@@ -7,6 +7,20 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Configure parameter serialization for FastAPI compatibility
+  paramsSerializer: function (params) {
+    const searchParams = new URLSearchParams();
+    for (const key in params) {
+      const value = params[key];
+      if (Array.isArray(value)) {
+        // Send arrays as multiple parameters with the same key (FastAPI format)
+        value.forEach(item => searchParams.append(key, item));
+      } else if (value !== null && value !== undefined) {
+        searchParams.append(key, value);
+      }
+    }
+    return searchParams.toString();
+  },
 });
 
 apiClient.interceptors.request.use(
