@@ -58,7 +58,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       setMaxParallelPros(maxPros);
       
       // Set initial professionals requested
-      const initialPros = Math.min(defaultPros, maxPros);
+      // If only 1 service selected, always use 1 professional
+      const initialPros = selectedServices.length === 1 ? 1 : Math.min(defaultPros, maxPros);
       setProfessionalsRequested(initialPros);
       
     } catch (error) {
@@ -413,12 +414,14 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               <Text style={styles.professionalsTitle}>
                 {availableProfessionals.length === 1 
                   ? 'Profissional disponível'
-                  : professionalsRequested === 1 
-                    ? 'Selecione o profissional' 
-                    : `Selecione ${professionalsRequested} profissionais`
+                  : selectedServices.length === 1
+                    ? 'Selecione o profissional'
+                    : professionalsRequested === 1 
+                      ? 'Selecione o profissional' 
+                      : `Selecione ${professionalsRequested} profissionais`
                 }
               </Text>
-              {availableProfessionals.length > 1 && (
+              {availableProfessionals.length > 1 && selectedServices.length > 1 && (
                 <Text style={styles.professionalsSubtitle}>
                   {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
                 </Text>
