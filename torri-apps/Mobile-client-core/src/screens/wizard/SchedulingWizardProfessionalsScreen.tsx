@@ -86,8 +86,14 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       setAvailableProfessionals(professionals);
       
-      // Reset selected professionals when available professionals change
-      setSelectedProfessionals([]);
+      // Auto-select if only 1 professional available
+      if (professionals.length === 1) {
+        setSelectedProfessionals([professionals[0]]);
+        setProfessionalsRequested(1);
+      } else {
+        // Reset selected professionals when available professionals change
+        setSelectedProfessionals([]);
+      }
       
     } catch (error) {
       console.error('Error loading available professionals:', error);
@@ -189,6 +195,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
+    const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
     const imageError = imageErrors[professional.id] || false;
     
@@ -205,9 +212,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           isSelected && styles.professionalChipSelected,
           isDisabled && styles.professionalChipDisabled,
         ]}
-        onPress={() => handleProfessionalSelect(professional)}
-        disabled={isDisabled}
-        activeOpacity={0.7}
+        onPress={() => !isOnlyOption && handleProfessionalSelect(professional)}
+        disabled={isDisabled || isOnlyOption}
+        activeOpacity={isOnlyOption ? 1 : 0.7}
       >
         <View style={[
           styles.professionalAvatar,
@@ -341,22 +348,31 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               />
             </View>
 
-            {/* Professional Count Toggle */}
-            <ProfessionalToggle
-              value={professionalsRequested}
-              maxValue={maxParallelPros}
-              onChange={handleProfessionalsCountChange}
-              disabled={maxParallelPros === 1}
-            />
+            {/* Professional Count Toggle - Only show if multiple professionals available */}
+            {availableProfessionals.length > 1 && (
+              <ProfessionalToggle
+                value={professionalsRequested}
+                maxValue={maxParallelPros}
+                onChange={handleProfessionalsCountChange}
+                disabled={maxParallelPros === 1}
+              />
+            )}
 
             {/* Professional Selection */}
             <View style={styles.professionalsSection}>
               <Text style={styles.professionalsTitle}>
-                Selecione {professionalsRequested === 1 ? 'o profissional' : `${professionalsRequested} profissionais`}
+                {availableProfessionals.length === 1 
+                  ? 'Profissional disponível'
+                  : professionalsRequested === 1 
+                    ? 'Selecione o profissional' 
+                    : `Selecione ${professionalsRequested} profissionais`
+                }
               </Text>
-              <Text style={styles.professionalsSubtitle}>
-                {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
-              </Text>
+              {availableProfessionals.length > 1 && (
+                <Text style={styles.professionalsSubtitle}>
+                  {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
+                </Text>
+              )}
               
               <FlatList
                 data={availableProfessionals}
