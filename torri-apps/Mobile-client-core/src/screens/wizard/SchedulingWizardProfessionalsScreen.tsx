@@ -13,6 +13,7 @@ type SchedulingWizardProfessionalsScreenNavigationProp = WizardNavigationProp<'W
 const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardProfessionalsScreenNavigationProp>();
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
+  const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
   
   const {
     selectedServices,
@@ -44,6 +45,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     loadConfiguration();
     loadAvailableProfessionals();
   }, [selectedDate]);
+
+  // Auto-hide success message after 3 seconds
+  useEffect(() => {
+    if (hasCompleteServiceCoverage() && getSelectedCount() > 0) {
+      setShowSuccessMessage(true);
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSuccessMessage(false);
+    }
+  }, [selectedProfessionals, professionalsRequested]);
 
   const loadConfiguration = async () => {
     try {
@@ -433,32 +447,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Fixed Validation Banner */}
-          {getSelectedCount() > 0 && (
-            <View style={styles.stickyBannerContainer}>
-              {professionalsRequested > 1 && getSelectedCount() < professionalsRequested ? (
-                <View style={[styles.bannerContent, styles.bannerWarning]}>
-                  <Text style={styles.bannerIcon}>⚠️</Text>
-                  <Text style={styles.bannerText}>
-                    Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''}
-                  </Text>
-                </View>
-              ) : !hasCompleteServiceCoverage() ? (
-                <View style={[styles.bannerContent, styles.bannerWarning]}>
-                  <Text style={styles.bannerIcon}>⚠️</Text>
-                  <View style={styles.bannerTextContainer}>
-                    <Text style={styles.bannerText}>Serviços não cobertos:</Text>
-                    <Text style={styles.bannerSubtext}>{getUncoveredServices().join(', ')}</Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={[styles.bannerContent, styles.bannerSuccess]}>
-                  <Text style={styles.bannerIcon}>✅</Text>
-                  <Text style={styles.bannerText}>Todos os serviços estão cobertos!</Text>
-                </View>
-              )}
-            </View>
-          )}
 
           {/* Scrollable Content */}
           <KeyboardAvoidingView 
@@ -525,9 +513,36 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Continue Button */}
+      {/* Continue Button with Snackbar */}
       {!isLoading && !error && availableProfessionals.length > 0 && (
         <View style={styles.footer}>
+          {/* Validation Snackbar */}
+          {(!hasCompleteServiceCoverage() || getSelectedCount() === 0) && (
+            <View style={[styles.snackbar, styles.snackbarWarning]}>
+              <Text style={styles.snackbarIcon}>⚠️</Text>
+              <View style={styles.snackbarTextContainer}>
+                <Text style={styles.snackbarText}>
+                  {getSelectedCount() === 0 
+                    ? 'Selecione pelo menos um profissional'
+                    : `Serviços pendentes: ${getUncoveredServices().join(', ')}`
+                  }
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Success Snackbar with Auto-hide */}
+          {showSuccessMessage && hasCompleteServiceCoverage() && getSelectedCount() > 0 && (
+            <View style={[styles.snackbar, styles.snackbarSuccess]}>
+              <Text style={styles.snackbarIcon}>✅</Text>
+              <View style={styles.snackbarTextContainer}>
+                <Text style={styles.snackbarText}>
+                  Todos os serviços foram cobertos!
+                </Text>
+              </View>
+            </View>
+          )}
+          
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -862,6 +877,44 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
     backgroundColor: 'white',
+  },
+  snackbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  snackbarWarning: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  snackbarSuccess: {
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  snackbarIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  snackbarTextContainer: {
+    flex: 1,
+  },
+  snackbarText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
   },
   continueButton: {
     backgroundColor: '#ec4899',
