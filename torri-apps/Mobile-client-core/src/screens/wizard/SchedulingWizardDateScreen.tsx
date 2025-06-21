@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
@@ -141,6 +141,32 @@ const SchedulingWizardDateScreen: React.FC = () => {
     });
   };
 
+  const getTotalEstimatedTime = () => {
+    return selectedServices.reduce((total: number, service: Service) => {
+      return total + service.duration_minutes;
+    }, 0);
+  };
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0 && mins > 0) {
+      return `${hours}h ${mins}min`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      return `${mins}min`;
+    }
+  };
+
+  const renderServiceChip = ({ item: service }: { item: Service }) => (
+    <View style={styles.serviceChip}>
+      <Text style={styles.serviceChipText}>{service.name}</Text>
+      <Text style={styles.serviceChipDuration}>{service.duration_minutes}min</Text>
+    </View>
+  );
+
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color="#ec4899" />
@@ -191,12 +217,21 @@ const SchedulingWizardDateScreen: React.FC = () => {
         <View style={styles.content}>
           {/* Services Summary */}
           <View style={styles.servicesSummary}>
-            <Text style={styles.servicesSummaryTitle}>Serviços selecionados:</Text>
-            {selectedServices.map((service: Service, index: number) => (
-              <Text key={index} style={styles.serviceItem}>
-                • {service.name} ({service.duration_minutes} min)
+            <View style={styles.servicesSummaryHeader}>
+              <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
+              <Text style={styles.totalTimeText}>
+                Total: {formatDuration(getTotalEstimatedTime())}
               </Text>
-            ))}
+            </View>
+            <FlatList
+              data={selectedServices}
+              renderItem={renderServiceChip}
+              keyExtractor={(item: Service) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.servicesChipContainer}
+              ItemSeparatorComponent={() => <View style={styles.chipSeparator} />}
+            />
           </View>
 
           {/* Calendar */}
@@ -271,16 +306,50 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 24,
   },
+  servicesSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   servicesSummaryTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 8,
   },
-  serviceItem: {
+  totalTimeText: {
     fontSize: 14,
-    color: '#4b5563',
-    marginBottom: 4,
+    fontWeight: '500',
+    color: '#ec4899',
+  },
+  servicesChipContainer: {
+    paddingHorizontal: 0,
+  },
+  serviceChip: {
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  serviceChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  serviceChipDuration: {
+    fontSize: 10,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  chipSeparator: {
+    width: 8,
   },
   calendarContainer: {
     backgroundColor: 'white',
