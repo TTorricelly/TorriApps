@@ -114,7 +114,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
     const dateString = day.dateString;
 
     if (!availableDates.includes(dateString)) {
-      showUnavailabilityTooltip(dateString);
+      showUnavailabilityTooltip();
       return;
     }
 
@@ -129,7 +129,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
     }, 500);
   };
 
-  const showUnavailabilityTooltip = (date: string) => {
+  const showUnavailabilityTooltip = () => {
     Alert.alert(
       'Data Indisponível',
       'Não há horários disponíveis para os serviços escolhidos nesta data.',
@@ -193,10 +193,10 @@ const SchedulingWizardDateScreen: React.FC = () => {
     const slotCount = availabilityData[dateString] || 0;
     const isToday = dateString === new Date().toISOString().split('T')[0];
     
-    // Check if this is a date we should evaluate for availability
+    // Check if this is a future date that should show availability indicators
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to compare dates only
     const dayDate = new Date(dateString + 'T00:00:00');
-    const isPastDate = dayDate < today;
     const isFutureDate = dayDate >= today;
     
     return (
@@ -210,25 +210,23 @@ const SchedulingWizardDateScreen: React.FC = () => {
             styles.dayText,
             isSelected && styles.selectedDayText,
             isToday && !isSelected && styles.todayDayText,
-            isPastDate && styles.disabledDayText,
-            !isAvailable && isFutureDate && styles.disabledDayText
           ]}>
             {day.day}
           </Text>
           
-          {/* Only show indicators for current and future dates */}
-          {isFutureDate && (
-            isAvailable ? (
-              <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
-                <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
-                  {slotCount}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.lockContainer}>
-                <Lock size={8} color="#9ca3af" />
-              </View>
-            )
+          {/* Show indicators only for future dates */}
+          {isFutureDate && isAvailable && (
+            <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
+              <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
+                {slotCount}
+              </Text>
+            </View>
+          )}
+          
+          {isFutureDate && !isAvailable && (
+            <View style={styles.lockContainer}>
+              <Lock size={6} color="#9ca3af" />
+            </View>
           )}
         </View>
       </View>
@@ -316,6 +314,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
               markedDates={markedDates}
               minDate={new Date().toISOString().split('T')[0]}
               maxDate={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 3 months ahead
+              dayComponent={renderCustomDay}
               theme={{
                 selectedDayBackgroundColor: '#ec4899',
                 selectedDayTextColor: 'white',
