@@ -83,6 +83,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         selectedDate
       );
       
+      // Debug: Log the API response
+      console.log('API Response - Available professionals:', professionals);
+      console.log('First professional fields:', professionals[0] ? Object.keys(professionals[0]) : 'No professionals');
+      
       setAvailableProfessionals(professionals);
       
       // Reset selected professionals when available professionals change
@@ -191,12 +195,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const fullPhotoUrl = buildAssetUrl(professional.photo_url);
     const hasValidPhoto = fullPhotoUrl && !imageError;
     
-    // Debug logging
+    // Debug logging - check all professional fields
     console.log('Professional:', professional.full_name);
-    console.log('Raw photo_url:', professional.photo_url);
-    console.log('Processed fullPhotoUrl:', fullPhotoUrl);
-    console.log('hasValidPhoto:', hasValidPhoto);
-    console.log('imageError:', imageError);
+    console.log('All professional fields:', Object.keys(professional));
+    console.log('Full professional object:', professional);
     
     return (
       <TouchableOpacity
