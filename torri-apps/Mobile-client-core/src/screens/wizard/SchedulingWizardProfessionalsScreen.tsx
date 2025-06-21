@@ -83,9 +83,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         selectedDate
       );
       
-      // Debug: Log the API response
-      console.log('API Response - Available professionals:', professionals);
-      console.log('First professional fields:', professionals[0] ? Object.keys(professionals[0]) : 'No professionals');
       
       setAvailableProfessionals(professionals);
       
@@ -145,6 +142,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const handleEditServices = () => {
+    // Navigate back to service selection screen
+    navigation.navigate('WizardDate' as any); // Go back to services/date screen
+  };
+
 
   const getSelectedCount = () => {
     return selectedProfessionals.filter((prof: Professional | null) => prof !== null).length;
@@ -176,8 +178,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     </View>
   );
 
-  const handleImageError = (professionalId: string, photoUrl: string) => {
-    console.log('Failed to load image for professional:', professionalId, 'URL:', photoUrl);
+  const handleImageError = (professionalId: string) => {
     setImageErrors(prev => ({ ...prev, [professionalId]: true }));
   };
 
@@ -196,11 +197,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const fullPhotoUrl = buildAssetUrl(photoPath);
     const hasValidPhoto = fullPhotoUrl && !imageError;
     
-    // Debug logging
-    console.log('Professional:', professional.full_name);
-    console.log('Raw photo_path:', photoPath);
-    console.log('Processed fullPhotoUrl:', fullPhotoUrl);
-    console.log('hasValidPhoto:', hasValidPhoto);
     
     return (
       <TouchableOpacity
@@ -222,7 +218,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               source={{ uri: fullPhotoUrl }}
               style={styles.professionalAvatarImage}
               resizeMode="cover"
-              onError={() => handleImageError(professional.id, fullPhotoUrl)}
+              onError={() => handleImageError(professional.id)}
               onLoad={() => handleImageLoad(professional.id)}
             />
           ) : (
@@ -319,9 +315,18 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             <View style={styles.servicesSummary}>
               <View style={styles.servicesSummaryHeader}>
                 <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
-                <Text style={styles.totalTimeText}>
-                  {formatDuration(getTotalEstimatedTime())}
-                </Text>
+                <View style={styles.summaryHeaderRight}>
+                  <Text style={styles.totalTimeText}>
+                    {formatDuration(getTotalEstimatedTime())}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={handleEditServices}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editButtonText}>Editar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               <FlatList
                 data={selectedServices}
@@ -433,10 +438,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  summaryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   totalTimeText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#6b7280',
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ec4899',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ec4899',
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#ec4899',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
   },
   servicesChipContainer: {
     paddingHorizontal: 0,
