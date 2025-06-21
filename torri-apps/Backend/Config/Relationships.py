@@ -128,21 +128,21 @@ def configure_relationships():
     try:
         if not hasattr(ProfessionalAvailability, 'professional'):
             ProfessionalAvailability.professional = relationship(
-                "User",
+                User,
                 foreign_keys="ProfessionalAvailability.professional_user_id",
                 back_populates="availability_schedule"
             )
         
         if not hasattr(ProfessionalBlockedTime, 'professional'):
             ProfessionalBlockedTime.professional = relationship(
-                "User",
+                User,
                 foreign_keys="ProfessionalBlockedTime.professional_user_id", 
                 back_populates="blocked_times"
             )
         
         if not hasattr(ProfessionalBreak, 'professional'):
             ProfessionalBreak.professional = relationship(
-                "User",
+                User,
                 foreign_keys="ProfessionalBreak.professional_user_id",
                 back_populates="recurring_breaks"
             )
@@ -153,19 +153,19 @@ def configure_relationships():
     try:
         if hasattr(AvailabilityModel, '__table__') and not hasattr(AvailabilityModel, 'professional'):
             AvailabilityModel.professional = relationship(
-                "User",
+                User,
                 foreign_keys="ProfessionalAvailability.professional_user_id"
             )
         
         if hasattr(BreakModel, '__table__') and not hasattr(BreakModel, 'professional'):
             BreakModel.professional = relationship(
-                "User", 
+                User, 
                 foreign_keys="ProfessionalBreak.professional_user_id"
             )
         
         if hasattr(BlockedTimeModel, '__table__') and not hasattr(BlockedTimeModel, 'professional'):
             BlockedTimeModel.professional = relationship(
-                "User",
+                User,
                 foreign_keys="ProfessionalBlockedTime.professional_user_id"
             )
     except ImportError:
