@@ -398,8 +398,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               />
             </View>
 
-            {/* Professional Count Toggle - Only show if multiple professionals available */}
-            {availableProfessionals.length > 1 && (
+            {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
+            {availableProfessionals.length > 1 && selectedServices.length > 1 && (
               <ProfessionalToggle
                 value={professionalsRequested}
                 maxValue={maxParallelPros}
