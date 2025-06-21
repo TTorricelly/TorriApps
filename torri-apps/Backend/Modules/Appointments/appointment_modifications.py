@@ -45,9 +45,9 @@ def get_appointment_for_modification(
     can_modify = False
     if requesting_user.role in [UserRole.GESTOR, UserRole.ATENDENTE]:
         can_modify = True
-    elif requesting_user.role == UserRole.CLIENTE and appointment.client_id == str(requesting_user.id): # Use .id
+    elif requesting_user.role == UserRole.CLIENTE and str(appointment.client_id) == str(requesting_user.id): # Use .id
         can_modify = True
-    elif requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id == str(requesting_user.id): # Use .id
+    elif requesting_user.role == UserRole.PROFISSIONAL and str(appointment.professional_id) == str(requesting_user.id): # Use .id
         can_modify = True
 
     if not can_modify:
@@ -178,7 +178,7 @@ def complete_appointment(
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as completed.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
+    if requesting_user.role == UserRole.PROFISSIONAL and str(appointment.professional_id) != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only complete their own appointments.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:
@@ -206,7 +206,7 @@ def mark_appointment_as_no_show(
 
     if requesting_user.role == UserRole.CLIENTE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients cannot mark appointments as No Show.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
+    if requesting_user.role == UserRole.PROFISSIONAL and str(appointment.professional_id) != str(requesting_user.id): # Use .id
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professionals can only mark their own appointments as No Show.")
 
     if appointment.status != AppointmentStatus.SCHEDULED:

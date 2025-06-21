@@ -221,9 +221,9 @@ def get_appointment_by_id(
         return None # Handled as 404 in route
 
     # Permission check
-    if requesting_user.role == UserRole.CLIENTE and appointment.client_id != str(requesting_user.id): # Use .id
+    if requesting_user.role == UserRole.CLIENTE and str(appointment.client_id) != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client can only view their own appointment details.")
-    if requesting_user.role == UserRole.PROFISSIONAL and appointment.professional_id != str(requesting_user.id): # Use .id
+    if requesting_user.role == UserRole.PROFISSIONAL and str(appointment.professional_id) != str(requesting_user.id): # Use .id
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Professional can only view their own appointment details.")
     # GESTOR and ATENDENTE can view any appointment (as tenant_id filter is removed)
 
