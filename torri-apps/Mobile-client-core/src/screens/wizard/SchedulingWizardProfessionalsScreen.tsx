@@ -294,6 +294,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.servicesChipContainer}
                 ItemSeparatorComponent={() => <View style={styles.chipSeparator} />}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
               />
             </View>
 
@@ -322,6 +324,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.professionalsContainer}
                 ItemSeparatorComponent={() => <View style={styles.professionalSeparator} />}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
               />
             </View>
 
