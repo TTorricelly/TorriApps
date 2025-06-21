@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ProfessionalToggle } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -190,12 +190,20 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           styles.professionalAvatar,
           isSelected && styles.professionalAvatarSelected,
         ]}>
-          <Text style={[
-            styles.professionalAvatarText,
-            isSelected && styles.professionalAvatarTextSelected,
-          ]}>
-            {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
-          </Text>
+          {professional.photo_url ? (
+            <Image
+              source={{ uri: professional.photo_url }}
+              style={styles.professionalAvatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={[
+              styles.professionalAvatarText,
+              isSelected && styles.professionalAvatarTextSelected,
+            ]}>
+              {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
+            </Text>
+          )}
         </View>
         <View style={styles.professionalChipInfo}>
           <Text style={[
@@ -492,6 +500,11 @@ const styles = StyleSheet.create({
   },
   professionalAvatarTextSelected: {
     color: 'white',
+  },
+  professionalAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   professionalChipInfo: {
     flex: 1,
