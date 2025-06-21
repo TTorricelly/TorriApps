@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { Lock } from 'lucide-react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
@@ -33,6 +34,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
   } = useWizardStore();
 
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
+  const [availabilityData, setAvailabilityData] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     setCurrentStep(1);
@@ -67,6 +69,14 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
       const dates = await wizardApiService.getAvailableDates(serviceIds, year, month);
       setAvailableDates(dates);
+      
+      // For now, simulate slot counts (in a real implementation, this would come from the API)
+      const slotsData: {[key: string]: number} = {};
+      dates.forEach((date: string) => {
+        // Simulate 1-8 available slots per day
+        slotsData[date] = Math.floor(Math.random() * 8) + 1;
+      });
+      setAvailabilityData(slotsData);
     } catch (error) {
       console.error('Error loading available dates:', error);
       setError('Erro ao carregar datas disponíveis. Tente novamente.');
@@ -141,6 +151,15 @@ const SchedulingWizardDateScreen: React.FC = () => {
     });
   };
 
+  const formatSelectedDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+    }).replace('.', '');
+  };
+
   const getTotalEstimatedTime = () => {
     return selectedServices.reduce((total: number, service: Service) => {
       return total + service.duration_minutes;
@@ -166,6 +185,45 @@ const SchedulingWizardDateScreen: React.FC = () => {
       <Text style={styles.serviceChipDuration}>{service.duration_minutes}min</Text>
     </View>
   );
+
+  const renderCustomDay = (day: any) => {
+    const dateString = day.dateString;
+    const isAvailable = availableDates.includes(dateString);
+    const isSelected = selectedDate === dateString;
+    const slotCount = availabilityData[dateString] || 0;
+    const isToday = dateString === new Date().toISOString().split('T')[0];
+    
+    return (
+      <View style={styles.dayContainer}>
+        <View style={[
+          styles.dayContent,
+          isSelected && styles.selectedDay,
+          isToday && !isSelected && styles.todayDay
+        ]}>
+          <Text style={[
+            styles.dayText,
+            isSelected && styles.selectedDayText,
+            isToday && !isSelected && styles.todayDayText,
+            !isAvailable && styles.disabledDayText
+          ]}>
+            {day.day}
+          </Text>
+          
+          {isAvailable ? (
+            <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
+              <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
+                {slotCount}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.lockContainer}>
+              <Lock size={8} color="#9ca3af" />
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
@@ -219,9 +277,16 @@ const SchedulingWizardDateScreen: React.FC = () => {
           <View style={styles.servicesSummary}>
             <View style={styles.servicesSummaryHeader}>
               <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
-              <Text style={styles.totalTimeText}>
-                Total: {formatDuration(getTotalEstimatedTime())}
-              </Text>
+              <View style={styles.summaryRight}>
+                {selectedDate && (
+                  <Text style={styles.selectedDateChip}>
+                    {formatSelectedDate(selectedDate)}
+                  </Text>
+                )}
+                <Text style={styles.totalTimeText}>
+                  {formatDuration(getTotalEstimatedTime())}
+                </Text>
+              </View>
             </View>
             <FlatList
               data={selectedServices}
@@ -241,6 +306,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
               markedDates={markedDates}
               minDate={new Date().toISOString().split('T')[0]}
               maxDate={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 3 months ahead
+              dayComponent={renderCustomDay}
               theme={{
                 selectedDayBackgroundColor: '#ec4899',
                 selectedDayTextColor: 'white',
@@ -275,16 +341,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
             />
           </View>
 
-          {/* Selected Date Display */}
-          {selectedDate && (
-            <View style={styles.selectedDateContainer}>
-              <Text style={styles.selectedDateLabel}>Data selecionada:</Text>
-              <Text style={styles.selectedDateText}>
-                {formatDate(selectedDate)}
-              </Text>
-            </View>
-          )}
-
           {/* No Availability Message */}
           {!isLoading && availableDates.length === 0 && (
             renderNoAvailabilityState()
@@ -317,10 +373,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
+  summaryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectedDateChip: {
+    backgroundColor: '#ec4899',
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    textTransform: 'uppercase',
+  },
   totalTimeText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#ec4899',
+    color: '#6b7280',
   },
   servicesChipContainer: {
     paddingHorizontal: 0,
@@ -369,25 +440,6 @@ const styles = StyleSheet.create({
     color: '#ec4899',
     fontWeight: 'bold',
   },
-  selectedDateContainer: {
-    backgroundColor: '#fdf2f8',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f3e8ff',
-  },
-  selectedDateLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#7c3aed',
-    marginBottom: 4,
-  },
-  selectedDateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    textTransform: 'capitalize',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -430,6 +482,69 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  // Custom day styles
+  dayContainer: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayContent: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  selectedDay: {
+    backgroundColor: '#ec4899',
+  },
+  todayDay: {
+    borderWidth: 1,
+    borderColor: '#ec4899',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  selectedDayText: {
+    color: 'white',
+  },
+  todayDayText: {
+    color: '#ec4899',
+  },
+  disabledDayText: {
+    color: '#d1d5db',
+  },
+  availabilityIndicator: {
+    position: 'absolute',
+    bottom: 1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ec4899',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedIndicator: {
+    backgroundColor: 'white',
+  },
+  slotCountText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: 'white',
+  },
+  selectedSlotText: {
+    color: '#ec4899',
+  },
+  lockContainer: {
+    position: 'absolute',
+    bottom: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
