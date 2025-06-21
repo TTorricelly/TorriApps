@@ -291,7 +291,7 @@ class MultiServiceAvailabilityService:
         Returns:
             List of valid resource combinations
         """
-        combinations = []
+        resource_combinations = []
         
         # Check if parallel execution is possible
         can_parallel = self._can_execute_in_parallel(service_requirements)
@@ -307,7 +307,7 @@ class MultiServiceAvailabilityService:
                     available_stations = self._get_available_stations(station_requirements)
                     
                     if available_stations:
-                        combinations.append(ResourceCombination(
+                        resource_combinations.append(ResourceCombination(
                             services=[req.service for req in service_requirements],
                             professionals=[professional],
                             stations=available_stations,
@@ -322,14 +322,14 @@ class MultiServiceAvailabilityService:
                     available_stations = self._get_available_stations(station_requirements)
                     
                     if available_stations:
-                        combinations.append(ResourceCombination(
+                        resource_combinations.append(ResourceCombination(
                             services=[req.service for req in service_requirements],
                             professionals=list(prof_pair),
                             stations=available_stations,
                             execution_type="parallel"
                         ))
         
-        return combinations
+        return resource_combinations
     
     def _can_execute_in_parallel(self, service_requirements: List[ServiceRequirement]) -> bool:
         """Check if all services can be executed in parallel."""
@@ -450,9 +450,11 @@ class MultiServiceAvailabilityService:
             professional_availabilities[professional.id] = availability.slots
         
         # Find simultaneous availability
+        max_duration = max(service.duration_minutes for service in combination.services)
+        
         simultaneous_slots = self._find_simultaneous_availability(
             professional_availabilities,
-            max(service.duration_minutes for service in combination.services)
+            max_duration
         )
         
         # Create wizard time slots
@@ -601,7 +603,7 @@ class MultiServiceAvailabilityService:
             
             # Check if this slot is available for all other professionals
             slot_available_for_all = True
-            for other_slots in all_professional_slots[1:]:
+            for prof_idx, other_slots in enumerate(all_professional_slots[1:], 1):
                 slot_available_in_other = any(
                     other_slot.is_available and
                     other_slot.start_time <= slot.start_time and
@@ -614,13 +616,66 @@ class MultiServiceAvailabilityService:
                     break
             
             if slot_available_for_all:
-                # Check if slot can accommodate the maximum duration
+                # For slots that are simultaneously available, check if we can extend to meet duration
                 slot_duration = self._calculate_time_difference(slot.start_time, slot.end_time)
+                
                 if slot_duration >= max_duration:
+                    # Single slot is long enough
                     end_time = calculate_end_time(slot.start_time, max_duration)
                     simultaneous_slots.append((slot.start_time, end_time))
+                else:
+                    # Try to extend with consecutive slots to meet duration requirement
+                    extended_end_time = self._try_extend_slot_duration(
+                        slot, all_professional_slots, max_duration
+                    )
+                    if extended_end_time:
+                        simultaneous_slots.append((slot.start_time, extended_end_time))
         
         return simultaneous_slots
+    
+    def _try_extend_slot_duration(self, initial_slot, all_professional_slots, required_duration):
+        """
+        Try to extend a slot by checking consecutive slots to meet duration requirement.
+        
+        Args:
+            initial_slot: The starting slot that's available for all professionals
+            all_professional_slots: List of slot lists for all professionals
+            required_duration: Required duration in minutes
+            
+        Returns:
+            Extended end time if possible, None otherwise
+        """
+        current_duration = self._calculate_time_difference(initial_slot.start_time, initial_slot.end_time)
+        current_end_time = initial_slot.end_time
+        
+        # Check consecutive slots until we have enough duration
+        while current_duration < required_duration:
+            # Find the next slot for all professionals
+            next_slot_available_for_all = True
+            
+            for prof_slots in all_professional_slots:
+                # Find the slot that starts when current ends
+                next_slot = None
+                for slot in prof_slots:
+                    if slot.start_time == current_end_time and slot.is_available:
+                        next_slot = slot
+                        break
+                
+                if not next_slot:
+                    next_slot_available_for_all = False
+                    break
+            
+            if not next_slot_available_for_all:
+                # Cannot extend further
+                return None
+            
+            # Extend the duration
+            slot_duration = self._calculate_time_difference(current_end_time, next_slot.end_time)
+            current_duration += slot_duration
+            current_end_time = next_slot.end_time
+        
+        # Calculate the exact end time needed
+        return calculate_end_time(initial_slot.start_time, required_duration)
     
     def _find_consecutive_slots(
         self,
@@ -700,10 +755,32 @@ class MultiServiceAvailabilityService:
         """
         services_in_slot = []
         used_stations = set()
+        used_professionals = set()
         
         for i, service in enumerate(services):
-            # Assign professional (rotate between available professionals)
-            professional = professionals[i % len(professionals)]
+            # Assign professional - find one who can do this service and hasn't been assigned yet
+            professional = None
+            for prof in professionals:
+                if prof.id in used_professionals:
+                    continue  # Skip already assigned professionals
+                    
+                prof_service_ids = {s.id for s in prof.services_offered}
+                if service.id in prof_service_ids:
+                    professional = prof
+                    used_professionals.add(prof.id)
+                    break
+            
+            if not professional:
+                # Fallback: find any available professional (even if already assigned)
+                for prof in professionals:
+                    prof_service_ids = {s.id for s in prof.services_offered}
+                    if service.id in prof_service_ids:
+                        professional = prof
+                        break
+                
+                if not professional:
+                    # Last resort: rotation
+                    professional = professionals[i % len(professionals)]
             
             # Assign station
             station = None
