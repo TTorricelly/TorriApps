@@ -1,49 +1,33 @@
+import { withApiErrorHandling, buildApiEndpoint } from '../utils/apiHelpers';
 import apiClient from '../config/api';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // Adjust path as needed
 
 export const login = async (emailOrPhone, password) => {
-  try {
-    const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, {
+  const endpoint = buildApiEndpoint('auth/login');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, {
       email_or_phone: emailOrPhone,
       password,
-    });
-    // Assuming the token is in response.data.access_token
-    // User details are expected to be in the JWT itself.
-    return response.data;
-  } catch (error) {
-    // Enhance error handling based on actual API error structure
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      throw new Error(error.response.data.detail || 'Login failed');
-    } else if (error.request) {
-      // The request was made but no response was received
-      throw new Error('Login failed: No response from server.');
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      throw new Error(`Login failed: ${error.message}`);
+    }),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
     }
-  }
+  );
 };
 
 export const register = async (userData) => {
-  try {
-    const response = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, userData);
-    return response.data;
-  } catch (error) {
-    // Enhanced error handling based on actual API error structure
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      throw new Error(error.response.data.detail || 'Registration failed');
-    } else if (error.request) {
-      // The request was made but no response was received
-      throw new Error('Registration failed: No response from server.');
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      throw new Error(`Registration failed: ${error.message}`);
+  const endpoint = buildApiEndpoint('users/register');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, userData),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
     }
-  }
+  );
 };
 
 // Example for a potential future function:

@@ -2,21 +2,21 @@
 // This file handles environment-specific settings for different deployment targets
 
 const developmentConfig = {
-  // For Codespaces: Use the auto-generated HTTPS URL
-  // For local development: Use IP address for physical devices, localhost for simulators
-  API_BASE_URL: process.env.CODESPACE_NAME 
-    ? `https://${process.env.CODESPACE_NAME}-8000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
-    : 'http://192.168.1.7:8000', // Fallback to local IP for physical device testing
+  // Priority: REACT_NATIVE_API_BASE_URL > Codespaces auto-detection > local default
+  API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL ||
+    (process.env.CODESPACE_NAME 
+      ? `https://${process.env.CODESPACE_NAME}-8000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
+      : 'http://localhost:8000'), // Use localhost as default for development
   ENVIRONMENT: 'development',
 };
 
 const stagingConfig = {
-  API_BASE_URL: 'https://api-staging.torriapps.com', // Replace with your actual staging URL
+  API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL || 'https://api-staging.torriapps.com',
   ENVIRONMENT: 'staging',
 };
 
 const productionConfig = {
-  API_BASE_URL: 'https://api.torriapps.com', // Replace with your actual production URL
+  API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL || 'https://api.torriapps.com',
   ENVIRONMENT: 'production',
 };
 

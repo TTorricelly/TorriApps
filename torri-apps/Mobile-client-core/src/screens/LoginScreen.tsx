@@ -61,7 +61,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
     fetchCompanyInfo();
   }, []);
 
-  const handleLogin = async () => { // Made async
+  const handleLogin = async () => {
     if (!emailOrPhone || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
@@ -70,10 +70,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({
     setIsLoading(true);
     try {
       const tokenData = await authService.login(emailOrPhone, password);
-      // The authStore's login action will handle decoding and setting user data
-      await storeLogin(tokenData);
-      // onLoginSuccess prop is likely used by the navigator to switch screens
-      onLoginSuccess();
+      
+      // Check if login was successful (tokenData is not null)
+      if (tokenData) {
+        // The authStore's login action will handle decoding and setting user data
+        await storeLogin(tokenData);
+        // onLoginSuccess prop is used by the navigator to switch screens
+        onLoginSuccess();
+      } else {
+        Alert.alert('Falha no Login', 'Credenciais inválidas. Tente novamente.');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
       Alert.alert('Falha no Login', errorMessage);

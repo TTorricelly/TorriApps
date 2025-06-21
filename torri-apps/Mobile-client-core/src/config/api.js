@@ -1,7 +1,6 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // Adjust path as needed
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Or your preferred storage
-import { API_BASE_URL } from './environment'; // Use environment-specific base URL
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from './environment';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL, // Use environment config instead of shared constants

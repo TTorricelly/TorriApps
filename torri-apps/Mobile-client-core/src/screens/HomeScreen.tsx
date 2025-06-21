@@ -7,7 +7,7 @@ import useServicesStore from '../store/servicesStore';
 import { getUserProfile } from '../services/userService';
 import { getCategories, getServicesByCategory } from '../services/categoryService';
 import { getAvailableTimeSlots } from '../services/appointmentService';
-import { API_BASE_URL } from '../config/environment';
+import { buildAssetUrl } from '../utils/urlHelpers';
 import { 
   Scissors,
   User, 
@@ -65,14 +65,7 @@ const formatPrice = (priceStr: string | undefined | null) => {
 
 // Helper function to construct full image URLs from relative paths
 const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-  if (!relativePath) return null;
-  // If it's already a full URL, check if it needs localhost replacement
-  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    // Replace localhost with the actual server IP for mobile device compatibility
-    return relativePath.replace('http://localhost:8000', API_BASE_URL);
-  }
-  // Construct full URL by prepending base URL from environment config
-  return `${API_BASE_URL}${relativePath}`;
+  return buildAssetUrl(relativePath);
 };
 
 // Define the inner component function with explicit types for props and ref

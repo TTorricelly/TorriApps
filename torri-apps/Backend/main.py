@@ -18,6 +18,7 @@ from Modules.Company.routes import router as company_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
+from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:
 # from .Modules.AdminMaster.routes import router as admin_master_router
 
@@ -50,6 +51,10 @@ app.add_middleware(
 # --- Exception Handlers ---
 # Add custom exception handlers to the app.
 add_exception_handlers(app)
+
+# --- Relationship Configuration ---
+# Configure SQLAlchemy relationships after all models are loaded
+configure_relationships()
 
 # --- API Routers ---
 # The routers are defined with their own prefixes (e.g., /auth, /users).

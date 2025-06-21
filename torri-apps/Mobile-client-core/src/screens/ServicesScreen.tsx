@@ -6,7 +6,7 @@ import { ShoppingCart, Trash2, X, ChevronDown, ChevronRight, Plus, ArrowLeft } f
 import RenderHtml from 'react-native-render-html';
 import useServicesStore from '../store/servicesStore';
 import ServiceDetailsView from '../components/ServiceDetailsView';
-import { API_BASE_URL } from '../config/environment';
+import { buildAssetUrl } from '../utils/urlHelpers';
 import { getCategories } from '../services/categoryService';
 
 interface Service {
@@ -64,11 +64,7 @@ const SwipeableServiceCard = ({
   };
 
   const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-    if (!relativePath) return null;
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-      return relativePath.replace('http://localhost:8000', API_BASE_URL);
-    }
-    return `${API_BASE_URL}${relativePath}`;
+    return buildAssetUrl(relativePath);
   };
 
   const onGestureEvent = Animated.event(
@@ -395,11 +391,7 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
   };
 
   const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-    if (!relativePath) return null;
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-      return relativePath.replace('http://localhost:8000', API_BASE_URL);
-    }
-    return `${API_BASE_URL}${relativePath}`;
+    return buildAssetUrl(relativePath);
   };
 
   return (

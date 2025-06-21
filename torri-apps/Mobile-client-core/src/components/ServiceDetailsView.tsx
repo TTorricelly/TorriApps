@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import RenderHtml from 'react-native-render-html';
-import { API_BASE_URL } from '../config/environment';
+import { buildAssetUrl } from '../utils/urlHelpers';
 
 interface Service {
   id: string;
@@ -23,14 +23,7 @@ interface ServiceDetailsViewProps {
 
 // Helper function to construct full image URLs from relative paths
 const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-  if (!relativePath) return null;
-  // If it's already a full URL, check if it needs localhost replacement
-  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    // Replace localhost with the actual server IP for mobile device compatibility
-    return relativePath.replace('http://localhost:8000', API_BASE_URL);
-  }
-  // Construct full URL by prepending base URL from environment config
-  return `${API_BASE_URL}${relativePath}`;
+  return buildAssetUrl(relativePath);
 };
 
 const ServiceDetailsView: React.FC<ServiceDetailsViewProps> = ({ service, onImagePress }) => {

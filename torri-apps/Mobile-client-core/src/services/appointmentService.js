@@ -1,5 +1,8 @@
+import { withApiErrorHandling, buildApiEndpoint, transformEntityWithImages } from '../utils/apiHelpers';
 import apiClient from '../config/api';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api';
+
+// Image fields for professional data
+const PROFESSIONAL_IMAGE_FIELDS = ['photo_url', 'avatar_url', 'profile_picture_url'];
 
 /**
  * Get available professionals for a service
@@ -7,18 +10,15 @@ import { API_ENDPOINTS } from '../../../Shared/Constans/Api';
  * @returns {Promise<Array>} Array of professional objects
  */
 export const getProfessionalsForService = async (serviceId) => {
-  try {
-    const response = await apiClient.get(`${API_ENDPOINTS.SERVICES}/${serviceId}/professionals`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professionals');
-    } else if (error.request) {
-      throw new Error('Failed to fetch professionals: No response from server');
-    } else {
-      throw new Error(`Failed to fetch professionals: ${error.message}`);
+  const endpoint = buildApiEndpoint(`services/${serviceId}/professionals`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: [],
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-  }
+  );
 };
 
 /**
@@ -28,18 +28,15 @@ export const getProfessionalsForService = async (serviceId) => {
  * @returns {Promise<Array>} Array of weekly availability slots
  */
 export const getProfessionalWeeklyAvailability = async (professionalId) => {
-  try {
-    const response = await apiClient.get(`/api/v1/availability/professional/${professionalId}/slots`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professional availability');
-    } else if (error.request) {
-      throw new Error('Failed to fetch availability: No response from server');
-    } else {
-      throw new Error(`Failed to fetch availability: ${error.message}`);
+  const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: [],
+      transformData: (data) => data
     }
-  }
+  );
 };
 
 /**
@@ -50,20 +47,15 @@ export const getProfessionalWeeklyAvailability = async (professionalId) => {
  * @returns {Promise<Object>} Object with date and slots array { date: "2024-06-17", slots: [{ start_time: "09:00", end_time: "09:30", is_available: true }] }
  */
 export const getProfessionalDailyAvailability = async (professionalId, date) => {
-  try {
-    const response = await apiClient.get(`/api/v1/appointments/professional/${professionalId}/availability`, {
-      params: { date }
-    });
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch available time slots');
-    } else if (error.request) {
-      throw new Error('Failed to fetch time slots: No response from server');
-    } else {
-      throw new Error(`Failed to fetch time slots: ${error.message}`);
+  const endpoint = buildApiEndpoint(`appointments/professional/${professionalId}/availability`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint, { params: { date } }),
+    {
+      defaultValue: { date, slots: [] },
+      transformData: (data) => data
     }
-  }
+  );
 };
 
 /**
@@ -144,28 +136,25 @@ export const getAvailableTimeSlots = async (serviceId, professionalId, date) => 
  * @returns {Promise<Object>} Created appointment object
  */
 export const createAppointment = async (appointmentData) => {
-  try {
-    // Create the payload with the exact structure expected by the backend
-    const payload = {
-      client_id: appointmentData.client_id, // This should be the authenticated user's ID
-      professional_id: appointmentData.professional_id,
-      service_id: appointmentData.service_id,
-      appointment_date: appointmentData.appointment_date,
-      start_time: appointmentData.start_time,
-      notes_by_client: appointmentData.notes_by_client || null
-    };
+  const endpoint = buildApiEndpoint('appointments');
+  
+  // Create the payload with the exact structure expected by the backend
+  const payload = {
+    client_id: appointmentData.client_id, // This should be the authenticated user's ID
+    professional_id: appointmentData.professional_id,
+    service_id: appointmentData.service_id,
+    appointment_date: appointmentData.appointment_date,
+    start_time: appointmentData.start_time,
+    notes_by_client: appointmentData.notes_by_client || null
+  };
 
-    const response = await apiClient.post(API_ENDPOINTS.APPOINTMENTS, payload);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to create appointment');
-    } else if (error.request) {
-      throw new Error('Failed to create appointment: No response from server');
-    } else {
-      throw new Error(`Failed to create appointment: ${error.message}`);
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, payload),
+    {
+      defaultValue: null,
+      transformData: (data) => data
     }
-  }
+  );
 };
 
 /**
@@ -174,36 +163,22 @@ export const createAppointment = async (appointmentData) => {
  * @returns {Promise<Array>} Array of user appointments
  */
 export const getUserAppointments = async (status = null) => {
-  try {
-    const params = status ? { status } : {};
-    console.log('getUserAppointments - Making request to:', API_ENDPOINTS.APPOINTMENTS);
-    console.log('getUserAppointments - With params:', params);
-    
-    // Use the main appointments endpoint without trailing slash to avoid 307 redirect
-    const response = await apiClient.get(API_ENDPOINTS.APPOINTMENTS, {
-      params
-    });
-    
-    console.log('getUserAppointments - Response received:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('getUserAppointments error:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-      url: error.config?.url,
-      headers: error.config?.headers
-    });
-    
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch appointments');
-    } else if (error.request) {
-      throw new Error('Failed to fetch appointments: No response from server');
-    } else {
-      throw new Error(`Failed to fetch appointments: ${error.message}`);
+  const endpoint = buildApiEndpoint('appointments');
+  const params = status ? { status } : {};
+  
+  console.log('getUserAppointments - Making request to:', endpoint);
+  console.log('getUserAppointments - With params:', params);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint, { params }),
+    {
+      defaultValue: [],
+      transformData: (data) => {
+        console.log('getUserAppointments - Response received:', data);
+        return data;
+      }
     }
-  }
+  );
 };
 
 /**
@@ -212,18 +187,15 @@ export const getUserAppointments = async (status = null) => {
  * @returns {Promise<Object>} Updated appointment object
  */
 export const cancelAppointment = async (appointmentId) => {
-  try {
-    const response = await apiClient.patch(`${API_ENDPOINTS.APPOINTMENTS}/${appointmentId}/cancel`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to cancel appointment');
-    } else if (error.request) {
-      throw new Error('Failed to cancel appointment: No response from server');
-    } else {
-      throw new Error(`Failed to cancel appointment: ${error.message}`);
+  const endpoint = buildApiEndpoint(`appointments/${appointmentId}/cancel`);
+  
+  return withApiErrorHandling(
+    () => apiClient.patch(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => data
     }
-  }
+  );
 };
 
 /**
@@ -236,16 +208,13 @@ export const cancelAppointment = async (appointmentId) => {
  * @returns {Promise<Object>} Updated appointment object
  */
 export const rescheduleAppointment = async (appointmentId, rescheduleData) => {
-  try {
-    const response = await apiClient.patch(`${API_ENDPOINTS.APPOINTMENTS}/${appointmentId}/reschedule`, rescheduleData);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to reschedule appointment');
-    } else if (error.request) {
-      throw new Error('Failed to reschedule appointment: No response from server');
-    } else {
-      throw new Error(`Failed to reschedule appointment: ${error.message}`);
+  const endpoint = buildApiEndpoint(`appointments/${appointmentId}/reschedule`);
+  
+  return withApiErrorHandling(
+    () => apiClient.patch(endpoint, rescheduleData),
+    {
+      defaultValue: null,
+      transformData: (data) => data
     }
-  }
+  );
 };

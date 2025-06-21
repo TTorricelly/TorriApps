@@ -1,14 +1,16 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
+from typing import Union
 
 from .models import Company
 from .schemas import CompanyCreate, CompanyUpdate
 
 
-def get_company(db: Session, company_id: UUID) -> Optional[Company]:
+def get_company(db: Session, company_id: Union[UUID, str]) -> Optional[Company]:
     """Get a company by ID."""
-    return db.query(Company).filter(Company.id == company_id).first()
+    company_id_str = str(company_id) if isinstance(company_id, UUID) else company_id
+    return db.query(Company).filter(Company.id == company_id_str).first()
 
 
 def get_companies(db: Session, skip: int = 0, limit: int = 100) -> List[Company]:
@@ -36,9 +38,10 @@ def create_company(db: Session, company_data: CompanyCreate) -> Company:
     return db_company
 
 
-def update_company(db: Session, company_id: UUID, company_data: CompanyUpdate) -> Optional[Company]:
+def update_company(db: Session, company_id: Union[UUID, str], company_data: CompanyUpdate) -> Optional[Company]:
     """Update an existing company."""
-    db_company = db.query(Company).filter(Company.id == company_id).first()
+    company_id_str = str(company_id) if isinstance(company_id, UUID) else company_id
+    db_company = db.query(Company).filter(Company.id == company_id_str).first()
     if not db_company:
         return None
     
@@ -52,9 +55,10 @@ def update_company(db: Session, company_id: UUID, company_data: CompanyUpdate) -
     return db_company
 
 
-def delete_company(db: Session, company_id: UUID) -> bool:
+def delete_company(db: Session, company_id: Union[UUID, str]) -> bool:
     """Soft delete a company by setting is_active to False."""
-    db_company = db.query(Company).filter(Company.id == company_id).first()
+    company_id_str = str(company_id) if isinstance(company_id, UUID) else company_id
+    db_company = db.query(Company).filter(Company.id == company_id_str).first()
     if not db_company:
         return False
     
