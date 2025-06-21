@@ -12,6 +12,7 @@ type SchedulingWizardProfessionalsScreenNavigationProp = WizardNavigationProp<'W
 
 const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardProfessionalsScreenNavigationProp>();
+  const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   
   const {
     selectedServices,
@@ -171,11 +172,20 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     </View>
   );
 
+  const handleImageError = (professionalId: string, photoUrl: string) => {
+    console.log('Failed to load image for professional:', professionalId, 'URL:', photoUrl);
+    setImageErrors(prev => ({ ...prev, [professionalId]: true }));
+  };
+
+  const handleImageLoad = (professionalId: string) => {
+    setImageErrors(prev => ({ ...prev, [professionalId]: false }));
+  };
+
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
     const isDisabled = !isSelected && !canSelect;
-    const [imageError, setImageError] = React.useState(false);
+    const imageError = imageErrors[professional.id] || false;
     
     // Process photo URL using best practices
     const fullPhotoUrl = buildAssetUrl(professional.photo_url);
@@ -208,11 +218,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               source={{ uri: fullPhotoUrl }}
               style={styles.professionalAvatarImage}
               resizeMode="cover"
-              onError={() => {
-                console.log('Failed to load image:', fullPhotoUrl);
-                setImageError(true);
-              }}
-              onLoad={() => setImageError(false)}
+              onError={() => handleImageError(professional.id, fullPhotoUrl)}
+              onLoad={() => handleImageLoad(professional.id)}
             />
           ) : (
             <Text style={[
