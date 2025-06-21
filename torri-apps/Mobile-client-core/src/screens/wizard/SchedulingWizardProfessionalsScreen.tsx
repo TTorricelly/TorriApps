@@ -178,12 +178,43 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     }, 0);
   };
 
-  const renderServiceChip = ({ item: service }: { item: Service }) => (
-    <View style={styles.serviceChip}>
-      <Text style={styles.serviceChipText}>{service.name}</Text>
-      <Text style={styles.serviceChipDuration}>{service.duration_minutes}min</Text>
-    </View>
-  );
+  const isServiceCovered = (service: Service): boolean => {
+    // Check if any selected professional can provide this service
+    return selectedProfessionals.some((prof: Professional | null) => 
+      prof && prof.services_offered?.includes(service.id)
+    );
+  };
+
+  const renderServiceChip = ({ item: service }: { item: Service }) => {
+    const isCovered = isServiceCovered(service);
+    
+    return (
+      <View style={[
+        styles.serviceChip,
+        isCovered && styles.serviceChipCovered
+      ]}>
+        <View style={styles.serviceChipContent}>
+          <Text style={[
+            styles.serviceChipText,
+            isCovered && styles.serviceChipTextCovered
+          ]}>
+            {service.name}
+          </Text>
+          <Text style={[
+            styles.serviceChipDuration,
+            isCovered && styles.serviceChipDurationCovered
+          ]}>
+            {service.duration_minutes}min
+          </Text>
+        </View>
+        {isCovered && (
+          <View style={styles.serviceCheckMark}>
+            <Text style={styles.serviceCheckMarkText}>✓</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const handleImageError = (professionalId: string) => {
     setImageErrors(prev => ({ ...prev, [professionalId]: true }));
@@ -559,9 +590,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 80,
+    position: 'relative',
+  },
+  serviceChipCovered: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#16a34a',
+  },
+  serviceChipContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   serviceChipText: {
     fontSize: 12,
@@ -570,10 +611,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 2,
   },
+  serviceChipTextCovered: {
+    color: '#15803d',
+  },
   serviceChipDuration: {
     fontSize: 10,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  serviceChipDurationCovered: {
+    color: '#16a34a',
+  },
+  serviceCheckMark: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  serviceCheckMarkText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'white',
   },
   chipSeparator: {
     width: 8,
