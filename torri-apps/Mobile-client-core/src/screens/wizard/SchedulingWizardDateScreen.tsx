@@ -35,6 +35,10 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
   const [availabilityData, setAvailabilityData] = useState<{[key: string]: number}>({});
+  const [currentDisplayMonth, setCurrentDisplayMonth] = useState<{year: number, month: number}>({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1
+  });
 
   useEffect(() => {
     setCurrentStep(1);
@@ -53,7 +57,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   useEffect(() => {
     updateMarkedDates();
-  }, [availableDates, selectedDate, availabilityData]);
+  }, [availableDates, selectedDate, availabilityData, currentDisplayMonth]);
 
   const loadAvailableDates = async (year?: number, month?: number) => {
     if (selectedServices.length === 0) return;
@@ -94,25 +98,33 @@ const SchedulingWizardDateScreen: React.FC = () => {
     availableDates.forEach((date: string) => {
       const slotCount = availabilityData[date] || 0;
       
-      // Create dots based on slot count (1-2 dots for low, 3 dots for high availability)
-      const dots = [];
-      if (slotCount >= 1) dots.push({ color: '#ec4899' });
-      if (slotCount >= 3) dots.push({ color: '#ec4899' });
-      if (slotCount >= 6) dots.push({ color: '#ec4899' });
+      // Only show dots for dates in the current display month
+      const dateObj = new Date(date + 'T00:00:00');
+      const dateYear = dateObj.getFullYear();
+      const dateMonth = dateObj.getMonth() + 1;
       
-      marked[date] = {
-        dots: dots,
-        disabled: false,
-      };
+      if (dateYear === currentDisplayMonth.year && dateMonth === currentDisplayMonth.month) {
+        // Create dots based on slot count (1-2 dots for low, 3 dots for high availability)
+        const dots = [];
+        if (slotCount >= 1) dots.push({ color: '#ec4899' });
+        if (slotCount >= 3) dots.push({ color: '#ec4899' });
+        if (slotCount >= 6) dots.push({ color: '#ec4899' });
+        
+        marked[date] = {
+          dots: dots,
+          disabled: false,
+        };
+      }
     });
 
-    // Mark unavailable future dates with gray dots
+    // Mark unavailable future dates with gray dots (only for current display month)
     const today = new Date();
-    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    const displayMonthStart = new Date(currentDisplayMonth.year, currentDisplayMonth.month - 1, 1);
+    const displayMonthEnd = new Date(currentDisplayMonth.year, currentDisplayMonth.month, 0);
     
-    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(Math.max(displayMonthStart.getTime(), today.getTime())); d <= displayMonthEnd; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
-      if (!availableDates.includes(dateStr) && d >= today) {
+      if (!availableDates.includes(dateStr)) {
         marked[dateStr] = {
           dots: [{ color: '#d1d5db' }], // Single gray dot for unavailable
           disabled: true,
@@ -168,6 +180,11 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const handleMonthChange = (month: any) => {
     const year = month.year;
     const monthNumber = month.month;
+    
+    // Update current display month
+    setCurrentDisplayMonth({ year, month: monthNumber });
+    
+    // Load availability for the new month
     loadAvailableDates(year, monthNumber);
   };
 
