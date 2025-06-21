@@ -35,11 +35,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
   const [availabilityData, setAvailabilityData] = useState<{[key: string]: number}>({});
-  const [allMonthsData, setAllMonthsData] = useState<{[key: string]: string[]}>({});
-  const [currentDisplayMonth, setCurrentDisplayMonth] = useState<{year: number, month: number}>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1
-  });
 
   useEffect(() => {
     setCurrentStep(1);
@@ -58,7 +53,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   useEffect(() => {
     updateMarkedDates();
-  }, [selectedDate, availabilityData, currentDisplayMonth, allMonthsData]);
+  }, [availableDates, selectedDate, availabilityData]);
 
   const loadAvailableDates = async (year?: number, month?: number) => {
     if (selectedServices.length === 0) return;
@@ -74,41 +69,16 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const targetYear = year || targetDate.getFullYear();
       const targetMonth = month || (targetDate.getMonth() + 1);
 
-      const monthKey = `${targetYear}-${targetMonth.toString().padStart(2, '0')}`;
-      
-      // Check if we already have data for this month
-      if (allMonthsData[monthKey]) {
-        // Use cached data
-        const cachedDates = allMonthsData[monthKey];
-        setAvailableDates(cachedDates);
-      } else {
-        // Load new data
-        const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
-        
-        // Store data for this month
-        setAllMonthsData(prev => ({
-          ...prev,
-          [monthKey]: dates
-        }));
-        
-        setAvailableDates(dates);
-      }
+      const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
+      setAvailableDates(dates);
       
       // For now, simulate slot counts (in a real implementation, this would come from the API)
       const slotsData: {[key: string]: number} = {};
-      availableDates.forEach((date: string) => {
-        // Only add slot data if we don't already have it
-        if (!availabilityData[date]) {
-          slotsData[date] = Math.floor(Math.random() * 8) + 1;
-        }
+      dates.forEach((date: string) => {
+        // Simulate 1-8 available slots per day
+        slotsData[date] = Math.floor(Math.random() * 8) + 1;
       });
-      
-      // Merge with existing availability data
-      setAvailabilityData(prev => ({
-        ...prev,
-        ...slotsData
-      }));
-      
+      setAvailabilityData(slotsData);
     } catch (error) {
       console.error('Error loading available dates:', error);
       setError('Erro ao carregar datas disponíveis. Tente novamente.');
@@ -120,12 +90,8 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const updateMarkedDates = () => {
     const marked: {[key: string]: any} = {};
 
-    // Get available dates for current display month
-    const monthKey = `${currentDisplayMonth.year}-${currentDisplayMonth.month.toString().padStart(2, '0')}`;
-    const currentMonthDates = allMonthsData[monthKey] || [];
-
     // Mark available dates with multiple dots to indicate slot count ranges
-    currentMonthDates.forEach((date: string) => {
+    availableDates.forEach((date: string) => {
       const slotCount = availabilityData[date] || 0;
       
       // Create dots based on slot count (1-2 dots for low, 3 dots for high availability)
@@ -140,14 +106,13 @@ const SchedulingWizardDateScreen: React.FC = () => {
       };
     });
 
-    // Mark unavailable future dates with gray dots (only for current display month)
+    // Mark unavailable future dates with gray dots
     const today = new Date();
-    const displayMonthStart = new Date(currentDisplayMonth.year, currentDisplayMonth.month - 1, 1);
-    const displayMonthEnd = new Date(currentDisplayMonth.year, currentDisplayMonth.month, 0);
+    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
     
-    for (let d = new Date(Math.max(displayMonthStart.getTime(), today.getTime())); d <= displayMonthEnd; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
-      if (!currentMonthDates.includes(dateStr)) {
+      if (!availableDates.includes(dateStr) && d >= today) {
         marked[dateStr] = {
           dots: [{ color: '#d1d5db' }], // Single gray dot for unavailable
           disabled: true,
@@ -171,15 +136,8 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   const handleDateSelect = (day: DateData) => {
     const dateString = day.dateString;
-    
-    // Get available dates for the month of the selected date
-    const dateObj = new Date(dateString + 'T00:00:00');
-    const dateYear = dateObj.getFullYear();
-    const dateMonth = dateObj.getMonth() + 1;
-    const monthKey = `${dateYear}-${dateMonth.toString().padStart(2, '0')}`;
-    const monthDates = allMonthsData[monthKey] || [];
 
-    if (!monthDates.includes(dateString)) {
+    if (!availableDates.includes(dateString)) {
       showUnavailabilityTooltip();
       return;
     }
@@ -210,9 +168,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const handleMonthChange = (month: any) => {
     const year = month.year;
     const monthNumber = month.month;
-    
-    // Update current display month
-    setCurrentDisplayMonth({ year, month: monthNumber });
     
     // Load availability for the new month
     loadAvailableDates(year, monthNumber);
