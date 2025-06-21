@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useWizardStore = create(
   persist(
@@ -297,6 +298,11 @@ export const useWizardStore = create(
     }),
     {
       name: 'wizard-storage',
+      storage: {
+        getItem: (key) => AsyncStorage.getItem(key),
+        setItem: (key, value) => AsyncStorage.setItem(key, JSON.stringify(value)),
+        removeItem: (key) => AsyncStorage.removeItem(key),
+      },
       // Only persist essential state, not temporary data like loading states
       partialize: (state) => ({
         selectedServices: state.selectedServices,

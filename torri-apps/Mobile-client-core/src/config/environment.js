@@ -6,7 +6,7 @@ const developmentConfig = {
   API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL ||
     (process.env.CODESPACE_NAME 
       ? `https://${process.env.CODESPACE_NAME}-8000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
-      : 'http://localhost:8000'), // Use localhost as default for development
+      : 'https://upgraded-barnacle-wr95qvxv5gqh5457-8000.app.github.dev'), // Your Codespace URL
   ENVIRONMENT: 'development',
 };
 
@@ -47,6 +47,16 @@ const getEnvironmentConfig = () => {
 };
 
 const config = getEnvironmentConfig();
+
+// Debug logging
+console.log('Environment Config Debug:', {
+  API_BASE_URL: config.API_BASE_URL,
+  ENVIRONMENT: config.ENVIRONMENT,
+  __DEV__: __DEV__,
+  REACT_NATIVE_API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL,
+  CODESPACE_NAME: process.env.CODESPACE_NAME,
+  GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN
+});
 
 export const API_BASE_URL = config.API_BASE_URL;
 export const ENVIRONMENT = config.ENVIRONMENT;

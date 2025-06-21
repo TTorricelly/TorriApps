@@ -65,7 +65,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
 
-      const dates = await wizardApiService.getAvailableDates(serviceIds);
+      const dates = await wizardApiService.getAvailableDates(serviceIds, year, month);
       setAvailableDates(dates);
     } catch (error) {
       console.error('Error loading available dates:', error);
