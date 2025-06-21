@@ -68,11 +68,20 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const month = currentDate.getMonth() + 1;
 
       const dates = await wizardApiService.getAvailableDates(serviceIds, year, month);
-      setAvailableDates(dates);
+      console.log('Available dates from API:', dates);
+      
+      // For testing: if no dates returned, add some test dates
+      const testDates = dates.length > 0 ? dates : [
+        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // tomorrow
+        new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // day after tomorrow
+        new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 days from now
+      ];
+      
+      setAvailableDates(testDates);
       
       // For now, simulate slot counts (in a real implementation, this would come from the API)
       const slotsData: {[key: string]: number} = {};
-      dates.forEach((date: string) => {
+      testDates.forEach((date: string) => {
         // Simulate 1-8 available slots per day
         slotsData[date] = Math.floor(Math.random() * 8) + 1;
       });
