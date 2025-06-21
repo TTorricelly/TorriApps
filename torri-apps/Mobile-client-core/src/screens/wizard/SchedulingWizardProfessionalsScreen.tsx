@@ -191,14 +191,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const isDisabled = !isSelected && !canSelect;
     const imageError = imageErrors[professional.id] || false;
     
-    // Process photo URL using best practices
-    const fullPhotoUrl = buildAssetUrl(professional.photo_url);
+    // Process photo URL using best practices - API returns photo_path, not photo_url
+    const photoPath = professional.photo_path; // API returns photo_path field
+    const fullPhotoUrl = buildAssetUrl(photoPath);
     const hasValidPhoto = fullPhotoUrl && !imageError;
     
-    // Debug logging - check all professional fields
+    // Debug logging
     console.log('Professional:', professional.full_name);
-    console.log('All professional fields:', Object.keys(professional));
-    console.log('Full professional object:', professional);
+    console.log('Raw photo_path:', photoPath);
+    console.log('Processed fullPhotoUrl:', fullPhotoUrl);
+    console.log('hasValidPhoto:', hasValidPhoto);
     
     return (
       <TouchableOpacity

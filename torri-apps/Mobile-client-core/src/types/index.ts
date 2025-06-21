@@ -52,7 +52,8 @@ export interface Professional {
   is_active?: boolean;
   role?: string;
   services_offered?: Service[];
-  photo_url?: string; // Full URL from backend
+  photo_url?: string; // Full URL from backend (legacy)
+  photo_path?: string; // Relative path from backend (current API)
   
   // Legacy support for existing components
   name?: string; // Computed from full_name for backward compatibility
