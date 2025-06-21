@@ -53,7 +53,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
   useEffect(() => {
     updateMarkedDates();
-  }, [availableDates, selectedDate]);
+  }, [availableDates, selectedDate, availabilityData]);
 
   const loadAvailableDates = async () => {
     if (selectedServices.length === 0) return;
@@ -373,24 +373,28 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
           {/* Calendar Legend */}
           <View style={styles.calendarLegend}>
-            <View style={styles.legendItem}>
-              <View style={styles.legendDot} />
-              <Text style={styles.legendText}>Poucos horários</Text>
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={styles.legendDot} />
+                <Text style={styles.legendText}>Poucos</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={styles.legendDot} />
+                <View style={styles.legendDot} />
+                <Text style={styles.legendText}>Médios</Text>
+              </View>
             </View>
-            <View style={styles.legendItem}>
-              <View style={styles.legendDot} />
-              <View style={styles.legendDot} />
-              <Text style={styles.legendText}>Médios horários</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={styles.legendDot} />
-              <View style={styles.legendDot} />
-              <View style={styles.legendDot} />
-              <Text style={styles.legendText}>Muitos horários</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, styles.grayDot]} />
-              <Text style={styles.legendText}>Indisponível</Text>
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={styles.legendDot} />
+                <View style={styles.legendDot} />
+                <View style={styles.legendDot} />
+                <Text style={styles.legendText}>Muitos</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, styles.grayDot]} />
+                <Text style={styles.legendText}>Indisponível</Text>
+              </View>
             </View>
           </View>
 
@@ -537,19 +541,22 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   calendarLegend: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: '#f9fafb',
     borderRadius: 8,
-    marginBottom: 16,
-    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 2,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 2,
+    flex: 1,
+    justifyContent: 'center',
   },
   legendDot: {
     width: 6,
