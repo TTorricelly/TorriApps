@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { WizardHeader, WizardContainer, ProfessionalToggle, ProfessionalDropdown } from '../../components/wizard';
+import { WizardHeader, WizardContainer, ProfessionalToggle } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
@@ -27,7 +27,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     setDefaultProsRequested,
     setSelectedProfessionals,
     setAvailableProfessionals,
-    updateSelectedProfessional,
     setLoading,
     setError,
     clearError,
@@ -100,8 +99,31 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     resetFromStep(3); // Reset time slots when changing professional count
   };
 
-  const handleProfessionalSelect = (index: number, professional: any) => {
-    updateSelectedProfessional(index, professional);
+  const handleProfessionalSelect = (professional: Professional) => {
+    const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
+    
+    if (isSelected) {
+      // Remove professional
+      const newSelected = selectedProfessionals.filter((prof: Professional | null) => prof?.id !== professional.id);
+      // Fill remaining slots with null to maintain count
+      while (newSelected.length < professionalsRequested) {
+        newSelected.push(null);
+      }
+      setSelectedProfessionals(newSelected);
+    } else {
+      // Add professional to first available slot
+      const newSelected = [...selectedProfessionals];
+      const firstEmptyIndex = newSelected.findIndex((prof: Professional | null) => prof === null);
+      
+      if (firstEmptyIndex !== -1) {
+        newSelected[firstEmptyIndex] = professional;
+        setSelectedProfessionals(newSelected);
+      } else if (newSelected.length < professionalsRequested) {
+        newSelected.push(professional);
+        setSelectedProfessionals(newSelected);
+      }
+    }
+    
     resetFromStep(3); // Reset time slots when changing professionals
   };
 
@@ -117,11 +139,87 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const getExcludeIds = (currentIndex: number) => {
-    return selectedProfessionals
-      .filter((_: Professional | null, index: number) => index !== currentIndex)
-      .map((prof: Professional | null) => prof?.id)
-      .filter(Boolean);
+
+  const getSelectedCount = () => {
+    return selectedProfessionals.filter((prof: Professional | null) => prof !== null).length;
+  };
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0 && mins > 0) {
+      return `${hours}h ${mins}min`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      return `${mins}min`;
+    }
+  };
+
+  const getTotalEstimatedTime = () => {
+    return selectedServices.reduce((total: number, service: Service) => {
+      return total + service.duration_minutes;
+    }, 0);
+  };
+
+  const renderServiceChip = ({ item: service }: { item: Service }) => (
+    <View style={styles.serviceChip}>
+      <Text style={styles.serviceChipText}>{service.name}</Text>
+      <Text style={styles.serviceChipDuration}>{service.duration_minutes}min</Text>
+    </View>
+  );
+
+  const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
+    const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
+    const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
+    const isDisabled = !isSelected && !canSelect;
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.professionalChip,
+          isSelected && styles.professionalChipSelected,
+          isDisabled && styles.professionalChipDisabled,
+        ]}
+        onPress={() => handleProfessionalSelect(professional)}
+        disabled={isDisabled}
+        activeOpacity={0.7}
+      >
+        <View style={[
+          styles.professionalAvatar,
+          isSelected && styles.professionalAvatarSelected,
+        ]}>
+          <Text style={[
+            styles.professionalAvatarText,
+            isSelected && styles.professionalAvatarTextSelected,
+          ]}>
+            {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.professionalChipInfo}>
+          <Text style={[
+            styles.professionalChipName,
+            isSelected && styles.professionalChipNameSelected,
+            isDisabled && styles.professionalChipNameDisabled,
+          ]}>
+            {professional.full_name || professional.email}
+          </Text>
+          <Text style={[
+            styles.professionalChipServices,
+            isSelected && styles.professionalChipServicesSelected,
+            isDisabled && styles.professionalChipServicesDisabled,
+          ]}>
+            {professional.services_offered?.length || 0} serviço{(professional.services_offered?.length || 0) !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        {isSelected && (
+          <View style={styles.selectedIndicator}>
+            <Text style={styles.selectedIndicatorText}>✓</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   const canContinue = canProceedToStep(3);
@@ -159,7 +257,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       <WizardHeader
         currentStep={2}
         totalSteps={4}
-        title="Profissionais & paralelismo"
+        title="Profissionais"
         onBack={handleBack}
       />
 
@@ -170,80 +268,79 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       ) : availableProfessionals.length === 0 ? (
         renderEmptyState()
       ) : (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Date and Services Summary */}
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>Resumo da seleção:</Text>
-            <Text style={styles.summaryDate}>
-              Data: {new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <Text style={styles.summaryServices}>
-              Serviços: {selectedServices.map((s: Service) => s.name).join(', ')}
-            </Text>
-          </View>
-
-          {/* Professional Count Toggle */}
-          <ProfessionalToggle
-            value={professionalsRequested}
-            maxValue={maxParallelPros}
-            onChange={handleProfessionalsCountChange}
-            disabled={maxParallelPros === 1}
-          />
-
-          {/* Professional Selection */}
-          <View style={styles.professionalsSection}>
-            <Text style={styles.professionalsTitle}>
-              Selecione {professionalsRequested === 1 ? 'o profissional' : 'os profissionais'}:
-            </Text>
-            
-            {Array.from({ length: professionalsRequested }).map((_, index) => (
-              <ProfessionalDropdown
-                key={index}
-                label={professionalsRequested === 1 ? 'Profissional' : `Profissional ${index + 1}`}
-                professionals={availableProfessionals}
-                selectedProfessional={selectedProfessionals[index]}
-                onSelect={(professional: Professional) => handleProfessionalSelect(index, professional)}
-                excludeIds={getExcludeIds(index)}
-                placeholder="Selecione um profissional"
-              />
-            ))}
-          </View>
-
-          {/* Available Professionals Info */}
-          <View style={styles.infoSection}>
-            <Text style={styles.infoTitle}>Profissionais disponíveis ({availableProfessionals.length}):</Text>
-            {availableProfessionals.map((professional: Professional) => (
-              <View key={professional.id} style={styles.professionalInfo}>
-                <Text style={styles.professionalName}>
-                  {professional.full_name || professional.email}
-                </Text>
-                <Text style={styles.professionalServices}>
-                  Serviços: {professional.services_offered?.length || 0} disponível(is)
+        <KeyboardAvoidingView 
+          style={styles.container} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={100}
+        >
+          <ScrollView 
+            style={styles.content} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Services Summary */}
+            <View style={styles.servicesSummary}>
+              <View style={styles.servicesSummaryHeader}>
+                <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
+                <Text style={styles.totalTimeText}>
+                  {formatDuration(getTotalEstimatedTime())}
                 </Text>
               </View>
-            ))}
-          </View>
-
-          {/* Validation Messages */}
-          {professionalsRequested > 1 && selectedProfessionals.length > 0 && (
-            <View style={styles.validationSection}>
-              {selectedProfessionals.some((prof: Professional | null) => prof === null || prof === undefined) ? (
-                <Text style={styles.validationWarning}>
-                  ⚠️ Selecione todos os profissionais para continuar
-                </Text>
-              ) : (
-                <Text style={styles.validationSuccess}>
-                  ✅ Profissionais selecionados com sucesso
-                </Text>
-              )}
+              <FlatList
+                data={selectedServices}
+                renderItem={renderServiceChip}
+                keyExtractor={(item: Service) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.servicesChipContainer}
+                ItemSeparatorComponent={() => <View style={styles.chipSeparator} />}
+              />
             </View>
-          )}
-        </ScrollView>
+
+            {/* Professional Count Toggle */}
+            <ProfessionalToggle
+              value={professionalsRequested}
+              maxValue={maxParallelPros}
+              onChange={handleProfessionalsCountChange}
+              disabled={maxParallelPros === 1}
+            />
+
+            {/* Professional Selection */}
+            <View style={styles.professionalsSection}>
+              <Text style={styles.professionalsTitle}>
+                Selecione {professionalsRequested === 1 ? 'o profissional' : `${professionalsRequested} profissionais`}
+              </Text>
+              <Text style={styles.professionalsSubtitle}>
+                {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
+              </Text>
+              
+              <FlatList
+                data={availableProfessionals}
+                renderItem={renderProfessionalChip}
+                keyExtractor={(item: Professional) => item.id}
+                numColumns={1}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.professionalsContainer}
+                ItemSeparatorComponent={() => <View style={styles.professionalSeparator} />}
+              />
+            </View>
+
+            {/* Validation Messages */}
+            {professionalsRequested > 1 && getSelectedCount() > 0 && (
+              <View style={styles.validationSection}>
+                {getSelectedCount() < professionalsRequested ? (
+                  <Text style={styles.validationWarning}>
+                    ⚠️ Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''} para continuar
+                  </Text>
+                ) : (
+                  <Text style={styles.validationSuccess}>
+                    ✅ Profissionais selecionados com sucesso
+                  </Text>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
 
       {/* Continue Button */}
@@ -271,31 +368,63 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     padding: 16,
   },
-  summaryContainer: {
+  servicesSummary: {
     backgroundColor: '#f8f9fa',
     padding: 16,
     borderRadius: 8,
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  summaryTitle: {
+  servicesSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  servicesSummaryTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 8,
   },
-  summaryDate: {
+  totalTimeText: {
     fontSize: 14,
-    color: '#4b5563',
-    marginBottom: 4,
-    textTransform: 'capitalize',
+    fontWeight: '500',
+    color: '#6b7280',
   },
-  summaryServices: {
-    fontSize: 14,
-    color: '#4b5563',
+  servicesChipContainer: {
+    paddingHorizontal: 0,
+  },
+  serviceChip: {
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  serviceChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  serviceChipDuration: {
+    fontSize: 10,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  chipSeparator: {
+    width: 8,
   },
   professionalsSection: {
     marginVertical: 24,
@@ -304,37 +433,103 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
+    marginBottom: 4,
+  },
+  professionalsSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
     marginBottom: 16,
   },
-  infoSection: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#f0f9ff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0f2fe',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0369a1',
-    marginBottom: 12,
-  },
-  professionalInfo: {
-    marginBottom: 8,
+  professionalsContainer: {
     paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0f2fe',
   },
-  professionalName: {
+  professionalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  professionalChipSelected: {
+    borderColor: '#ec4899',
+    backgroundColor: '#fdf2f8',
+  },
+  professionalChipDisabled: {
+    opacity: 0.4,
+    backgroundColor: '#f9fafb',
+  },
+  professionalAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  professionalAvatarSelected: {
+    backgroundColor: '#ec4899',
+  },
+  professionalAvatarText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  professionalAvatarTextSelected: {
+    color: 'white',
+  },
+  professionalChipInfo: {
+    flex: 1,
+  },
+  professionalChipName: {
+    fontSize: 16,
     fontWeight: '500',
     color: '#1f2937',
+    marginBottom: 2,
   },
-  professionalServices: {
+  professionalChipNameSelected: {
+    color: '#be185d',
+  },
+  professionalChipNameDisabled: {
+    color: '#9ca3af',
+  },
+  professionalChipServices: {
     fontSize: 12,
     color: '#6b7280',
-    marginTop: 2,
+  },
+  professionalChipServicesSelected: {
+    color: '#be185d',
+  },
+  professionalChipServicesDisabled: {
+    color: '#9ca3af',
+  },
+  selectedIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ec4899',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  selectedIndicatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
+  professionalSeparator: {
+    height: 12,
   },
   validationSection: {
     marginTop: 16,
