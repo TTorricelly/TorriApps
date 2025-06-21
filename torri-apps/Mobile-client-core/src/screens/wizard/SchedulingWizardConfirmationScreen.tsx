@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
-import { useAuthStore } from '../../store/authStore';
+import useAuthStore from '../../store/authStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
 import { Service, Professional } from '../../types';
