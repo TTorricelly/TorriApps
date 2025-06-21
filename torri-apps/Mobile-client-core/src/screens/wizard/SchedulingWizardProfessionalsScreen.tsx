@@ -181,6 +181,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const fullPhotoUrl = buildAssetUrl(professional.photo_url);
     const hasValidPhoto = fullPhotoUrl && !imageError;
     
+    // Debug logging
+    console.log('Professional:', professional.full_name);
+    console.log('Raw photo_url:', professional.photo_url);
+    console.log('Processed fullPhotoUrl:', fullPhotoUrl);
+    console.log('hasValidPhoto:', hasValidPhoto);
+    console.log('imageError:', imageError);
+    
     return (
       <TouchableOpacity
         style={[
