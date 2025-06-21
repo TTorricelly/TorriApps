@@ -143,8 +143,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const handleEditServices = () => {
-    // Navigate back to service selection screen
-    navigation.navigate('WizardDate' as any); // Go back to services/date screen
+    // Exit wizard modal and return to ServicesScreen where users can edit services
+    navigation.getParent()?.goBack(); // Exit the wizard modal
   };
 
 
