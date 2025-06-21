@@ -76,6 +76,8 @@ class MultiServiceAvailabilityService:
         Returns:
             Response with available time slots
         """
+        # Get available time slots for multiple services
+        
         # 1. Expand service requirements
         service_requirements = self._expand_service_requirements(request.service_ids)
         
@@ -118,9 +120,10 @@ class MultiServiceAvailabilityService:
         # 5. Rank and filter results
         ranked_slots = self._rank_and_filter_slots(all_itineraries)
         
+        
         return MultiServiceAvailabilityResponse(
             date=request.date,
-            available_slots=ranked_slots[:10]  # Return top 10 options
+            available_slots=ranked_slots[:20]  # Return top 20 options
         )
     
     def get_available_professionals(
@@ -143,7 +146,7 @@ class MultiServiceAvailabilityService:
             select(Service)
             .options(joinedload(Service.professionals))
             .where(Service.id.in_([str(sid) for sid in service_ids]))
-        ).scalars().all()
+        ).unique().scalars().all()
         
         if not services:
             return AvailableProfessionalsResponse(
@@ -163,7 +166,7 @@ class MultiServiceAvailabilityService:
             # Check if professional has any availability on target date
             availability = get_daily_time_slots_for_professional(
                 self.db,
-                UUID(professional.id),
+                professional.id,
                 target_date
             )
             
@@ -171,12 +174,12 @@ class MultiServiceAvailabilityService:
             if any(slot.is_available for slot in availability.slots):
                 # Get services this professional can handle
                 professional_service_ids = [
-                    UUID(service.id) for service in professional.services_offered
-                    if UUID(service.id) in service_ids
+                    service.id for service in professional.services_offered
+                    if service.id in service_ids
                 ]
                 
                 available_professionals.append(ProfessionalInfo(
-                    id=UUID(professional.id),
+                    id=professional.id,
                     full_name=professional.full_name or professional.email,
                     email=professional.email,
                     photo_path=professional.photo_path,
@@ -208,7 +211,7 @@ class MultiServiceAvailabilityService:
                 joinedload(Service.station_requirements).joinedload(ServiceStationRequirement.station_type)
             )
             .where(Service.id.in_([str(sid) for sid in service_ids]))
-        ).scalars().all()
+        ).unique().scalars().all()
         
         requirements = []
         for service in services:
@@ -220,7 +223,6 @@ class MultiServiceAvailabilityService:
                 station_requirements=list(service.station_requirements),
                 qualified_professionals=list(service.professionals)
             ))
-        
         return requirements
     
     def _get_eligible_professionals(
@@ -246,12 +248,13 @@ class MultiServiceAvailabilityService:
             for professional in req.qualified_professionals:
                 all_qualified.add(professional)
         
+        
         # Filter by specific professionals if provided
         if specific_professional_ids:
             specific_ids_str = [str(pid) for pid in specific_professional_ids]
             all_qualified = {
                 prof for prof in all_qualified 
-                if prof.id in specific_ids_str
+                if str(prof.id) in specific_ids_str
             }
         
         # Filter by availability on target date
@@ -259,9 +262,11 @@ class MultiServiceAvailabilityService:
         for professional in all_qualified:
             availability = get_daily_time_slots_for_professional(
                 self.db,
-                UUID(professional.id),
+                professional.id,
                 target_date
             )
+            
+            available_slots = [slot for slot in availability.slots if slot.is_available]
             
             # Check if professional has any available slots
             if any(slot.is_available for slot in availability.slots):
@@ -439,7 +444,7 @@ class MultiServiceAvailabilityService:
         for professional in combination.professionals:
             availability = get_daily_time_slots_for_professional(
                 self.db,
-                UUID(professional.id),
+                professional.id,
                 target_date
             )
             professional_availabilities[professional.id] = availability.slots
@@ -510,9 +515,10 @@ class MultiServiceAvailabilityService:
         # Get availability for the primary professional
         availability = get_daily_time_slots_for_professional(
             self.db,
-            UUID(primary_professional.id),
+            primary_professional.id,
             target_date
         )
+        
         
         # Calculate total duration needed
         total_duration = sum(service.duration_minutes for service in combination.services)
@@ -522,6 +528,7 @@ class MultiServiceAvailabilityService:
             availability.slots,
             total_duration
         )
+        
         
         # Create wizard time slots
         wizard_slots = []
@@ -714,11 +721,11 @@ class MultiServiceAvailabilityService:
                     break
             
             services_in_slot.append(ServiceInSlot(
-                service_id=UUID(service.id),
+                service_id=service.id,
                 service_name=service.name,
-                professional_id=UUID(professional.id),
+                professional_id=professional.id,
                 professional_name=professional.full_name or professional.email,
-                station_id=UUID(station.id) if station else None,
+                station_id=station.id if station else None,
                 station_name=station.label if station else None,
                 duration_minutes=service.duration_minutes,
                 price=service.price
@@ -765,11 +772,11 @@ class MultiServiceAvailabilityService:
                     break
             
             services_in_slot.append(ServiceInSlot(
-                service_id=UUID(service.id),
+                service_id=service.id,
                 service_name=service.name,
-                professional_id=UUID(professional.id),
+                professional_id=professional.id,
                 professional_name=professional.full_name or professional.email,
-                station_id=UUID(station.id) if station else None,
+                station_id=station.id if station else None,
                 station_name=station.label if station else None,
                 duration_minutes=service.duration_minutes,
                 price=service.price

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
+import { useAuthStore } from '../../store/authStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
 import { Service, Professional } from '../../types';
@@ -22,9 +23,9 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     setCurrentStep,
     goToPreviousStep,
     resetWizard,
-    getSelectedServiceIds,
-    getSelectedProfessionalIds,
   } = useWizardStore();
+  
+  const { user } = useAuthStore();
 
   React.useEffect(() => {
     setCurrentStep(4);
@@ -44,20 +45,23 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     setIsBooking(true);
 
     try {
-      const bookingRequest = {
-        serviceIds: getSelectedServiceIds(),
-        date: selectedDate,
-        slotId: selectedSlot.id,
-        professionalsRequested,
-        professionalIds: getSelectedProfessionalIds(),
-        notes: '', // Could be added as an optional field later
-      };
+      if (!user?.id) {
+        Alert.alert('Erro', 'Usuário não autenticado.');
+        return;
+      }
+      
+      const bookingRequest = wizardApiService.buildBookingRequest(
+        user.id,
+        selectedDate,
+        selectedSlot,
+        null // notes - could be added as an optional field later
+      );
 
       const result = await wizardApiService.createMultiServiceBooking(bookingRequest);
 
       Alert.alert(
         'Agendamento Confirmado!',
-        `Seus serviços foram agendados com sucesso.\n\nNúmero do agendamento: ${result.group_id}`,
+        `Seus serviços foram agendados com sucesso.\n\nNúmero do agendamento: ${result.appointment_group?.id || 'N/A'}`,
         [
           {
             text: 'OK',

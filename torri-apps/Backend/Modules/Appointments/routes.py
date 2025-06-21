@@ -427,4 +427,8 @@ def get_available_dates_for_services_endpoint(
         month=month
     )
 
+
+
+
+
 # Delete endpoint is intentionally omitted as per subtask notes (cancellation is logical deletion).
