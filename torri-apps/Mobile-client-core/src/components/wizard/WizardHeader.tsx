@@ -42,22 +42,20 @@ export const WizardHeader: React.FC<WizardHeaderProps> = ({
         
         <View style={styles.rightSection}>
           <Text style={styles.stepIndicator}>
-            {currentStep}/{totalSteps}
+            Passo {currentStep} de {totalSteps}
           </Text>
         </View>
       </View>
       
       <View style={styles.progressContainer}>
-        {Array.from({ length: totalSteps }).map((_, index) => (
-          <View
-            key={index}
+        <View style={styles.progressBarBackground}>
+          <View 
             style={[
-              styles.progressDot,
-              index < currentStep ? styles.completedDot : styles.incompleteDot,
-              index === currentStep - 1 && styles.currentDot,
-            ]}
+              styles.progressBarFill,
+              { width: `${(currentStep / totalSteps) * 100}%` }
+            ]} 
           />
-        ))}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -108,27 +106,19 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
-    gap: 8,
   },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  completedDot: {
-    backgroundColor: '#ec4899',
-  },
-  incompleteDot: {
+  progressBarBackground: {
+    height: 4,
     backgroundColor: '#e5e7eb',
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  currentDot: {
+  progressBarFill: {
+    height: '100%',
     backgroundColor: '#ec4899',
-    transform: [{ scale: 1.2 }],
+    borderRadius: 2,
   },
 });
 
