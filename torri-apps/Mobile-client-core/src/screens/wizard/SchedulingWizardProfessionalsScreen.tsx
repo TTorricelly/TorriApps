@@ -179,10 +179,27 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const isServiceCovered = (service: Service): boolean => {
-    // Check if any selected professional can provide this service
-    return selectedProfessionals.some((prof: Professional | null) => 
+    // Service is only truly covered if:
+    // 1. At least one selected professional can provide this service
+    // 2. All other services can also be covered by the current selection
+    
+    const hasProviderForThisService = selectedProfessionals.some((prof: Professional | null) => 
       prof && prof.services_offered?.includes(service.id)
     );
+    
+    if (!hasProviderForThisService) {
+      return false;
+    }
+    
+    // Check if ALL services can be covered by current selection
+    const allServicesCovered = selectedServices.every((selectedService: Service) => {
+      return selectedProfessionals.some((prof: Professional | null) => 
+        prof && prof.services_offered?.includes(selectedService.id)
+      );
+    });
+    
+    // Only show checkmark if this service is covered AND all other services are also covered
+    return allServicesCovered;
   };
 
   const renderServiceChip = ({ item: service }: { item: Service }) => {
