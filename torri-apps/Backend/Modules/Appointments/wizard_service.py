@@ -90,7 +90,7 @@ def create_multi_service_booking(
     # Validate permissions
     if requesting_user.role == UserRole.CLIENTE:
         # Client can only book for themselves
-        if str(booking_data.client_id) != requesting_user.id:
+        if str(booking_data.client_id) != str(requesting_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Clientes só podem agendar para si mesmos"
@@ -115,7 +115,7 @@ def create_multi_service_booking(
         select(Service)
         .options(joinedload(Service.station_requirements))
         .where(Service.id.in_(service_ids))
-    ).scalars().all()
+    ).unique().scalars().all()
     
     if len(services) != len(service_ids):
         raise HTTPException(
@@ -180,7 +180,9 @@ def create_multi_service_booking(
         
         for service_booking in booking_data.selected_slot.services:
             # Find the corresponding service
-            service = next(s for s in services if s.id == str(service_booking.service_id))
+            service = next((s for s in services if str(s.id) == str(service_booking.service_id)), None)
+            if not service:
+                raise ValueError(f"Service {service_booking.service_id} not found in validated services")
             
             # Create appointment
             appointment = Appointment(
