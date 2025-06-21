@@ -6,6 +6,7 @@ import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
 import { Service, Professional } from '../../types';
+import { buildAssetUrl } from '../../utils/urlHelpers';
 
 type SchedulingWizardProfessionalsScreenNavigationProp = WizardNavigationProp<'WizardProfessionals'>;
 
@@ -174,6 +175,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
     const isDisabled = !isSelected && !canSelect;
+    const [imageError, setImageError] = React.useState(false);
+    
+    // Process photo URL using best practices
+    const fullPhotoUrl = buildAssetUrl(professional.photo_url);
+    const hasValidPhoto = fullPhotoUrl && !imageError;
     
     return (
       <TouchableOpacity
@@ -190,11 +196,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           styles.professionalAvatar,
           isSelected && styles.professionalAvatarSelected,
         ]}>
-          {professional.photo_url ? (
+          {hasValidPhoto ? (
             <Image
-              source={{ uri: professional.photo_url }}
+              source={{ uri: fullPhotoUrl }}
               style={styles.professionalAvatarImage}
               resizeMode="cover"
+              onError={() => {
+                console.log('Failed to load image:', fullPhotoUrl);
+                setImageError(true);
+              }}
+              onLoad={() => setImageError(false)}
             />
           ) : (
             <Text style={[
