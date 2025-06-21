@@ -55,7 +55,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
     updateMarkedDates();
   }, [availableDates, selectedDate, availabilityData]);
 
-  const loadAvailableDates = async () => {
+  const loadAvailableDates = async (year?: number, month?: number) => {
     if (selectedServices.length === 0) return;
 
     setLoading(true);
@@ -63,11 +63,13 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
     try {
       const serviceIds = selectedServices.map((service: Service) => service.id);
-      const currentDate = new Date();
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
+      
+      // Use provided year/month or default to current
+      const targetDate = new Date();
+      const targetYear = year || targetDate.getFullYear();
+      const targetMonth = month || (targetDate.getMonth() + 1);
 
-      const dates = await wizardApiService.getAvailableDates(serviceIds, year, month);
+      const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
       setAvailableDates(dates);
       
       // For now, simulate slot counts (in a real implementation, this would come from the API)
@@ -163,6 +165,12 @@ const SchedulingWizardDateScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const handleMonthChange = (month: any) => {
+    const year = month.year;
+    const monthNumber = month.month;
+    loadAvailableDates(year, monthNumber);
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('pt-BR', {
@@ -173,14 +181,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
     });
   };
 
-  const formatSelectedDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-    }).replace('.', '');
-  };
 
   const getTotalEstimatedTime = () => {
     return selectedServices.reduce((total: number, service: Service) => {
@@ -208,52 +208,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
     </View>
   );
 
-  const renderCustomDay = (day: any) => {
-    const dateString = day.dateString;
-    const isAvailable = availableDates.includes(dateString);
-    const isSelected = selectedDate === dateString;
-    const slotCount = availabilityData[dateString] || 0;
-    const isToday = dateString === new Date().toISOString().split('T')[0];
-    
-    // Check if this is a future date that should show availability indicators
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to compare dates only
-    const dayDate = new Date(dateString + 'T00:00:00');
-    const isFutureDate = dayDate >= today;
-    
-    return (
-      <View style={styles.dayContainer}>
-        <View style={[
-          styles.dayContent,
-          isSelected && styles.selectedDay,
-          isToday && !isSelected && styles.todayDay
-        ]}>
-          <Text style={[
-            styles.dayText,
-            isSelected && styles.selectedDayText,
-            isToday && !isSelected && styles.todayDayText,
-          ]}>
-            {day.day}
-          </Text>
-          
-          {/* Show indicators only for future dates */}
-          {isFutureDate && isAvailable && (
-            <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
-              <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
-                {slotCount}
-              </Text>
-            </View>
-          )}
-          
-          {isFutureDate && !isAvailable && (
-            <View style={styles.lockContainer}>
-              <Lock size={6} color="#9ca3af" />
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
 
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
@@ -307,16 +261,9 @@ const SchedulingWizardDateScreen: React.FC = () => {
           <View style={styles.servicesSummary}>
             <View style={styles.servicesSummaryHeader}>
               <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
-              <View style={styles.summaryRight}>
-                {selectedDate && (
-                  <Text style={styles.selectedDateChip}>
-                    {formatSelectedDate(selectedDate)}
-                  </Text>
-                )}
-                <Text style={styles.totalTimeText}>
-                  {formatDuration(getTotalEstimatedTime())}
-                </Text>
-              </View>
+              <Text style={styles.totalTimeText}>
+                {formatDuration(getTotalEstimatedTime())}
+              </Text>
             </View>
             <FlatList
               data={selectedServices}
@@ -333,6 +280,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
           <View style={styles.calendarContainer}>
             <Calendar
               onDayPress={handleDateSelect}
+              onMonthChange={handleMonthChange}
               markedDates={markedDates}
               markingType="multi-dot"
               minDate={new Date().toISOString().split('T')[0]}
@@ -417,7 +365,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     padding: 16,
     borderRadius: 8,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   servicesSummaryHeader: {
     flexDirection: 'row',
@@ -429,21 +377,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-  },
-  summaryRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  selectedDateChip: {
-    backgroundColor: '#ec4899',
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '600',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    textTransform: 'uppercase',
   },
   totalTimeText: {
     fontSize: 14,
@@ -490,7 +423,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   calendarArrow: {
     fontSize: 24,
