@@ -193,6 +193,12 @@ const SchedulingWizardDateScreen: React.FC = () => {
     const slotCount = availabilityData[dateString] || 0;
     const isToday = dateString === new Date().toISOString().split('T')[0];
     
+    // Check if this is a date we should evaluate for availability
+    const today = new Date();
+    const dayDate = new Date(dateString + 'T00:00:00');
+    const isPastDate = dayDate < today;
+    const isFutureDate = dayDate >= today;
+    
     return (
       <View style={styles.dayContainer}>
         <View style={[
@@ -204,21 +210,25 @@ const SchedulingWizardDateScreen: React.FC = () => {
             styles.dayText,
             isSelected && styles.selectedDayText,
             isToday && !isSelected && styles.todayDayText,
-            !isAvailable && styles.disabledDayText
+            isPastDate && styles.disabledDayText,
+            !isAvailable && isFutureDate && styles.disabledDayText
           ]}>
             {day.day}
           </Text>
           
-          {isAvailable ? (
-            <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
-              <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
-                {slotCount}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.lockContainer}>
-              <Lock size={8} color="#9ca3af" />
-            </View>
+          {/* Only show indicators for current and future dates */}
+          {isFutureDate && (
+            isAvailable ? (
+              <View style={[styles.availabilityIndicator, isSelected && styles.selectedIndicator]}>
+                <Text style={[styles.slotCountText, isSelected && styles.selectedSlotText]}>
+                  {slotCount}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.lockContainer}>
+                <Lock size={8} color="#9ca3af" />
+              </View>
+            )
           )}
         </View>
       </View>
