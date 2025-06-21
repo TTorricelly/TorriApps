@@ -390,17 +390,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       ) : availableProfessionals.length === 0 ? (
         renderEmptyState()
       ) : (
-        <KeyboardAvoidingView 
-          style={styles.container} 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={100}
-        >
-          <ScrollView 
-            style={styles.content} 
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Services Summary */}
+        <View style={styles.container}>
+          {/* Fixed Services Summary - Always Visible */}
+          <View style={styles.stickyServicesContainer}>
             <View style={styles.servicesSummary}>
               <View style={styles.servicesSummaryHeader}>
                 <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
@@ -429,6 +421,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 nestedScrollEnabled={true}
               />
             </View>
+          </View>
+
+          {/* Scrollable Content */}
+          <KeyboardAvoidingView 
+            style={styles.scrollContainer} 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={100}
+          >
+            <ScrollView 
+              style={styles.content} 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
 
             {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
@@ -492,8 +497,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 )}
               </View>
             )}
-          </ScrollView>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       )}
 
       {/* Continue Button */}
@@ -522,6 +528,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  stickyServicesContainer: {
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  scrollContainer: {
     flex: 1,
   },
   content: {
