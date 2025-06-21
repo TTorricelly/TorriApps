@@ -88,14 +88,44 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const updateMarkedDates = () => {
     const marked: {[key: string]: any} = {};
 
-    // Mark available dates
+    // Mark available dates with slot indicators
     availableDates.forEach((date: string) => {
+      const slotCount = availabilityData[date] || 0;
       marked[date] = {
         marked: true,
         dotColor: '#ec4899',
         disabled: false,
+        // Add custom text to show slot count
+        activeOpacity: 1,
+        customStyles: {
+          container: {
+            backgroundColor: 'transparent',
+          },
+          text: {
+            color: '#1f2937',
+            fontWeight: '500',
+          },
+        },
+        // Store slot count for potential overlay
+        slotCount: slotCount,
       };
     });
+
+    // Mark unavailable future dates differently  
+    const today = new Date();
+    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      if (!availableDates.includes(dateStr) && d >= today) {
+        marked[dateStr] = {
+          marked: true,
+          dotColor: '#9ca3af',
+          disabled: true,
+          disableTouchEvent: false, // Allow touch but show tooltip
+        };
+      }
+    }
 
     // Mark selected date
     if (selectedDate) {
@@ -314,7 +344,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
               markedDates={markedDates}
               minDate={new Date().toISOString().split('T')[0]}
               maxDate={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 3 months ahead
-              dayComponent={renderCustomDay}
               theme={{
                 selectedDayBackgroundColor: '#ec4899',
                 selectedDayTextColor: 'white',
