@@ -88,30 +88,23 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const updateMarkedDates = () => {
     const marked: {[key: string]: any} = {};
 
-    // Mark available dates with slot indicators
+    // Mark available dates with multiple dots to indicate slot count ranges
     availableDates.forEach((date: string) => {
       const slotCount = availabilityData[date] || 0;
+      
+      // Create dots based on slot count (1-2 dots for low, 3 dots for high availability)
+      const dots = [];
+      if (slotCount >= 1) dots.push({ color: '#ec4899' });
+      if (slotCount >= 3) dots.push({ color: '#ec4899' });
+      if (slotCount >= 6) dots.push({ color: '#ec4899' });
+      
       marked[date] = {
-        marked: true,
-        dotColor: '#ec4899',
+        dots: dots,
         disabled: false,
-        // Add custom text to show slot count
-        activeOpacity: 1,
-        customStyles: {
-          container: {
-            backgroundColor: 'transparent',
-          },
-          text: {
-            color: '#1f2937',
-            fontWeight: '500',
-          },
-        },
-        // Store slot count for potential overlay
-        slotCount: slotCount,
       };
     });
 
-    // Mark unavailable future dates differently  
+    // Mark unavailable future dates with gray dots
     const today = new Date();
     const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
     
@@ -119,10 +112,9 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const dateStr = d.toISOString().split('T')[0];
       if (!availableDates.includes(dateStr) && d >= today) {
         marked[dateStr] = {
-          marked: true,
-          dotColor: '#9ca3af',
+          dots: [{ color: '#d1d5db' }], // Single gray dot for unavailable
           disabled: true,
-          disableTouchEvent: false, // Allow touch but show tooltip
+          disableTouchEvent: false,
         };
       }
     }
@@ -342,6 +334,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
             <Calendar
               onDayPress={handleDateSelect}
               markedDates={markedDates}
+              markingType="multi-dot"
               minDate={new Date().toISOString().split('T')[0]}
               maxDate={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 3 months ahead
               theme={{
@@ -376,6 +369,29 @@ const SchedulingWizardDateScreen: React.FC = () => {
                 </Text>
               )}
             />
+          </View>
+
+          {/* Calendar Legend */}
+          <View style={styles.calendarLegend}>
+            <View style={styles.legendItem}>
+              <View style={styles.legendDot} />
+              <Text style={styles.legendText}>Poucos horários</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.legendDot} />
+              <View style={styles.legendDot} />
+              <Text style={styles.legendText}>Médios horários</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.legendDot} />
+              <View style={styles.legendDot} />
+              <View style={styles.legendDot} />
+              <Text style={styles.legendText}>Muitos horários</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, styles.grayDot]} />
+              <Text style={styles.legendText}>Indisponível</Text>
+            </View>
           </View>
 
           {/* No Availability Message */}
@@ -520,68 +536,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  // Custom day styles
-  dayContainer: {
-    flex: 1,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+  calendarLegend: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    marginBottom: 16,
+    flexWrap: 'wrap',
   },
-  dayContent: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
+  legendItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
+    marginVertical: 2,
   },
-  selectedDay: {
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#ec4899',
+    marginRight: 2,
   },
-  todayDay: {
-    borderWidth: 1,
-    borderColor: '#ec4899',
+  grayDot: {
+    backgroundColor: '#d1d5db',
   },
-  dayText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
-    marginBottom: 2,
-  },
-  selectedDayText: {
-    color: 'white',
-  },
-  todayDayText: {
-    color: '#ec4899',
-  },
-  disabledDayText: {
-    color: '#d1d5db',
-  },
-  availabilityIndicator: {
-    position: 'absolute',
-    bottom: 1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#ec4899',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedIndicator: {
-    backgroundColor: 'white',
-  },
-  slotCountText: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: 'white',
-  },
-  selectedSlotText: {
-    color: '#ec4899',
-  },
-  lockContainer: {
-    position: 'absolute',
-    bottom: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+  legendText: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginLeft: 4,
   },
 });
 
