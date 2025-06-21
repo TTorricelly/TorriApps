@@ -192,6 +192,56 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     setImageErrors(prev => ({ ...prev, [professionalId]: false }));
   };
 
+  const getMatchingServices = (professional: Professional): string[] => {
+    if (!professional.services_offered || !selectedServices) return [];
+    
+    // Find which selected services this professional can provide
+    const matchingServices = selectedServices.filter((selectedService: Service) => 
+      professional.services_offered?.includes(selectedService.id)
+    );
+    
+    return matchingServices.map((service: Service) => service.name);
+  };
+
+  const getExclusiveServices = (professional: Professional): string[] => {
+    if (!professional.services_offered || !selectedServices) return [];
+    
+    // Find services that only this professional can provide
+    const exclusiveServices = selectedServices.filter((selectedService: Service) => {
+      if (!professional.services_offered?.includes(selectedService.id)) return false;
+      
+      // Count how many professionals can provide this service
+      const providersCount = availableProfessionals.filter((prof: Professional) => 
+        prof.services_offered?.includes(selectedService.id)
+      ).length;
+      
+      return providersCount === 1;
+    });
+    
+    return exclusiveServices.map((service: Service) => service.name);
+  };
+
+  const getFormattedServices = (professional: Professional): string => {
+    const allServices = getMatchingServices(professional);
+    const exclusiveServices = getExclusiveServices(professional);
+    
+    if (allServices.length === 0) return 'Nenhum serviço selecionado';
+    
+    // Format services with star indicator for exclusive ones
+    const formattedServices = allServices.map((serviceName: string) => {
+      const isExclusive = exclusiveServices.includes(serviceName);
+      return isExclusive ? `⭐ ${serviceName}` : serviceName;
+    });
+    
+    return formattedServices.join(' • ');
+  };
+
+  const hasExclusiveServices = (): boolean => {
+    return availableProfessionals.some((professional: Professional) => 
+      getExclusiveServices(professional).length > 0
+    );
+  };
+
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
@@ -250,7 +300,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             isSelected && styles.professionalChipServicesSelected,
             isDisabled && styles.professionalChipServicesDisabled,
           ]}>
-            {professional.services_offered?.length || 0} serviço{(professional.services_offered?.length || 0) !== 1 ? 's' : ''}
+            {getFormattedServices(professional)}
           </Text>
         </View>
         {isSelected && (
@@ -372,6 +422,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 <Text style={styles.professionalsSubtitle}>
                   {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
                 </Text>
+              )}
+              
+              {/* Legend for exclusive services */}
+              {hasExclusiveServices() && (
+                <View style={styles.legendContainer}>
+                  <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
+                </View>
               )}
               
               <FlatList
@@ -532,6 +589,21 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 16,
   },
+  legendContainer: {
+    backgroundColor: '#f0f9ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#0369a1',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   professionalsContainer: {
     paddingBottom: 8,
   },
@@ -602,8 +674,10 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   professionalChipServices: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
+    lineHeight: 14,
+    flexWrap: 'wrap',
   },
   professionalChipServicesSelected: {
     color: '#be185d',
