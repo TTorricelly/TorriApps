@@ -433,6 +433,33 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Fixed Validation Banner */}
+          {getSelectedCount() > 0 && (
+            <View style={styles.stickyBannerContainer}>
+              {professionalsRequested > 1 && getSelectedCount() < professionalsRequested ? (
+                <View style={[styles.bannerContent, styles.bannerWarning]}>
+                  <Text style={styles.bannerIcon}>⚠️</Text>
+                  <Text style={styles.bannerText}>
+                    Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              ) : !hasCompleteServiceCoverage() ? (
+                <View style={[styles.bannerContent, styles.bannerWarning]}>
+                  <Text style={styles.bannerIcon}>⚠️</Text>
+                  <View style={styles.bannerTextContainer}>
+                    <Text style={styles.bannerText}>Serviços não cobertos:</Text>
+                    <Text style={styles.bannerSubtext}>{getUncoveredServices().join(', ')}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={[styles.bannerContent, styles.bannerSuccess]}>
+                  <Text style={styles.bannerIcon}>✅</Text>
+                  <Text style={styles.bannerText}>Todos os serviços estão cobertos!</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Scrollable Content */}
           <KeyboardAvoidingView 
             style={styles.scrollContainer} 
@@ -444,32 +471,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Floating Validation Banner */}
-              {getSelectedCount() > 0 && (
-                <View style={styles.floatingBanner}>
-                  {professionalsRequested > 1 && getSelectedCount() < professionalsRequested ? (
-                    <View style={[styles.bannerContent, styles.bannerWarning]}>
-                      <Text style={styles.bannerIcon}>⚠️</Text>
-                      <Text style={styles.bannerText}>
-                        Selecione mais {professionalsRequested - getSelectedCount()} profissional{professionalsRequested - getSelectedCount() > 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                  ) : !hasCompleteServiceCoverage() ? (
-                    <View style={[styles.bannerContent, styles.bannerWarning]}>
-                      <Text style={styles.bannerIcon}>⚠️</Text>
-                      <View style={styles.bannerTextContainer}>
-                        <Text style={styles.bannerText}>Serviços não cobertos:</Text>
-                        <Text style={styles.bannerSubtext}>{getUncoveredServices().join(', ')}</Text>
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={[styles.bannerContent, styles.bannerSuccess]}>
-                      <Text style={styles.bannerIcon}>✅</Text>
-                      <Text style={styles.bannerText}>Todos os serviços estão cobertos!</Text>
-                    </View>
-                  )}
-                </View>
-              )}
 
               {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
@@ -558,6 +559,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f3f4f6',
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  stickyBannerContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
   scrollContainer: {
     flex: 1,
@@ -807,9 +815,6 @@ const styles = StyleSheet.create({
   },
   professionalSeparator: {
     height: 12,
-  },
-  floatingBanner: {
-    marginBottom: 16,
   },
   bannerContent: {
     flexDirection: 'row',
