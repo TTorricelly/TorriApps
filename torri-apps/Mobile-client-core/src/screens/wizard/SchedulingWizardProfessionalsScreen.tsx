@@ -133,20 +133,28 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           }
         });
         
+        // Calculate minimum professionals needed based on service coverage
+        const minProfessionalsNeeded = calculateMinimumProfessionalsNeeded(selectedServices, professionals);
+        
         if (autoSelectedProfessionals.length > 0) {
           // If we need more professionals than currently requested, auto-update the count
-          if (autoSelectedProfessionals.length > professionalsRequested) {
-            setProfessionalsRequested(autoSelectedProfessionals.length);
+          const requiredCount = Math.max(autoSelectedProfessionals.length, minProfessionalsNeeded);
+          if (requiredCount > professionalsRequested) {
+            setProfessionalsRequested(requiredCount);
           }
           
           // Fill remaining slots with null to maintain array structure
           const selectedArray = [...autoSelectedProfessionals];
-          const requiredCount = Math.max(professionalsRequested, autoSelectedProfessionals.length);
-          while (selectedArray.length < requiredCount) {
+          const finalCount = Math.max(professionalsRequested, requiredCount);
+          while (selectedArray.length < finalCount) {
             selectedArray.push(null);
           }
           setSelectedProfessionals(selectedArray);
         } else {
+          // No auto-selected professionals, but still check if we need more than 1
+          if (minProfessionalsNeeded > professionalsRequested) {
+            setProfessionalsRequested(minProfessionalsNeeded);
+          }
           // Reset selected professionals when available professionals change
           setSelectedProfessionals([]);
         }
@@ -161,9 +169,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const handleProfessionalsCountChange = (count: number) => {
-    console.log(`handleProfessionalsCountChange called with count: ${count}`);
     setProfessionalsRequested(count);
-    console.log(`professionalsRequested set to: ${count}`);
     resetFromStep(3); // Reset time slots when changing professional count
     // Auto-close modal after selection
     setTimeout(() => {
@@ -297,6 +303,27 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return matchingServices.map((service: Service) => service.name);
   };
 
+  const calculateMinimumProfessionalsNeeded = (services: Service[], professionals: Professional[]): number => {
+    if (services.length === 0 || professionals.length === 0) return 1;
+    
+    // For each service, count how many professionals can provide it
+    const serviceProviderCounts = services.map((service: Service) => {
+      const providersCount = professionals.filter((prof: Professional) => 
+        prof.services_offered?.includes(service.id)
+      ).length;
+      return { service: service.id, providers: providersCount };
+    });
+    
+    // Count how many services have only 1 provider (exclusive services)
+    const exclusiveServicesCount = serviceProviderCounts.filter(s => s.providers === 1).length;
+    
+    // If we have exclusive services, we need at least that many professionals
+    // For non-exclusive services, one professional might be able to handle multiple
+    const minNeeded = Math.max(1, exclusiveServicesCount);
+    
+    return Math.min(minNeeded, professionals.length); // Don't exceed available professionals
+  };
+
   const getExclusiveServices = (professional: Professional): string[] => {
     if (!professional.services_offered || !selectedServices) return [];
     
@@ -376,15 +403,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
     
-    // Debug logging to understand what's happening
-    if (professional.full_name === 'João Santos') { // Only log for one professional to reduce noise
-      console.log(`Professional ${professional.full_name}: isSelected=${isSelected}, getSelectedCount()=${getSelectedCount()}, professionalsRequested=${professionalsRequested}, canSelect=${canSelect}, isDisabled=${isDisabled}`);
-    }
     const imageError = imageErrors[professional.id] || false;
     
     // Process photo URL using best practices - API returns photo_path, not photo_url
     const photoPath = professional.photo_path; // API returns photo_path field
-    const fullPhotoUrl = buildAssetUrl(photoPath);
+    const fullPhotoUrl = photoPath ? buildAssetUrl(photoPath) : null;
     const hasValidPhoto = fullPhotoUrl && !imageError;
     
     
