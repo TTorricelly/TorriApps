@@ -73,8 +73,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       setMaxParallelPros(maxPros);
       
       // Set initial professionals requested
-      // If only 1 service selected, always use 1 professional
-      const initialPros = selectedServices.length === 1 ? 1 : Math.min(defaultPros, maxPros);
+      // If only 1 service selected OR parallel execution not possible, always use 1 professional
+      const initialPros = (selectedServices.length === 1 || maxPros === 1) ? 1 : Math.min(defaultPros, maxPros);
       setProfessionalsRequested(initialPros);
       
     } catch (error) {
@@ -520,8 +520,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
 
-              {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available */}
-            {availableProfessionals.length > 1 && selectedServices.length > 1 && (
+              {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available AND parallel execution is possible */}
+            {availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1 && (
               <TouchableOpacity 
                 style={styles.sequenceCard}
                 onPress={handleOpenProfessionalCountModal}
