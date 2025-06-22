@@ -73,8 +73,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       setMaxParallelPros(maxPros);
       
       // Set initial professionals requested
-      // If only 1 service selected OR parallel execution not possible, always use 1 professional
-      const initialPros = (selectedServices.length === 1 || maxPros === 1) ? 1 : Math.min(defaultPros, maxPros);
+      // If only 1 service selected, use 1 professional
+      // If parallel execution not possible, check if we need multiple pros for sequential execution
+      let initialPros;
+      if (selectedServices.length === 1) {
+        initialPros = 1;
+      } else if (maxPros === 1) {
+        // Sequential execution required - but we might need multiple pros for different services
+        // Start with 2 professionals for multi-service sequential scenarios
+        initialPros = 2;
+      } else {
+        // Parallel execution possible
+        initialPros = Math.min(defaultPros, maxPros);
+      }
       setProfessionalsRequested(initialPros);
       
     } catch (error) {
@@ -543,7 +554,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                       <Text style={styles.sequenceOptionDescription}>
                         {professionalsRequested === 1 
                           ? 'Um por vez • mais tempo'
-                          : 'Ao mesmo tempo • mais rápido'
+                          : maxParallelPros === 1
+                            ? 'Sequencial • especialistas diferentes'
+                            : 'Ao mesmo tempo • mais rápido'
                         }
                       </Text>
                     </View>

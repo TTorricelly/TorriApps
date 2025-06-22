@@ -297,6 +297,7 @@ class MultiServiceAvailabilityService:
         can_parallel = self._can_execute_in_parallel(service_requirements)
         max_parallel_pros = min(req.max_parallel_pros for req in service_requirements)
         
+        
         # Generate professional combinations
         if professionals_requested == 1 or max_parallel_pros == 1:
             # Single professional combinations
@@ -315,7 +316,8 @@ class MultiServiceAvailabilityService:
                         ))
         
         # Multi-professional sequential execution for mixed scenarios
-        if professionals_requested >= 2 and max_parallel_pros == 1:
+        # Trigger when max_parallel_pros == 1 AND no single professional can handle all services
+        if max_parallel_pros == 1 and len(resource_combinations) == 0:
             # Sequential execution with different professionals handling different services
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
