@@ -74,17 +74,14 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       // Set initial professionals requested
       // If only 1 service selected, use 1 professional
-      // If parallel execution not possible, check if we need multiple pros for sequential execution
+      // For multiple services, start with default but allow user to choose
       let initialPros;
       if (selectedServices.length === 1) {
         initialPros = 1;
-      } else if (maxPros === 1) {
-        // Sequential execution required - but we might need multiple pros for different services
-        // Start with 2 professionals for multi-service sequential scenarios
-        initialPros = 2;
       } else {
-        // Parallel execution possible
-        initialPros = Math.min(defaultPros, maxPros);
+        // For multiple services, start with default professionals suggested
+        // User can always change via sequence selection card
+        initialPros = Math.min(defaultPros, maxPros || 2);
       }
       setProfessionalsRequested(initialPros);
       
@@ -523,8 +520,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
 
-              {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available AND parallel execution is possible */}
-            {availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1 && (
+              {/* Sequence Selection Card - Show when multiple services AND multiple professionals available */}
+            {availableProfessionals.length > 1 && selectedServices.length > 1 && (
               <TouchableOpacity 
                 style={styles.sequenceCard}
                 onPress={handleOpenProfessionalCountModal}
@@ -553,7 +550,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                       </Text>
                       <Text style={styles.sequenceOptionDescription}>
                         {professionalsRequested === 1 
-                          ? 'Um por vez • mais tempo'
+                          ? 'Serviços em sequência'
                           : maxParallelPros === 1
                             ? 'Sequencial • especialistas diferentes'
                             : 'Ao mesmo tempo • mais rápido'
@@ -728,12 +725,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                       styles.radioDescription,
                       professionalsRequested === 1 && styles.radioDescriptionSelected
                     ]}>
-                      Um por vez • mais tempo
+                      Serviços em sequência
                     </Text>
                   </View>
                 </TouchableOpacity>
                 
-                {maxParallelPros > 1 && (
+                {selectedServices.length > 1 && (
                   <TouchableOpacity 
                     style={[
                       styles.radioOption,
@@ -762,7 +759,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                         styles.radioDescription,
                         professionalsRequested >= 2 && styles.radioDescriptionSelected
                       ]}>
-                        Ao mesmo tempo • mais rápido
+                        {maxParallelPros > 1 
+                          ? 'Ao mesmo tempo • mais rápido'
+                          : 'Especialistas diferentes'
+                        }
                       </Text>
                     </View>
                   </TouchableOpacity>
