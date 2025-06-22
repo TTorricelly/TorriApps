@@ -161,7 +161,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const handleProfessionalsCountChange = (count: number) => {
+    console.log(`handleProfessionalsCountChange called with count: ${count}`);
     setProfessionalsRequested(count);
+    console.log(`professionalsRequested set to: ${count}`);
     resetFromStep(3); // Reset time slots when changing professional count
     // Auto-close modal after selection
     setTimeout(() => {
@@ -375,7 +377,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const isDisabled = !isSelected && !canSelect;
     
     // Debug logging to understand what's happening
-    console.log(`Professional ${professional.full_name}: isSelected=${isSelected}, getSelectedCount()=${getSelectedCount()}, professionalsRequested=${professionalsRequested}, canSelect=${canSelect}, isDisabled=${isDisabled}`);
+    if (professional.full_name === 'João Santos') { // Only log for one professional to reduce noise
+      console.log(`Professional ${professional.full_name}: isSelected=${isSelected}, getSelectedCount()=${getSelectedCount()}, professionalsRequested=${professionalsRequested}, canSelect=${canSelect}, isDisabled=${isDisabled}`);
+    }
     const imageError = imageErrors[professional.id] || false;
     
     // Process photo URL using best practices - API returns photo_path, not photo_url
