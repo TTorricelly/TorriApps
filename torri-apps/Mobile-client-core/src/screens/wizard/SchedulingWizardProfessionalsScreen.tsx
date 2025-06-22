@@ -135,13 +135,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         
         // Calculate minimum professionals needed based on service coverage
         const minProfessionalsNeeded = calculateMinimumProfessionalsNeeded(selectedServices, professionals);
-        console.log(`minProfessionalsNeeded: ${minProfessionalsNeeded}, current professionalsRequested: ${professionalsRequested}`);
         
         if (autoSelectedProfessionals.length > 0) {
           // If we need more professionals than currently requested, auto-update the count
           const requiredCount = Math.max(autoSelectedProfessionals.length, minProfessionalsNeeded);
           if (requiredCount > professionalsRequested) {
-            console.log(`Updating professionalsRequested from ${professionalsRequested} to ${requiredCount}`);
             setProfessionalsRequested(requiredCount);
           }
           
@@ -155,7 +153,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         } else {
           // No auto-selected professionals, but still check if we need more than 1
           if (minProfessionalsNeeded > professionalsRequested) {
-            console.log(`No auto-selected pros: Updating professionalsRequested from ${professionalsRequested} to ${minProfessionalsNeeded}`);
             setProfessionalsRequested(minProfessionalsNeeded);
           }
           // Reset selected professionals when available professionals change
@@ -310,28 +307,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     if (services.length === 0 || professionals.length === 0) return 1;
     if (services.length === 1) return 1; // Single service always needs 1 professional
     
-    console.log(`Calculating minimum professionals for ${services.length} services and ${professionals.length} professionals`);
-    
     // Check if any single professional can handle ALL services
     const professionalsWhoCanHandleAll = professionals.filter((prof: Professional) => {
-      const canHandleAll = services.every((service: Service) => 
+      return services.every((service: Service) => 
         prof.services_offered?.includes(service.id)
       );
-      if (canHandleAll) {
-        console.log(`Professional ${prof.full_name} can handle all services`);
-      }
-      return canHandleAll;
     });
     
     // If at least one professional can handle all services, we only need 1
     if (professionalsWhoCanHandleAll.length > 0) {
-      console.log(`Found ${professionalsWhoCanHandleAll.length} professionals who can handle all services - minimum needed: 1`);
       return 1;
     }
     
     // If no single professional can handle all services, we need multiple
-    // For now, assume we need at least 2 for multiple services when no one can do all
-    console.log(`No single professional can handle all services - minimum needed: 2`);
     return Math.min(2, professionals.length);
   };
 
@@ -571,7 +559,45 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
 
-              {/* Sequence Selection Card - Show when multiple services AND multiple professionals available */}
+            {/* Professional Selection */}
+            <View style={styles.professionalsSection}>
+              <Text style={styles.professionalsTitle}>
+                {availableProfessionals.length === 1 
+                  ? 'Profissional disponível'
+                  : selectedServices.length === 1
+                    ? 'Selecione o profissional'
+                    : professionalsRequested === 1 
+                      ? 'Selecione o profissional' 
+                      : `Selecione ${professionalsRequested} profissionais`
+                }
+              </Text>
+              {availableProfessionals.length > 1 && selectedServices.length > 1 && (
+                <Text style={styles.professionalsSubtitle}>
+                  {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
+                </Text>
+              )}
+              
+              {/* Legend for exclusive services */}
+              {hasExclusiveServices() && (
+                <View style={styles.legendContainer}>
+                  <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
+                </View>
+              )}
+              
+              <FlatList
+                data={availableProfessionals}
+                renderItem={renderProfessionalChip}
+                keyExtractor={(item: Professional) => item.id}
+                numColumns={1}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.professionalsContainer}
+                ItemSeparatorComponent={() => <View style={styles.professionalSeparator} />}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
+              />
+            </View>
+
+            {/* Sequence Selection Card - Show when multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
               <TouchableOpacity 
                 style={styles.sequenceCard}
@@ -617,44 +643,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 </View>
               </TouchableOpacity>
             )}
-
-            {/* Professional Selection */}
-            <View style={styles.professionalsSection}>
-              <Text style={styles.professionalsTitle}>
-                {availableProfessionals.length === 1 
-                  ? 'Profissional disponível'
-                  : selectedServices.length === 1
-                    ? 'Selecione o profissional'
-                    : professionalsRequested === 1 
-                      ? 'Selecione o profissional' 
-                      : `Selecione ${professionalsRequested} profissionais`
-                }
-              </Text>
-              {availableProfessionals.length > 1 && selectedServices.length > 1 && (
-                <Text style={styles.professionalsSubtitle}>
-                  {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
-                </Text>
-              )}
-              
-              {/* Legend for exclusive services */}
-              {hasExclusiveServices() && (
-                <View style={styles.legendContainer}>
-                  <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
-                </View>
-              )}
-              
-              <FlatList
-                data={availableProfessionals}
-                renderItem={renderProfessionalChip}
-                keyExtractor={(item: Professional) => item.id}
-                numColumns={1}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.professionalsContainer}
-                ItemSeparatorComponent={() => <View style={styles.professionalSeparator} />}
-                scrollEnabled={false}
-                nestedScrollEnabled={true}
-              />
-            </View>
 
             </ScrollView>
           </KeyboardAvoidingView>
