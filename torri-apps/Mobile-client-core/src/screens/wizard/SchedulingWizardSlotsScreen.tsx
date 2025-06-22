@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -249,32 +249,15 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
 
   // Time Grid for single service
   const renderTimeGrid = () => (
-    <View style={styles.timeGridContainer}>
-      <View style={styles.slotsHeader}>
-        <Text style={styles.slotsTitle}>
-          Horários disponíveis ({availableSlots.length})
-        </Text>
-        <Text style={styles.slotsSubtitle}>
-          Selecione o horário que melhor se adequa à sua agenda
-        </Text>
-      </View>
-      
+    <ScrollView 
+      style={styles.timeGridContainer}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.timeGridContent}
+    >
       <View style={styles.timeGrid}>
-        {currentSlots.map((slot) => renderTimeGridItem(slot))}
+        {availableSlots.map((slot: any) => renderTimeGridItem(slot))}
       </View>
-
-      {/* Show more button for grid */}
-      {hasMoreSlots && !showAllSlots && (
-        <TouchableOpacity
-          style={styles.showAllButton}
-          onPress={handleShowAllSlots}
-        >
-          <Text style={styles.showAllText}>
-            Ver todos os horários ({availableSlots.length - visibleCount} restantes)
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    </ScrollView>
   );
 
   // Itinerary List for multi-service
@@ -645,11 +628,14 @@ const styles = StyleSheet.create({
   timeGridContainer: {
     flex: 1,
   },
+  timeGridContent: {
+    paddingBottom: 20,
+  },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingTop: 16,
     justifyContent: 'space-between',
   },
   timeGridSlot: {
