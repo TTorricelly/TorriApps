@@ -327,7 +327,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
       <WizardHeader
         currentStep={3}
         totalSteps={4}
-        title="Horários disponíveis"
+        title="Horários"
         onBack={handleBack}
       />
 
