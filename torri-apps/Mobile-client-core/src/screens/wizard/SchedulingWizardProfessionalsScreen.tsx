@@ -70,6 +70,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const maxPros = Math.min(
         ...selectedServices.map((service: Service) => service.max_parallel_pros || 1)
       );
+      console.log('Debug - Selected services:', selectedServices.map(s => ({name: s.name, max_parallel_pros: s.max_parallel_pros})));
+      console.log('Debug - maxPros calculated:', maxPros);
       setMaxParallelPros(maxPros);
       
       // Set initial professionals requested
