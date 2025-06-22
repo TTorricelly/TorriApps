@@ -128,10 +128,19 @@ const getStateForMultiProfessionalSequence = (
   
   // Check if professional can ONLY provide covered services
   if (canOnlyProvideCoveredServices) {
-    // If there are uncovered services they can't help with, they're redundant regardless of professional count
+    // If there are uncovered services they can't help with
     if (uncoveredServices.length > 0) {
-      // Professional is useless - can only do covered services while uncovered services exist
-      return 'REDUNDANT';
+      // In multi-professional sequences, balance service coverage vs professional count
+      const remainingProfessionalsNeeded = professionalsRequested - selectedCount;
+      
+      // If we still need multiple professionals, keep them available even if they can't help with uncovered services
+      // This handles the case where we need to fill professional slots for the sequence
+      if (remainingProfessionalsNeeded > 1) {
+        return 'AVAILABLE';
+      } else {
+        // We only need 1 more professional, prioritize those who can cover uncovered services
+        return 'REDUNDANT';
+      }
     }
     // If all services are covered but we still need more professionals, they're available
     else if (selectedCount < professionalsRequested) {
@@ -308,9 +317,9 @@ describe('Professional Selection Algorithm', () => {
       const selectedServices = [services.hairColor, services.manicure, services.botox];
       const currentSelected: (Professional | null)[] = [professionals.hairOnlyColor, null, null];
       
-      // Another hair pro should be REDUNDANT because they can only provide covered services while uncovered services exist
+      // Another hair pro should be AVAILABLE because we still need 2 more professionals (even though they can only provide covered services)
       const redundantHairState = getProfessionalState(professionals.hairPro2, currentSelected, selectedServices, professionalsRequested);
-      expect(redundantHairState).toBe('REDUNDANT'); // Redundant because can only provide covered services
+      expect(redundantHairState).toBe('AVAILABLE'); // Available because we still need 2 more professionals
       
       // Pros who can help with uncovered services should be OPTIMAL
       const nailState = getProfessionalState(professionals.manicureOnly, currentSelected, selectedServices, professionalsRequested);
@@ -376,9 +385,9 @@ describe('Professional Selection Algorithm', () => {
       const nailState = getProfessionalState(professionals.nailPro1, currentSelected, selectedServices, professionalsRequested);
       expect(nailState).toBe('OPTIMAL');
       
-      // Another hair professional should be REDUNDANT (can only do covered services while uncovered services exist)
+      // Another hair professional should be AVAILABLE (can only do covered services, but we still need 2 more professionals)
       const redundantHairState = getProfessionalState(professionals.hairPro2, currentSelected, selectedServices, professionalsRequested);
-      expect(redundantHairState).toBe('REDUNDANT');
+      expect(redundantHairState).toBe('AVAILABLE');
     });
   });
   
@@ -597,9 +606,9 @@ describe('Professional Selection Algorithm', () => {
         const joselitoState = getProfessionalState(joselito, currentSelected, userScenarioServices, professionalsRequested);
         
         expect(mariaState).toBe('OPTIMAL'); // Can cover uncovered nail services
-        expect(joaoState).toBe('REDUNDANT'); // Can only do covered Botox while uncovered services exist
+        expect(joaoState).toBe('AVAILABLE'); // Can only do covered Botox, but we still need 2 more professionals
         expect(joselitoState).toBe('OPTIMAL'); // Can cover uncovered nail services
-        expect(getUIState(joaoState).color).toBe('yellow'); // Yellow because redundant
+        expect(getUIState(joaoState).color).toBe('white'); // White because available
       });
       
       test('BUG TEST 3-PROS: After selecting João Santos (Botox) - Ana Costa should be REDUNDANT (gray) because she cannot help with uncovered services', () => {
@@ -623,10 +632,6 @@ describe('Professional Selection Algorithm', () => {
           professionalServices.every((service: Service) => alreadyCoveredServices.includes(service));
         
         // Debug assertions
-        console.log('Services Ana Costa can provide:', professionalServices.map(s => s.name));
-        console.log('Uncovered services:', uncoveredServices.map(s => s.name));
-        console.log('Already covered services:', alreadyCoveredServices.map(s => s.name));
-        console.log('Can only provide covered services:', canOnlyProvideCoveredServices);
         
         expect(professionalServices.map(s => s.name)).toEqual(['Botox']); // Ana can only do Botox
         expect(uncoveredServices.map(s => s.name)).toEqual(['Manicure', 'Pedicure']); // These are uncovered
@@ -638,12 +643,12 @@ describe('Professional Selection Algorithm', () => {
         const joselitoState = getProfessionalState(joselito, currentSelected, userScenarioServices, professionalsRequested);
         
         expect(mariaState).toBe('OPTIMAL'); // Can cover uncovered nail services
-        expect(anaState).toBe('REDUNDANT'); // Can ONLY do covered Botox AND cannot help with uncovered Manicure/Pedicure
+        expect(anaState).toBe('AVAILABLE'); // Can ONLY do covered Botox, but we still need 2 more professionals
         expect(joselitoState).toBe('OPTIMAL'); // Can cover uncovered nail services
         
-        // UI state validation - Ana Costa should be redundant because she's useless for uncovered services
-        expect(getUIState(anaState).color).toBe('yellow'); // Should be yellow (redundant) because she can't help
-        expect(getUIState(anaState).selectable).toBe(false); // Should NOT be selectable
+        // UI state validation - Ana Costa should be available because we still need 2 more professionals
+        expect(getUIState(anaState).color).toBe('white'); // Should be white (available) 
+        expect(getUIState(anaState).selectable).toBe(true); // Should be selectable
       });
       
       test('After selecting Ana + Maria (all services covered) - remaining should be AVAILABLE', () => {
@@ -725,6 +730,24 @@ describe('Professional Selection Algorithm', () => {
         expect(getUIState(joselitoState).color).toBe('white');
         expect(getUIState(joselitoState).selectable).toBe(true);
       });
+      
+      test('NEW BUG: After selecting Maria Silva (Manicure + Pedicure) - Joselito should be AVAILABLE, not REDUNDANT', () => {
+        const currentSelected: (Professional | null)[] = [mariaSilva, null, null];
+        
+        const anaState = getProfessionalState(anaCosta, currentSelected, userScenarioServices, professionalsRequested);
+        const joaoState = getProfessionalState(joaoSantos, currentSelected, userScenarioServices, professionalsRequested);
+        const joselitoState = getProfessionalState(joselito, currentSelected, userScenarioServices, professionalsRequested);
+        
+        // Maria covers Manicure + Pedicure, Botox is still uncovered
+        expect(anaState).toBe('OPTIMAL'); // Can cover uncovered Botox
+        expect(joaoState).toBe('OPTIMAL'); // Can cover uncovered Botox
+        
+        // Joselito can only provide covered services (Manicure + Pedicure) BUT we still need 2 more professionals
+        // He should be AVAILABLE because we need to fill the 3-professional requirement
+        expect(joselitoState).toBe('AVAILABLE'); // Should be available to fill professional slots
+        expect(getUIState(joselitoState).color).toBe('white'); // Should be white (selectable)
+        expect(getUIState(joselitoState).selectable).toBe(true); // Should be selectable
+      });
     });
   });
   
@@ -745,8 +768,8 @@ describe('Professional Selection Algorithm', () => {
       currentSelected = [professionals.hairOnlyColor, null, null];
       
       expect(getProfessionalState(professionals.nailPro1, currentSelected, selectedServices, professionalsRequested)).toBe('OPTIMAL');
-      expect(getProfessionalState(professionals.hairPro2, currentSelected, selectedServices, professionalsRequested)).toBe('REDUNDANT'); // Redundant because can only provide covered services
-      expect(getUIState('REDUNDANT').color).toBe('yellow');
+      expect(getProfessionalState(professionals.hairPro2, currentSelected, selectedServices, professionalsRequested)).toBe('AVAILABLE'); // Available because we still need 2 more professionals  
+      expect(getUIState('AVAILABLE').color).toBe('white');
       
       // Step 3: Select nail professional (covers both nail services) - still need 1 more pro
       currentSelected = [professionals.hairOnlyColor, professionals.nailPro1, null];

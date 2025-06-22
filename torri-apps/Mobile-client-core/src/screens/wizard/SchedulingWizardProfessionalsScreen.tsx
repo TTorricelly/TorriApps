@@ -532,10 +532,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     // Check if professional can ONLY provide covered services
     if (canOnlyProvideCoveredServices) {
-      // If there are uncovered services they can't help with, they're redundant regardless of professional count
+      // If there are uncovered services they can't help with
       if (uncoveredServices.length > 0) {
-        // Professional is useless - can only do covered services while uncovered services exist
-        return 'REDUNDANT';
+        // In multi-professional sequences, balance service coverage vs professional count
+        const remainingProfessionalsNeeded = professionalsRequested - selectedCount;
+        
+        // If we still need multiple professionals, keep them available even if they can't help with uncovered services
+        // This handles the case where we need to fill professional slots for the sequence
+        if (remainingProfessionalsNeeded > 1) {
+          return 'AVAILABLE';
+        } else {
+          // We only need 1 more professional, prioritize those who can cover uncovered services
+          return 'REDUNDANT';
+        }
       }
       // If all services are covered but we still need more professionals, they're available
       else if (selectedCount < professionalsRequested) {
@@ -604,30 +613,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return 'REDUNDANT';
   };
   
-  // Get optimal professional choices using assignment problem logic
-  const getOptimalChoicesForAssignment = (currentSelected: (Professional | null)[]): string[] => {
-    const uncoveredServices = getUncoveredServicesForAssignment(currentSelected);
-    
-    if (uncoveredServices.length === 0) return [];
-    
-    // Greedy algorithm: find professionals that cover most uncovered services
-    const professionalScores = availableProfessionals.map((professional: Professional) => {
-      const coverageCount = uncoveredServices.filter((service: Service) => 
-        (professional.services_offered as any)?.includes(service.id)
-      ).length;
-      
-      return {
-        professionalId: professional.id,
-        score: coverageCount
-      };
-    });
-    
-    // Return professionals with highest coverage scores
-    const maxScore = Math.max(...professionalScores.map((p: any) => p.score));
-    return professionalScores
-      .filter((p: any) => p.score === maxScore && p.score > 0)
-      .map((p: any) => p.professionalId);
-  };
   
   // Get uncovered services for assignment algorithm
   const getUncoveredServicesForAssignment = (currentSelected: (Professional | null)[]): Service[] => {
@@ -647,13 +632,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return state === 'REDUNDANT';
   };
 
-  const isOptimalSelection = (
-    professional: Professional, 
-    currentSelected: (Professional | null)[]
-  ): boolean => {
-    const state = getProfessionalState(professional, currentSelected);
-    return state === 'OPTIMAL';
-  };
 
   const getBetterAlternatives = (
     professional: Professional, 
@@ -786,7 +764,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     const canSelect = !isSelected && getSelectedCount() < effectiveLimit;
     
-    
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
     
@@ -796,7 +773,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const photoPath = professional.photo_path; // API returns photo_path field
     const fullPhotoUrl = photoPath ? buildAssetUrl(photoPath) : null;
     const hasValidPhoto = fullPhotoUrl && !imageError;
-    
     
     return (
       <TouchableOpacity
