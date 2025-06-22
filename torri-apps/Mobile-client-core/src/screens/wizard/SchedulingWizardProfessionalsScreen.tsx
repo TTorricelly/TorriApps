@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal, Animated, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -193,8 +193,18 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       }
       setSelectedProfessionals(newSelected);
     } else {
-      // Add professional to first available slot
+      // Smart selection logic to prevent redundant coverage
       const newSelected = [...selectedProfessionals];
+      
+      // Check if selecting this professional would create redundant coverage
+      const wouldCreateRedundancy = checkIfSelectionCreatesRedundancy(professional, newSelected);
+      
+      if (wouldCreateRedundancy && !isOptimalSelection(professional, newSelected)) {
+        // Show helpful guidance instead of allowing redundant selection
+        showRedundancyGuidance(professional);
+        return;
+      }
+      
       const firstEmptyIndex = newSelected.findIndex((prof: Professional | null) => prof === null);
       
       if (firstEmptyIndex !== -1) {
@@ -440,6 +450,101 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
+  // Smart Professional Selection Helper Functions
+  const checkIfSelectionCreatesRedundancy = (
+    professional: Professional, 
+    currentSelected: (Professional | null)[]
+  ): boolean => {
+    if (!professional.services_offered) return false;
+    
+    // Get services this professional can provide
+    const professionalServices = selectedServices.filter((service: Service) => 
+      professional.services_offered?.includes(service.id)
+    );
+    
+    // Check if any of these services are already covered by selected professionals
+    const alreadyCoveredServices = professionalServices.filter((service: Service) => {
+      return currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && selectedProf.services_offered?.includes(service.id)
+      );
+    });
+    
+    // It's redundant if this professional only provides services already covered
+    return alreadyCoveredServices.length === professionalServices.length && professionalServices.length > 0;
+  };
+
+  const isOptimalSelection = (
+    professional: Professional, 
+    currentSelected: (Professional | null)[]
+  ): boolean => {
+    if (!professional.services_offered) return false;
+    
+    // Check if this professional covers services that are currently uncovered
+    const uncoveredServices = selectedServices.filter((service: Service) => {
+      const isCovered = currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && selectedProf.services_offered?.includes(service.id)
+      );
+      return !isCovered;
+    });
+    
+    // Check if this professional can cover any uncovered services
+    const coversUncoveredServices = uncoveredServices.some((service: Service) => 
+      professional.services_offered?.includes(service.id)
+    );
+    
+    return coversUncoveredServices;
+  };
+
+  const getBetterAlternatives = (
+    professional: Professional, 
+    currentSelected: (Professional | null)[]
+  ): Professional[] => {
+    // Find professionals who can cover currently uncovered services
+    const uncoveredServices = selectedServices.filter((service: Service) => {
+      const isCovered = currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && selectedProf.services_offered?.includes(service.id)
+      );
+      return !isCovered;
+    });
+    
+    if (uncoveredServices.length === 0) return [];
+    
+    // Find professionals who can cover these uncovered services
+    const alternatives = availableProfessionals.filter((prof: Professional) => {
+      if (prof.id === professional.id) return false; // Exclude the professional being selected
+      if (currentSelected.some(selected => selected?.id === prof.id)) return false; // Exclude already selected
+      
+      return uncoveredServices.some((service: Service) => 
+        prof.services_offered?.includes(service.id)
+      );
+    });
+    
+    return alternatives;
+  };
+
+  const showRedundancyGuidance = (professional: Professional) => {
+    const alternatives = getBetterAlternatives(professional, selectedProfessionals);
+    const uncoveredServices = getUncoveredServices();
+    
+    let message = `${professional.full_name || professional.email} já tem seus serviços cobertos por outros profissionais selecionados.`;
+    
+    if (uncoveredServices.length > 0) {
+      message += `\n\nServiços ainda não cobertos: ${uncoveredServices.join(', ')}`;
+      
+      if (alternatives.length > 0) {
+        const alternativeNames = alternatives.slice(0, 2).map(alt => alt.full_name || alt.email).join(' ou ');
+        message += `\n\nSugestão: Selecione ${alternativeNames} para cobrir estes serviços.`;
+      }
+    }
+    
+    // Show guidance to user about better selection
+    Alert.alert(
+      'Seleção Inteligente',
+      message,
+      [{ text: 'Entendi' }]
+    );
+  };
+
   // Happy button shake animation when ready
   React.useEffect(() => {
     if (isValidSelection() && !showSuccessMessage) {
@@ -589,7 +694,14 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const canSelect = !isSelected && getSelectedCount() < effectiveLimit;
     
     const isOnlyOption = availableProfessionals.length === 1;
-    const isDisabled = !isSelected && !canSelect;
+    
+    // Smart selection analysis
+    const wouldCreateRedundancy = !isSelected && checkIfSelectionCreatesRedundancy(professional, selectedProfessionals);
+    const isOptimal = !isSelected && isOptimalSelection(professional, selectedProfessionals);
+    const shouldShowWarning = wouldCreateRedundancy && !isOptimal;
+    const shouldHighlight = isOptimal && getUncoveredServices().length > 0;
+    
+    const isDisabled = !isSelected && (!canSelect || shouldShowWarning);
     
     const imageError = imageErrors[professional.id] || false;
     const photoPath = professional.photo_path;
@@ -603,11 +715,26 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             styles.professionalCardContent,
             isSelected && styles.professionalCardSelected,
             isDisabled && styles.professionalCardDisabled,
+            shouldHighlight && styles.professionalCardOptimal,
+            shouldShowWarning && styles.professionalCardWarning,
           ]}
           onPress={() => !isOnlyOption && handleProfessionalSelect(professional)}
           disabled={isDisabled || isOnlyOption}
           activeOpacity={isOnlyOption ? 1 : 0.8}
         >
+          {/* Optimal Selection Indicator */}
+          {shouldHighlight && (
+            <View style={styles.optimalIndicator}>
+              <Text style={styles.optimalIndicatorText}>⭐</Text>
+            </View>
+          )}
+          
+          {/* Warning Indicator */}
+          {shouldShowWarning && (
+            <View style={styles.warningIndicator}>
+              <Text style={styles.warningIndicatorText}>⚠️</Text>
+            </View>
+          )}
           {/* Professional Photo */}
           <View style={[
             styles.professionalCardAvatar,
@@ -761,10 +888,18 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 }
               </Text>
               
-              {/* Legend for exclusive services */}
-              {hasExclusiveServices() && (
+              {/* Legend for exclusive services and smart selection */}
+              {(hasExclusiveServices() || getUncoveredServices().length > 0) && (
                 <View style={styles.legendContainer}>
-                  <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
+                  {hasExclusiveServices() && (
+                    <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
+                  )}
+                  {getUncoveredServices().length > 0 && (
+                    <Text style={styles.legendText}>
+                      {hasExclusiveServices() && '\n'}
+                      💡 Profissionais destacados cobrem serviços pendentes
+                    </Text>
+                  )}
                 </View>
               )}
               
@@ -1444,6 +1579,18 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     backgroundColor: '#f9fafb',
   },
+  professionalCardOptimal: {
+    borderColor: '#10b981',
+    backgroundColor: '#f0fdf4',
+    shadowColor: '#10b981',
+    shadowOpacity: 0.3,
+  },
+  professionalCardWarning: {
+    borderColor: '#f59e0b',
+    backgroundColor: '#fefce8',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.2,
+  },
   professionalCardAvatar: {
     width: 40,
     height: 40,
@@ -1522,6 +1669,42 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: 'white',
+  },
+  optimalIndicator: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    zIndex: 10,
+  },
+  optimalIndicatorText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  warningIndicator: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f59e0b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    zIndex: 10,
+  },
+  warningIndicatorText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   bannerContent: {
     flexDirection: 'row',
