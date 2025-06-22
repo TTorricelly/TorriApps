@@ -457,6 +457,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   ): boolean => {
     if (!professional.services_offered) return false;
     
+    // For sequences = 3 (1 professional per service), allow multiple pros for same service
+    // Only apply redundancy logic for sequences = 1 or 2
+    if (professionalsRequested >= 3) {
+      return false; // No redundancy restrictions for 3+ professional sequences
+    }
+    
     // Get services this professional can provide
     const professionalServices = selectedServices.filter((service: Service) => 
       professional.services_offered?.includes(service.id)
@@ -470,6 +476,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     });
     
     // It's redundant if this professional only provides services already covered
+    // AND we're in a 1 or 2 professional sequence
     return alreadyCoveredServices.length === professionalServices.length && professionalServices.length > 0;
   };
 
@@ -479,7 +486,29 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   ): boolean => {
     if (!professional.services_offered) return false;
     
-    // Check if this professional covers services that are currently uncovered
+    // For 3+ professional sequences, still prioritize uncovered services
+    // but be less restrictive about what's considered "optimal"
+    if (professionalsRequested >= 3) {
+      // Find services not yet covered
+      const uncoveredServices = selectedServices.filter((service: Service) => {
+        const isCovered = currentSelected.some((selectedProf: Professional | null) => 
+          selectedProf && selectedProf.services_offered?.includes(service.id)
+        );
+        return !isCovered;
+      });
+      
+      // If there are uncovered services, prioritize professionals who can cover them
+      if (uncoveredServices.length > 0) {
+        return uncoveredServices.some((service: Service) => 
+          professional.services_offered?.includes(service.id)
+        );
+      }
+      
+      // If all services are covered, don't highlight anyone specifically
+      return false;
+    }
+    
+    // For 1-2 professional sequences, prioritize covering uncovered services
     const uncoveredServices = selectedServices.filter((service: Service) => {
       const isCovered = currentSelected.some((selectedProf: Professional | null) => 
         selectedProf && selectedProf.services_offered?.includes(service.id)
@@ -523,6 +552,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const showRedundancyGuidance = (professional: Professional) => {
+    // Only show guidance for 1-2 professional sequences
+    // For 3+ sequences, redundancy is allowed
+    if (professionalsRequested >= 3) {
+      return; // No guidance needed for 3+ sequences
+    }
+    
     const alternatives = getBetterAlternatives(professional, selectedProfessionals);
     const uncoveredServices = getUncoveredServices();
     
@@ -888,18 +923,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 }
               </Text>
               
-              {/* Legend for exclusive services and smart selection */}
-              {(hasExclusiveServices() || getUncoveredServices().length > 0) && (
+              {/* Legend for exclusive services */}
+              {hasExclusiveServices() && (
                 <View style={styles.legendContainer}>
-                  {hasExclusiveServices() && (
-                    <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
-                  )}
-                  {getUncoveredServices().length > 0 && (
-                    <Text style={styles.legendText}>
-                      {hasExclusiveServices() && '\n'}
-                      💡 Profissionais destacados cobrem serviços pendentes
-                    </Text>
-                  )}
+                  <Text style={styles.legendText}>⭐ Serviço exclusivo deste profissional</Text>
                 </View>
               )}
               
