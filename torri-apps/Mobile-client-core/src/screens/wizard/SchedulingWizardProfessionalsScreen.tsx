@@ -464,8 +464,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       // Check if this professional only offers services that are already covered
       // AND there are still services that need coverage
       
-      const selectedCount = currentSelected.filter(prof => prof !== null).length;
-      
       // Find which services this professional can provide
       const professionalServices = selectedServices.filter((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
@@ -473,7 +471,17 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       if (professionalServices.length === 0) return false; // Professional can't help with any selected services
       
-      // Find services that still need coverage (nobody selected can do them)
+      // For sequence = 3+, we assume each professional handles only 1 service
+      // So we need to consider how many professionals vs how many services
+      const selectedCount = currentSelected.filter(prof => prof !== null).length;
+      
+      // If we have fewer professionals than services, we still need more professionals
+      // regardless of their service capabilities
+      if (selectedCount < selectedServices.length) {
+        return false; // Don't mark anyone as redundant until we have enough professionals
+      }
+      
+      // Only after we have enough professionals, check for true redundancy
       const servicesNeedingCoverage = selectedServices.filter((service: Service) => {
         return !currentSelected.some((selectedProf: Professional | null) => 
           selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
