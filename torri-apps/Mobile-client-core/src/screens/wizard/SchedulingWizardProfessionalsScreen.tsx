@@ -494,10 +494,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const selectedCount = currentSelected.filter(prof => prof !== null).length;
     const servicesCount = selectedServices.length;
     
-    // Phase 1: Until we have enough professionals, prioritize based on coverage
+    // Phase 1: Until we have enough professionals, highlight all who can help
     if (selectedCount < servicesCount) {
-      const optimalChoices = getOptimalChoicesForAssignment(currentSelected);
-      return optimalChoices.includes(professional.id) ? 'OPTIMAL' : 'AVAILABLE';
+      // In sequence=3, initially highlight anyone who can provide any service
+      const canProvideAnyService = selectedServices.some((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      );
+      return canProvideAnyService ? 'OPTIMAL' : 'AVAILABLE';
     }
     
     // Phase 2: After enough professionals, check for redundancy
