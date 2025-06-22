@@ -314,6 +314,22 @@ class MultiServiceAvailabilityService:
                             execution_type="sequential"
                         ))
         
+        # Multi-professional sequential execution for mixed scenarios
+        if professionals_requested >= 2 and max_parallel_pros == 1:
+            # Sequential execution with different professionals handling different services
+            for prof_pair in combinations(eligible_professionals, 2):
+                if self._professional_pair_can_handle_services(prof_pair, service_requirements):
+                    station_requirements = self._get_combined_station_requirements(service_requirements)
+                    available_stations = self._get_available_stations(station_requirements)
+                    
+                    if available_stations:
+                        resource_combinations.append(ResourceCombination(
+                            services=[req.service for req in service_requirements],
+                            professionals=list(prof_pair),
+                            stations=available_stations,
+                            execution_type="sequential"
+                        ))
+        
         if professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
             for prof_pair in combinations(eligible_professionals, 2):
