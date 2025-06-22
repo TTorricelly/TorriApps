@@ -15,6 +15,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
+  const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0);
   
   // Animation for ready button
   const buttonShakeAnim = React.useRef(new Animated.Value(0)).current;
@@ -580,6 +581,87 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     );
   };
 
+  const renderProfessionalCard = ({ item: professional }: { item: Professional }) => {
+    const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
+    
+    // More intelligent selection logic that considers actual service requirements
+    const actualOptimalNeeded = calculateOptimalProfessionalsNeeded(selectedServices, availableProfessionals);
+    const effectiveLimit = Math.max(professionalsRequested, actualOptimalNeeded);
+    const canSelect = !isSelected && getSelectedCount() < effectiveLimit;
+    
+    const isOnlyOption = availableProfessionals.length === 1;
+    const isDisabled = !isSelected && !canSelect;
+    
+    const imageError = imageErrors[professional.id] || false;
+    const photoPath = professional.photo_path;
+    const fullPhotoUrl = photoPath ? buildAssetUrl(photoPath) : null;
+    const hasValidPhoto = fullPhotoUrl && !imageError;
+    
+    return (
+      <View style={styles.professionalCard}>
+        <TouchableOpacity
+          style={[
+            styles.professionalCardContent,
+            isSelected && styles.professionalCardSelected,
+            isDisabled && styles.professionalCardDisabled,
+          ]}
+          onPress={() => !isOnlyOption && handleProfessionalSelect(professional)}
+          disabled={isDisabled || isOnlyOption}
+          activeOpacity={isOnlyOption ? 1 : 0.8}
+        >
+          {/* Professional Photo */}
+          <View style={[
+            styles.professionalCardAvatar,
+            isSelected && styles.professionalCardAvatarSelected,
+          ]}>
+            {hasValidPhoto ? (
+              <Image
+                source={{ uri: fullPhotoUrl }}
+                style={styles.professionalCardAvatarImage}
+                resizeMode="cover"
+                onError={() => handleImageError(professional.id)}
+                onLoad={() => handleImageLoad(professional.id)}
+              />
+            ) : (
+              <Text style={[
+                styles.professionalCardAvatarText,
+                isSelected && styles.professionalCardAvatarTextSelected,
+              ]}>
+                {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
+              </Text>
+            )}
+          </View>
+
+          {/* Professional Info */}
+          <View style={styles.professionalCardInfo}>
+            <Text style={[
+              styles.professionalCardName,
+              isSelected && styles.professionalCardNameSelected,
+              isDisabled && styles.professionalCardNameDisabled,
+            ]}>
+              {professional.full_name || professional.email}
+            </Text>
+            
+            <Text style={[
+              styles.professionalCardServices,
+              isSelected && styles.professionalCardServicesSelected,
+              isDisabled && styles.professionalCardServicesDisabled,
+            ]}>
+              {getFormattedServices(professional)}
+            </Text>
+          </View>
+
+          {/* Selection Indicator */}
+          {isSelected && (
+            <View style={styles.professionalCardSelectedIndicator}>
+              <Text style={styles.professionalCardSelectedIndicatorText}>✓</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const canContinue = canProceedToStep(3);
 
   const renderLoadingState = () => (
@@ -699,15 +781,42 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               
               <FlatList
                 data={availableProfessionals}
-                renderItem={renderProfessionalChip}
+                renderItem={renderProfessionalCard}
                 keyExtractor={(item: Professional) => item.id}
-                numColumns={1}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.professionalsContainer}
-                ItemSeparatorComponent={() => <View style={styles.professionalSeparator} />}
-                scrollEnabled={false}
-                nestedScrollEnabled={true}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.professionalsCarousel}
+                ItemSeparatorComponent={() => <View style={styles.carouselSeparator} />}
+                scrollEnabled={true}
+                pagingEnabled={false}
+                decelerationRate="fast"
+                snapToInterval={280} // Card width + separator
+                snapToAlignment="start"
+                contentInset={{ left: 16, right: 16 }}
+                contentInsetAdjustmentBehavior="automatic"
+                onScroll={(event) => {
+                  const contentOffsetX = event.nativeEvent.contentOffset.x;
+                  const cardWidth = 280; // Card width + separator
+                  const newIndex = Math.round(contentOffsetX / cardWidth);
+                  setCurrentCarouselIndex(Math.max(0, Math.min(newIndex, availableProfessionals.length - 1)));
+                }}
+                scrollEventThrottle={50}
               />
+              
+              {/* Pagination Dots */}
+              {availableProfessionals.length > 1 && (
+                <View style={styles.paginationContainer}>
+                  {availableProfessionals.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        currentCarouselIndex === index && styles.paginationDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
 
             {/* Sequence Selection Card - Show when multiple services AND multiple professionals available */}
@@ -1311,6 +1420,145 @@ const styles = StyleSheet.create({
   },
   professionalSeparator: {
     height: 12,
+  },
+  
+  // Carousel Styles
+  professionalsCarousel: {
+    paddingHorizontal: 0,
+    paddingVertical: 8,
+  },
+  carouselSeparator: {
+    width: 16,
+  },
+  professionalCard: {
+    width: 260,
+    marginVertical: 4,
+  },
+  professionalCardContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    minHeight: 140,
+  },
+  professionalCardSelected: {
+    borderColor: '#ec4899',
+    backgroundColor: '#fdf2f8',
+    shadowColor: '#ec4899',
+    shadowOpacity: 0.2,
+  },
+  professionalCardDisabled: {
+    opacity: 0.4,
+    backgroundColor: '#f9fafb',
+  },
+  professionalCardAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
+  professionalCardAvatarSelected: {
+    backgroundColor: '#ec4899',
+  },
+  professionalCardAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  professionalCardAvatarText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#6b7280',
+  },
+  professionalCardAvatarTextSelected: {
+    color: 'white',
+  },
+  professionalCardInfo: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  professionalCardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  professionalCardNameSelected: {
+    color: '#be185d',
+  },
+  professionalCardNameDisabled: {
+    color: '#9ca3af',
+  },
+  professionalCardServices: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  professionalCardServicesSelected: {
+    color: '#be185d',
+  },
+  professionalCardServicesDisabled: {
+    color: '#9ca3af',
+  },
+  professionalCardSelectedIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ec4899',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  professionalCardSelectedIndicatorText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'white',
+  },
+  
+  // Pagination Styles
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#d1d5db',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: '#ec4899',
+    width: 24,
+    borderRadius: 12,
   },
   bannerContent: {
     flexDirection: 'row',
