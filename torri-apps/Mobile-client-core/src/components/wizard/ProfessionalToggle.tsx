@@ -25,11 +25,6 @@ export const ProfessionalToggle: React.FC<ProfessionalToggleProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Quantos profissionais?</Text>
-      <Text style={styles.subtitle}>
-        Escolha 2 profissionais para reduzir o tempo total quando possível
-      </Text>
-      
       <View style={styles.toggleContainer}>
         {options.map((option) => {
           const isSelected = value === option.value;

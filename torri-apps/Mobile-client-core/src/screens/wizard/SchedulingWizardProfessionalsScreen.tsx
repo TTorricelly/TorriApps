@@ -660,7 +660,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             
             <View style={styles.modalBody}>
               <Text style={styles.modalDescription}>
-                Quantos profissionais você gostaria para realizar os serviços?
+                no você gostaria para realizar os serviços?
               </Text>
               
               <ProfessionalToggle
