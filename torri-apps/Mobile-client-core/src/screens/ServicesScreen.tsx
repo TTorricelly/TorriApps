@@ -20,6 +20,9 @@ interface Service {
   image_ondulado?: string;
   image_cacheado?: string;
   image_crespo?: string;
+  // Parallel service execution fields
+  parallelable?: boolean;
+  max_parallel_pros?: number;
 }
 
 interface HomeScreenRef {
@@ -492,8 +495,8 @@ const ServicesScreen = ({ navigation, homeScreenRef }: { navigation?: any; homeS
                       name: service.name,
                       duration_minutes: service.duration_minutes,
                       price: parseFloat(service.price),
-                      parallelable: true, // Assume all services can be parallelized for now
-                      max_parallel_pros: 2, // Default max parallel professionals
+                      parallelable: service.parallelable ?? false, // Use database value or default to false
+                      max_parallel_pros: service.max_parallel_pros ?? 1, // Use database value or default to 1
                     }));
                     
                     navigation?.navigate('SchedulingWizard', {

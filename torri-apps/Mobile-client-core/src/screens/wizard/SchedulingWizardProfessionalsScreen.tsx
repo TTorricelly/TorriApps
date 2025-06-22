@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { WizardHeader, WizardContainer, ProfessionalToggle } from '../../components/wizard';
+import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
@@ -341,14 +341,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return formatDuration(totalMinutes);
   };
 
-  const getSuggestionText = (): string => {
-    const timeText = getEstimatedTimeText();
-    return `Sugerimos: ${professionalsRequested} profissional${professionalsRequested > 1 ? 'is' : ''} | Tempo estimado: ${timeText}`;
-  };
-
-  const getChooseButtonText = (): string => {
-    return `escolher ${professionalsRequested === 1 ? '2+' : '1'}`;
-  };
 
   const handleOpenProfessionalCountModal = () => {
     setShowProfessionalCountModal(true);
@@ -521,11 +513,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             >
 
               {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available AND parallel execution is possible */}
-            {(() => {
-              console.log('Debug - Current selectedServices:', selectedServices.length, selectedServices.map(s => s.name));
-              const showCard = availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1;
-              return showCard;
-            })() && (
+            {availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1 && (
               <TouchableOpacity 
                 style={styles.sequenceCard}
                 onPress={handleOpenProfessionalCountModal}
