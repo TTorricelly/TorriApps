@@ -482,9 +482,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       ? getStateForMultiProfessionalSequence(professional, currentSelected, professionalServices)
       : getStateForSingleOrDualSequence(professional, currentSelected, professionalServices);
     
-    // Debug logging
-    console.log(`[Algorithm] ${professional.full_name || professional.id}: ${state} (sequence=${professionalsRequested}, selected=${currentSelected.filter(p => p !== null).length})`);
-    
     return state;
   };
   
@@ -492,7 +489,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const getStateForMultiProfessionalSequence = (
     professional: Professional,
     currentSelected: (Professional | null)[],
-    professionalServices: Service[]
+    _professionalServices: Service[]
   ): ProfessionalState => {
     const selectedCount = currentSelected.filter(prof => prof !== null).length;
     const servicesCount = selectedServices.length;
@@ -523,7 +520,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const getStateForSingleOrDualSequence = (
     professional: Professional,
     currentSelected: (Professional | null)[],
-    professionalServices: Service[]
+    _professionalServices: Service[]
   ): ProfessionalState => {
     const uncoveredServices = selectedServices.filter((service: Service) => {
       return !currentSelected.some((selectedProf: Professional | null) => 
@@ -562,7 +559,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     if (uncoveredServices.length === 0) return [];
     
     // Greedy algorithm: find professionals that cover most uncovered services
-    const professionalScores = availableProfessionals.map(professional => {
+    const professionalScores = availableProfessionals.map((professional: Professional) => {
       const coverageCount = uncoveredServices.filter((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
       ).length;
@@ -574,10 +571,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     });
     
     // Return professionals with highest coverage scores
-    const maxScore = Math.max(...professionalScores.map(p => p.score));
+    const maxScore = Math.max(...professionalScores.map((p: any) => p.score));
     return professionalScores
-      .filter(p => p.score === maxScore && p.score > 0)
-      .map(p => p.professionalId);
+      .filter((p: any) => p.score === maxScore && p.score > 0)
+      .map((p: any) => p.professionalId);
   };
   
   // Get uncovered services for assignment algorithm
@@ -816,14 +813,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     const isOnlyOption = availableProfessionals.length === 1;
     
-    // Smart selection analysis
-    const wouldCreateRedundancy = !isSelected && checkIfSelectionCreatesRedundancy(professional, selectedProfessionals);
-    const isOptimal = !isSelected && isOptimalSelection(professional, selectedProfessionals);
-    const shouldShowWarning = wouldCreateRedundancy; // Simplified: if redundant, show warning
-    // For sequence = 3+, use different highlighting logic
-    const shouldHighlight = professionalsRequested >= 3 
-      ? isOptimal  // For sequence = 3+, highlight based on our improved isOptimal logic
-      : isOptimal && getUncoveredServices().length > 0; // For sequence = 1-2, use old logic
+    // Use algorithmic approach for professional state
+    const professionalState = !isSelected ? getProfessionalState(professional, selectedProfessionals) : 'SELECTED';
+    const shouldShowWarning = professionalState === 'REDUNDANT';
+    const shouldHighlight = professionalState === 'OPTIMAL';
     
     const isDisabled = !isSelected && (!canSelect || shouldShowWarning);
     
