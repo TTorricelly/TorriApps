@@ -148,24 +148,20 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         console.log('=====================================');
         
         if (autoSelectedProfessionals.length > 0) {
-          // If we need more professionals than currently requested, auto-update the count
+          // Always set to optimal count for consistency across dates
           const requiredCount = Math.max(autoSelectedProfessionals.length, optimalProfessionalsNeeded);
-          if (requiredCount > professionalsRequested) {
-            setProfessionalsRequested(requiredCount);
-          }
+          setProfessionalsRequested(requiredCount);
           
           // Fill remaining slots with null to maintain array structure
           const selectedArray = [...autoSelectedProfessionals];
-          const finalCount = Math.max(professionalsRequested, requiredCount);
-          while (selectedArray.length < finalCount) {
+          while (selectedArray.length < requiredCount) {
             selectedArray.push(null);
           }
           setSelectedProfessionals(selectedArray);
         } else {
-          // No auto-selected professionals, but still check if we need more than 1
-          if (optimalProfessionalsNeeded > professionalsRequested) {
-            setProfessionalsRequested(optimalProfessionalsNeeded);
-          }
+          // No auto-selected professionals, but still update to optimal count
+          // Always set to optimal to ensure consistency across dates
+          setProfessionalsRequested(optimalProfessionalsNeeded);
           // Reset selected professionals when available professionals change
           setSelectedProfessionals([]);
         }
