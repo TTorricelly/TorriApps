@@ -48,7 +48,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   // Auto-hide success message after 3 seconds
   useEffect(() => {
-    if (hasCompleteServiceCoverage() && getSelectedCount() > 0) {
+    if (isValidSelection()) {
       setShowSuccessMessage(true);
       const timer = setTimeout(() => {
         setShowSuccessMessage(false);
@@ -325,6 +325,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return selectedServices.every((service: Service) => isServiceCovered(service));
   };
 
+  const isValidSelection = (): boolean => {
+    const hasServiceCoverage = hasCompleteServiceCoverage();
+    const hasRequiredProfessionals = getSelectedCount() === professionalsRequested;
+    return hasServiceCoverage && hasRequiredProfessionals;
+  };
+
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
@@ -560,26 +566,33 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           </TouchableOpacity>
           
           {/* Modern Overlay Snackbars */}
-          {(!hasCompleteServiceCoverage() || getSelectedCount() === 0) && (
+          {!isValidSelection() && (
             <View style={[styles.snackbarOverlay, styles.snackbarWarning]}>
               <View style={styles.snackbarIconContainer}>
                 <Text style={styles.snackbarIcon}>⚠️</Text>
               </View>
               <View style={styles.snackbarContent}>
                 <Text style={styles.snackbarTitle}>
-                  {getSelectedCount() === 0 ? 'Seleção necessária' : 'Serviços pendentes'}
+                  {getSelectedCount() === 0 
+                    ? 'Seleção necessária' 
+                    : getSelectedCount() < professionalsRequested
+                      ? 'Profissionais insuficientes'
+                      : 'Serviços pendentes'
+                  }
                 </Text>
                 <Text style={styles.snackbarMessage}>
                   {getSelectedCount() === 0 
                     ? 'Escolha pelo menos um profissional'
-                    : getUncoveredServices().join(', ')
+                    : getSelectedCount() < professionalsRequested
+                      ? `Selecione ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} adicional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''}`
+                      : getUncoveredServices().join(', ')
                   }
                 </Text>
               </View>
             </View>
           )}
           
-          {showSuccessMessage && hasCompleteServiceCoverage() && getSelectedCount() > 0 && (
+          {showSuccessMessage && isValidSelection() && (
             <View style={[styles.snackbarOverlay, styles.snackbarSuccess]}>
               <View style={styles.snackbarIconContainer}>
                 <Text style={styles.snackbarIcon}>✓</Text>
@@ -587,7 +600,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               <View style={styles.snackbarContent}>
                 <Text style={styles.snackbarTitle}>Tudo pronto!</Text>
                 <Text style={styles.snackbarMessage}>
-                  Todos os serviços estão cobertos
+                  {professionalsRequested === 1 
+                    ? 'Profissional selecionado e serviços cobertos'
+                    : `${professionalsRequested} profissionais selecionados e serviços cobertos`
+                  }
                 </Text>
               </View>
             </View>
