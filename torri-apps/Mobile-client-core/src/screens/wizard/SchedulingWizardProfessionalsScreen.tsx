@@ -450,127 +450,160 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
-  // Smart Professional Selection Helper Functions
+  // ==========================================
+  // ALGORITHMIC PROFESSIONAL SELECTION LOGIC
+  // ==========================================
+  
+  // Professional state types
+  type ProfessionalState = 'SELECTED' | 'OPTIMAL' | 'AVAILABLE' | 'REDUNDANT' | 'DISABLED';
+  
   // Note: services_offered is typed as Service[] but actually contains string IDs (API inconsistency)
-  const checkIfSelectionCreatesRedundancy = (
-    professional: Professional, 
+  
+  // Core algorithm to determine professional state
+  const getProfessionalState = (
+    professional: Professional,
     currentSelected: (Professional | null)[]
-  ): boolean => {
-    if (!professional.services_offered) return false;
+  ): ProfessionalState => {
+    // Check if already selected
+    const isSelected = currentSelected.some((prof: Professional | null) => prof?.id === professional.id);
+    if (isSelected) return 'SELECTED';
     
-    // For sequences = 3+, apply refined redundancy logic
-    // In 3+ sequences, each professional typically handles 1 service
-    if (professionalsRequested >= 3) {
-      // Check if this professional only offers services that are already covered
-      // AND there are still services that need coverage
-      
-      // Find which services this professional can provide
-      const professionalServices = selectedServices.filter((service: Service) => 
-        (professional.services_offered as any)?.includes(service.id)
-      );
-      
-      if (professionalServices.length === 0) return false; // Professional can't help with any selected services
-      
-      // For sequence = 3+, we assume each professional handles only 1 service
-      // So we need to consider how many professionals vs how many services
-      const selectedCount = currentSelected.filter(prof => prof !== null).length;
-      
-      // If we have fewer professionals than services, we still need more professionals
-      // regardless of their service capabilities
-      if (selectedCount < selectedServices.length) {
-        return false; // Don't mark anyone as redundant until we have enough professionals
-      }
-      
-      // Only after we have enough professionals, check for true redundancy
-      const servicesNeedingCoverage = selectedServices.filter((service: Service) => {
-        return !currentSelected.some((selectedProf: Professional | null) => 
-          selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
-        );
-      });
-      
-      // Check if this professional can help with services that need coverage
-      const canHelpWithNeededServices = servicesNeedingCoverage.some((service: Service) => 
-        (professional.services_offered as any)?.includes(service.id)
-      );
-      
-      // Professional is redundant if:
-      // 1. They can't help with any services that need coverage
-      // 2. AND there are still services that need coverage
-      // 3. AND all their services are already covered by selected professionals
-      if (!canHelpWithNeededServices && servicesNeedingCoverage.length > 0) {
-        const allTheirServicesCovered = professionalServices.every((service: Service) => {
-          return currentSelected.some((selectedProf: Professional | null) => 
-            selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
-          );
-        });
-        
-        return allTheirServicesCovered;
-      }
-      
-      return false;
-    }
+    // Check if professional can help with any selected services
+    if (!professional.services_offered) return 'DISABLED';
     
-    // For sequences = 1 or 2, apply stricter redundancy logic
     const professionalServices = selectedServices.filter((service: Service) => 
       (professional.services_offered as any)?.includes(service.id)
     );
     
-    const alreadyCoveredServices = professionalServices.filter((service: Service) => {
-      return currentSelected.some((selectedProf: Professional | null) => 
+    if (professionalServices.length === 0) return 'DISABLED';
+    
+    // Apply algorithm based on sequence type
+    const state = professionalsRequested >= 3 
+      ? getStateForMultiProfessionalSequence(professional, currentSelected, professionalServices)
+      : getStateForSingleOrDualSequence(professional, currentSelected, professionalServices);
+    
+    // Debug logging
+    console.log(`[Algorithm] ${professional.full_name || professional.id}: ${state} (sequence=${professionalsRequested}, selected=${currentSelected.filter(p => p !== null).length})`);
+    
+    return state;
+  };
+  
+  // Algorithm for sequence = 3+ (Assignment Problem approach)
+  const getStateForMultiProfessionalSequence = (
+    professional: Professional,
+    currentSelected: (Professional | null)[],
+    professionalServices: Service[]
+  ): ProfessionalState => {
+    const selectedCount = currentSelected.filter(prof => prof !== null).length;
+    const servicesCount = selectedServices.length;
+    
+    // Phase 1: Until we have enough professionals, prioritize based on coverage
+    if (selectedCount < servicesCount) {
+      const optimalChoices = getOptimalChoicesForAssignment(currentSelected);
+      return optimalChoices.includes(professional.id) ? 'OPTIMAL' : 'AVAILABLE';
+    }
+    
+    // Phase 2: After enough professionals, check for redundancy
+    const uncoveredServices = getUncoveredServicesForAssignment(currentSelected);
+    
+    if (uncoveredServices.length === 0) {
+      // All services covered, additional professionals are available but not optimal
+      return 'AVAILABLE';
+    }
+    
+    // Check if this professional can help with uncovered services
+    const canHelpWithUncovered = uncoveredServices.some((service: Service) => 
+      (professional.services_offered as any)?.includes(service.id)
+    );
+    
+    return canHelpWithUncovered ? 'OPTIMAL' : 'REDUNDANT';
+  };
+  
+  // Algorithm for sequence = 1-2 (Set Cover approach)
+  const getStateForSingleOrDualSequence = (
+    professional: Professional,
+    currentSelected: (Professional | null)[],
+    professionalServices: Service[]
+  ): ProfessionalState => {
+    const uncoveredServices = selectedServices.filter((service: Service) => {
+      return !currentSelected.some((selectedProf: Professional | null) => 
         selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
       );
     });
     
-    return alreadyCoveredServices.length === professionalServices.length && professionalServices.length > 0;
+    if (uncoveredServices.length === 0) {
+      // All services covered
+      return 'AVAILABLE';
+    }
+    
+    // Check if this professional can help with uncovered services
+    const canHelpWithUncovered = uncoveredServices.some((service: Service) => 
+      (professional.services_offered as any)?.includes(service.id)
+    );
+    
+    if (canHelpWithUncovered) {
+      // Calculate coverage score for optimization
+      const coverageScore = uncoveredServices.filter((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      ).length;
+      
+      // Higher coverage score = more optimal
+      return coverageScore > 0 ? 'OPTIMAL' : 'AVAILABLE';
+    }
+    
+    // Can only provide already covered services
+    return 'REDUNDANT';
+  };
+  
+  // Get optimal professional choices using assignment problem logic
+  const getOptimalChoicesForAssignment = (currentSelected: (Professional | null)[]): string[] => {
+    const uncoveredServices = getUncoveredServicesForAssignment(currentSelected);
+    
+    if (uncoveredServices.length === 0) return [];
+    
+    // Greedy algorithm: find professionals that cover most uncovered services
+    const professionalScores = availableProfessionals.map(professional => {
+      const coverageCount = uncoveredServices.filter((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      ).length;
+      
+      return {
+        professionalId: professional.id,
+        score: coverageCount
+      };
+    });
+    
+    // Return professionals with highest coverage scores
+    const maxScore = Math.max(...professionalScores.map(p => p.score));
+    return professionalScores
+      .filter(p => p.score === maxScore && p.score > 0)
+      .map(p => p.professionalId);
+  };
+  
+  // Get uncovered services for assignment algorithm
+  const getUncoveredServicesForAssignment = (currentSelected: (Professional | null)[]): Service[] => {
+    return selectedServices.filter((service: Service) => {
+      return !currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
+      );
+    });
+  };
+  
+  // Legacy compatibility functions (now using algorithmic approach)
+  const checkIfSelectionCreatesRedundancy = (
+    professional: Professional, 
+    currentSelected: (Professional | null)[]
+  ): boolean => {
+    const state = getProfessionalState(professional, currentSelected);
+    return state === 'REDUNDANT';
   };
 
   const isOptimalSelection = (
     professional: Professional, 
     currentSelected: (Professional | null)[]
   ): boolean => {
-    if (!professional.services_offered) return false;
-    
-    // For 3+ professional sequences, highlight professionals who can help with services
-    // In sequence = 3, each professional typically handles 1 service, so we need different logic
-    if (professionalsRequested >= 3) {
-      // In sequence = 3, we assume each selected professional will handle 1 service
-      // So we need to count selected professionals vs number of services
-      
-      const selectedCount = currentSelected.filter(prof => prof !== null).length;
-      const servicesCount = selectedServices.length;
-      
-      // If we have fewer professionals than services, highlight professionals 
-      // who can help with any of the services
-      if (selectedCount < servicesCount) {
-        const canHelpWithAnyService = selectedServices.some((service: Service) => 
-          (professional.services_offered as any)?.includes(service.id)
-        );
-        return canHelpWithAnyService;
-      }
-      
-      // If we have equal or more professionals than services, 
-      // still highlight if this professional offers coverage for our services
-      const professionalServices = selectedServices.filter((service: Service) => 
-        (professional.services_offered as any)?.includes(service.id)
-      );
-      
-      return professionalServices.length > 0;
-    }
-    
-    // For 1-2 professional sequences, prioritize covering uncovered services
-    const uncoveredServices = selectedServices.filter((service: Service) => {
-      const isCovered = currentSelected.some((selectedProf: Professional | null) => 
-        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
-      );
-      return !isCovered;
-    });
-    
-    // Check if this professional can cover any uncovered services
-    const coversUncoveredServices = uncoveredServices.some((service: Service) => 
-      (professional.services_offered as any)?.includes(service.id)
-    );
-    
-    return coversUncoveredServices;
+    const state = getProfessionalState(professional, currentSelected);
+    return state === 'OPTIMAL';
   };
 
   const getBetterAlternatives = (
