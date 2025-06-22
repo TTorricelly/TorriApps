@@ -309,20 +309,25 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const calculateMinimumProfessionalsNeeded = (services: Service[], professionals: Professional[]): number => {
     if (services.length === 0 || professionals.length === 0) return 1;
     
+    console.log(`Calculating minimum professionals for ${services.length} services and ${professionals.length} professionals`);
+    
     // For each service, count how many professionals can provide it
     const serviceProviderCounts = services.map((service: Service) => {
       const providersCount = professionals.filter((prof: Professional) => 
         prof.services_offered?.includes(service.id)
       ).length;
+      console.log(`Service ${service.name} (${service.id}) can be provided by ${providersCount} professionals`);
       return { service: service.id, providers: providersCount };
     });
     
     // Count how many services have only 1 provider (exclusive services)
     const exclusiveServicesCount = serviceProviderCounts.filter(s => s.providers === 1).length;
+    console.log(`Found ${exclusiveServicesCount} exclusive services (services with only 1 provider)`);
     
     // If we have exclusive services, we need at least that many professionals
     // For non-exclusive services, one professional might be able to handle multiple
     const minNeeded = Math.max(1, exclusiveServicesCount);
+    console.log(`Minimum professionals needed: ${minNeeded}`);
     
     return Math.min(minNeeded, professionals.length); // Don't exceed available professionals
   };
