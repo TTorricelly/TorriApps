@@ -346,15 +346,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const isValidSelection = (): boolean => {
     const hasServiceCoverage = hasCompleteServiceCoverage();
-    const selectedCount = getSelectedCount();
-    
-    // Valid if:
-    // 1. All services are covered
-    // 2. We have at least the minimum required professionals
-    // 3. We don't exceed the maximum allowed professionals
-    const maxAllowedPros = Math.min(maxParallelPros || 2, availableProfessionals.length);
-    const hasRequiredProfessionals = selectedCount >= professionalsRequested && selectedCount <= maxAllowedPros;
-    
+    const hasRequiredProfessionals = getSelectedCount() === professionalsRequested;
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
@@ -375,16 +367,15 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     
-    // More intelligent selection logic:
-    // - Always allow selection if not at max capacity (maxParallelPros or total available)
-    // - Allow deselection if selected
-    // - Consider if this professional has exclusive services
-    const hasExclusiveService = getExclusiveServices(professional).length > 0;
-    const maxAllowedPros = Math.min(maxParallelPros || 2, availableProfessionals.length);
-    const canSelect = !isSelected && (getSelectedCount() < maxAllowedPros || hasExclusiveService);
+    // Simplified logic: Allow selection up to professionalsRequested count
+    // This ensures that when user sets to 2 pros, they can select 2 professionals
+    const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
     
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
+    
+    // Debug logging to understand what's happening
+    console.log(`Professional ${professional.full_name}: isSelected=${isSelected}, getSelectedCount()=${getSelectedCount()}, professionalsRequested=${professionalsRequested}, canSelect=${canSelect}, isDisabled=${isDisabled}`);
     const imageError = imageErrors[professional.id] || false;
     
     // Process photo URL using best practices - API returns photo_path, not photo_url
