@@ -135,11 +135,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         
         // Calculate minimum professionals needed based on service coverage
         const minProfessionalsNeeded = calculateMinimumProfessionalsNeeded(selectedServices, professionals);
+        console.log(`minProfessionalsNeeded: ${minProfessionalsNeeded}, current professionalsRequested: ${professionalsRequested}`);
         
         if (autoSelectedProfessionals.length > 0) {
           // If we need more professionals than currently requested, auto-update the count
           const requiredCount = Math.max(autoSelectedProfessionals.length, minProfessionalsNeeded);
           if (requiredCount > professionalsRequested) {
+            console.log(`Updating professionalsRequested from ${professionalsRequested} to ${requiredCount}`);
             setProfessionalsRequested(requiredCount);
           }
           
@@ -153,6 +155,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         } else {
           // No auto-selected professionals, but still check if we need more than 1
           if (minProfessionalsNeeded > professionalsRequested) {
+            console.log(`No auto-selected pros: Updating professionalsRequested from ${professionalsRequested} to ${minProfessionalsNeeded}`);
             setProfessionalsRequested(minProfessionalsNeeded);
           }
           // Reset selected professionals when available professionals change
