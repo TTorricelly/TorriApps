@@ -866,12 +866,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           activeOpacity={isOnlyOption ? 1 : 0.8}
         >
           
-          {/* Warning Indicator */}
-          {shouldShowWarning && (
-            <View style={styles.warningIndicator}>
-              <Text style={styles.warningIndicatorText}>⚠️</Text>
-            </View>
-          )}
           {/* Professional Photo */}
           <View style={[
             styles.professionalCardAvatar,
@@ -1715,10 +1709,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
   },
   professionalCardWarning: {
-    borderColor: '#f59e0b',
-    backgroundColor: '#fefce8',
-    shadowColor: '#f59e0b',
-    shadowOpacity: 0.2,
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
+    shadowColor: '#9ca3af',
+    shadowOpacity: 0.1,
   },
   professionalCardAvatar: {
     width: 40,
