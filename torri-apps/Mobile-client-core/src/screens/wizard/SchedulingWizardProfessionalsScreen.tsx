@@ -308,28 +308,31 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const calculateMinimumProfessionalsNeeded = (services: Service[], professionals: Professional[]): number => {
     if (services.length === 0 || professionals.length === 0) return 1;
+    if (services.length === 1) return 1; // Single service always needs 1 professional
     
     console.log(`Calculating minimum professionals for ${services.length} services and ${professionals.length} professionals`);
     
-    // For each service, count how many professionals can provide it
-    const serviceProviderCounts = services.map((service: Service) => {
-      const providersCount = professionals.filter((prof: Professional) => 
+    // Check if any single professional can handle ALL services
+    const professionalsWhoCanHandleAll = professionals.filter((prof: Professional) => {
+      const canHandleAll = services.every((service: Service) => 
         prof.services_offered?.includes(service.id)
-      ).length;
-      console.log(`Service ${service.name} (${service.id}) can be provided by ${providersCount} professionals`);
-      return { service: service.id, providers: providersCount };
+      );
+      if (canHandleAll) {
+        console.log(`Professional ${prof.full_name} can handle all services`);
+      }
+      return canHandleAll;
     });
     
-    // Count how many services have only 1 provider (exclusive services)
-    const exclusiveServicesCount = serviceProviderCounts.filter(s => s.providers === 1).length;
-    console.log(`Found ${exclusiveServicesCount} exclusive services (services with only 1 provider)`);
+    // If at least one professional can handle all services, we only need 1
+    if (professionalsWhoCanHandleAll.length > 0) {
+      console.log(`Found ${professionalsWhoCanHandleAll.length} professionals who can handle all services - minimum needed: 1`);
+      return 1;
+    }
     
-    // If we have exclusive services, we need at least that many professionals
-    // For non-exclusive services, one professional might be able to handle multiple
-    const minNeeded = Math.max(1, exclusiveServicesCount);
-    console.log(`Minimum professionals needed: ${minNeeded}`);
-    
-    return Math.min(minNeeded, professionals.length); // Don't exceed available professionals
+    // If no single professional can handle all services, we need multiple
+    // For now, assume we need at least 2 for multiple services when no one can do all
+    console.log(`No single professional can handle all services - minimum needed: 2`);
+    return Math.min(2, professionals.length);
   };
 
   const getExclusiveServices = (professional: Professional): string[] => {
