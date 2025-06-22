@@ -84,12 +84,8 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
 
   // Helper function to format time for grid display
   const formatTimeForGrid = (timeString: string) => {
-    const date = new Date(timeString);
-    return date.toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
+    // Extract time from "HH:MM:SS" or "HH:MM" format
+    return timeString.substring(0, 5);
   };
 
   // Progressive loading functions
@@ -143,7 +139,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   };
 
   // Time grid item for single service bookings
-  const renderTimeGridItem = (slot: any, index: number) => {
+  const renderTimeGridItem = (slot: any) => {
     const isSelected = selectedSlot?.id === slot.id;
     const isUnavailable = slot.status === 'unavailable'; // Assuming unavailable slots are marked
     
@@ -264,7 +260,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
       </View>
       
       <View style={styles.timeGrid}>
-        {currentSlots.map((slot, index) => renderTimeGridItem(slot, index))}
+        {currentSlots.map((slot) => renderTimeGridItem(slot))}
       </View>
 
       {/* Show more button for grid */}
