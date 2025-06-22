@@ -844,7 +844,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // Use algorithmic approach for professional state
     const professionalState = !isSelected ? getProfessionalState(professional, selectedProfessionals) : 'SELECTED';
     const shouldShowWarning = professionalState === 'REDUNDANT';
-    const shouldHighlight = professionalState === 'OPTIMAL';
     
     const isDisabled = !isSelected && (!canSelect || shouldShowWarning);
     
@@ -860,19 +859,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             styles.professionalCardContent,
             isSelected && styles.professionalCardSelected,
             isDisabled && styles.professionalCardDisabled,
-            shouldHighlight && styles.professionalCardOptimal,
             shouldShowWarning && styles.professionalCardWarning,
           ]}
           onPress={() => !isOnlyOption && handleProfessionalSelect(professional)}
           disabled={isDisabled || isOnlyOption}
           activeOpacity={isOnlyOption ? 1 : 0.8}
         >
-          {/* Optimal Selection Indicator */}
-          {shouldHighlight && (
-            <View style={styles.optimalIndicator}>
-              <Text style={styles.optimalIndicatorText}>⭐</Text>
-            </View>
-          )}
           
           {/* Warning Indicator */}
           {shouldShowWarning && (
