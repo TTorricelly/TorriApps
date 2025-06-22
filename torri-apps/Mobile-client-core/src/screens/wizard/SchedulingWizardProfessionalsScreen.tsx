@@ -261,59 +261,15 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const calculateIntelligentEstimatedTime = (): number => {
     if (selectedServices.length === 0) return 0;
     
-    // Use the intended number of professionals for time estimation
-    const effectiveProfessionals = professionalsRequested;
-    
-    // Scenario 1: Only 1 professional - everything must be sequential
-    if (effectiveProfessionals === 1) {
-      return selectedServices.reduce((total: number, service: Service) => {
-        return total + service.duration_minutes;
-      }, 0);
+    // HARDCODED TEST: If more than 1 professional, return 99 minutes to test if this function is being used
+    if (professionalsRequested > 1) {
+      return 99; // This should show up immediately in the UI if our function is working
     }
     
-    // Scenario 2 & 3: Multiple professionals - consider parallelability
-    const parallelableServices = selectedServices.filter((service: Service) => service.parallelable);
-    const sequentialServices = selectedServices.filter((service: Service) => !service.parallelable);
-    
-    // If no services are marked as parallelable, treat all as parallelable for multi-professional scenarios
-    // This is a fallback in case the API doesn't provide parallelable info
-    const hasParallelableInfo = selectedServices.some(service => service.parallelable === true || service.parallelable === false);
-    if (!hasParallelableInfo && effectiveProfessionals > 1) {
-      // Treat all services as parallelable if no explicit parallelable info is provided
-      const allServicesAsParallelable = selectedServices;
-      const allParallelTime = effectiveProfessionals >= allServicesAsParallelable.length 
-        ? Math.max(...allServicesAsParallelable.map((service: Service) => service.duration_minutes))
-        : calculateOptimalParallelTime(allServicesAsParallelable, effectiveProfessionals);
-      
-      return allParallelTime;
-    }
-    
-    let totalTime = 0;
-    
-    // Sequential services always add to total time (cannot be parallelized)
-    const sequentialTime = sequentialServices.reduce((total: number, service: Service) => {
+    // Otherwise, sum all durations (sequential)
+    return selectedServices.reduce((total: number, service: Service) => {
       return total + service.duration_minutes;
     }, 0);
-    
-    // For parallelable services, calculate based on professional availability
-    let parallelTime = 0;
-    if (parallelableServices.length > 0) {
-      if (effectiveProfessionals >= parallelableServices.length) {
-        // We have enough professionals to do all parallelable services simultaneously
-        // Time = longest parallelable service duration
-        parallelTime = Math.max(...parallelableServices.map((service: Service) => service.duration_minutes));
-      } else {
-        // Not enough professionals for full parallelization
-        // Group services optimally across available professionals
-        parallelTime = calculateOptimalParallelTime(parallelableServices, effectiveProfessionals);
-      }
-    }
-    
-    // Total time = sequential time + parallel time
-    // (assuming sequential services happen after parallel ones, or vice versa)
-    totalTime = sequentialTime + parallelTime;
-    
-    return totalTime;
   };
 
   const calculateOptimalParallelTime = (services: Service[], availableProfessionals: number): number => {
