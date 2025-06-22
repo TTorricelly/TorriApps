@@ -497,30 +497,38 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const selectedCount = currentSelected.filter(prof => prof !== null).length;
     const servicesCount = selectedServices.length;
     
-    // Phase 1: Until we have enough professionals, highlight all who can help
-    if (selectedCount < servicesCount) {
+    // Check if any services are already covered (this determines if we're in Phase 2)
+    const coveredServices = selectedServices.filter((service: Service) => 
+      currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
+      )
+    );
+    const hasAnyCoverage = coveredServices.length > 0;
+    
+    // Phase 1: Until we have any coverage, highlight all who can help
+    if (selectedCount === 0 || !hasAnyCoverage) {
       // In sequence=3, initially highlight anyone who can provide any service
       const canProvideAnyService = selectedServices.some((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
       );
-      console.log(`Phase 1 - ${professional.full_name}: selectedCount=${selectedCount}, servicesCount=${servicesCount}, canProvideAnyService=${canProvideAnyService}`);
+      console.log(`Phase 1 - ${professional.full_name}: selectedCount=${selectedCount}, servicesCount=${servicesCount}, hasAnyCoverage=${hasAnyCoverage}, canProvideAnyService=${canProvideAnyService}`);
       return canProvideAnyService ? 'OPTIMAL' : 'AVAILABLE';
     }
     
-    // Phase 2: After enough professionals selected, check for redundancy
+    // Phase 2: We have some coverage, now check for redundancy  
     const uncoveredServices = getUncoveredServicesForAssignment(currentSelected);
-    const coveredServices = selectedServices.filter((service: Service) => !uncoveredServices.includes(service));
+    const alreadyCoveredServices = selectedServices.filter((service: Service) => !uncoveredServices.includes(service));
     
     // Get services this professional can provide
     const professionalServices = selectedServices.filter((service: Service) => 
       (professional.services_offered as any)?.includes(service.id)
     );
     
-    console.log(`Phase 2 - ${professional.full_name}: uncovered=[${uncoveredServices.map(s => s.name).join(', ')}], covered=[${coveredServices.map(s => s.name).join(', ')}], profServices=[${professionalServices.map(s => s.name).join(', ')}]`);
+    console.log(`Phase 2 - ${professional.full_name}: uncovered=[${uncoveredServices.map((s: Service) => s.name).join(', ')}], covered=[${alreadyCoveredServices.map((s: Service) => s.name).join(', ')}], profServices=[${professionalServices.map((s: Service) => s.name).join(', ')}]`);
     
     // Check if professional can ONLY provide already-covered services
     const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
-      professionalServices.every((service: Service) => coveredServices.includes(service));
+      professionalServices.every((service: Service) => alreadyCoveredServices.includes(service));
     
     console.log(`Phase 2 - ${professional.full_name}: canOnlyProvideCoveredServices=${canOnlyProvideCoveredServices}`);
     
