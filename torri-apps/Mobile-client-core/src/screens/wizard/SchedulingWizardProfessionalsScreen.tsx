@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -15,6 +15,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
+  
+  // Animation for ready button
+  const buttonPulseAnim = React.useRef(new Animated.Value(1)).current;
   
   const {
     selectedServices,
@@ -59,6 +62,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       setShowSuccessMessage(false);
     }
   }, [selectedProfessionals, professionalsRequested]);
+
 
   const loadConfiguration = async () => {
     try {
@@ -436,6 +440,36 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
+  // Happy button animation when ready
+  React.useEffect(() => {
+    if (isValidSelection() && !showSuccessMessage) {
+      // Start the gentle pulsing animation when ready and success message is gone
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonPulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonPulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimation.start();
+      
+      return () => {
+        pulseAnimation.stop();
+        buttonPulseAnim.setValue(1);
+      };
+    } else {
+      // Reset animation when not ready
+      buttonPulseAnim.setValue(1);
+    }
+  }, [selectedProfessionals, professionalsRequested, showSuccessMessage]);
+
   const getEstimatedTimeText = (): string => {
     const totalMinutes = getTotalEstimatedTime();
     return formatDuration(totalMinutes);
@@ -714,21 +748,27 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       {/* Continue Button */}
       {!isLoading && !error && availableProfessionals.length > 0 && (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              !canContinue && styles.disabledButton,
-            ]}
-            onPress={handleContinue}
-            disabled={!canContinue}
+          <Animated.View
+            style={{
+              transform: [{ scale: buttonPulseAnim }],
+            }}
           >
-            <Text style={[
-              styles.continueButtonText,
-              !canContinue && styles.disabledButtonText,
-            ]}>
-              Ver Horários
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.continueButton,
+                !canContinue && styles.disabledButton,
+              ]}
+              onPress={handleContinue}
+              disabled={!canContinue}
+            >
+              <Text style={[
+                styles.continueButtonText,
+                !canContinue && styles.disabledButtonText,
+              ]}>
+                Ver Horários
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
           
           {/* Friendly Guide Messages */}
           {!isValidSelection() && (
