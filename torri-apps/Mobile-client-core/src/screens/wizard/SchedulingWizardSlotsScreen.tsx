@@ -66,7 +66,9 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
       });
 
       setAvailableSlots(slots);
-      setVisibleSlots(3); // Reset visible slots
+      // Reset local progressive loading state
+      setVisibleCount(8);
+      setShowAllSlots(false);
       
     } catch (error) {
       console.error('Error loading available slots:', error);
