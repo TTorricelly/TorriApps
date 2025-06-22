@@ -482,8 +482,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       ? getStateForMultiProfessionalSequence(professional, currentSelected, professionalServices)
       : getStateForSingleOrDualSequence(professional, currentSelected, professionalServices);
     
-    // Debug logging
-    console.log(`Professional ${professional.full_name}: State = ${state}, Services = ${professionalServices.map(s => s.name).join(', ')}, Selected Count = ${currentSelected.filter(p => p !== null).length}`);
     
     return state;
   };
@@ -511,7 +509,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const canProvideAnyService = selectedServices.some((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
       );
-      console.log(`Phase 1 - ${professional.full_name}: selectedCount=${selectedCount}, servicesCount=${servicesCount}, hasAnyCoverage=${hasAnyCoverage}, canProvideAnyService=${canProvideAnyService}`);
       return canProvideAnyService ? 'OPTIMAL' : 'AVAILABLE';
     }
     
@@ -524,8 +521,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
-    console.log(`Phase 2 - ${professional.full_name}: uncovered=[${uncoveredServices.map((s: Service) => s.name).join(', ')}], covered=[${alreadyCoveredServices.map((s: Service) => s.name).join(', ')}], profServices=[${professionalServices.map((s: Service) => s.name).join(', ')}]`);
-    
     // Check if professional can ONLY provide already-covered services
     const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
       professionalServices.every((service: Service) => alreadyCoveredServices.includes(service));
@@ -534,11 +529,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // AND they can only provide covered services
     const hasEnoughProfessionals = selectedCount >= professionalsRequested;
     
-    console.log(`Phase 2 - ${professional.full_name}: canOnlyProvideCoveredServices=${canOnlyProvideCoveredServices}, hasEnoughProfessionals=${hasEnoughProfessionals} (${selectedCount}/${professionalsRequested})`);
-    
     if (canOnlyProvideCoveredServices && hasEnoughProfessionals) {
       // Professional can only do services that are already covered AND we have enough professionals = REDUNDANT
-      console.log(`Phase 2 - ${professional.full_name}: REDUNDANT - can only provide covered services and we have enough professionals`);
       return 'REDUNDANT';
     }
     
@@ -546,11 +538,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       // All services covered, but check if we still need more professionals for the sequence
       if (selectedCount < professionalsRequested) {
         // Still need more professionals, so this one is available
-        console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered but need more professionals (${selectedCount}/${professionalsRequested})`);
         return 'AVAILABLE';
       } else {
         // Have enough professionals and all services covered
-        console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered and have enough professionals`);
         return 'AVAILABLE';
       }
     }
@@ -560,7 +550,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
-    console.log(`Phase 2 - ${professional.full_name}: ${canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE'} - canHelpWithUncovered=${canHelpWithUncovered}`);
     return canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE';
   };
   
