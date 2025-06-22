@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/wizard';
@@ -11,6 +11,11 @@ type SchedulingWizardSlotsScreenNavigationProp = WizardNavigationProp<'WizardSlo
 const SchedulingWizardSlotsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardSlotsScreenNavigationProp>();
   
+  // Local state for progressive loading
+  const [visibleCount, setVisibleCount] = useState(8); // Start with 8 slots (improved from 3)
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showAllSlots, setShowAllSlots] = useState(false);
+  
   const {
     selectedServices,
     selectedDate,
@@ -18,13 +23,10 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     selectedProfessionals,
     availableSlots,
     selectedSlot,
-    visibleSlots,
     isLoading,
     error,
     setAvailableSlots,
     setSelectedSlot,
-    setVisibleSlots,
-    showMoreSlots,
     setLoading,
     setError,
     clearError,
@@ -39,6 +41,9 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   useEffect(() => {
     setCurrentStep(3);
     loadAvailableSlots();
+    // Reset visible count when slots change
+    setVisibleCount(8);
+    setShowAllSlots(false);
   }, [selectedProfessionals]);
 
   const loadAvailableSlots = async () => {
@@ -75,8 +80,28 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     setSelectedSlot(slot);
   };
 
-  const handleShowMore = () => {
-    showMoreSlots();
+  // Progressive loading functions
+  const handleLoadMore = () => {
+    if (!isLoadingMore && visibleCount < availableSlots.length) {
+      setIsLoadingMore(true);
+      
+      // Simulate loading delay for better UX
+      setTimeout(() => {
+        setVisibleCount(prev => Math.min(prev + 6, availableSlots.length));
+        setIsLoadingMore(false);
+      }, 300);
+    }
+  };
+
+  const handleShowAllSlots = () => {
+    setShowAllSlots(true);
+    setVisibleCount(availableSlots.length);
+  };
+
+  const onEndReached = () => {
+    if (!showAllSlots) {
+      handleLoadMore();
+    }
   };
 
   const handleConfirm = () => {
@@ -92,11 +117,10 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   };
 
   const canConfirm = canProceedToStep(4);
-  const hasMoreSlots = visibleSlots < availableSlots.length;
+  const hasMoreSlots = visibleCount < availableSlots.length;
+  const currentSlots = showAllSlots ? availableSlots : availableSlots.slice(0, visibleCount);
 
-  const renderSlotItem = ({ item, index }: { item: any; index: number }) => {
-    if (index >= visibleSlots) return null;
-
+  const renderSlotItem = ({ item }: { item: any }) => {
     return (
       <ItineraryCard
         slot={item}
@@ -162,39 +186,59 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   const renderSlotsList = () => (
     <>
       <FlatList
-        data={availableSlots}
+        data={currentSlots}
         keyExtractor={(item) => item.id}
         renderItem={renderSlotItem}
         style={styles.slotsList}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.slotsListContent}
+        // Infinite scroll configuration
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.1}
         ListHeaderComponent={
           <View style={styles.slotsHeader}>
             <Text style={styles.slotsTitle}>
               Horários disponíveis ({availableSlots.length})
             </Text>
             <Text style={styles.slotsSubtitle}>
-              Selecione o horário que melhor se adequa à sua agenda
+              {showAllSlots 
+                ? "Todos os horários disponíveis"
+                : `Mostrando ${Math.min(visibleCount, availableSlots.length)} de ${availableSlots.length} horários`
+              }
             </Text>
           </View>
         }
         ListFooterComponent={
-          hasMoreSlots ? (
-            <TouchableOpacity
-              style={styles.showMoreButton}
-              onPress={handleShowMore}
-            >
-              <Text style={styles.showMoreText}>
-                Ver mais horários ({availableSlots.length - visibleSlots} restantes)
-              </Text>
-            </TouchableOpacity>
-          ) : availableSlots.length > 3 ? (
-            <View style={styles.allSlotsShown}>
-              <Text style={styles.allSlotsText}>
-                Todos os horários foram exibidos
-              </Text>
-            </View>
-          ) : null
+          <View style={styles.footerContainer}>
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <View style={styles.loadingMoreContainer}>
+                <ActivityIndicator size="small" color="#ec4899" />
+                <Text style={styles.loadingMoreText}>Carregando mais horários...</Text>
+              </View>
+            )}
+            
+            {/* Show all button */}
+            {hasMoreSlots && !isLoadingMore && !showAllSlots && (
+              <TouchableOpacity
+                style={styles.showAllButton}
+                onPress={handleShowAllSlots}
+              >
+                <Text style={styles.showAllText}>
+                  Ver todos os horários ({availableSlots.length - visibleCount} restantes)
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* All slots shown message */}
+            {showAllSlots && availableSlots.length > 8 && (
+              <View style={styles.allSlotsShown}>
+                <Text style={styles.allSlotsText}>
+                  ✓ Todos os horários foram exibidos
+                </Text>
+              </View>
+            )}
+          </View>
         }
       />
     </>
@@ -330,6 +374,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     fontStyle: 'italic',
+  },
+  footerContainer: {
+    paddingTop: 8,
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  showAllButton: {
+    backgroundColor: '#f3f4f6',
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  showAllText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
   },
   selectedSlotSummary: {
     backgroundColor: '#fdf2f8',
