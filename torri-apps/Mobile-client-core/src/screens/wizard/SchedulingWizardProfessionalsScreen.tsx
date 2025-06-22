@@ -101,13 +101,40 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       setAvailableProfessionals(professionals);
       
-      // Auto-select if only 1 professional available
+      // Auto-select professionals based on service exclusivity
       if (professionals.length === 1) {
+        // Only 1 professional total - auto-select
         setSelectedProfessionals([professionals[0]]);
         setProfessionalsRequested(1);
       } else {
-        // Reset selected professionals when available professionals change
-        setSelectedProfessionals([]);
+        // Auto-select professionals who are the only ones that can provide specific services
+        const autoSelectedProfessionals: Professional[] = [];
+        
+        selectedServices.forEach((service: Service) => {
+          const capableProfessionals = professionals.filter((prof: Professional) => 
+            prof.services_offered?.includes(service.id)
+          );
+          
+          // If only 1 professional can provide this service, auto-select them
+          if (capableProfessionals.length === 1) {
+            const exclusiveProfessional = capableProfessionals[0];
+            if (!autoSelectedProfessionals.some(p => p.id === exclusiveProfessional.id)) {
+              autoSelectedProfessionals.push(exclusiveProfessional);
+            }
+          }
+        });
+        
+        if (autoSelectedProfessionals.length > 0) {
+          // Fill remaining slots with null to maintain array structure
+          const selectedArray = [...autoSelectedProfessionals];
+          while (selectedArray.length < professionalsRequested) {
+            selectedArray.push(null);
+          }
+          setSelectedProfessionals(selectedArray);
+        } else {
+          // Reset selected professionals when available professionals change
+          setSelectedProfessionals([]);
+        }
       }
       
     } catch (error) {
