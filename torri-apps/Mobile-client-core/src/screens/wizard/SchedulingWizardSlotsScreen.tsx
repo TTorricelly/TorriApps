@@ -182,42 +182,29 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
 
     return (
       <View style={styles.summaryContainer}>
-        <Text style={styles.summaryTitle}>Resumo</Text>
-        <View style={styles.chipsContainer}>
+        <View style={styles.compactChipsRow}>
           {/* Date Chip */}
-          <View style={styles.chip}>
-            <View style={styles.chipIcon}>
-              <Text style={styles.chipIconText}>📅</Text>
-            </View>
-            <Text style={styles.chipText}>{formatDateChip(selectedDate)}</Text>
+          <View style={styles.compactChip}>
+            <Text style={styles.compactChipText}>📅 {formatDateChip(selectedDate)}</Text>
           </View>
 
           {/* Professionals Chip */}
-          <View style={styles.chip}>
-            <View style={styles.chipIcon}>
-              <Text style={styles.chipIconText}>👥</Text>
-            </View>
-            <Text style={styles.chipText}>
-              {professionalsRequested} pro{professionalsRequested > 1 ? 's' : ''}
+          <View style={styles.compactChip}>
+            <Text style={styles.compactChipText}>
+              👥 {professionalsRequested}
             </Text>
           </View>
 
           {/* Services Chip */}
-          <View style={styles.chip}>
-            <View style={styles.chipIcon}>
-              <Text style={styles.chipIconText}>🛍️</Text>
-            </View>
-            <Text style={styles.chipText}>
-              {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''}
+          <View style={styles.compactChip}>
+            <Text style={styles.compactChipText}>
+              🛍️ {selectedServices.length}
             </Text>
           </View>
 
           {/* Price Chip */}
-          <View style={[styles.chip, styles.priceChip]}>
-            <View style={styles.chipIcon}>
-              <Text style={styles.chipIconText}>💰</Text>
-            </View>
-            <Text style={[styles.chipText, styles.priceText]}>
+          <View style={[styles.compactChip, styles.compactPriceChip]}>
+            <Text style={[styles.compactChipText, styles.compactPriceText]}>
               R$ {totalPrice.toFixed(2).replace('.', ',')}
             </Text>
           </View>
@@ -351,61 +338,38 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   summaryContainer: {
-    backgroundColor: 'white',
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  chipsContainer: {
+  compactChipsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  },
+  compactChip: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    flex: 1,
+    marginHorizontal: 2,
+    alignItems: 'center',
   },
-  priceChip: {
+  compactPriceChip: {
     backgroundColor: '#fef3c7',
     borderColor: '#f59e0b',
   },
-  chipIcon: {
-    marginRight: 6,
-  },
-  chipIconText: {
-    fontSize: 12,
-  },
-  chipText: {
-    fontSize: 13,
+  compactChipText: {
+    fontSize: 11,
     fontWeight: '500',
-    color: '#374151',
+    color: '#475569',
   },
-  priceText: {
+  compactPriceText: {
     color: '#92400e',
     fontWeight: '600',
   },
