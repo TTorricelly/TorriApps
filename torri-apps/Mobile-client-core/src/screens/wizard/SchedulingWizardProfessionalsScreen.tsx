@@ -503,6 +503,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const canProvideAnyService = selectedServices.some((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
       );
+      console.log(`Phase 1 - ${professional.full_name}: selectedCount=${selectedCount}, servicesCount=${servicesCount}, canProvideAnyService=${canProvideAnyService}`);
       return canProvideAnyService ? 'OPTIMAL' : 'AVAILABLE';
     }
     
@@ -515,17 +516,23 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
+    console.log(`Phase 2 - ${professional.full_name}: uncovered=[${uncoveredServices.map(s => s.name).join(', ')}], covered=[${coveredServices.map(s => s.name).join(', ')}], profServices=[${professionalServices.map(s => s.name).join(', ')}]`);
+    
     // Check if professional can ONLY provide already-covered services
     const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
       professionalServices.every((service: Service) => coveredServices.includes(service));
     
+    console.log(`Phase 2 - ${professional.full_name}: canOnlyProvideCoveredServices=${canOnlyProvideCoveredServices}`);
+    
     if (canOnlyProvideCoveredServices) {
       // Professional can only do services that are already covered = REDUNDANT
+      console.log(`Phase 2 - ${professional.full_name}: REDUNDANT - can only provide covered services`);
       return 'REDUNDANT';
     }
     
     if (uncoveredServices.length === 0) {
       // All services covered, additional professionals are available but not optimal
+      console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered`);
       return 'AVAILABLE';
     }
     
@@ -534,6 +541,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
+    console.log(`Phase 2 - ${professional.full_name}: ${canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE'} - canHelpWithUncovered=${canHelpWithUncovered}`);
     return canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE';
   };
   
