@@ -346,7 +346,15 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const isValidSelection = (): boolean => {
     const hasServiceCoverage = hasCompleteServiceCoverage();
-    const hasRequiredProfessionals = getSelectedCount() === professionalsRequested;
+    const selectedCount = getSelectedCount();
+    
+    // Valid if:
+    // 1. All services are covered
+    // 2. We have at least the minimum required professionals
+    // 3. We don't exceed the maximum allowed professionals
+    const maxAllowedPros = Math.min(maxParallelPros || 2, availableProfessionals.length);
+    const hasRequiredProfessionals = selectedCount >= professionalsRequested && selectedCount <= maxAllowedPros;
+    
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
@@ -366,7 +374,15 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
-    const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
+    
+    // More intelligent selection logic:
+    // - Always allow selection if not at max capacity (maxParallelPros or total available)
+    // - Allow deselection if selected
+    // - Consider if this professional has exclusive services
+    const hasExclusiveService = getExclusiveServices(professional).length > 0;
+    const maxAllowedPros = Math.min(maxParallelPros || 2, availableProfessionals.length);
+    const canSelect = !isSelected && (getSelectedCount() < maxAllowedPros || hasExclusiveService);
+    
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
     const imageError = imageErrors[professional.id] || false;
