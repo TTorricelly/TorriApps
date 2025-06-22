@@ -482,6 +482,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       ? getStateForMultiProfessionalSequence(professional, currentSelected, professionalServices)
       : getStateForSingleOrDualSequence(professional, currentSelected, professionalServices);
     
+    // Debug logging
+    console.log(`Professional ${professional.full_name}: State = ${state}, Services = ${professionalServices.map(s => s.name).join(', ')}, Selected Count = ${currentSelected.filter(p => p !== null).length}`);
+    
     return state;
   };
   
