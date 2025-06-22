@@ -652,7 +652,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Número de profissionais</Text>
+              <Text style={styles.modalTitle}>Sequência de atendimento</Text>
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={handleCloseProfessionalCountModal}
