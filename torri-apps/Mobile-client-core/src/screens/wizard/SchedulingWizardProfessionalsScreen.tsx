@@ -17,7 +17,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
   
   // Animation for ready button
-  const buttonPulseAnim = React.useRef(new Animated.Value(1)).current;
+  const buttonShakeAnim = React.useRef(new Animated.Value(0)).current;
   
   const {
     selectedServices,
@@ -440,33 +440,50 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
-  // Happy button animation when ready
+  // Happy button shake animation when ready
   React.useEffect(() => {
     if (isValidSelection() && !showSuccessMessage) {
-      // Start the gentle pulsing animation when ready and success message is gone
-      const pulseAnimation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonPulseAnim, {
-            toValue: 1.05,
-            duration: 1000,
+      // Delay the shake slightly after success message disappears
+      const shakeTimer = setTimeout(() => {
+        // Create a gentle shake animation (left-right movement)
+        const shakeAnimation = Animated.sequence([
+          Animated.timing(buttonShakeAnim, {
+            toValue: 10,
+            duration: 100,
             useNativeDriver: true,
           }),
-          Animated.timing(buttonPulseAnim, {
-            toValue: 1,
-            duration: 1000,
+          Animated.timing(buttonShakeAnim, {
+            toValue: -10,
+            duration: 100,
             useNativeDriver: true,
           }),
-        ])
-      );
-      pulseAnimation.start();
+          Animated.timing(buttonShakeAnim, {
+            toValue: 8,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonShakeAnim, {
+            toValue: -8,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonShakeAnim, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]);
+        
+        shakeAnimation.start();
+      }, 300); // Small delay after success message disappears
       
       return () => {
-        pulseAnimation.stop();
-        buttonPulseAnim.setValue(1);
+        clearTimeout(shakeTimer);
+        buttonShakeAnim.setValue(0);
       };
     } else {
       // Reset animation when not ready
-      buttonPulseAnim.setValue(1);
+      buttonShakeAnim.setValue(0);
     }
   }, [selectedProfessionals, professionalsRequested, showSuccessMessage]);
 
@@ -750,7 +767,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         <View style={styles.footer}>
           <Animated.View
             style={{
-              transform: [{ scale: buttonPulseAnim }],
+              transform: [{ translateX: buttonShakeAnim }],
             }}
           >
             <TouchableOpacity
