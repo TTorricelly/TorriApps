@@ -659,17 +659,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </View>
             
             <View style={styles.modalBody}>
-              <Text style={styles.modalDescription}>
-                no você gostaria para realizar os serviços?
-              </Text>
-              
-              <ProfessionalToggle
-                value={professionalsRequested}
-                maxValue={maxParallelPros}
-                onChange={handleProfessionalsCountChange}
-                disabled={maxParallelPros === 1}
-              />
-              
               <Text style={styles.modalNote}>
                 • 1 profissional: Serviços realizados em sequência
                 {maxParallelPros > 1 && (
@@ -678,6 +667,13 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                   </>
                 )}
               </Text>
+              
+              <ProfessionalToggle
+                value={professionalsRequested}
+                maxValue={maxParallelPros}
+                onChange={handleProfessionalsCountChange}
+                disabled={maxParallelPros === 1}
+              />
             </View>
             
             <TouchableOpacity 
