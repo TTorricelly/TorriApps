@@ -517,35 +517,29 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     if (!professional.services_offered) return false;
     
     // For 3+ professional sequences, highlight professionals who can help with services
-    // that need more coverage (considering we want 1 professional per service)
+    // In sequence = 3, each professional typically handles 1 service, so we need different logic
     if (professionalsRequested >= 3) {
-      // In sequence = 3, we want to guide toward optimal 1-pro-per-service allocation
+      // In sequence = 3, we assume each selected professional will handle 1 service
+      // So we need to count selected professionals vs number of services
       
-      // Count how many selected professionals can handle each service
-      const serviceCoverage = new Map<string, number>();
-      selectedServices.forEach(service => {
-        const coveringPros = currentSelected.filter((prof: Professional | null) => 
-          prof && (prof.services_offered as any)?.includes(service.id)
-        ).length;
-        serviceCoverage.set(service.id, coveringPros);
-      });
+      const selectedCount = currentSelected.filter(prof => prof !== null).length;
+      const servicesCount = selectedServices.length;
       
-      // Find services that need more professional coverage
-      const servicesNeedingMore = selectedServices.filter((service: Service) => {
-        const currentCoverage = serviceCoverage.get(service.id) || 0;
-        // In 3-pro sequence, ideally each service should have at least 1 dedicated professional
-        return currentCoverage === 0;
-      });
-      
-      // Highlight this professional if they can help with services that need coverage
-      if (servicesNeedingMore.length > 0) {
-        return servicesNeedingMore.some((service: Service) => 
+      // If we have fewer professionals than services, highlight professionals 
+      // who can help with any of the services
+      if (selectedCount < servicesCount) {
+        return selectedServices.some((service: Service) => 
           (professional.services_offered as any)?.includes(service.id)
         );
       }
       
-      // If all services have some coverage, still allow selections but don't specifically highlight
-      return false;
+      // If we have equal or more professionals than services, 
+      // still highlight if this professional offers unique coverage
+      const professionalServices = selectedServices.filter((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      );
+      
+      return professionalServices.length > 0;
     }
     
     // For 1-2 professional sequences, prioritize covering uncovered services
