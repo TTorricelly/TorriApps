@@ -255,14 +255,76 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const getTotalEstimatedTime = () => {
-    return selectedServices.reduce((total: number, service: Service) => {
+    return calculateIntelligentEstimatedTime();
+  };
+
+  const calculateIntelligentEstimatedTime = (): number => {
+    if (selectedServices.length === 0) return 0;
+    
+    // Get the number of professionals we're actually working with
+    const actualProfessionalsCount = Math.max(getSelectedCount(), 1); // At least 1 professional needed
+    const effectiveProfessionals = Math.min(actualProfessionalsCount, professionalsRequested);
+    
+    // Scenario 1: Only 1 professional - everything must be sequential
+    if (effectiveProfessionals === 1) {
+      return selectedServices.reduce((total: number, service: Service) => {
+        return total + service.duration_minutes;
+      }, 0);
+    }
+    
+    // Scenario 2 & 3: Multiple professionals - consider parallelability
+    const parallelableServices = selectedServices.filter((service: Service) => service.parallelable);
+    const sequentialServices = selectedServices.filter((service: Service) => !service.parallelable);
+    
+    let totalTime = 0;
+    
+    // Sequential services always add to total time (cannot be parallelized)
+    const sequentialTime = sequentialServices.reduce((total: number, service: Service) => {
       return total + service.duration_minutes;
     }, 0);
+    
+    // For parallelable services, calculate based on professional availability
+    let parallelTime = 0;
+    if (parallelableServices.length > 0) {
+      if (effectiveProfessionals >= parallelableServices.length) {
+        // We have enough professionals to do all parallelable services simultaneously
+        // Time = longest parallelable service duration
+        parallelTime = Math.max(...parallelableServices.map((service: Service) => service.duration_minutes));
+      } else {
+        // Not enough professionals for full parallelization
+        // Group services optimally across available professionals
+        parallelTime = calculateOptimalParallelTime(parallelableServices, effectiveProfessionals);
+      }
+    }
+    
+    // Total time = sequential time + parallel time
+    // (assuming sequential services happen after parallel ones, or vice versa)
+    totalTime = sequentialTime + parallelTime;
+    
+    return totalTime;
+  };
+
+  const calculateOptimalParallelTime = (services: Service[], availableProfessionals: number): number => {
+    // Sort services by duration (longest first) for optimal distribution
+    const sortedServices = [...services].sort((a, b) => b.duration_minutes - a.duration_minutes);
+    
+    // Create arrays to track time for each professional
+    const professionalTimes = new Array(availableProfessionals).fill(0);
+    
+    // Distribute services to professionals using greedy algorithm (assign to least busy professional)
+    sortedServices.forEach(service => {
+      // Find professional with least current workload
+      const minTimeIndex = professionalTimes.indexOf(Math.min(...professionalTimes));
+      professionalTimes[minTimeIndex] += service.duration_minutes;
+    });
+    
+    // Total time = time taken by the busiest professional
+    return Math.max(...professionalTimes);
   };
 
   const getServiceCoverageStatus = (service: Service): 'covered' | 'partial' | 'uncovered' => {
     const canBeHandled = selectedProfessionals.some((prof: Professional | null) => 
-      prof && prof.services_offered?.includes(service.id)
+      prof && (prof.services_offered as any)?.includes(service.id)
     );
     
     const hasCompleteSelection = getSelectedCount() === professionalsRequested;
@@ -324,7 +386,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     // Find which selected services this professional can provide
     const matchingServices = selectedServices.filter((selectedService: Service) => 
-      professional.services_offered?.includes(selectedService.id)
+      (professional.services_offered as any)?.includes(selectedService.id)
     );
     
     return matchingServices.map((service: Service) => service.name);
@@ -337,7 +399,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // Check if any single professional can handle ALL services
     const professionalsWhoCanHandleAll = professionals.filter((prof: Professional) => {
       return services.every((service: Service) => 
-        prof.services_offered?.includes(service.id)
+        (prof.services_offered as any)?.includes(service.id)
       );
     });
     
@@ -351,7 +413,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     services.forEach((service: Service) => {
       const capableProfIds = new Set<string>();
       professionals.forEach((prof: Professional) => {
-        if (prof.services_offered?.includes(service.id)) {
+        if ((prof.services_offered as any)?.includes(service.id)) {
           capableProfIds.add(prof.id);
         }
       });
@@ -400,11 +462,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     // Find services that only this professional can provide
     const exclusiveServices = selectedServices.filter((selectedService: Service) => {
-      if (!professional.services_offered?.includes(selectedService.id)) return false;
+      if (!(professional.services_offered as any)?.includes(selectedService.id)) return false;
       
       // Count how many professionals can provide this service
       const providersCount = availableProfessionals.filter((prof: Professional) => 
-        prof.services_offered?.includes(selectedService.id)
+        (prof.services_offered as any)?.includes(selectedService.id)
       ).length;
       
       return providersCount === 1;
