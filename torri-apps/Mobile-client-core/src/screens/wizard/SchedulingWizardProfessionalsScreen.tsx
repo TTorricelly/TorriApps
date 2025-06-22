@@ -451,53 +451,60 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   // Smart Professional Selection Helper Functions
+  // Note: services_offered is typed as Service[] but actually contains string IDs (API inconsistency)
   const checkIfSelectionCreatesRedundancy = (
     professional: Professional, 
     currentSelected: (Professional | null)[]
   ): boolean => {
     if (!professional.services_offered) return false;
     
-    // Get services this professional can provide
-    const professionalServices = selectedServices.filter((service: Service) => 
-      professional.services_offered?.includes(service.id)
-    );
-    
-    // Check if any of these services are already covered by selected professionals
-    const alreadyCoveredServices = professionalServices.filter((service: Service) => {
-      return currentSelected.some((selectedProf: Professional | null) => 
-        selectedProf && selectedProf.services_offered?.includes(service.id)
-      );
-    });
-    
-    // For sequences = 3+, still prevent obvious redundancy when there are uncovered services
+    // For sequences = 3+, use simpler logic focused on service coverage gaps
     if (professionalsRequested >= 3) {
       // Find services that are not yet covered
       const uncoveredServices = selectedServices.filter((service: Service) => {
         return !currentSelected.some((selectedProf: Professional | null) => 
-          selectedProf && selectedProf.services_offered?.includes(service.id)
+          selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
         );
       });
       
-      // If there are uncovered services, this professional is redundant if:
-      // 1. All their services are already covered by others
-      // 2. They can't help with any uncovered services
+      // If there are uncovered services, check if this professional helps with them
       if (uncoveredServices.length > 0) {
-        const canHelpWithUncovered = uncoveredServices.some((service: Service) => 
-          professional.services_offered?.includes(service.id)
+        const helpsWithUncovered = uncoveredServices.some((service: Service) => 
+          (professional.services_offered as any)?.includes(service.id)
         );
         
-        return (
-          alreadyCoveredServices.length === professionalServices.length && 
-          professionalServices.length > 0 &&
-          !canHelpWithUncovered
-        );
+        // Only consider redundant if they DON'T help with uncovered services
+        // AND they only provide services that are already covered
+        if (!helpsWithUncovered) {
+          const professionalServices = selectedServices.filter((service: Service) => 
+            (professional.services_offered as any)?.includes(service.id)
+          );
+          
+          const allServicesCovered = professionalServices.every((service: Service) => {
+            return currentSelected.some((selectedProf: Professional | null) => 
+              selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
+            );
+          });
+          
+          return professionalServices.length > 0 && allServicesCovered;
+        }
       }
       
-      // If all services are covered, allow any selection (user might want specific professionals)
+      // If no uncovered services or they help with uncovered services, not redundant
       return false;
     }
     
     // For sequences = 1 or 2, apply stricter redundancy logic
+    const professionalServices = selectedServices.filter((service: Service) => 
+      (professional.services_offered as any)?.includes(service.id)
+    );
+    
+    const alreadyCoveredServices = professionalServices.filter((service: Service) => {
+      return currentSelected.some((selectedProf: Professional | null) => 
+        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
+      );
+    });
+    
     return alreadyCoveredServices.length === professionalServices.length && professionalServices.length > 0;
   };
 
@@ -513,7 +520,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       // Find services not yet covered
       const uncoveredServices = selectedServices.filter((service: Service) => {
         const isCovered = currentSelected.some((selectedProf: Professional | null) => 
-          selectedProf && selectedProf.services_offered?.includes(service.id)
+          selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
         );
         return !isCovered;
       });
@@ -521,7 +528,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       // If there are uncovered services, prioritize professionals who can cover them
       if (uncoveredServices.length > 0) {
         return uncoveredServices.some((service: Service) => 
-          professional.services_offered?.includes(service.id)
+          (professional.services_offered as any)?.includes(service.id)
         );
       }
       
@@ -532,14 +539,14 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // For 1-2 professional sequences, prioritize covering uncovered services
     const uncoveredServices = selectedServices.filter((service: Service) => {
       const isCovered = currentSelected.some((selectedProf: Professional | null) => 
-        selectedProf && selectedProf.services_offered?.includes(service.id)
+        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
       );
       return !isCovered;
     });
     
     // Check if this professional can cover any uncovered services
     const coversUncoveredServices = uncoveredServices.some((service: Service) => 
-      professional.services_offered?.includes(service.id)
+      (professional.services_offered as any)?.includes(service.id)
     );
     
     return coversUncoveredServices;
@@ -552,7 +559,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // Find professionals who can cover currently uncovered services
     const uncoveredServices = selectedServices.filter((service: Service) => {
       const isCovered = currentSelected.some((selectedProf: Professional | null) => 
-        selectedProf && selectedProf.services_offered?.includes(service.id)
+        selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
       );
       return !isCovered;
     });
@@ -565,7 +572,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       if (currentSelected.some(selected => selected?.id === prof.id)) return false; // Exclude already selected
       
       return uncoveredServices.some((service: Service) => 
-        prof.services_offered?.includes(service.id)
+        (prof.services_offered as any)?.includes(service.id)
       );
     });
     
@@ -758,7 +765,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     // Smart selection analysis
     const wouldCreateRedundancy = !isSelected && checkIfSelectionCreatesRedundancy(professional, selectedProfessionals);
     const isOptimal = !isSelected && isOptimalSelection(professional, selectedProfessionals);
-    const shouldShowWarning = wouldCreateRedundancy && !isOptimal;
+    const shouldShowWarning = wouldCreateRedundancy; // Simplified: if redundant, show warning
     const shouldHighlight = isOptimal && getUncoveredServices().length > 0;
     
     const isDisabled = !isSelected && (!canSelect || shouldShowWarning);
