@@ -666,33 +666,22 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               <View style={styles.executionOptions}>
                 <View style={styles.executionOption}>
                   <View style={styles.executionIcon}>
-                    <Text style={styles.executionIconText}>👤</Text>
+                    <Text style={styles.executionIconText}>1</Text>
                   </View>
                   <View style={styles.executionContent}>
                     <Text style={styles.executionTitle}>1 Profissional</Text>
-                    <View style={styles.visualFlow}>
-                      <Text style={styles.serviceBox}>💇‍♀️</Text>
-                      <Text style={styles.flowArrow}>→</Text>
-                      <Text style={styles.serviceBox}>💅</Text>
-                      <Text style={styles.timeIndicator}>60min</Text>
-                    </View>
+                    <Text style={styles.executionDescription}>Um por vez • mais tempo</Text>
                   </View>
                 </View>
                 
                 {maxParallelPros > 1 && (
                   <View style={styles.executionOption}>
                     <View style={[styles.executionIcon, styles.parallelIcon]}>
-                      <Text style={[styles.executionIconText, styles.parallelIconText]}>👥</Text>
+                      <Text style={[styles.executionIconText, styles.parallelIconText]}>2+</Text>
                     </View>
                     <View style={styles.executionContent}>
                       <Text style={styles.executionTitle}>2+ Profissionais</Text>
-                      <View style={styles.visualFlow}>
-                        <View style={styles.parallelServices}>
-                          <Text style={styles.serviceBox}>💇‍♀️</Text>
-                          <Text style={styles.serviceBox}>💅</Text>
-                        </View>
-                        <Text style={styles.timeIndicator}>⚡ 30min</Text>
-                      </View>
+                      <Text style={styles.executionDescription}>Ao mesmo tempo • mais rápido</Text>
                     </View>
                   </View>
                 )}
@@ -1207,7 +1196,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34, // Safe area bottom
-    maxHeight: '50%',
+    maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1260,10 +1249,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
   },
   executionIconText: {
-    fontSize: 18,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
   },
   parallelIconText: {
-    fontSize: 18,
+    color: '#16a34a',
   },
   executionContent: {
     flex: 1,
@@ -1272,40 +1263,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 8,
+    marginBottom: 2,
   },
-  visualFlow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  serviceBox: {
-    fontSize: 16,
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  flowArrow: {
-    fontSize: 14,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  parallelServices: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  timeIndicator: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#059669',
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 4,
+  executionDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
   },
   modalDescription: {
     fontSize: 16,
