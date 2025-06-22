@@ -246,38 +246,51 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     }, 0);
   };
 
-  const isServiceCovered = (service: Service): boolean => {
-    // Simple check: if any selected professional can provide this service, it's covered
-    return selectedProfessionals.some((prof: Professional | null) => 
+  const getServiceCoverageStatus = (service: Service): 'covered' | 'partial' | 'uncovered' => {
+    const canBeHandled = selectedProfessionals.some((prof: Professional | null) => 
       prof && prof.services_offered?.includes(service.id)
     );
+    
+    const hasCompleteSelection = getSelectedCount() === professionalsRequested;
+    
+    if (!canBeHandled) return 'uncovered';
+    if (hasCompleteSelection) return 'covered';
+    return 'partial'; // Can be handled but selection not complete
   };
 
   const renderServiceChip = ({ item: service }: { item: Service }) => {
-    const isCovered = isServiceCovered(service);
+    const status = getServiceCoverageStatus(service);
     
     return (
       <View style={[
         styles.serviceChip,
-        isCovered && styles.serviceChipCovered
+        status === 'covered' && styles.serviceChipCovered,
+        status === 'partial' && styles.serviceChipPartial
       ]}>
         <View style={styles.serviceChipContent}>
           <Text style={[
             styles.serviceChipText,
-            isCovered && styles.serviceChipTextCovered
+            status === 'covered' && styles.serviceChipTextCovered,
+            status === 'partial' && styles.serviceChipTextPartial
           ]}>
             {service.name}
           </Text>
           <Text style={[
             styles.serviceChipDuration,
-            isCovered && styles.serviceChipDurationCovered
+            status === 'covered' && styles.serviceChipDurationCovered,
+            status === 'partial' && styles.serviceChipDurationPartial
           ]}>
             {service.duration_minutes}min
           </Text>
         </View>
-        {isCovered && (
+        {status === 'covered' && (
           <View style={styles.serviceCheckMark}>
             <Text style={styles.serviceCheckMarkText}>✓</Text>
+          </View>
+        )}
+        {status === 'partial' && (
+          <View style={styles.servicePartialMark}>
+            <Text style={styles.servicePartialMarkText}>⏳</Text>
           </View>
         )}
       </View>
@@ -355,10 +368,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       // If each service can be handled by multiple professionals, suggest individual assignment
       const allServicesHaveOptions = Array.from(serviceToProfs.values()).every(profSet => profSet.size >= 1);
-      console.log(`3+ services detected: ${services.length} services, ${professionals.length} professionals, maxNeeded: ${maxProfessionalsNeeded}, allHaveOptions: ${allServicesHaveOptions}`);
-      
       if (allServicesHaveOptions && maxProfessionalsNeeded >= 3) {
-        console.log(`Suggesting individual assignment: ${maxProfessionalsNeeded} professionals`);
         return maxProfessionalsNeeded; // Suggest 1 professional per service
       }
     }
@@ -412,12 +422,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   const getUncoveredServices = (): string[] => {
     return selectedServices
-      .filter((service: Service) => !isServiceCovered(service))
+      .filter((service: Service) => getServiceCoverageStatus(service) === 'uncovered')
       .map((service: Service) => service.name);
   };
 
   const hasCompleteServiceCoverage = (): boolean => {
-    return selectedServices.every((service: Service) => isServiceCovered(service));
+    return selectedServices.every((service: Service) => getServiceCoverageStatus(service) === 'covered');
   };
 
   const isValidSelection = (): boolean => {
@@ -985,6 +995,34 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   serviceCheckMarkText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'white',
+  },
+  serviceChipPartial: {
+    backgroundColor: '#fefce8',
+    borderColor: '#eab308',
+  },
+  serviceChipTextPartial: {
+    color: '#a16207',
+  },
+  serviceChipDurationPartial: {
+    color: '#ca8a04',
+  },
+  servicePartialMark: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#eab308',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  servicePartialMarkText: {
     fontSize: 10,
     fontWeight: '700',
     color: 'white',
