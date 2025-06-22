@@ -307,33 +307,43 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     if (services.length === 0 || professionals.length === 0) return 1;
     if (services.length === 1) return 1; // Single service always needs 1 professional
     
+    console.log(`Analyzing ${services.length} services with ${professionals.length} professionals`);
+    
     // Check if any single professional can handle ALL services
     const professionalsWhoCanHandleAll = professionals.filter((prof: Professional) => {
-      return services.every((service: Service) => 
+      const canHandleAll = services.every((service: Service) => 
         prof.services_offered?.includes(service.id)
       );
+      if (canHandleAll) {
+        console.log(`Professional ${prof.full_name} can handle ALL services`);
+      }
+      return canHandleAll;
     });
     
     // If at least one professional can handle all services, we only need 1
     if (professionalsWhoCanHandleAll.length > 0) {
+      console.log(`Found ${professionalsWhoCanHandleAll.length} professionals who can handle all services - returning 1`);
       return 1;
     }
     
     // More sophisticated analysis: check if services require different professionals
     // Create a map of which professionals can do each service
     const serviceToProfs = new Map<string, Set<string>>();
-    services.forEach((service: Service) => {
+    services.forEach((service: Service, index) => {
       const capableProfIds = new Set<string>();
       professionals.forEach((prof: Professional) => {
         if (prof.services_offered?.includes(service.id)) {
           capableProfIds.add(prof.id);
         }
       });
+      console.log(`Service ${index} (${service.name}): [${Array.from(capableProfIds).join(', ')}]`);
       serviceToProfs.set(service.id, capableProfIds);
     });
     
     // Check if any two services have NO overlapping professionals
     const serviceIds = Array.from(serviceToProfs.keys());
+    let foundZeroOverlap = false;
+    
     for (let i = 0; i < serviceIds.length; i++) {
       for (let j = i + 1; j < serviceIds.length; j++) {
         const profsForServiceA = serviceToProfs.get(serviceIds[i]) || new Set();
@@ -341,16 +351,18 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         
         // Check if sets have no intersection (no professional can do both services)
         const intersection = new Set([...profsForServiceA].filter(x => profsForServiceB.has(x)));
-        console.log(`Service ${i} professionals: [${Array.from(profsForServiceA).join(', ')}]`);
-        console.log(`Service ${j} professionals: [${Array.from(profsForServiceB).join(', ')}]`);
-        console.log(`Intersection: [${Array.from(intersection).join(', ')}] (size: ${intersection.size})`);
+        console.log(`Service ${i} vs ${j}: intersection size = ${intersection.size}`);
         
         if (intersection.size === 0) {
-          // These services require completely different professionals
-          console.log(`No overlap detected - requiring 2 professionals`);
-          return Math.min(2, professionals.length);
+          console.log(`Zero overlap found between services ${i} and ${j}`);
+          foundZeroOverlap = true;
         }
       }
+    }
+    
+    if (foundZeroOverlap) {
+      console.log(`Returning 2 professionals due to zero overlap`);
+      return Math.min(2, professionals.length);
     }
     
     // If we reach here, all services have some overlapping professionals

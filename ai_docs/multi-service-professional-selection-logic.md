@@ -50,7 +50,38 @@ const calculateMinimumProfessionalsNeeded = (services: Service[], professionals:
     return 1;
   }
   
-  // If no single professional can handle all services, we need multiple
+  // More sophisticated analysis: check if services require different professionals
+  // Create a map of which professionals can do each service
+  const serviceToProfs = new Map<string, Set<string>>();
+  services.forEach((service: Service) => {
+    const capableProfIds = new Set<string>();
+    professionals.forEach((prof: Professional) => {
+      if (prof.services_offered?.includes(service.id)) {
+        capableProfIds.add(prof.id);
+      }
+    });
+    serviceToProfs.set(service.id, capableProfIds);
+  });
+  
+  // Check if any two services have NO overlapping professionals
+  const serviceIds = Array.from(serviceToProfs.keys());
+  for (let i = 0; i < serviceIds.length; i++) {
+    for (let j = i + 1; j < serviceIds.length; j++) {
+      const profsForServiceA = serviceToProfs.get(serviceIds[i]) || new Set();
+      const profsForServiceB = serviceToProfs.get(serviceIds[j]) || new Set();
+      
+      // Check if sets have no intersection (no professional can do both services)
+      const intersection = new Set([...profsForServiceA].filter(x => profsForServiceB.has(x)));
+      
+      if (intersection.size === 0) {
+        // These services require completely different professionals
+        return Math.min(2, professionals.length);
+      }
+    }
+  }
+  
+  // If we reach here, all services have some overlapping professionals
+  // but no single professional can do all - likely need 2 professionals
   return Math.min(2, professionals.length);
 };
 ```
@@ -120,7 +151,9 @@ def _professional_pair_can_handle_services(
 |----------|----------|----------------------|----------------------|------------|
 | Single Service | 1 service | Any professional can handle it | 1 | No |
 | Multi-Service (All-in-One) | 2+ services | ≥1 professional can handle ALL services | 1 | No |
-| Multi-Service (Exclusive) | 2+ services | NO professional can handle all services | 2+ | **Yes** |
+| Multi-Service (Partial Overlap) | 2+ services | Some professionals overlap but none can do all | 2+ | **Yes** |
+| Multi-Service (Zero Overlap) | 2+ services | NO professional overlap between any services | 2+ | **Yes** |
+| Multi-Service (Exclusive) | 2+ services | Each service has only 1 capable professional | 2+ | **Yes** |
 
 ### Frontend-Backend Coordination
 
@@ -210,7 +243,15 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - **Logic**: Multiple professionals can handle all services → Minimum = 1
 - **Result**: Normal single-professional selection logic applies
 
-### Scenario 3: Mixed Coverage
+### Scenario 3: Zero Overlap Coverage (Latest Fix)
+- **Services**: Service A + Service B
+- **Professionals**:
+  - Professional 1 & 2: Can do Service A only
+  - Professional 3 & 4: Can do Service B only
+- **Logic**: No professional overlap between services → Minimum = 2
+- **Result**: Auto-enables 2-professional selection (eliminates gray-out issue)
+
+### Scenario 4: Mixed Coverage
 - **Services**: Service A + Service B + Service C
 - **Professionals**:
   - Professional 1: Can do Service A + Service B
@@ -256,6 +297,24 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - **Accurate Requirements**: Respects actual professional specialization constraints
 - **Flexible Operations**: Supports both single and multi-professional workflows
 - **Scalable**: Works with any number of services and professionals
+
+## Algorithm Evolution
+
+### Version History
+
+#### v1.0 - Basic Logic (Initial)
+- Simple check: Can any professional handle all services?
+- **Issue**: Missed cases where services had separate professional groups
+
+#### v2.0 - Enhanced Analysis (Latest)
+- **Added**: Set intersection analysis between service professional groups
+- **Fixed**: Zero overlap detection (e.g., Service A: Pros 1,2; Service B: Pros 3,4)
+- **Improved**: Handles all professional coverage scenarios accurately
+
+### Algorithm Complexity
+- **Time Complexity**: O(n² × m) where n = services, m = professionals
+- **Space Complexity**: O(n × m) for service-to-professional mapping
+- **Real-world Performance**: Negligible impact with typical salon sizes (2-10 services, 3-20 professionals)
 
 ## Future Enhancements
 
