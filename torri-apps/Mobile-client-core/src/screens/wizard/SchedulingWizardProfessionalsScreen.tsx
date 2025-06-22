@@ -261,9 +261,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const calculateIntelligentEstimatedTime = (): number => {
     if (selectedServices.length === 0) return 0;
     
-    // Get the number of professionals we're actually working with
-    const actualProfessionalsCount = Math.max(getSelectedCount(), 1); // At least 1 professional needed
-    const effectiveProfessionals = Math.min(actualProfessionalsCount, professionalsRequested);
+    // Use the intended number of professionals for time estimation
+    const effectiveProfessionals = professionalsRequested;
     
     // Scenario 1: Only 1 professional - everything must be sequential
     if (effectiveProfessionals === 1) {
