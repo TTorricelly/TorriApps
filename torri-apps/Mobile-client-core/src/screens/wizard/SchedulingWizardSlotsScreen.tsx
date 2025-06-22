@@ -165,25 +165,66 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     </View>
   );
 
-  const renderSummary = () => (
-    <View style={styles.summaryContainer}>
-      <Text style={styles.summaryTitle}>Resumo da seleção:</Text>
-      <Text style={styles.summaryItem}>
-        📅 {new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', {
-          weekday: 'long',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        })}
-      </Text>
-      <Text style={styles.summaryItem}>
-        👥 {professionalsRequested} profissional{professionalsRequested > 1 ? 'is' : ''}
-      </Text>
-      <Text style={styles.summaryItem}>
-        🛍️ {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''}
-      </Text>
-    </View>
-  );
+  const renderSummary = () => {
+    // Calculate total price
+    const totalPrice = selectedServices.reduce((total: number, service: any) => {
+      return total + parseFloat(service.price || '0');
+    }, 0);
+
+    // Format date for chip
+    const formatDateChip = (date: string) => {
+      const dateObj = new Date(date + 'T00:00:00');
+      return dateObj.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+      });
+    };
+
+    return (
+      <View style={styles.summaryContainer}>
+        <Text style={styles.summaryTitle}>Resumo</Text>
+        <View style={styles.chipsContainer}>
+          {/* Date Chip */}
+          <View style={styles.chip}>
+            <View style={styles.chipIcon}>
+              <Text style={styles.chipIconText}>📅</Text>
+            </View>
+            <Text style={styles.chipText}>{formatDateChip(selectedDate)}</Text>
+          </View>
+
+          {/* Professionals Chip */}
+          <View style={styles.chip}>
+            <View style={styles.chipIcon}>
+              <Text style={styles.chipIconText}>👥</Text>
+            </View>
+            <Text style={styles.chipText}>
+              {professionalsRequested} pro{professionalsRequested > 1 ? 's' : ''}
+            </Text>
+          </View>
+
+          {/* Services Chip */}
+          <View style={styles.chip}>
+            <View style={styles.chipIcon}>
+              <Text style={styles.chipIconText}>🛍️</Text>
+            </View>
+            <Text style={styles.chipText}>
+              {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''}
+            </Text>
+          </View>
+
+          {/* Price Chip */}
+          <View style={[styles.chip, styles.priceChip]}>
+            <View style={styles.chipIcon}>
+              <Text style={styles.chipIconText}>💰</Text>
+            </View>
+            <Text style={[styles.chipText, styles.priceText]}>
+              R$ {totalPrice.toFixed(2).replace('.', ',')}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   const renderSlotsList = () => (
     <>
@@ -310,21 +351,63 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   summaryContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'white',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   summaryTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  summaryItem: {
-    fontSize: 14,
-    color: '#4b5563',
-    marginBottom: 4,
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  priceChip: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#f59e0b',
+  },
+  chipIcon: {
+    marginRight: 6,
+  },
+  chipIconText: {
+    fontSize: 12,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  priceText: {
+    color: '#92400e',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
