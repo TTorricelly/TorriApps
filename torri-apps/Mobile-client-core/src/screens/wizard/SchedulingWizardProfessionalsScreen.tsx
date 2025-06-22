@@ -513,36 +513,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Continue Button with Snackbar */}
+      {/* Continue Button */}
       {!isLoading && !error && availableProfessionals.length > 0 && (
         <View style={styles.footer}>
-          {/* Validation Snackbar */}
-          {(!hasCompleteServiceCoverage() || getSelectedCount() === 0) && (
-            <View style={[styles.snackbar, styles.snackbarWarning]}>
-              <Text style={styles.snackbarIcon}>⚠️</Text>
-              <View style={styles.snackbarTextContainer}>
-                <Text style={styles.snackbarText}>
-                  {getSelectedCount() === 0 
-                    ? 'Selecione pelo menos um profissional'
-                    : `Serviços pendentes: ${getUncoveredServices().join(', ')}`
-                  }
-                </Text>
-              </View>
-            </View>
-          )}
-          
-          {/* Success Snackbar with Auto-hide */}
-          {showSuccessMessage && hasCompleteServiceCoverage() && getSelectedCount() > 0 && (
-            <View style={[styles.snackbar, styles.snackbarSuccess]}>
-              <Text style={styles.snackbarIcon}>✅</Text>
-              <View style={styles.snackbarTextContainer}>
-                <Text style={styles.snackbarText}>
-                  Todos os serviços foram cobertos!
-                </Text>
-              </View>
-            </View>
-          )}
-          
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -558,6 +531,40 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               Ver Horários
             </Text>
           </TouchableOpacity>
+          
+          {/* Modern Overlay Snackbars */}
+          {(!hasCompleteServiceCoverage() || getSelectedCount() === 0) && (
+            <View style={[styles.snackbarOverlay, styles.snackbarWarning]}>
+              <View style={styles.snackbarIconContainer}>
+                <Text style={styles.snackbarIcon}>⚠️</Text>
+              </View>
+              <View style={styles.snackbarContent}>
+                <Text style={styles.snackbarTitle}>
+                  {getSelectedCount() === 0 ? 'Seleção necessária' : 'Serviços pendentes'}
+                </Text>
+                <Text style={styles.snackbarMessage}>
+                  {getSelectedCount() === 0 
+                    ? 'Escolha pelo menos um profissional'
+                    : getUncoveredServices().join(', ')
+                  }
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {showSuccessMessage && hasCompleteServiceCoverage() && getSelectedCount() > 0 && (
+            <View style={[styles.snackbarOverlay, styles.snackbarSuccess]}>
+              <View style={styles.snackbarIconContainer}>
+                <Text style={styles.snackbarIcon}>✓</Text>
+              </View>
+              <View style={styles.snackbarContent}>
+                <Text style={styles.snackbarTitle}>Tudo pronto!</Text>
+                <Text style={styles.snackbarMessage}>
+                  Todos os serviços estão cobertos
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
     </WizardContainer>
@@ -877,44 +884,67 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
     backgroundColor: 'white',
+    position: 'relative',
   },
-  snackbar: {
+  snackbarOverlay: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 1000,
   },
   snackbarWarning: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
   },
   snackbarSuccess: {
-    backgroundColor: '#d1fae5',
-    borderWidth: 1,
-    borderColor: '#10b981',
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  snackbarIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    backgroundColor: '#f8fafc',
   },
   snackbarIcon: {
-    fontSize: 16,
-    marginRight: 12,
+    fontSize: 18,
+    fontWeight: '600',
   },
-  snackbarTextContainer: {
+  snackbarContent: {
     flex: 1,
+    paddingTop: 2,
   },
-  snackbarText: {
-    fontSize: 14,
-    fontWeight: '500',
+  snackbarTitle: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1f2937',
+    marginBottom: 2,
+    lineHeight: 20,
+  },
+  snackbarMessage: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#6b7280',
+    lineHeight: 18,
   },
   continueButton: {
     backgroundColor: '#ec4899',
