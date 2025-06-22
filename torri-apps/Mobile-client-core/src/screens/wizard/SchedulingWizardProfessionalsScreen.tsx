@@ -133,12 +133,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           }
         });
         
-        // Calculate minimum professionals needed based on service coverage
-        const minProfessionalsNeeded = calculateMinimumProfessionalsNeeded(selectedServices, professionals);
+        // Calculate optimal professionals needed based on service coverage
+        const optimalProfessionalsNeeded = calculateOptimalProfessionalsNeeded(selectedServices, professionals);
         
         if (autoSelectedProfessionals.length > 0) {
           // If we need more professionals than currently requested, auto-update the count
-          const requiredCount = Math.max(autoSelectedProfessionals.length, minProfessionalsNeeded);
+          const requiredCount = Math.max(autoSelectedProfessionals.length, optimalProfessionalsNeeded);
           if (requiredCount > professionalsRequested) {
             setProfessionalsRequested(requiredCount);
           }
@@ -152,8 +152,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           setSelectedProfessionals(selectedArray);
         } else {
           // No auto-selected professionals, but still check if we need more than 1
-          if (minProfessionalsNeeded > professionalsRequested) {
-            setProfessionalsRequested(minProfessionalsNeeded);
+          if (optimalProfessionalsNeeded > professionalsRequested) {
+            setProfessionalsRequested(optimalProfessionalsNeeded);
           }
           // Reset selected professionals when available professionals change
           setSelectedProfessionals([]);
@@ -303,44 +303,35 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return matchingServices.map((service: Service) => service.name);
   };
 
-  const calculateMinimumProfessionalsNeeded = (services: Service[], professionals: Professional[]): number => {
+  const calculateOptimalProfessionalsNeeded = (services: Service[], professionals: Professional[]): number => {
     if (services.length === 0 || professionals.length === 0) return 1;
     if (services.length === 1) return 1; // Single service always needs 1 professional
     
-    console.log(`Analyzing ${services.length} services with ${professionals.length} professionals`);
-    
     // Check if any single professional can handle ALL services
     const professionalsWhoCanHandleAll = professionals.filter((prof: Professional) => {
-      const canHandleAll = services.every((service: Service) => 
+      return services.every((service: Service) => 
         prof.services_offered?.includes(service.id)
       );
-      if (canHandleAll) {
-        console.log(`Professional ${prof.full_name} can handle ALL services`);
-      }
-      return canHandleAll;
     });
     
     // If at least one professional can handle all services, we only need 1
     if (professionalsWhoCanHandleAll.length > 0) {
-      console.log(`Found ${professionalsWhoCanHandleAll.length} professionals who can handle all services - returning 1`);
       return 1;
     }
     
-    // More sophisticated analysis: check if services require different professionals
-    // Create a map of which professionals can do each service
+    // Enhanced analysis: consider optimal vs minimum scenarios
     const serviceToProfs = new Map<string, Set<string>>();
-    services.forEach((service: Service, index) => {
+    services.forEach((service: Service) => {
       const capableProfIds = new Set<string>();
       professionals.forEach((prof: Professional) => {
         if (prof.services_offered?.includes(service.id)) {
           capableProfIds.add(prof.id);
         }
       });
-      console.log(`Service ${index} (${service.name}): [${Array.from(capableProfIds).join(', ')}]`);
       serviceToProfs.set(service.id, capableProfIds);
     });
     
-    // Check if any two services have NO overlapping professionals
+    // Check zero overlap (minimum requirement)
     const serviceIds = Array.from(serviceToProfs.keys());
     let foundZeroOverlap = false;
     
@@ -348,25 +339,35 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       for (let j = i + 1; j < serviceIds.length; j++) {
         const profsForServiceA = serviceToProfs.get(serviceIds[i]) || new Set();
         const profsForServiceB = serviceToProfs.get(serviceIds[j]) || new Set();
-        
-        // Check if sets have no intersection (no professional can do both services)
         const intersection = new Set([...profsForServiceA].filter(x => profsForServiceB.has(x)));
-        console.log(`Service ${i} vs ${j}: intersection size = ${intersection.size}`);
         
         if (intersection.size === 0) {
-          console.log(`Zero overlap found between services ${i} and ${j}`);
           foundZeroOverlap = true;
         }
       }
     }
     
+    // Smart defaults based on service patterns
+    if (services.length >= 3) {
+      // For 3+ services, consider individual professional assignment as optimal
+      // Check if we have enough professionals for 1-per-service approach
+      const maxProfessionalsNeeded = Math.min(services.length, professionals.length);
+      
+      // If each service can be handled by multiple professionals, suggest individual assignment
+      const allServicesHaveOptions = Array.from(serviceToProfs.values()).every(profSet => profSet.size >= 1);
+      console.log(`3+ services detected: ${services.length} services, ${professionals.length} professionals, maxNeeded: ${maxProfessionalsNeeded}, allHaveOptions: ${allServicesHaveOptions}`);
+      
+      if (allServicesHaveOptions && maxProfessionalsNeeded >= 3) {
+        console.log(`Suggesting individual assignment: ${maxProfessionalsNeeded} professionals`);
+        return maxProfessionalsNeeded; // Suggest 1 professional per service
+      }
+    }
+    
+    // Fallback to minimum required
     if (foundZeroOverlap) {
-      console.log(`Returning 2 professionals due to zero overlap`);
       return Math.min(2, professionals.length);
     }
     
-    // If we reach here, all services have some overlapping professionals
-    // but no single professional can do all - likely need 2 professionals
     return Math.min(2, professionals.length);
   };
 
@@ -444,15 +445,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     
     // More intelligent selection logic that considers actual service requirements
     // Calculate what we actually need in real-time, not just what professionalsRequested says
-    const actualMinNeeded = calculateMinimumProfessionalsNeeded(selectedServices, availableProfessionals);
-    const effectiveLimit = Math.max(professionalsRequested, actualMinNeeded);
+    const actualOptimalNeeded = calculateOptimalProfessionalsNeeded(selectedServices, availableProfessionals);
+    const effectiveLimit = Math.max(professionalsRequested, actualOptimalNeeded);
     
     const canSelect = !isSelected && getSelectedCount() < effectiveLimit;
     
-    // Debug logging for the problematic professional
-    if (professional.full_name?.includes('João') || professional.full_name?.includes('Ana')) {
-      console.log(`${professional.full_name}: professionalsRequested=${professionalsRequested}, actualMinNeeded=${actualMinNeeded}, effectiveLimit=${effectiveLimit}, getSelectedCount()=${getSelectedCount()}, canSelect=${canSelect}, isDisabled=${!isSelected && !canSelect}`);
-    }
     
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
@@ -791,76 +788,61 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             
             <View style={styles.modalBody}>
               <View style={styles.radioOptions}>
-                <TouchableOpacity 
-                  style={[
-                    styles.radioOption,
-                    professionalsRequested === 1 && styles.radioOptionSelected
-                  ]}
-                  onPress={() => handleProfessionalsCountChange(1)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.radioButton}>
-                    <View style={[
-                      styles.radioCircle,
-                      professionalsRequested === 1 && styles.radioCircleSelected
-                    ]}>
-                      {professionalsRequested === 1 && <View style={styles.radioDot} />}
-                    </View>
-                    <Text style={styles.radioNumber}>1</Text>
-                  </View>
-                  <View style={styles.radioContent}>
-                    <Text style={[
-                      styles.radioTitle,
-                      professionalsRequested === 1 && styles.radioTitleSelected
-                    ]}>
-                      1 Profissional
-                    </Text>
-                    <Text style={[
-                      styles.radioDescription,
-                      professionalsRequested === 1 && styles.radioDescriptionSelected
-                    ]}>
-                      Serviços em sequência
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                
-                {selectedServices.length > 1 && (
-                  <TouchableOpacity 
-                    style={[
-                      styles.radioOption,
-                      professionalsRequested >= 2 && styles.radioOptionSelected
-                    ]}
-                    onPress={() => handleProfessionalsCountChange(2)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.radioButton}>
-                      <View style={[
-                        styles.radioCircle,
-                        professionalsRequested >= 2 && styles.radioCircleSelected
-                      ]}>
-                        {professionalsRequested >= 2 && <View style={styles.radioDot} />}
+                {/* Dynamic professional count options */}
+                {[1, 2, 3].filter(count => {
+                  // Show option if:
+                  // - 1 professional (always available)
+                  // - 2 professionals (if multiple services)
+                  // - 3 professionals (if 3+ services and enough professionals)
+                  if (count === 1) return true;
+                  if (count === 2) return selectedServices.length > 1;
+                  if (count === 3) return selectedServices.length >= 3 && availableProfessionals.length >= 3;
+                  return false;
+                }).map(count => {
+                  const isSelected = professionalsRequested === count;
+                  const getDescription = (professionalCount: number) => {
+                    if (professionalCount === 1) return 'Serviços em sequência';
+                    if (professionalCount === 2) return maxParallelPros > 1 ? 'Ao mesmo tempo • mais rápido' : 'Especialistas diferentes';
+                    if (professionalCount === 3) return '1 profissional por serviço • máxima flexibilidade';
+                    return '';
+                  };
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={count}
+                      style={[
+                        styles.radioOption,
+                        isSelected && styles.radioOptionSelected
+                      ]}
+                      onPress={() => handleProfessionalsCountChange(count)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.radioButton}>
+                        <View style={[
+                          styles.radioCircle,
+                          isSelected && styles.radioCircleSelected
+                        ]}>
+                          {isSelected && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={styles.radioNumber}>{count}</Text>
                       </View>
-                      <Text style={styles.radioNumber}>2+</Text>
-                    </View>
-                    <View style={styles.radioContent}>
-                      <Text style={[
-                        styles.radioTitle,
-                        professionalsRequested >= 2 && styles.radioTitleSelected
-                      ]}>
-                        2+ Profissionais
-                      </Text>
-                      <Text style={[
-                        styles.radioDescription,
-                        professionalsRequested >= 2 && styles.radioDescriptionSelected
-                      ]}>
-                        {maxParallelPros > 1 
-                          ? 'Ao mesmo tempo • mais rápido'
-                          : 'Especialistas diferentes'
-                        }
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
+                      <View style={styles.radioContent}>
+                        <Text style={[
+                          styles.radioTitle,
+                          isSelected && styles.radioTitleSelected
+                        ]}>
+                          {count === 1 ? '1 Profissional' : `${count} Profissionais`}
+                        </Text>
+                        <Text style={[
+                          styles.radioDescription,
+                          isSelected && styles.radioDescriptionSelected
+                        ]}>
+                          {getDescription(count)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </View>
