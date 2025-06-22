@@ -711,20 +711,17 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           {/* Fixed Services Summary - Always Visible */}
           <View style={styles.stickyServicesContainer}>
             <View style={styles.servicesSummary}>
-              <View style={styles.servicesSummaryHeader}>
-                <Text style={styles.servicesSummaryTitle}>Serviços selecionados</Text>
-                <View style={styles.summaryHeaderRight}>
-                  <Text style={styles.totalTimeText}>
-                    {formatDuration(getTotalEstimatedTime())}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.editButton}
-                    onPress={handleEditServices}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.editButtonText}>Editar</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.servicesCompactHeader}>
+                <Text style={styles.totalTimeText}>
+                  {formatDuration(getTotalEstimatedTime())}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.editButton}
+                  onPress={handleEditServices}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.editButtonText}>Editar</Text>
+                </TouchableOpacity>
               </View>
               <FlatList
                 data={selectedServices}
@@ -1016,7 +1013,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
   stickyBannerContainer: {
     backgroundColor: 'white',
@@ -1034,15 +1031,22 @@ const styles = StyleSheet.create({
   },
   servicesSummary: {
     backgroundColor: '#f8f9fa',
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   servicesSummaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  servicesCompactHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
   },
   servicesSummaryTitle: {
     fontSize: 16,
@@ -1272,7 +1276,8 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
   professionalsSection: {
-    marginVertical: 24,
+    marginTop: 8,
+    marginBottom: 16,
   },
   professionalsTitle: {
     fontSize: 18,
