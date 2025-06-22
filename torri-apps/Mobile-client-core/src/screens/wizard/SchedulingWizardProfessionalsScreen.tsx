@@ -458,39 +458,41 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   ): boolean => {
     if (!professional.services_offered) return false;
     
-    // For sequences = 3+, use simpler logic focused on service coverage gaps
+    // For sequences = 3+, apply minimal redundancy logic
+    // In 3+ sequences, each professional typically handles 1 service, so we need different logic
     if (professionalsRequested >= 3) {
-      // Find services that are not yet covered
+      // Only consider it redundant if we have already filled enough professionals
+      // to cover all services and this professional doesn't add unique value
+      
+      // If we haven't selected enough professionals yet, don't mark anyone as redundant
+      const selectedCount = currentSelected.filter(prof => prof !== null).length;
+      if (selectedCount < selectedServices.length) {
+        return false; // Don't restrict selections until we have enough professionals
+      }
+      
+      // If we have enough professionals, check if this one is truly redundant
       const uncoveredServices = selectedServices.filter((service: Service) => {
         return !currentSelected.some((selectedProf: Professional | null) => 
           selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
         );
       });
       
-      // If there are uncovered services, check if this professional helps with them
-      if (uncoveredServices.length > 0) {
-        const helpsWithUncovered = uncoveredServices.some((service: Service) => 
+      // Only redundant if there are no uncovered services and this professional 
+      // doesn't provide any unique services
+      if (uncoveredServices.length === 0) {
+        const professionalServices = selectedServices.filter((service: Service) => 
           (professional.services_offered as any)?.includes(service.id)
         );
         
-        // Only consider redundant if they DON'T help with uncovered services
-        // AND they only provide services that are already covered
-        if (!helpsWithUncovered) {
-          const professionalServices = selectedServices.filter((service: Service) => 
-            (professional.services_offered as any)?.includes(service.id)
+        const allServicesCovered = professionalServices.every((service: Service) => {
+          return currentSelected.some((selectedProf: Professional | null) => 
+            selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
           );
-          
-          const allServicesCovered = professionalServices.every((service: Service) => {
-            return currentSelected.some((selectedProf: Professional | null) => 
-              selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
-            );
-          });
-          
-          return professionalServices.length > 0 && allServicesCovered;
-        }
+        });
+        
+        return professionalServices.length > 0 && allServicesCovered;
       }
       
-      // If no uncovered services or they help with uncovered services, not redundant
       return false;
     }
     
