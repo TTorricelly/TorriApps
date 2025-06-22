@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
   },
   snackbarOverlay: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 16,
     left: 20,
     right: 20,
     flexDirection: 'row',
