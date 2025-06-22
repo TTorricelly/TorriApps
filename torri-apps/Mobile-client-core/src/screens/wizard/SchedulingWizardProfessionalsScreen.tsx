@@ -760,11 +760,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                       : `Selecione ${professionalsRequested} profissionais`
                 }
               </Text>
-              {availableProfessionals.length > 1 && selectedServices.length > 1 && (
-                <Text style={styles.professionalsSubtitle}>
-                  {getSelectedCount()}/{professionalsRequested} selecionado{professionalsRequested > 1 ? 's' : ''}
-                </Text>
-              )}
               
               {/* Legend for exclusive services */}
               {hasExclusiveServices() && (
@@ -1294,12 +1289,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 4,
-  },
-  professionalsSubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   legendContainer: {
     backgroundColor: '#f0f9ff',
