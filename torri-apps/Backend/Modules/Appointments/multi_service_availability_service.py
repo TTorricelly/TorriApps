@@ -315,21 +315,24 @@ class MultiServiceAvailabilityService:
                             execution_type="sequential"
                         ))
         
-        # Multi-professional sequential execution for mixed scenarios
-        # Trigger when max_parallel_pros == 1 AND no single professional can handle all services
-        if max_parallel_pros == 1 and len(resource_combinations) == 0:
-            # Sequential execution with different professionals handling different services
+        # Multi-professional execution when single professional approach fails
+        # Trigger when no single professional can handle all services, regardless of parallel capability
+        if len(resource_combinations) == 0 and len(service_requirements) > 1:
+            # Try both sequential and parallel execution with different professionals
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
                     station_requirements = self._get_combined_station_requirements(service_requirements)
                     available_stations = self._get_available_stations(station_requirements)
                     
                     if available_stations:
+                        # Choose execution type based on service capabilities
+                        execution_type = "parallel" if can_parallel and max_parallel_pros >= 2 else "sequential"
+                        
                         resource_combinations.append(ResourceCombination(
                             services=[req.service for req in service_requirements],
                             professionals=list(prof_pair),
                             stations=available_stations,
-                            execution_type="sequential"
+                            execution_type=execution_type
                         ))
         
         if professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
