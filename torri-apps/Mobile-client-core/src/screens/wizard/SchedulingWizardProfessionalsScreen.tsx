@@ -520,18 +520,49 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
 
-              {/* Professional Count Suggestion - Only show if multiple services AND multiple professionals available */}
+              {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
-              <View style={styles.professionalSuggestion}>
-                <Text style={styles.suggestionText}>{getSuggestionText()}</Text>
-                <TouchableOpacity 
-                  style={styles.chooseButton}
-                  onPress={handleOpenProfessionalCountModal}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.chooseButtonText}>({getChooseButtonText()})</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                style={styles.sequenceCard}
+                onPress={handleOpenProfessionalCountModal}
+                activeOpacity={0.7}
+              >
+                <View style={styles.sequenceHeader}>
+                  <Text style={styles.sequenceTitle}>Sequência de atendimento</Text>
+                  <View style={styles.changeButton}>
+                    <Text style={styles.changeButtonText}>Alterar</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.sequenceContent}>
+                  <View style={styles.sequenceOption}>
+                    <View style={styles.sequenceIcon}>
+                      <Text style={styles.sequenceIconText}>
+                        {professionalsRequested === 1 ? '1' : '2+'}
+                      </Text>
+                    </View>
+                    <View style={styles.sequenceInfo}>
+                      <Text style={styles.sequenceOptionTitle}>
+                        {professionalsRequested === 1 
+                          ? '1 Profissional' 
+                          : `${professionalsRequested} Profissionais`
+                        }
+                      </Text>
+                      <Text style={styles.sequenceOptionDescription}>
+                        {professionalsRequested === 1 
+                          ? 'Um por vez • mais tempo'
+                          : 'Ao mesmo tempo • mais rápido'
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.timeEstimate}>
+                    <Text style={styles.timeLabel}>Tempo estimado</Text>
+                    <Text style={styles.timeValue}>{getEstimatedTimeText()}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             )}
 
             {/* Professional Selection */}
@@ -880,34 +911,101 @@ const styles = StyleSheet.create({
   chipSeparator: {
     width: 8,
   },
-  professionalSuggestion: {
-    backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 12,
+  sequenceCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sequenceHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sequenceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  changeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#f8fafc',
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  suggestionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
+  changeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  sequenceContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sequenceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  chooseButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'transparent',
-    borderRadius: 8,
+  sequenceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fdf2f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#ec4899',
   },
-  chooseButtonText: {
+  sequenceIconText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#ec4899',
-    textDecorationLine: 'underline',
+  },
+  sequenceInfo: {
+    flex: 1,
+  },
+  sequenceOptionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  sequenceOptionDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 16,
+  },
+  timeEstimate: {
+    alignItems: 'flex-end',
+  },
+  timeLabel: {
+    fontSize: 11,
+    color: '#9ca3af',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  timeValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
   },
   professionalsSection: {
     marginVertical: 24,
