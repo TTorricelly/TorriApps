@@ -525,13 +525,26 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
       professionalServices.every((service: Service) => alreadyCoveredServices.includes(service));
     
-    // In 3+ professional sequences, only mark as redundant if we already have enough professionals
-    // AND they can only provide covered services
+    
+    // In 3+ professional sequences, mark as redundant if they can only provide covered services
+    // UNLESS we don't have enough professionals yet and need to fill slots
     const hasEnoughProfessionals = selectedCount >= professionalsRequested;
     
-    if (canOnlyProvideCoveredServices && hasEnoughProfessionals) {
-      // Professional can only do services that are already covered AND we have enough professionals = REDUNDANT
-      return 'REDUNDANT';
+    // Check if professional can ONLY provide covered services
+    if (canOnlyProvideCoveredServices) {
+      // If there are uncovered services they can't help with, they're redundant regardless of professional count
+      if (uncoveredServices.length > 0) {
+        // Professional is useless - can only do covered services while uncovered services exist
+        return 'REDUNDANT';
+      }
+      // If all services are covered but we still need more professionals, they're available
+      else if (selectedCount < professionalsRequested) {
+        return 'AVAILABLE';
+      }
+      // If all services are covered and we have enough professionals, they're redundant
+      else {
+        return 'REDUNDANT';
+      }
     }
     
     if (uncoveredServices.length === 0) {
@@ -550,6 +563,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
+    // At this point, we know there are uncovered services
+    // Check if this professional can help with them
     return canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE';
   };
   
