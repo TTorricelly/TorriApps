@@ -663,14 +663,29 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </View>
             
             <View style={styles.modalBody}>
-              <Text style={styles.modalNote}>
-                • 1 profissional: Serviços realizados em sequência
+              <View style={styles.executionOptions}>
+                <View style={styles.executionOption}>
+                  <View style={styles.executionIcon}>
+                    <Text style={styles.executionIconText}>1</Text>
+                  </View>
+                  <View style={styles.executionContent}>
+                    <Text style={styles.executionTitle}>1 Profissional</Text>
+                    <Text style={styles.executionDescription}>Serviços em sequência</Text>
+                  </View>
+                </View>
+                
                 {maxParallelPros > 1 && (
-                  <>
-                    {'\n'}• {maxParallelPros}+ profissionais: Serviços realizados em paralelo (mais rápido)
-                  </>
+                  <View style={styles.executionOption}>
+                    <View style={[styles.executionIcon, styles.parallelIcon]}>
+                      <Text style={[styles.executionIconText, styles.parallelIconText]}>2+</Text>
+                    </View>
+                    <View style={styles.executionContent}>
+                      <Text style={styles.executionTitle}>2+ Profissionais</Text>
+                      <Text style={styles.executionDescription}>Em paralelo • mais rápido</Text>
+                    </View>
+                  </View>
                 )}
-              </Text>
+              </View>
               
               <ProfessionalToggle
                 value={professionalsRequested}
@@ -1212,6 +1227,48 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
+  },
+  executionOptions: {
+    marginBottom: 24,
+  },
+  executionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  executionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  parallelIcon: {
+    backgroundColor: '#ecfdf5',
+  },
+  executionIconText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  parallelIconText: {
+    color: '#16a34a',
+  },
+  executionContent: {
+    flex: 1,
+  },
+  executionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  executionDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
   },
   modalDescription: {
     fontSize: 16,
