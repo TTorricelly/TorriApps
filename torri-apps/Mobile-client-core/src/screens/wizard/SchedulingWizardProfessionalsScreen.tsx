@@ -261,15 +261,25 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const calculateIntelligentEstimatedTime = (): number => {
     if (selectedServices.length === 0) return 0;
     
-    // HARDCODED TEST: If more than 1 professional, return 99 minutes to test if this function is being used
-    if (professionalsRequested > 1) {
-      return 99; // This should show up immediately in the UI if our function is working
+    // Use the intended number of professionals for time estimation
+    const effectiveProfessionals = professionalsRequested;
+    
+    // Scenario 1: Only 1 professional - everything must be sequential
+    if (effectiveProfessionals === 1) {
+      return selectedServices.reduce((total: number, service: Service) => {
+        return total + service.duration_minutes;
+      }, 0);
     }
     
-    // Otherwise, sum all durations (sequential)
-    return selectedServices.reduce((total: number, service: Service) => {
-      return total + service.duration_minutes;
-    }, 0);
+    // Scenario 2+: Multiple professionals - assume all services can be parallelized
+    // For simplicity, assume best case: all services run in parallel
+    if (effectiveProfessionals >= selectedServices.length) {
+      // All services can be done simultaneously - return longest service duration
+      return Math.max(...selectedServices.map((service: Service) => service.duration_minutes));
+    } else {
+      // More services than professionals - use optimal distribution
+      return calculateOptimalParallelTime(selectedServices, effectiveProfessionals);
+    }
   };
 
   const calculateOptimalParallelTime = (services: Service[], availableProfessionals: number): number => {
