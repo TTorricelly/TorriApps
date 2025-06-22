@@ -199,7 +199,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       // Check if selecting this professional would create redundant coverage
       const wouldCreateRedundancy = checkIfSelectionCreatesRedundancy(professional, newSelected);
       
-      if (wouldCreateRedundancy && !isOptimalSelection(professional, newSelected)) {
+      if (wouldCreateRedundancy) {
         // Show helpful guidance instead of allowing redundant selection
         showRedundancyGuidance(professional);
         return;
@@ -457,12 +457,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   ): boolean => {
     if (!professional.services_offered) return false;
     
-    // For sequences = 3 (1 professional per service), allow multiple pros for same service
-    // Only apply redundancy logic for sequences = 1 or 2
-    if (professionalsRequested >= 3) {
-      return false; // No redundancy restrictions for 3+ professional sequences
-    }
-    
     // Get services this professional can provide
     const professionalServices = selectedServices.filter((service: Service) => 
       professional.services_offered?.includes(service.id)
@@ -475,8 +469,35 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       );
     });
     
-    // It's redundant if this professional only provides services already covered
-    // AND we're in a 1 or 2 professional sequence
+    // For sequences = 3+, still prevent obvious redundancy when there are uncovered services
+    if (professionalsRequested >= 3) {
+      // Find services that are not yet covered
+      const uncoveredServices = selectedServices.filter((service: Service) => {
+        return !currentSelected.some((selectedProf: Professional | null) => 
+          selectedProf && selectedProf.services_offered?.includes(service.id)
+        );
+      });
+      
+      // If there are uncovered services, this professional is redundant if:
+      // 1. All their services are already covered by others
+      // 2. They can't help with any uncovered services
+      if (uncoveredServices.length > 0) {
+        const canHelpWithUncovered = uncoveredServices.some((service: Service) => 
+          professional.services_offered?.includes(service.id)
+        );
+        
+        return (
+          alreadyCoveredServices.length === professionalServices.length && 
+          professionalServices.length > 0 &&
+          !canHelpWithUncovered
+        );
+      }
+      
+      // If all services are covered, allow any selection (user might want specific professionals)
+      return false;
+    }
+    
+    // For sequences = 1 or 2, apply stricter redundancy logic
     return alreadyCoveredServices.length === professionalServices.length && professionalServices.length > 0;
   };
 
@@ -552,12 +573,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   };
 
   const showRedundancyGuidance = (professional: Professional) => {
-    // Only show guidance for 1-2 professional sequences
-    // For 3+ sequences, redundancy is allowed
-    if (professionalsRequested >= 3) {
-      return; // No guidance needed for 3+ sequences
-    }
-    
     const alternatives = getBetterAlternatives(professional, selectedProfessionals);
     const uncoveredServices = getUncoveredServices();
     
@@ -569,6 +584,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       if (alternatives.length > 0) {
         const alternativeNames = alternatives.slice(0, 2).map(alt => alt.full_name || alt.email).join(' ou ');
         message += `\n\nSugestão: Selecione ${alternativeNames} para cobrir estes serviços.`;
+      }
+    }
+    
+    // Adjust message for 3+ sequences
+    if (professionalsRequested >= 3 && uncoveredServices.length > 0) {
+      message = `Para maior eficiência, considere selecionar profissionais que cubram serviços diferentes.\n\nServiços ainda não cobertos: ${uncoveredServices.join(', ')}`;
+      
+      if (alternatives.length > 0) {
+        const alternativeNames = alternatives.slice(0, 2).map(alt => alt.full_name || alt.email).join(' ou ');
+        message += `\n\nSugestão: ${alternativeNames} podem cobrir estes serviços.`;
       }
     }
     
