@@ -260,15 +260,50 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - **Logic**: No single professional can handle all three → Minimum = 2
 - **Result**: Auto-enables 2-professional selection
 
+## Visual Feedback System (v3.0)
+
+### Three-State Service Coverage Indicator
+
+The system now uses a sophisticated three-state visual feedback mechanism to provide clear progress indication without causing user confusion:
+
+#### State 1: Uncovered (Default)
+- **Visual**: Gray service chip with no indicator
+- **Meaning**: Service not yet assignable by any selected professional
+- **User Action**: Continue selecting professionals
+
+#### State 2: Partial Coverage (⏳)
+- **Visual**: Yellow service chip with hourglass ⏳ indicator
+- **Meaning**: Service CAN be handled by selected professional(s) but professional selection is incomplete
+- **User Action**: Continue selecting remaining professionals
+- **Purpose**: Provides immediate feedback while preventing premature "completed" signals
+
+#### State 3: Full Coverage (✓)
+- **Visual**: Green service chip with checkmark ✓ indicator  
+- **Meaning**: Service is covered AND all required professionals have been selected
+- **User Action**: Proceed to next step or continue with remaining services
+
+### UX Problem Solved
+
+**Previous Issue**: When 1 professional could handle 2 services, both services immediately showed green checkmarks (✓), confusing users who still needed to select 2 more professionals.
+
+**Solution**: Services now show yellow ⏳ until the COMPLETE professional selection is finished, then turn green ✓ all at once.
+
+**Example Flow**:
+```
+Start: [Gray] [Gray] [Gray] - No professionals selected
+Select 1 pro who handles 2 services: [Yellow⏳] [Yellow⏳] [Gray] - Partial progress
+Select 2 more pros: [Green✓] [Green✓] [Green✓] - Complete coverage
+```
+
 ## Technical Implementation Details
 
 ### Key Functions
 
 #### Frontend Functions
-1. **`calculateMinimumProfessionalsNeeded()`**: Core algorithm for determining minimum professionals
-2. **`loadAvailableProfessionals()`**: Integration point that applies the logic
-3. **`renderProfessionalChip()`**: UI rendering that respects the calculated requirements
-4. **`isValidSelection()`**: Validation logic ensuring service coverage
+1. **`calculateOptimalProfessionalsNeeded()`**: Enhanced algorithm supporting 3+ professional scenarios
+2. **`getServiceCoverageStatus()`**: Three-state coverage calculation (uncovered/partial/covered)
+3. **`loadAvailableProfessionals()`**: Immediate optimal calculation with race condition fixes
+4. **`renderServiceChip()`**: Three-state visual rendering with proper indicators
 
 #### Backend Functions
 5. **`_generate_resource_combinations()`**: Main backend logic for creating valid professional combinations
@@ -281,8 +316,34 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - **`selectedProfessionals`**: Array tracking current selections
 - **`availableProfessionals`**: Available professionals for the date/services
 
+### Race Condition Resolution (v3.0)
+
+**Problem Identified**: Inconsistent default professional counts when changing dates
+- Date 1: Shows 3 professionals by default ✅
+- Date 2: Shows 3 professionals by default ✅  
+- Back to Date 1: Shows 1 professional by default ❌
+
+**Root Cause**: Race condition between `loadConfiguration()` and `loadAvailableProfessionals()`
+```typescript
+// Previous problematic flow:
+loadConfiguration();           // Sets professionalsRequested = 1
+loadAvailableProfessionals();  // Updates to 3, but timing varies
+```
+
+**Solution**: Immediate optimal calculation without configuration dependency
+```typescript
+// New reliable flow:
+loadAvailableProfessionals() {
+  const optimalCount = calculateOptimalProfessionalsNeeded(services, professionals);
+  setProfessionalsRequested(optimalCount); // Set immediately, consistently
+}
+```
+
+**Result**: 100% consistent behavior across all date changes.
+
 ### Error Prevention
 - Prevents scenarios where required professionals are unavailable for selection
+- Eliminates race conditions in professional count calculation
 - Maintains backward compatibility with manual sequence selection
 - Handles edge cases (empty lists, single services, etc.)
 
@@ -292,6 +353,9 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - **Seamless Selection**: No manual intervention required for obvious multi-professional scenarios
 - **Intuitive Behavior**: System behaves as users expect it to
 - **Reduced Friction**: Eliminates confusion about grayed-out professionals
+- **Clear Progress Indication**: Three-state visual feedback shows real-time progress without confusion
+- **Consistent Defaults**: Reliable professional count suggestions across all date changes
+- **Immediate Feedback**: Users see ⏳ indicators as soon as services become assignable
 
 ### Business Logic
 - **Accurate Requirements**: Respects actual professional specialization constraints
@@ -306,10 +370,17 @@ const renderProfessionalChip = ({ item: professional }: { item: Professional }) 
 - Simple check: Can any professional handle all services?
 - **Issue**: Missed cases where services had separate professional groups
 
-#### v2.0 - Enhanced Analysis (Latest)
+#### v2.0 - Enhanced Analysis 
 - **Added**: Set intersection analysis between service professional groups
 - **Fixed**: Zero overlap detection (e.g., Service A: Pros 1,2; Service B: Pros 3,4)
 - **Improved**: Handles all professional coverage scenarios accurately
+
+#### v3.0 - Three-State Visual System & Consistency Fixes (Latest)
+- **Added**: Three-state visual feedback (uncovered → partial ⏳ → covered ✓)
+- **Fixed**: Race condition causing inconsistent defaults across date changes
+- **Enhanced**: Immediate optimal calculation without dependency on configuration loading
+- **Improved**: UX clarity - no premature checkmarks, clear progress indication
+- **Added**: Support for 3-professional sequences with individual service assignment
 
 ### Algorithm Complexity
 - **Time Complexity**: O(n² × m) where n = services, m = professionals
