@@ -523,7 +523,16 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             >
 
               {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available AND parallel execution is possible */}
-            {availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1 && (
+            {(() => {
+              const showCard = availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1;
+              console.log('Debug - Show sequence card?', {
+                availableProfessionals: availableProfessionals.length,
+                selectedServices: selectedServices.length,
+                maxParallelPros,
+                showCard
+              });
+              return showCard;
+            })() && (
               <TouchableOpacity 
                 style={styles.sequenceCard}
                 onPress={handleOpenProfessionalCountModal}
