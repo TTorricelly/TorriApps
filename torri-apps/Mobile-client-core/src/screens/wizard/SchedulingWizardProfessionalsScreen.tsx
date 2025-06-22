@@ -275,6 +275,19 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const parallelableServices = selectedServices.filter((service: Service) => service.parallelable);
     const sequentialServices = selectedServices.filter((service: Service) => !service.parallelable);
     
+    // If no services are marked as parallelable, treat all as parallelable for multi-professional scenarios
+    // This is a fallback in case the API doesn't provide parallelable info
+    const hasParallelableInfo = selectedServices.some(service => service.parallelable === true || service.parallelable === false);
+    if (!hasParallelableInfo && effectiveProfessionals > 1) {
+      // Treat all services as parallelable if no explicit parallelable info is provided
+      const allServicesAsParallelable = selectedServices;
+      const allParallelTime = effectiveProfessionals >= allServicesAsParallelable.length 
+        ? Math.max(...allServicesAsParallelable.map((service: Service) => service.duration_minutes))
+        : calculateOptimalParallelTime(allServicesAsParallelable, effectiveProfessionals);
+      
+      return allParallelTime;
+    }
+    
     let totalTime = 0;
     
     // Sequential services always add to total time (cannot be parallelized)
