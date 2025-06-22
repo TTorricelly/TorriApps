@@ -663,36 +663,75 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </View>
             
             <View style={styles.modalBody}>
-              <View style={styles.executionOptions}>
-                <View style={styles.executionOption}>
-                  <View style={styles.executionIcon}>
-                    <Text style={styles.executionIconText}>1</Text>
+              <View style={styles.radioOptions}>
+                <TouchableOpacity 
+                  style={[
+                    styles.radioOption,
+                    professionalsRequested === 1 && styles.radioOptionSelected
+                  ]}
+                  onPress={() => handleProfessionalsCountChange(1)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.radioButton}>
+                    <View style={[
+                      styles.radioCircle,
+                      professionalsRequested === 1 && styles.radioCircleSelected
+                    ]}>
+                      {professionalsRequested === 1 && <View style={styles.radioDot} />}
+                    </View>
+                    <Text style={styles.radioNumber}>1</Text>
                   </View>
-                  <View style={styles.executionContent}>
-                    <Text style={styles.executionTitle}>1 Profissional</Text>
-                    <Text style={styles.executionDescription}>Um por vez • mais tempo</Text>
+                  <View style={styles.radioContent}>
+                    <Text style={[
+                      styles.radioTitle,
+                      professionalsRequested === 1 && styles.radioTitleSelected
+                    ]}>
+                      1 Profissional
+                    </Text>
+                    <Text style={[
+                      styles.radioDescription,
+                      professionalsRequested === 1 && styles.radioDescriptionSelected
+                    ]}>
+                      Um por vez • mais tempo
+                    </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 
                 {maxParallelPros > 1 && (
-                  <View style={styles.executionOption}>
-                    <View style={[styles.executionIcon, styles.parallelIcon]}>
-                      <Text style={[styles.executionIconText, styles.parallelIconText]}>2+</Text>
+                  <TouchableOpacity 
+                    style={[
+                      styles.radioOption,
+                      professionalsRequested >= 2 && styles.radioOptionSelected
+                    ]}
+                    onPress={() => handleProfessionalsCountChange(2)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.radioButton}>
+                      <View style={[
+                        styles.radioCircle,
+                        professionalsRequested >= 2 && styles.radioCircleSelected
+                      ]}>
+                        {professionalsRequested >= 2 && <View style={styles.radioDot} />}
+                      </View>
+                      <Text style={styles.radioNumber}>2+</Text>
                     </View>
-                    <View style={styles.executionContent}>
-                      <Text style={styles.executionTitle}>2+ Profissionais</Text>
-                      <Text style={styles.executionDescription}>Ao mesmo tempo • mais rápido</Text>
+                    <View style={styles.radioContent}>
+                      <Text style={[
+                        styles.radioTitle,
+                        professionalsRequested >= 2 && styles.radioTitleSelected
+                      ]}>
+                        2+ Profissionais
+                      </Text>
+                      <Text style={[
+                        styles.radioDescription,
+                        professionalsRequested >= 2 && styles.radioDescriptionSelected
+                      ]}>
+                        Ao mesmo tempo • mais rápido
+                      </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
               </View>
-              
-              <ProfessionalToggle
-                value={professionalsRequested}
-                maxValue={maxParallelPros}
-                onChange={handleProfessionalsCountChange}
-                disabled={maxParallelPros === 1}
-              />
             </View>
           </View>
         </View>
@@ -1228,47 +1267,73 @@ const styles = StyleSheet.create({
   modalBody: {
     padding: 20,
   },
-  executionOptions: {
-    marginBottom: 24,
+  radioOptions: {
+    gap: 12,
   },
-  executionOption: {
+  radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
   },
-  executionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
+  radioOptionSelected: {
+    borderColor: '#ec4899',
+    backgroundColor: '#fdf2f8',
+  },
+  radioButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
   },
-  parallelIcon: {
-    backgroundColor: '#ecfdf5',
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
-  executionIconText: {
+  radioCircleSelected: {
+    borderColor: '#ec4899',
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ec4899',
+  },
+  radioNumber: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#64748b',
+    color: '#6b7280',
+    minWidth: 24,
+    textAlign: 'center',
   },
-  parallelIconText: {
-    color: '#16a34a',
-  },
-  executionContent: {
+  radioContent: {
     flex: 1,
   },
-  executionTitle: {
+  radioTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 2,
   },
-  executionDescription: {
+  radioTitleSelected: {
+    color: '#be185d',
+  },
+  radioDescription: {
     fontSize: 13,
     color: '#6b7280',
     lineHeight: 18,
+  },
+  radioDescriptionSelected: {
+    color: '#be185d',
   },
   modalDescription: {
     fontSize: 16,
