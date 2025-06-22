@@ -503,8 +503,23 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       return canProvideAnyService ? 'OPTIMAL' : 'AVAILABLE';
     }
     
-    // Phase 2: After enough professionals, check for redundancy
+    // Phase 2: After enough professionals selected, check for redundancy
     const uncoveredServices = getUncoveredServicesForAssignment(currentSelected);
+    const coveredServices = selectedServices.filter((service: Service) => !uncoveredServices.includes(service));
+    
+    // Get services this professional can provide
+    const professionalServices = selectedServices.filter((service: Service) => 
+      (professional.services_offered as any)?.includes(service.id)
+    );
+    
+    // Check if professional can ONLY provide already-covered services
+    const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
+      professionalServices.every((service: Service) => coveredServices.includes(service));
+    
+    if (canOnlyProvideCoveredServices) {
+      // Professional can only do services that are already covered = REDUNDANT
+      return 'REDUNDANT';
+    }
     
     if (uncoveredServices.length === 0) {
       // All services covered, additional professionals are available but not optimal
@@ -516,7 +531,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       (professional.services_offered as any)?.includes(service.id)
     );
     
-    return canHelpWithUncovered ? 'OPTIMAL' : 'REDUNDANT';
+    return canHelpWithUncovered ? 'OPTIMAL' : 'AVAILABLE';
   };
   
   // Algorithm for sequence = 1-2 (Set Cover approach)
