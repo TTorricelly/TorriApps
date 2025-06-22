@@ -711,29 +711,27 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           {/* Fixed Services Summary - Always Visible */}
           <View style={styles.stickyServicesContainer}>
             <View style={styles.servicesSummary}>
-              <View style={styles.servicesCompactHeader}>
-                <Text style={styles.totalTimeText}>
-                  {formatDuration(getTotalEstimatedTime())}
-                </Text>
+              <View style={styles.servicesRow}>
+                <FlatList
+                  data={selectedServices}
+                  renderItem={renderServiceChip}
+                  keyExtractor={(item: Service) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.servicesChipContainer}
+                  ItemSeparatorComponent={() => <View style={styles.chipSeparator} />}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
+                  style={styles.servicesList}
+                />
                 <TouchableOpacity 
-                  style={styles.editButton}
+                  style={styles.editIconButton}
                   onPress={handleEditServices}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.editButtonText}>Editar</Text>
+                  <Text style={styles.editIconText}>✏️</Text>
                 </TouchableOpacity>
               </View>
-              <FlatList
-                data={selectedServices}
-                renderItem={renderServiceChip}
-                keyExtractor={(item: Service) => item.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.servicesChipContainer}
-                ItemSeparatorComponent={() => <View style={styles.chipSeparator} />}
-                scrollEnabled={false}
-                nestedScrollEnabled={true}
-              />
             </View>
           </View>
 
@@ -1035,18 +1033,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  servicesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  servicesList: {
+    flex: 1,
+  },
   servicesSummaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  servicesCompactHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 12,
   },
   servicesSummaryTitle: {
     fontSize: 16,
@@ -1087,6 +1086,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
     textAlign: 'center',
+  },
+  editIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  editIconText: {
+    fontSize: 14,
   },
   servicesChipContainer: {
     paddingHorizontal: 0,
