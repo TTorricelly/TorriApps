@@ -70,8 +70,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const maxPros = Math.min(
         ...selectedServices.map((service: Service) => service.max_parallel_pros || 1)
       );
-      console.log('Debug - Selected services:', selectedServices.map(s => ({name: s.name, max_parallel_pros: s.max_parallel_pros})));
-      console.log('Debug - maxPros calculated:', maxPros);
       setMaxParallelPros(maxPros);
       
       // Set initial professionals requested
@@ -524,13 +522,8 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
               {/* Sequence Selection Card - Only show if multiple services AND multiple professionals available AND parallel execution is possible */}
             {(() => {
+              console.log('Debug - Current selectedServices:', selectedServices.length, selectedServices.map(s => s.name));
               const showCard = availableProfessionals.length > 1 && selectedServices.length > 1 && maxParallelPros > 1;
-              console.log('Debug - Show sequence card?', {
-                availableProfessionals: availableProfessionals.length,
-                selectedServices: selectedServices.length,
-                maxParallelPros,
-                showCard
-              });
               return showCard;
             })() && (
               <TouchableOpacity 
