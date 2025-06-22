@@ -15,7 +15,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
-  const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0);
   
   // Animation for ready button
   const buttonShakeAnim = React.useRef(new Animated.Value(0)).current;
@@ -790,33 +789,11 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 scrollEnabled={true}
                 pagingEnabled={false}
                 decelerationRate="fast"
-                snapToInterval={280} // Card width + separator
+                snapToInterval={140} // Card width + separator (smaller cards)
                 snapToAlignment="start"
                 contentInset={{ left: 16, right: 16 }}
                 contentInsetAdjustmentBehavior="automatic"
-                onScroll={(event) => {
-                  const contentOffsetX = event.nativeEvent.contentOffset.x;
-                  const cardWidth = 280; // Card width + separator
-                  const newIndex = Math.round(contentOffsetX / cardWidth);
-                  setCurrentCarouselIndex(Math.max(0, Math.min(newIndex, availableProfessionals.length - 1)));
-                }}
-                scrollEventThrottle={50}
               />
-              
-              {/* Pagination Dots */}
-              {availableProfessionals.length > 1 && (
-                <View style={styles.paginationContainer}>
-                  {availableProfessionals.map((_, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.paginationDot,
-                        currentCarouselIndex === index && styles.paginationDotActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              )}
             </View>
 
             {/* Sequence Selection Card - Show when multiple services AND multiple professionals available */}
@@ -1428,16 +1405,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   carouselSeparator: {
-    width: 16,
+    width: 12,
   },
   professionalCard: {
-    width: 260,
+    width: 130,
     marginVertical: 4,
   },
   professionalCardContent: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 2,
     borderColor: '#e5e7eb',
     shadowColor: '#000',
@@ -1446,9 +1423,9 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 140,
+    shadowRadius: 4,
+    elevation: 3,
+    minHeight: 100,
   },
   professionalCardSelected: {
     borderColor: '#ec4899',
@@ -1461,25 +1438,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   professionalCardAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#e5e7eb',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     alignSelf: 'center',
   },
   professionalCardAvatarSelected: {
     backgroundColor: '#ec4899',
   },
   professionalCardAvatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   professionalCardAvatarText: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '700',
     color: '#6b7280',
   },
@@ -1488,13 +1465,13 @@ const styles = StyleSheet.create({
   },
   professionalCardInfo: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   professionalCardName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: 'center',
   },
   professionalCardNameSelected: {
@@ -1504,10 +1481,10 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   professionalCardServices: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 14,
   },
   professionalCardServicesSelected: {
     color: '#be185d',
@@ -1517,48 +1494,27 @@ const styles = StyleSheet.create({
   },
   professionalCardSelectedIndicator: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#ec4899',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 2,
+    elevation: 3,
   },
   professionalCardSelectedIndicatorText: {
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '700',
     color: 'white',
-  },
-  
-  // Pagination Styles
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#d1d5db',
-    marginHorizontal: 4,
-  },
-  paginationDotActive: {
-    backgroundColor: '#ec4899',
-    width: 24,
-    borderRadius: 12,
   },
   bannerContent: {
     flexDirection: 'row',
