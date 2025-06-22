@@ -136,6 +136,17 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         // Calculate optimal professionals needed based on service coverage
         const optimalProfessionalsNeeded = calculateOptimalProfessionalsNeeded(selectedServices, professionals);
         
+        // Debug logging to understand the inconsistency
+        console.log('=== Professional Selection Debug ===');
+        console.log('Date:', selectedDate);
+        console.log('Services count:', selectedServices.length);
+        console.log('Available professionals count:', professionals.length);
+        console.log('Current professionalsRequested:', professionalsRequested);
+        console.log('Calculated optimalProfessionalsNeeded:', optimalProfessionalsNeeded);
+        console.log('Services:', selectedServices.map(s => s.name));
+        console.log('Professionals:', professionals.map(p => ({ name: p.full_name || p.email, services: p.services_offered })));
+        console.log('=====================================');
+        
         if (autoSelectedProfessionals.length > 0) {
           // If we need more professionals than currently requested, auto-update the count
           const requiredCount = Math.max(autoSelectedProfessionals.length, optimalProfessionalsNeeded);
