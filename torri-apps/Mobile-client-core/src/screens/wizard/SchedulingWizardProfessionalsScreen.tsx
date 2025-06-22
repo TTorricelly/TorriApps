@@ -1188,8 +1188,9 @@ const styles = StyleSheet.create({
   sequenceCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    padding: 16,
+    marginBottom: 16,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: '#f1f5f9',
     shadowColor: '#000',
@@ -1283,20 +1284,20 @@ const styles = StyleSheet.create({
   },
   professionalsSection: {
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   professionalsTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   legendContainer: {
     backgroundColor: '#f0f9ff',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 6,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e0f2fe',
   },
@@ -1408,7 +1409,7 @@ const styles = StyleSheet.create({
   // Carousel Styles
   professionalsCarousel: {
     paddingHorizontal: 0,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   carouselSeparator: {
     width: 12,
