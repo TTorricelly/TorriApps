@@ -149,6 +149,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const handleProfessionalsCountChange = (count: number) => {
     setProfessionalsRequested(count);
     resetFromStep(3); // Reset time slots when changing professional count
+    // Auto-close modal after selection
+    setTimeout(() => {
+      setShowProfessionalCountModal(false);
+    }, 300);
   };
 
   const handleProfessionalSelect = (professional: Professional) => {
@@ -675,14 +679,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
                 disabled={maxParallelPros === 1}
               />
             </View>
-            
-            <TouchableOpacity 
-              style={styles.modalConfirmButton}
-              onPress={handleCloseProfessionalCountModal}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalConfirmText}>Confirmar</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
