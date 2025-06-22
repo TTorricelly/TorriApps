@@ -319,7 +319,42 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       return 1;
     }
     
-    // If no single professional can handle all services, we need multiple
+    // More sophisticated analysis: check if services require different professionals
+    // Create a map of which professionals can do each service
+    const serviceToProfs = new Map<string, Set<string>>();
+    services.forEach((service: Service) => {
+      const capableProfIds = new Set<string>();
+      professionals.forEach((prof: Professional) => {
+        if (prof.services_offered?.includes(service.id)) {
+          capableProfIds.add(prof.id);
+        }
+      });
+      serviceToProfs.set(service.id, capableProfIds);
+    });
+    
+    // Check if any two services have NO overlapping professionals
+    const serviceIds = Array.from(serviceToProfs.keys());
+    for (let i = 0; i < serviceIds.length; i++) {
+      for (let j = i + 1; j < serviceIds.length; j++) {
+        const profsForServiceA = serviceToProfs.get(serviceIds[i]) || new Set();
+        const profsForServiceB = serviceToProfs.get(serviceIds[j]) || new Set();
+        
+        // Check if sets have no intersection (no professional can do both services)
+        const intersection = new Set([...profsForServiceA].filter(x => profsForServiceB.has(x)));
+        console.log(`Service ${i} professionals: [${Array.from(profsForServiceA).join(', ')}]`);
+        console.log(`Service ${j} professionals: [${Array.from(profsForServiceB).join(', ')}]`);
+        console.log(`Intersection: [${Array.from(intersection).join(', ')}] (size: ${intersection.size})`);
+        
+        if (intersection.size === 0) {
+          // These services require completely different professionals
+          console.log(`No overlap detected - requiring 2 professionals`);
+          return Math.min(2, professionals.length);
+        }
+      }
+    }
+    
+    // If we reach here, all services have some overlapping professionals
+    // but no single professional can do all - likely need 2 professionals
     return Math.min(2, professionals.length);
   };
 
