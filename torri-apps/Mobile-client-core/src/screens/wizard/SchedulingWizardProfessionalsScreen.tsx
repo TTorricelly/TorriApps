@@ -730,27 +730,29 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
           
-          {/* Modern Overlay Snackbars */}
+          {/* Friendly Guide Messages */}
           {!isValidSelection() && (
-            <View style={[styles.snackbarOverlay, styles.snackbarWarning]}>
+            <View style={[styles.snackbarOverlay, styles.snackbarGuide]}>
               <View style={styles.snackbarIconContainer}>
-                <Text style={styles.snackbarIcon}>⚠️</Text>
+                <Text style={styles.snackbarIcon}>
+                  {getSelectedCount() === 0 ? '👥' : getSelectedCount() < professionalsRequested ? '✨' : '📋'}
+                </Text>
               </View>
               <View style={styles.snackbarContent}>
                 <Text style={styles.snackbarTitle}>
                   {getSelectedCount() === 0 
-                    ? 'Seleção necessária' 
+                    ? 'Escolha seus profissionais' 
                     : getSelectedCount() < professionalsRequested
-                      ? 'Profissionais insuficientes'
-                      : 'Serviços pendentes'
+                      ? 'Quase lá!'
+                      : 'Verificando serviços'
                   }
                 </Text>
                 <Text style={styles.snackbarMessage}>
                   {getSelectedCount() === 0 
-                    ? 'Escolha pelo menos um profissional'
+                    ? 'Selecione o(s) profissional(is) para seus serviços'
                     : getSelectedCount() < professionalsRequested
-                      ? `Selecione ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} adicional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''}`
-                      : getUncoveredServices().join(', ')
+                      ? `Selecione mais ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} para continuar`
+                      : `Verifique se todos os serviços estão cobertos: ${getUncoveredServices().join(', ')}`
                   }
                 </Text>
               </View>
@@ -1325,6 +1327,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderLeftWidth: 4,
     borderLeftColor: '#f59e0b',
+  },
+  snackbarGuide: {
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#6366f1', // Indigo for friendly guidance
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
   },
   snackbarSuccess: {
     backgroundColor: '#ffffff',
