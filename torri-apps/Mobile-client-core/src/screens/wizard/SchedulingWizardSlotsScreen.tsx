@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
-import { HapticFeedbackTypes, trigger } from 'react-native-haptic-feedback';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -80,8 +79,6 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   };
 
   const handleSlotSelect = (slot: any) => {
-    // Haptic feedback for selection
-    trigger(HapticFeedbackTypes.selection);
     setSelectedSlot(slot);
   };
 
