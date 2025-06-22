@@ -530,18 +530,29 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const canOnlyProvideCoveredServices = professionalServices.length > 0 && 
       professionalServices.every((service: Service) => alreadyCoveredServices.includes(service));
     
-    console.log(`Phase 2 - ${professional.full_name}: canOnlyProvideCoveredServices=${canOnlyProvideCoveredServices}`);
+    // In 3+ professional sequences, only mark as redundant if we already have enough professionals
+    // AND they can only provide covered services
+    const hasEnoughProfessionals = selectedCount >= professionalsRequested;
     
-    if (canOnlyProvideCoveredServices) {
-      // Professional can only do services that are already covered = REDUNDANT
-      console.log(`Phase 2 - ${professional.full_name}: REDUNDANT - can only provide covered services`);
+    console.log(`Phase 2 - ${professional.full_name}: canOnlyProvideCoveredServices=${canOnlyProvideCoveredServices}, hasEnoughProfessionals=${hasEnoughProfessionals} (${selectedCount}/${professionalsRequested})`);
+    
+    if (canOnlyProvideCoveredServices && hasEnoughProfessionals) {
+      // Professional can only do services that are already covered AND we have enough professionals = REDUNDANT
+      console.log(`Phase 2 - ${professional.full_name}: REDUNDANT - can only provide covered services and we have enough professionals`);
       return 'REDUNDANT';
     }
     
     if (uncoveredServices.length === 0) {
-      // All services covered, additional professionals are available but not optimal
-      console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered`);
-      return 'AVAILABLE';
+      // All services covered, but check if we still need more professionals for the sequence
+      if (selectedCount < professionalsRequested) {
+        // Still need more professionals, so this one is available
+        console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered but need more professionals (${selectedCount}/${professionalsRequested})`);
+        return 'AVAILABLE';
+      } else {
+        // Have enough professionals and all services covered
+        console.log(`Phase 2 - ${professional.full_name}: AVAILABLE - all services covered and have enough professionals`);
+        return 'AVAILABLE';
+      }
     }
     
     // Check if this professional can help with uncovered services
