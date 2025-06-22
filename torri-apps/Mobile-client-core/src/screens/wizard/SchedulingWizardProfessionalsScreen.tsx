@@ -458,39 +458,45 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   ): boolean => {
     if (!professional.services_offered) return false;
     
-    // For sequences = 3+, apply minimal redundancy logic
-    // In 3+ sequences, each professional typically handles 1 service, so we need different logic
+    // For sequences = 3+, apply refined redundancy logic
+    // In 3+ sequences, each professional typically handles 1 service
     if (professionalsRequested >= 3) {
-      // Only consider it redundant if we have already filled enough professionals
-      // to cover all services and this professional doesn't add unique value
+      // Check if this professional only offers services that are already covered
+      // AND there are still services that need coverage
       
-      // If we haven't selected enough professionals yet, don't mark anyone as redundant
       const selectedCount = currentSelected.filter(prof => prof !== null).length;
-      if (selectedCount < selectedServices.length) {
-        return false; // Don't restrict selections until we have enough professionals
-      }
       
-      // If we have enough professionals, check if this one is truly redundant
-      const uncoveredServices = selectedServices.filter((service: Service) => {
+      // Find which services this professional can provide
+      const professionalServices = selectedServices.filter((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      );
+      
+      if (professionalServices.length === 0) return false; // Professional can't help with any selected services
+      
+      // Find services that still need coverage (nobody selected can do them)
+      const servicesNeedingCoverage = selectedServices.filter((service: Service) => {
         return !currentSelected.some((selectedProf: Professional | null) => 
           selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
         );
       });
       
-      // Only redundant if there are no uncovered services and this professional 
-      // doesn't provide any unique services
-      if (uncoveredServices.length === 0) {
-        const professionalServices = selectedServices.filter((service: Service) => 
-          (professional.services_offered as any)?.includes(service.id)
-        );
-        
-        const allServicesCovered = professionalServices.every((service: Service) => {
+      // Check if this professional can help with services that need coverage
+      const canHelpWithNeededServices = servicesNeedingCoverage.some((service: Service) => 
+        (professional.services_offered as any)?.includes(service.id)
+      );
+      
+      // Professional is redundant if:
+      // 1. They can't help with any services that need coverage
+      // 2. AND there are still services that need coverage
+      // 3. AND all their services are already covered by selected professionals
+      if (!canHelpWithNeededServices && servicesNeedingCoverage.length > 0) {
+        const allTheirServicesCovered = professionalServices.every((service: Service) => {
           return currentSelected.some((selectedProf: Professional | null) => 
             selectedProf && (selectedProf.services_offered as any)?.includes(service.id)
           );
         });
         
-        return professionalServices.length > 0 && allServicesCovered;
+        return allTheirServicesCovered;
       }
       
       return false;
