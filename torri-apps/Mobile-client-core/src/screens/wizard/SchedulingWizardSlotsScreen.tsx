@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { HapticFeedbackTypes, trigger } from 'react-native-haptic-feedback';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -79,7 +80,19 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   };
 
   const handleSlotSelect = (slot: any) => {
+    // Haptic feedback for selection
+    trigger(HapticFeedbackTypes.selection);
     setSelectedSlot(slot);
+  };
+
+  // Helper function to format time for grid display
+  const formatTimeForGrid = (timeString: string) => {
+    const date = new Date(timeString);
+    return date.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
   };
 
   // Progressive loading functions
@@ -129,6 +142,34 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
         isSelected={selectedSlot?.id === item.id}
         onSelect={() => handleSlotSelect(item)}
       />
+    );
+  };
+
+  // Time grid item for single service bookings
+  const renderTimeGridItem = (slot: any, index: number) => {
+    const isSelected = selectedSlot?.id === slot.id;
+    const isUnavailable = slot.status === 'unavailable'; // Assuming unavailable slots are marked
+    
+    return (
+      <Pressable
+        key={slot.id}
+        style={[
+          styles.timeGridSlot,
+          isSelected && styles.timeGridSlotSelected,
+          isUnavailable && styles.timeGridSlotUnavailable,
+        ]}
+        onPress={() => !isUnavailable && handleSlotSelect(slot)}
+        disabled={isUnavailable}
+        android_ripple={{ color: '#ec489950' }}
+      >
+        <Text style={[
+          styles.timeGridText,
+          isSelected && styles.timeGridTextSelected,
+          isUnavailable && styles.timeGridTextUnavailable,
+        ]}>
+          {formatTimeForGrid(slot.start_time)}
+        </Text>
+      </Pressable>
     );
   };
 
@@ -198,7 +239,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
           {/* Services Chip */}
           <View style={styles.compactChip}>
             <Text style={styles.compactChipText}>
-              🛍️ {selectedServices.length}
+              🛒 {selectedServices.length}
             </Text>
           </View>
 
@@ -213,6 +254,37 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     );
   };
 
+  // Time Grid for single service
+  const renderTimeGrid = () => (
+    <View style={styles.timeGridContainer}>
+      <View style={styles.slotsHeader}>
+        <Text style={styles.slotsTitle}>
+          Horários disponíveis ({availableSlots.length})
+        </Text>
+        <Text style={styles.slotsSubtitle}>
+          Selecione o horário que melhor se adequa à sua agenda
+        </Text>
+      </View>
+      
+      <View style={styles.timeGrid}>
+        {currentSlots.map((slot, index) => renderTimeGridItem(slot, index))}
+      </View>
+
+      {/* Show more button for grid */}
+      {hasMoreSlots && !showAllSlots && (
+        <TouchableOpacity
+          style={styles.showAllButton}
+          onPress={handleShowAllSlots}
+        >
+          <Text style={styles.showAllText}>
+            Ver todos os horários ({availableSlots.length - visibleCount} restantes)
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Itinerary List for multi-service
   const renderSlotsList = () => (
     <>
       <FlatList
@@ -293,7 +365,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
         renderEmptyState()
       ) : (
         <View style={styles.content}>
-          {renderSlotsList()}
+          {selectedServices.length === 1 ? renderTimeGrid() : renderSlotsList()}
         </View>
       )}
 
@@ -575,6 +647,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4b5563',
     marginBottom: 4,
+  },
+  // Time Grid Styles
+  timeGridContainer: {
+    flex: 1,
+  },
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    justifyContent: 'space-between',
+  },
+  timeGridSlot: {
+    width: '32%', // 3 columns with spacing
+    minHeight: 48, // Minimum 48dp touch target
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  timeGridSlotSelected: {
+    backgroundColor: '#ec4899', // Brand pink background
+    borderColor: '#ec4899',
+  },
+  timeGridSlotUnavailable: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+  },
+  timeGridText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937', // Dark text for light background
+    textAlign: 'center',
+  },
+  timeGridTextSelected: {
+    color: '#ffffff', // White text for selected
+    fontWeight: '600',
+  },
+  timeGridTextUnavailable: {
+    color: '#C4C4C4', // Light gray for unavailable
   },
 });
 
