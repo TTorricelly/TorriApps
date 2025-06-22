@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Image, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer, ProfessionalToggle } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -14,6 +14,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardProfessionalsScreenNavigationProp>();
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
+  const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
   
   const {
     selectedServices,
@@ -331,6 +332,28 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     return hasServiceCoverage && hasRequiredProfessionals;
   };
 
+  const getEstimatedTimeText = (): string => {
+    const totalMinutes = getTotalEstimatedTime();
+    return formatDuration(totalMinutes);
+  };
+
+  const getSuggestionText = (): string => {
+    const timeText = getEstimatedTimeText();
+    return `Sugerimos: ${professionalsRequested} profissional${professionalsRequested > 1 ? 'is' : ''} | Tempo estimado: ${timeText}`;
+  };
+
+  const getChooseButtonText = (): string => {
+    return `escolher ${professionalsRequested === 1 ? '2+' : '1'}`;
+  };
+
+  const handleOpenProfessionalCountModal = () => {
+    setShowProfessionalCountModal(true);
+  };
+
+  const handleCloseProfessionalCountModal = () => {
+    setShowProfessionalCountModal(false);
+  };
+
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
@@ -493,14 +516,18 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
 
-              {/* Professional Count Toggle - Only show if multiple services AND multiple professionals available */}
+              {/* Professional Count Suggestion - Only show if multiple services AND multiple professionals available */}
             {availableProfessionals.length > 1 && selectedServices.length > 1 && (
-              <ProfessionalToggle
-                value={professionalsRequested}
-                maxValue={maxParallelPros}
-                onChange={handleProfessionalsCountChange}
-                disabled={maxParallelPros === 1}
-              />
+              <View style={styles.professionalSuggestion}>
+                <Text style={styles.suggestionText}>{getSuggestionText()}</Text>
+                <TouchableOpacity 
+                  style={styles.chooseButton}
+                  onPress={handleOpenProfessionalCountModal}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.chooseButtonText}>({getChooseButtonText()})</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {/* Professional Selection */}
@@ -610,6 +637,59 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           )}
         </View>
       )}
+
+      {/* Professional Count Bottom Sheet Modal */}
+      <Modal
+        visible={showProfessionalCountModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCloseProfessionalCountModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Número de profissionais</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={handleCloseProfessionalCountModal}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalDescription}>
+                Quantos profissionais você gostaria para realizar os serviços?
+              </Text>
+              
+              <ProfessionalToggle
+                value={professionalsRequested}
+                maxValue={maxParallelPros}
+                onChange={handleProfessionalsCountChange}
+                disabled={maxParallelPros === 1}
+              />
+              
+              <Text style={styles.modalNote}>
+                • 1 profissional: Serviços realizados em sequência
+                {maxParallelPros > 1 && (
+                  <>
+                    {'\n'}• {maxParallelPros}+ profissionais: Serviços realizados em paralelo (mais rápido)
+                  </>
+                )}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.modalConfirmButton}
+              onPress={handleCloseProfessionalCountModal}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalConfirmText}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </WizardContainer>
   );
 };
@@ -753,6 +833,35 @@ const styles = StyleSheet.create({
   },
   chipSeparator: {
     width: 8,
+  },
+  professionalSuggestion: {
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  suggestionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+    flex: 1,
+  },
+  chooseButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
+  },
+  chooseButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ec4899',
+    textDecorationLine: 'underline',
   },
   professionalsSection: {
     marginVertical: 24,
@@ -1069,6 +1178,84 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34, // Safe area bottom
+    maxHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  modalNote: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 16,
+    lineHeight: 20,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 8,
+  },
+  modalConfirmButton: {
+    backgroundColor: '#ec4899',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });
 
