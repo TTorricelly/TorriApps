@@ -525,16 +525,21 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const selectedCount = currentSelected.filter(prof => prof !== null).length;
       const servicesCount = selectedServices.length;
       
+      // Debug logging
+      console.log(`[isOptimalSelection] Professional: ${professional.full_name || professional.id}, selectedCount: ${selectedCount}, servicesCount: ${servicesCount}`);
+      
       // If we have fewer professionals than services, highlight professionals 
       // who can help with any of the services
       if (selectedCount < servicesCount) {
-        return selectedServices.some((service: Service) => 
+        const canHelpWithAnyService = selectedServices.some((service: Service) => 
           (professional.services_offered as any)?.includes(service.id)
         );
+        console.log(`[isOptimalSelection] ${professional.full_name || professional.id} canHelpWithAnyService: ${canHelpWithAnyService}`);
+        return canHelpWithAnyService;
       }
       
       // If we have equal or more professionals than services, 
-      // still highlight if this professional offers unique coverage
+      // still highlight if this professional offers coverage for our services
       const professionalServices = selectedServices.filter((service: Service) => 
         (professional.services_offered as any)?.includes(service.id)
       );
