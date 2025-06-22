@@ -43,7 +43,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   useEffect(() => {
     setCurrentStep(2);
-    loadConfiguration();
+    // Load professionals first, then let the optimal calculation determine the count
     loadAvailableProfessionals();
   }, [selectedDate]);
 
@@ -110,6 +110,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       
       setAvailableProfessionals(professionals);
       
+      // Calculate optimal professionals needed FIRST, before any other logic
+      const optimalProfessionalsNeeded = calculateOptimalProfessionalsNeeded(selectedServices, professionals);
+      
+      // Set optimal count immediately to prevent race conditions
+      setProfessionalsRequested(optimalProfessionalsNeeded);
+      
       // Auto-select professionals based on service exclusivity
       if (professionals.length === 1) {
         // Only 1 professional total - auto-select
@@ -132,9 +138,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             }
           }
         });
-        
-        // Calculate optimal professionals needed based on service coverage
-        const optimalProfessionalsNeeded = calculateOptimalProfessionalsNeeded(selectedServices, professionals);
         
         // Debug logging to understand the inconsistency
         console.log('=== Professional Selection Debug ===');
