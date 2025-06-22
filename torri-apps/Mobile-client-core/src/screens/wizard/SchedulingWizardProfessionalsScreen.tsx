@@ -525,16 +525,12 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       const selectedCount = currentSelected.filter(prof => prof !== null).length;
       const servicesCount = selectedServices.length;
       
-      // Debug logging
-      console.log(`[isOptimalSelection] Professional: ${professional.full_name || professional.id}, selectedCount: ${selectedCount}, servicesCount: ${servicesCount}`);
-      
       // If we have fewer professionals than services, highlight professionals 
       // who can help with any of the services
       if (selectedCount < servicesCount) {
         const canHelpWithAnyService = selectedServices.some((service: Service) => 
           (professional.services_offered as any)?.includes(service.id)
         );
-        console.log(`[isOptimalSelection] ${professional.full_name || professional.id} canHelpWithAnyService: ${canHelpWithAnyService}`);
         return canHelpWithAnyService;
       }
       
@@ -777,7 +773,10 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     const wouldCreateRedundancy = !isSelected && checkIfSelectionCreatesRedundancy(professional, selectedProfessionals);
     const isOptimal = !isSelected && isOptimalSelection(professional, selectedProfessionals);
     const shouldShowWarning = wouldCreateRedundancy; // Simplified: if redundant, show warning
-    const shouldHighlight = isOptimal && getUncoveredServices().length > 0;
+    // For sequence = 3+, use different highlighting logic
+    const shouldHighlight = professionalsRequested >= 3 
+      ? isOptimal  // For sequence = 3+, highlight based on our improved isOptimal logic
+      : isOptimal && getUncoveredServices().length > 0; // For sequence = 1-2, use old logic
     
     const isDisabled = !isSelected && (!canSelect || shouldShowWarning);
     
