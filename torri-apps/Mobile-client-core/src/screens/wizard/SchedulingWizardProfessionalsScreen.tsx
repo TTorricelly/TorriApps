@@ -442,9 +442,17 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const renderProfessionalChip = ({ item: professional }: { item: Professional }) => {
     const isSelected = selectedProfessionals.some((prof: Professional | null) => prof?.id === professional.id);
     
-    // Simplified logic: Allow selection up to professionalsRequested count
-    // This ensures that when user sets to 2 pros, they can select 2 professionals
-    const canSelect = !isSelected && getSelectedCount() < professionalsRequested;
+    // More intelligent selection logic that considers actual service requirements
+    // Calculate what we actually need in real-time, not just what professionalsRequested says
+    const actualMinNeeded = calculateMinimumProfessionalsNeeded(selectedServices, availableProfessionals);
+    const effectiveLimit = Math.max(professionalsRequested, actualMinNeeded);
+    
+    const canSelect = !isSelected && getSelectedCount() < effectiveLimit;
+    
+    // Debug logging for the problematic professional
+    if (professional.full_name?.includes('João') || professional.full_name?.includes('Ana')) {
+      console.log(`${professional.full_name}: professionalsRequested=${professionalsRequested}, actualMinNeeded=${actualMinNeeded}, effectiveLimit=${effectiveLimit}, getSelectedCount()=${getSelectedCount()}, canSelect=${canSelect}, isDisabled=${!isSelected && !canSelect}`);
+    }
     
     const isOnlyOption = availableProfessionals.length === 1;
     const isDisabled = !isSelected && !canSelect;
