@@ -648,17 +648,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               </Text>
 
               <View style={{ gap: 12 }}>
-                {/* Name */}
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <User size={20} color="#6b7280" style={{ marginRight: 12 }} />
-                  <View>
-                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Nome</Text>
-                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                      {storeUser?.fullName || 'Não informado'}
-                    </Text>
-                  </View>
-                </View>
-
                 {/* Email */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Mail size={20} color="#6b7280" style={{ marginRight: 12 }} />
@@ -724,18 +713,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   </View>
                 </View>
 
-                {/* Role - only show if it exists */}
-                {storeUser?.role ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <User size={20} color="#6b7280" style={{ marginRight: 12 }} />
-                    <View>
-                      <Text style={{ fontSize: 14, color: '#6b7280' }}>Perfil</Text>
-                      <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                        {storeUser.role}
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
               </View>
             </View>
           </View>
