@@ -132,7 +132,7 @@ const AppointmentsScreen = () => {
   };
 
   const formatPrice = (price?: number): string => {
-    if (!price) return '';
+    if (!price || typeof price !== 'number') return '';
     return `R$ ${price.toFixed(2).replace('.', ',')}`;
   };
 
