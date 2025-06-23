@@ -886,9 +886,9 @@ class MultiServiceAvailabilityService:
             ))
         
         # Debug what's being returned to frontend (can be removed in production)
-        # print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
-        # for service_slot in services_in_slot:
-        #     print(f"  {service_slot.service_name} → {service_slot.professional_name}")
+        print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
+        for service_slot in services_in_slot:
+            print(f"  {service_slot.service_name} → {service_slot.professional_name}")
         
         return services_in_slot
 
