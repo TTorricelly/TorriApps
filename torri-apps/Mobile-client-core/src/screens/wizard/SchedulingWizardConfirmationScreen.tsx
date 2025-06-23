@@ -142,45 +142,39 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     return `${mins}min`;
   };
 
-  // Modern card with gradient and better spacing
+  // Compact date/time card
   const renderDateTimeCard = () => (
-    <View style={styles.modernCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.cardIcon}>📅</Text>
+    <View style={styles.compactCard}>
+      <View style={styles.compactRow}>
+        <View style={styles.compactIconContainer}>
+          <Text style={styles.compactIcon}>📅</Text>
         </View>
-        <Text style={styles.cardTitle}>Data e Horário</Text>
-      </View>
-      
-      <View style={styles.dateTimeContent}>
-        <View style={styles.dateTimeMainInfo}>
-          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-          <View style={styles.timeRow}>
-            <Text style={styles.timeText}>
+        <View style={styles.compactContent}>
+          <Text style={styles.compactDate}>{formatDate(selectedDate)}</Text>
+          <View style={styles.compactTimeRow}>
+            <Text style={styles.compactTime}>
               {formatTime(selectedSlot?.start_time || '')} - {formatTime(selectedSlot?.end_time || '')}
             </Text>
-            <View style={styles.durationBadge}>
-              <Text style={styles.durationText}>
-                {formatDuration(selectedSlot?.total_duration_minutes || 0)}
-              </Text>
-            </View>
+            <Text style={styles.compactDuration}>
+              {formatDuration(selectedSlot?.total_duration_minutes || 0)}
+            </Text>
           </View>
         </View>
       </View>
     </View>
   );
 
-  // Enhanced service assignments with professional mapping
+  // Compact services card
   const renderServiceAssignments = () => (
-    <View style={styles.modernCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.cardIcon}>💼</Text>
+    <View style={styles.compactCard}>
+      <View style={styles.compactServiceHeader}>
+        <View style={styles.compactIconContainer}>
+          <Text style={styles.compactIcon}>💼</Text>
         </View>
-        <Text style={styles.cardTitle}>Serviços</Text>
+        <Text style={styles.compactCardTitle}>Serviços</Text>
         {selectedSlot?.execution_type === 'parallel' && (
-          <View style={styles.parallelBadge}>
-            <Text style={styles.parallelBadgeText}>⚡ Paralelo</Text>
+          <View style={styles.compactParallelBadge}>
+            <Text style={styles.compactParallelText}>⚡</Text>
           </View>
         )}
       </View>
@@ -250,31 +244,31 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   );
 
 
-  // Client notes input section
+  // Compact client notes section
   const renderClientNotes = () => (
-    <View style={styles.modernCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.cardIcon}>📝</Text>
+    <View style={styles.compactCard}>
+      <View style={styles.compactServiceHeader}>
+        <View style={styles.compactIconContainer}>
+          <Text style={styles.compactIcon}>📝</Text>
         </View>
-        <Text style={styles.cardTitle}>Observações</Text>
-        <Text style={styles.optionalText}>(opcional)</Text>
+        <Text style={styles.compactCardTitle}>Observações</Text>
+        <Text style={styles.compactOptionalText}>(opcional)</Text>
       </View>
       
-      <View style={styles.notesInputContent}>
+      <View style={styles.compactNotesContent}>
         <TextInput
-          style={styles.notesInput}
+          style={styles.compactNotesInput}
           multiline
-          numberOfLines={4}
-          placeholder="Informe alergias, preferências ou observações especiais..."
+          numberOfLines={3}
+          placeholder="Alergias, preferências ou observações especiais..."
           placeholderTextColor="#9ca3af"
           value={clientNotes}
           onChangeText={setClientNotes}
           maxLength={500}
           textAlignVertical="top"
         />
-        <Text style={styles.characterCount}>
-          {clientNotes.length}/500 caracteres
+        <Text style={styles.compactCharacterCount}>
+          {clientNotes.length}/500
         </Text>
       </View>
     </View>
@@ -988,6 +982,134 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#6b7280',
+  },
+  
+  // Compact styles for better space usage
+  compactCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginVertical: 6, // Reduced from 8
+    borderRadius: 12, // Reduced from 16
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.03, // Reduced shadow
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16, // Reduced from 20
+  },
+  
+  compactServiceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8, // Reduced padding
+  },
+  
+  compactIconContainer: {
+    width: 24, // Reduced from 32
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  
+  compactIcon: {
+    fontSize: 14, // Reduced from 16
+  },
+  
+  compactCardTitle: {
+    fontSize: 16, // Reduced from 18
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  
+  compactContent: {
+    flex: 1,
+  },
+  
+  compactDate: {
+    fontSize: 15, // Reduced
+    fontWeight: '500',
+    color: '#1f2937',
+    textTransform: 'capitalize',
+    marginBottom: 4,
+  },
+  
+  compactTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  
+  compactTime: {
+    fontSize: 18, // Reduced from 24
+    fontWeight: '700',
+    color: '#ec4899',
+  },
+  
+  compactDuration: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  
+  compactParallelBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  
+  compactParallelText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#92400e',
+  },
+  
+  compactOptionalText: {
+    fontSize: 12, // Reduced
+    color: '#9ca3af',
+    fontStyle: 'italic',
+  },
+  
+  compactNotesContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  
+  compactNotesInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8, // Reduced
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14, // Reduced
+    color: '#1f2937',
+    backgroundColor: '#f9fafb',
+    minHeight: 70, // Reduced from 100
+    marginBottom: 6,
+  },
+  
+  compactCharacterCount: {
+    fontSize: 11, // Reduced
+    color: '#9ca3af',
+    textAlign: 'right',
   },
 });
 
