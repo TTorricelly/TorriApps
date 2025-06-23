@@ -317,10 +317,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
 
         {/* Appointment Summary Card */}
         <View style={styles.successSummaryCard}>
-          <View style={styles.successSummaryHeader}>
-            <Text style={styles.successSummaryTitle}>Resumo do Agendamento</Text>
-          </View>
-          
           <View style={styles.successSummaryContent}>
             <View style={styles.successRow}>
               <Text style={styles.successLabel}>📅 Data</Text>
