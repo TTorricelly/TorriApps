@@ -55,6 +55,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
 
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [dateInputValue, setDateInputValue] = useState('');
 
   // editData state now uses EditableUserProfile and is initialized from storeUser
   const [editData, setEditData] = useState<EditableUserProfile>({
@@ -98,6 +99,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
         gender: storeUser.gender,
         date_of_birth: storeUser.date_of_birth,
       });
+      
+      // Initialize date input value
+      if (storeUser.date_of_birth) {
+        const formattedDate = new Date(storeUser.date_of_birth).toLocaleDateString('pt-BR');
+        setDateInputValue(formattedDate);
+      } else {
+        setDateInputValue('');
+      }
     }
   }, [storeUser]);
 
@@ -341,10 +350,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               }}
               onPress={() => {
                 const options = [
-                  { label: 'Liso', value: 'LISO' },
-                  { label: 'Ondulado', value: 'ONDULADO' },
                   { label: 'Cacheado', value: 'CACHEADO' },
                   { label: 'Crespo', value: 'CRESPO' },
+                  { label: 'Liso', value: 'LISO' },
+                  { label: 'Ondulado', value: 'ONDULADO' },
                 ];
                 if (Platform.OS === 'ios') {
                   Alert.alert(
@@ -484,9 +493,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
               }}
               placeholder="DD/MM/AAAA"
-              value={editData.date_of_birth ? 
-                new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
-                ''}
+              value={dateInputValue}
               onChangeText={(text) => {
                 // Simple date validation and formatting
                 const numbers = text.replace(/\D/g, '');
@@ -498,16 +505,29 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   formatted = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
                 }
                 
-                // Convert to ISO format for storage
+                // Update the display value immediately
+                setDateInputValue(formatted);
+                
+                // Convert to ISO format for storage only when complete
                 if (numbers.length === 8) {
                   const day = numbers.slice(0, 2);
                   const month = numbers.slice(2, 4);
                   const year = numbers.slice(4, 8);
-                  const isoDate = `${year}-${month}-${day}`;
-                  setEditData({ ...editData, date_of_birth: isoDate });
+                  
+                  // Basic validation
+                  const dayNum = parseInt(day, 10);
+                  const monthNum = parseInt(month, 10);
+                  const yearNum = parseInt(year, 10);
+                  
+                  if (dayNum >= 1 && dayNum <= 31 && 
+                      monthNum >= 1 && monthNum <= 12 && 
+                      yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
+                    const isoDate = `${year}-${month}-${day}`;
+                    setEditData({ ...editData, date_of_birth: isoDate });
+                  }
                 } else {
-                  // Update the display but don't set the ISO date until complete
-                  setEditData({ ...editData, date_of_birth: formatted });
+                  // Clear the ISO date if incomplete
+                  setEditData({ ...editData, date_of_birth: undefined });
                 }
               }}
               keyboardType="numeric"
@@ -539,6 +559,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   gender: storeUser.gender,
                   date_of_birth: storeUser.date_of_birth,
                 });
+                
+                // Reset date input value
+                if (storeUser.date_of_birth) {
+                  const formattedDate = new Date(storeUser.date_of_birth).toLocaleDateString('pt-BR');
+                  setDateInputValue(formattedDate);
+                } else {
+                  setDateInputValue('');
+                }
               }
               setCurrentView('profile');
             }}
