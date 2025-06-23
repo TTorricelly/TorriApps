@@ -123,7 +123,8 @@ const AppointmentsScreen = () => {
 
   // Helper function to convert date string to DateOption for formatting
   const formatAppointmentDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    // Fix timezone issue by explicitly adding time component
+    const date = new Date(dateString + 'T00:00:00');
     const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
