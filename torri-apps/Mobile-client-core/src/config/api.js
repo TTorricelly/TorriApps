@@ -26,14 +26,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('authToken'); // Key for storing token
-    console.log('API Request Interceptor - Token:', token ? 'Present' : 'Missing');
-    console.log('API Request Interceptor - URL:', config.url);
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('API Request Interceptor - Authorization header set');
-    } else {
-      console.log('API Request Interceptor - No token found in AsyncStorage');
     }
     return config;
   },

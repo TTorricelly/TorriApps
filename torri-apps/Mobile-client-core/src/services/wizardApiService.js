@@ -34,7 +34,6 @@ class WizardApiService {
       month: targetMonth,
     };
     
-    console.log('Getting available dates with params:', params);
     
     return withApiErrorHandling(
       () => apiClient.get(endpoint, { params }),
@@ -92,16 +91,6 @@ class WizardApiService {
         defaultValue: [],
         transformData: (data) => {
           const slots = data?.available_slots || [];
-          // Debug log the received data
-          console.log('DEBUG FRONTEND: Received slots from backend:', JSON.stringify(slots, null, 2));
-          
-          // Debug log each slot's service assignments
-          slots.forEach((slot, index) => {
-            console.log(`DEBUG FRONTEND: Slot ${index + 1} service assignments:`);
-            slot.services?.forEach(service => {
-              console.log(`  ${service.service_name} → ${service.professional_name}`);
-            });
-          });
           
           return slots;
         }

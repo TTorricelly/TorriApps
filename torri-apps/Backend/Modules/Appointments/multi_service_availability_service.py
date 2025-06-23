@@ -215,7 +215,6 @@ class MultiServiceAvailabilityService:
         
         requirements = []
         for service in services:
-            print(f"DEBUG SERVICE: {service.name} has qualified professionals: {[p.full_name or p.email for p in service.professionals]}")
             requirements.append(ServiceRequirement(
                 service=service,
                 duration_minutes=service.duration_minutes,
@@ -249,19 +248,15 @@ class MultiServiceAvailabilityService:
             for professional in req.qualified_professionals:
                 all_qualified.add(professional)
         
-        print(f"DEBUG ELIGIBLE: All qualified professionals: {[p.full_name or p.email for p in all_qualified]}")
-        print(f"DEBUG ELIGIBLE: Specific professional IDs requested: {specific_professional_ids}")
         
         # Filter by specific professionals if provided
         if specific_professional_ids:
             specific_ids_str = [str(pid) for pid in specific_professional_ids]
-            print(f"DEBUG ELIGIBLE: Specific IDs as strings: {specific_ids_str}")
             
             all_qualified = {
                 prof for prof in all_qualified 
                 if str(prof.id) in specific_ids_str
             }
-            print(f"DEBUG ELIGIBLE: After filtering by specific IDs: {[p.full_name or p.email for p in all_qualified]}")
         
         # Filter by availability on target date
         eligible_professionals = []
@@ -278,11 +273,7 @@ class MultiServiceAvailabilityService:
             # Check if professional has any available slots
             if any(slot.is_available for slot in availability.slots):
                 eligible_professionals.append(professional)
-                print(f"DEBUG ELIGIBLE: {prof_name} is available ({len(available_slots)} slots)")
-            else:
-                print(f"DEBUG ELIGIBLE: {prof_name} is NOT available (no available slots)")
         
-        print(f"DEBUG ELIGIBLE: Final eligible professionals: {[p.full_name or p.email for p in eligible_professionals]}")
         return eligible_professionals
     
     def _generate_resource_combinations(
@@ -350,16 +341,11 @@ class MultiServiceAvailabilityService:
         # Multi-professional combinations (3+ professionals) for parallel execution
         three_plus_professional_combinations_added = False
         if professionals_requested >= 3 and can_parallel and max_parallel_pros >= 3:
-            print(f"DEBUG: Generating 3+ professional combinations, requested: {professionals_requested}")
-            print(f"DEBUG: Eligible professionals: {[p.full_name or p.email for p in eligible_professionals]}")
-            print(f"DEBUG: Can parallel: {can_parallel}, Max parallel pros: {max_parallel_pros}")
             
             # Try combinations of exactly professionals_requested size
             for prof_combination in combinations(eligible_professionals, professionals_requested):
-                print(f"DEBUG: Testing combination: {[p.full_name or p.email for p in prof_combination]}")
                 
                 if self._professional_combination_can_handle_services(prof_combination, service_requirements):
-                    print(f"DEBUG: Combination can handle services - creating resource combination")
                     station_requirements = self._get_combined_station_requirements(service_requirements)
                     available_stations = self._get_available_stations(station_requirements)
                     
@@ -371,11 +357,6 @@ class MultiServiceAvailabilityService:
                             execution_type="parallel"
                         ))
                         three_plus_professional_combinations_added = True
-                        print(f"DEBUG: Added 3+ professional resource combination")
-                    else:
-                        print(f"DEBUG: No available stations for combination")
-                else:
-                    print(f"DEBUG: Combination cannot handle all services")
         
         # Only generate 2-professional combinations if 3+ professionals weren't requested or none were found
         if not three_plus_professional_combinations_added and professionals_requested == 2 and can_parallel and max_parallel_pros >= 2:
@@ -541,7 +522,6 @@ class MultiServiceAvailabilityService:
                 combination.services, 
                 combination.professionals
             )
-            print(f"DEBUG PARALLEL: Pre-calculated perfect assignments: {[(s.name, p.full_name or p.email) for s, p in perfect_assignments]}")
         
         # Create wizard time slots
         wizard_slots = []
@@ -568,9 +548,6 @@ class MultiServiceAvailabilityService:
                     "parallel"
                 )
                 
-                print(f"DEBUG WIZARD_SLOT: Creating WizardTimeSlot with services:")
-                for i, s in enumerate(services_in_slot):
-                    print(f"  [{i}] {s.service_name} → {s.professional_name} (ID: {s.professional_id})")
                 
                 wizard_slots.append(WizardTimeSlot(
                     id=slot_id,
@@ -856,7 +833,6 @@ class MultiServiceAvailabilityService:
         # Use predefined assignments if provided, otherwise calculate new assignments
         if predefined_assignments:
             assignments = predefined_assignments
-            print("DEBUG ASSIGNMENT: Using predefined assignments for parallel execution")
         else:
             # Use smart assignment algorithm for optimal professional distribution
             assignments = self._smart_professional_assignment(services, professionals)
@@ -866,7 +842,6 @@ class MultiServiceAvailabilityService:
         used_stations = set()
         
         for service, professional in assignments:
-            print(f"DEBUG LOOP: Processing assignment: {service.name} → {professional.full_name or professional.email} (ID: {professional.id})")
             # Assign station
             station = None
             for station_req in service.station_requirements:
@@ -892,13 +867,8 @@ class MultiServiceAvailabilityService:
                 duration_minutes=service.duration_minutes,
                 price=service.price
             )
-            print(f"DEBUG SLOT_CREATED: Created slot for {service_slot.service_name} → {service_slot.professional_name} (ID: {service_slot.professional_id})")
             services_in_slot.append(service_slot)
         
-        # Debug what's being returned to frontend (can be removed in production)
-        print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
-        for i, service_slot in enumerate(services_in_slot):
-            print(f"  [{i}] {service_slot.service_name} → {service_slot.professional_name} (ID: {service_slot.professional_id})")
         
         return services_in_slot
 
@@ -946,30 +916,18 @@ class MultiServiceAvailabilityService:
         assignments = []
         used_professionals = set()
         
-        print(f"DEBUG ASSIGNMENT: Processing {len(services)} services with {len(professionals)} professionals")
-        print(f"DEBUG ASSIGNMENT: Services: {[s.name for s in services]}")
-        print(f"DEBUG ASSIGNMENT: Professionals: {[p.full_name or p.email for p in professionals]}")
         
-        # Debug capability matrix
-        print("DEBUG ASSIGNMENT: Capability Matrix:")
-        for service in services:
-            capable_names = [p.full_name or p.email for p in capability_matrix.get(service.id, [])]
-            print(f"  {service.name}: {capable_names}")
         
-        print(f"DEBUG ASSIGNMENT: Assignment order: {[s.name for s in services_by_exclusivity]}")
         
         # Check if we can achieve perfect 1:1 assignment with equal-capability services
         if len(services) == len(professionals):
             perfect_assignment = self._try_perfect_assignment(services, professionals, capability_matrix)
             if perfect_assignment:
-                print("DEBUG ASSIGNMENT: Using perfect 1:1 assignment")
                 return perfect_assignment
         
         # Assign professionals to services
         for service in services_by_exclusivity:
             capable_profs = capability_matrix.get(service.id, [])
-            print(f"DEBUG ASSIGNMENT: Assigning {service.name}, capable: {[p.full_name or p.email for p in capable_profs]}")
-            print(f"DEBUG ASSIGNMENT: Used professionals so far: {[p for p in used_professionals]}")
             
             # Find a professional who hasn't been assigned yet
             available_prof = None
@@ -977,26 +935,19 @@ class MultiServiceAvailabilityService:
                 prof_name = prof.full_name or prof.email
                 if prof.id not in used_professionals:
                     available_prof = prof
-                    print(f"DEBUG ASSIGNMENT: Found available professional: {prof_name}")
                     break
-                else:
-                    print(f"DEBUG ASSIGNMENT: Professional {prof_name} already used")
             
             if available_prof:
                 assignments.append((service, available_prof))
                 used_professionals.add(available_prof.id)
-                print(f"DEBUG ASSIGNMENT: Assigned {service.name} → {available_prof.full_name or available_prof.email}")
             else:
                 # Phase 2: No unique professional available, use conflict resolution
-                print(f"DEBUG ASSIGNMENT: No available prof for {service.name}, using conflict resolution")
                 assigned_prof = self._resolve_professional_conflict(
                     service, capable_profs, assignments, used_professionals
                 )
                 if assigned_prof:
                     assignments.append((service, assigned_prof))
-                    print(f"DEBUG ASSIGNMENT: Conflict resolution assigned {service.name} → {assigned_prof.full_name or assigned_prof.email}")
         
-        print(f"DEBUG ASSIGNMENT: Final assignments: {[(s.name, p.full_name or p.email) for s, p in assignments]}")
         return assignments
 
     def _try_perfect_assignment(
@@ -1019,7 +970,6 @@ class MultiServiceAvailabilityService:
         """
         from itertools import permutations
         
-        print("DEBUG PERFECT: Attempting perfect 1:1 assignment")
         
         # Try different permutations of professional assignments
         for prof_permutation in permutations(professionals):
@@ -1038,12 +988,8 @@ class MultiServiceAvailabilityService:
                     break
             
             if assignment_valid:
-                prof_names = [p.full_name or p.email for p in prof_permutation]
-                service_names = [s.name for s in services]
-                print(f"DEBUG PERFECT: Found valid assignment: {list(zip(service_names, prof_names))}")
                 return test_assignment
         
-        print("DEBUG PERFECT: No perfect 1:1 assignment found")
         return None
 
     def _resolve_professional_conflict(
