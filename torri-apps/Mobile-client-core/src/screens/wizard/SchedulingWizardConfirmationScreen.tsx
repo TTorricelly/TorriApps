@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
@@ -13,6 +13,7 @@ type SchedulingWizardConfirmationScreenNavigationProp = WizardNavigationProp<'Wi
 const SchedulingWizardConfirmationScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardConfirmationScreenNavigationProp>();
   const [isBooking, setIsBooking] = useState(false);
+  const [clientNotes, setClientNotes] = useState('');
   
   const {
     selectedServices,
@@ -52,7 +53,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         user.id,
         selectedDate,
         selectedSlot,
-        null // notes - could be added as an optional field later
+        clientNotes.trim() || null // Client notes
       );
 
       const result = await wizardApiService.createMultiServiceBooking(bookingRequest);
@@ -221,6 +222,36 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   );
 
 
+  // Client notes input section
+  const renderClientNotes = () => (
+    <View style={styles.modernCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.cardIcon}>📝</Text>
+        </View>
+        <Text style={styles.cardTitle}>Observações</Text>
+        <Text style={styles.optionalText}>(opcional)</Text>
+      </View>
+      
+      <View style={styles.notesInputContent}>
+        <TextInput
+          style={styles.notesInput}
+          multiline
+          numberOfLines={4}
+          placeholder="Informe alergias, preferências ou observações especiais..."
+          placeholderTextColor="#9ca3af"
+          value={clientNotes}
+          onChangeText={setClientNotes}
+          maxLength={500}
+          textAlignVertical="top"
+        />
+        <Text style={styles.characterCount}>
+          {clientNotes.length}/500 caracteres
+        </Text>
+      </View>
+    </View>
+  );
+
   // Enhanced important notes with better visual hierarchy
   const renderImportantNotes = () => (
     <View style={styles.notesCard}>
@@ -283,6 +314,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderDateTimeCard()}
         {renderServiceAssignments()}
+        {renderClientNotes()}
         {renderImportantNotes()}
         
         {/* Bottom spacing for better scroll experience */}
@@ -535,6 +567,37 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#ec4899',
+  },
+  
+  // Client notes styles
+  optionalText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    fontStyle: 'italic',
+  },
+  
+  notesInputContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  
+  notesInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1f2937',
+    backgroundColor: '#f9fafb',
+    minHeight: 100,
+    marginBottom: 8,
+  },
+  
+  characterCount: {
+    fontSize: 12,
+    color: '#9ca3af',
+    textAlign: 'right',
   },
   
   // Notes styles
