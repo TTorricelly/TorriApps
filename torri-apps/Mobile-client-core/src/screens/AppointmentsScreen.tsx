@@ -53,6 +53,7 @@ const AppointmentsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const loadAppointments = async (showRefreshLoader = false) => {
     if (!isAuthenticated || !user) {
@@ -213,12 +214,14 @@ const AppointmentsScreen = () => {
     const serviceName = appointment.service?.name || appointment.service_name || 'Serviço não informado';
     const professionalName = appointment.professional?.full_name || appointment.professional_name || 'Profissional não informado';
     const isUpcoming = isUpcomingAppointment(appointment);
+    const isExpanded = expandedCard === appointment.id;
 
     return (
       <TouchableOpacity 
         key={appointment.id} 
         style={[styles.appointmentCard, { borderLeftColor: statusConfig.borderColor }]}
         activeOpacity={0.7}
+        onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
       >
         {/* Header with service and status */}
         <View style={styles.cardHeader}>
@@ -261,6 +264,41 @@ const AppointmentsScreen = () => {
           </View>
         )}
 
+        {/* Expanded details section */}
+        {isExpanded && (
+          <View style={styles.expandedDetails}>
+            <View style={styles.detailsHeader}>
+              <Text style={styles.detailsTitle}>Informações Completas</Text>
+            </View>
+            
+            {appointment.salon_name && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Local:</Text>
+                <Text style={styles.detailValue}>{appointment.salon_name}</Text>
+              </View>
+            )}
+            
+            {appointment.salon_address && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Endereço:</Text>
+                <Text style={styles.detailValue}>{appointment.salon_address}</Text>
+              </View>
+            )}
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Duração:</Text>
+              <Text style={styles.detailValue}>
+                {appointment.service?.duration_minutes ? `${appointment.service.duration_minutes} min` : 'Não informado'}
+              </Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>ID do Agendamento:</Text>
+              <Text style={styles.detailValue}>{appointment.id.substring(0, 8)}...</Text>
+            </View>
+          </View>
+        )}
+
         {/* Action button for upcoming appointments */}
         {isUpcoming && (
           <View style={styles.actionContainer}>
@@ -270,9 +308,18 @@ const AppointmentsScreen = () => {
             >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.detailsButton}>
-              <Text style={styles.detailsButtonText}>Detalhes</Text>
-              <ChevronRight size={16} color="#ec4899" />
+            <TouchableOpacity 
+              style={styles.detailsButton}
+              onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
+            >
+              <Text style={styles.detailsButtonText}>
+                {isExpanded ? 'Menos' : 'Detalhes'}
+              </Text>
+              <ChevronRight 
+                size={16} 
+                color="#ec4899" 
+                style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
+              />
             </TouchableOpacity>
           </View>
         )}
@@ -630,6 +677,40 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  expandedDetails: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  detailsHeader: {
+    marginBottom: 12,
+  },
+  detailsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '400',
+    flex: 2,
+    textAlign: 'right',
   },
 });
 
