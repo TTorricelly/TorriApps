@@ -11,6 +11,7 @@ import {
   StyleSheet, // Added for styles
   ActivityIndicator, // Added for loading indicator
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -156,8 +157,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
   };
 
   const renderEditProfile = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={{ padding: 24 }}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={{ padding: 24 }}>
         {/* Header Text */}
         <View style={{ marginBottom: 24, alignItems: 'center' }}>
           <Text style={{ 
@@ -465,7 +471,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 zIndex: 1 
               }} 
             />
-            <TouchableOpacity
+            <TextInput
               style={{
                 width: '100%',
                 paddingLeft: 44,
@@ -474,67 +480,39 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 borderWidth: 1,
                 borderColor: '#d1d5db',
                 borderRadius: 12,
+                fontSize: 16,
                 backgroundColor: 'white',
-                justifyContent: 'center',
               }}
-              onPress={() => {
-                // Create a simple date input using Alert
-                Alert.prompt(
-                  'Data de Nascimento',
-                  'Digite sua data de nascimento (DD/MM/AAAA):',
-                  [
-                    {
-                      text: 'Cancelar',
-                      style: 'cancel',
-                    },
-                    {
-                      text: 'OK',
-                      onPress: (text) => {
-                        if (text) {
-                          // Validate and parse DD/MM/YYYY format
-                          const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-                          const match = text.match(dateRegex);
-                          
-                          if (match) {
-                            const [, day, month, year] = match;
-                            const dayNum = parseInt(day, 10);
-                            const monthNum = parseInt(month, 10);
-                            const yearNum = parseInt(year, 10);
-                            
-                            // Basic validation
-                            if (dayNum >= 1 && dayNum <= 31 && 
-                                monthNum >= 1 && monthNum <= 12 && 
-                                yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
-                              
-                              // Convert to ISO format (YYYY-MM-DD)
-                              const isoDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
-                              setEditData({ ...editData, date_of_birth: isoDate });
-                            } else {
-                              Alert.alert('Erro', 'Data inválida. Use o formato DD/MM/AAAA com uma data válida.');
-                            }
-                          } else {
-                            Alert.alert('Erro', 'Formato inválido. Use o formato DD/MM/AAAA.');
-                          }
-                        }
-                      },
-                    },
-                  ],
-                  'plain-text',
-                  editData.date_of_birth ? 
-                    new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
-                    ''
-                );
+              placeholder="DD/MM/AAAA"
+              value={editData.date_of_birth ? 
+                new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
+                ''}
+              onChangeText={(text) => {
+                // Simple date validation and formatting
+                const numbers = text.replace(/\D/g, '');
+                let formatted = numbers;
+                if (numbers.length >= 3) {
+                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
+                }
+                if (numbers.length >= 5) {
+                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
+                }
+                
+                // Convert to ISO format for storage
+                if (numbers.length === 8) {
+                  const day = numbers.slice(0, 2);
+                  const month = numbers.slice(2, 4);
+                  const year = numbers.slice(4, 8);
+                  const isoDate = `${year}-${month}-${day}`;
+                  setEditData({ ...editData, date_of_birth: isoDate });
+                } else {
+                  // Update the display but don't set the ISO date until complete
+                  setEditData({ ...editData, date_of_birth: formatted });
+                }
               }}
-            >
-              <Text style={{ 
-                fontSize: 16, 
-                color: editData.date_of_birth ? '#1f2937' : '#9ca3af' 
-              }}>
-                {editData.date_of_birth ? 
-                  new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
-                  'Toque para selecionar data de nascimento'}
-              </Text>
-            </TouchableOpacity>
+              keyboardType="numeric"
+              maxLength={10}
+            />
           </View>
         </View>
 
@@ -585,8 +563,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const renderProfileView = () => {
