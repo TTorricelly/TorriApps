@@ -322,19 +322,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
             />
           </View>
 
-          {/* Calendar Legend */}
-          <View style={styles.calendarLegend}>
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={styles.legendDot} />
-                <Text style={styles.legendText}>Disponível</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, styles.grayDot]} />
-                <Text style={styles.legendText}>Indisponível</Text>
-              </View>
-            </View>
-          </View>
 
           {/* No Availability Message */}
           {!isLoading && availableDates.length === 0 && (
