@@ -1006,6 +1006,52 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
 
   return (
     <WizardContainer>
+      {/* Snack bars at top */}
+      {showGuideMessage && !isValidSelection() && (
+        <View style={[styles.snackbarTop, styles.snackbarGuide]}>
+          <View style={styles.snackbarIconContainer}>
+            <Text style={styles.snackbarIcon}>
+              {getSelectedCount() === 0 ? '👥' : getSelectedCount() < professionalsRequested ? '✨' : '📋'}
+            </Text>
+          </View>
+          <View style={styles.snackbarContent}>
+            <Text style={styles.snackbarTitle}>
+              {getSelectedCount() === 0 
+                ? 'Escolha seus profissionais' 
+                : getSelectedCount() < professionalsRequested
+                  ? 'Quase lá!'
+                  : 'Verificando serviços'
+              }
+            </Text>
+            <Text style={styles.snackbarMessage}>
+              {getSelectedCount() === 0 
+                ? 'Selecione o(s) profissional(is) para seus serviços'
+                : getSelectedCount() < professionalsRequested
+                  ? `Selecione mais ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} para continuar`
+                  : `Verifique se todos os serviços estão cobertos: ${getUncoveredServices().join(', ')}`
+              }
+            </Text>
+          </View>
+        </View>
+      )}
+      
+      {showSuccessMessage && isValidSelection() && (
+        <View style={[styles.snackbarTop, styles.snackbarSuccess]}>
+          <View style={styles.snackbarIconContainer}>
+            <Text style={styles.snackbarIcon}>✓</Text>
+          </View>
+          <View style={styles.snackbarContent}>
+            <Text style={styles.snackbarTitle}>Tudo pronto!</Text>
+            <Text style={styles.snackbarMessage}>
+              {professionalsRequested === 1 
+                ? 'Profissional selecionado e serviços cobertos'
+                : `${professionalsRequested} profissionais selecionados e serviços cobertos`
+              }
+            </Text>
+          </View>
+        </View>
+      )}
+
       <WizardHeader
         currentStep={2}
         totalSteps={4}
@@ -1176,51 +1222,6 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
             </TouchableOpacity>
           </Animated.View>
           
-          {/* Friendly Guide Messages */}
-          {showGuideMessage && !isValidSelection() && (
-            <View style={[styles.snackbarOverlay, styles.snackbarGuide]}>
-              <View style={styles.snackbarIconContainer}>
-                <Text style={styles.snackbarIcon}>
-                  {getSelectedCount() === 0 ? '👥' : getSelectedCount() < professionalsRequested ? '✨' : '📋'}
-                </Text>
-              </View>
-              <View style={styles.snackbarContent}>
-                <Text style={styles.snackbarTitle}>
-                  {getSelectedCount() === 0 
-                    ? 'Escolha seus profissionais' 
-                    : getSelectedCount() < professionalsRequested
-                      ? 'Quase lá!'
-                      : 'Verificando serviços'
-                  }
-                </Text>
-                <Text style={styles.snackbarMessage}>
-                  {getSelectedCount() === 0 
-                    ? 'Selecione o(s) profissional(is) para seus serviços'
-                    : getSelectedCount() < professionalsRequested
-                      ? `Selecione mais ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} para continuar`
-                      : `Verifique se todos os serviços estão cobertos: ${getUncoveredServices().join(', ')}`
-                  }
-                </Text>
-              </View>
-            </View>
-          )}
-          
-          {showSuccessMessage && isValidSelection() && (
-            <View style={[styles.snackbarOverlay, styles.snackbarSuccess]}>
-              <View style={styles.snackbarIconContainer}>
-                <Text style={styles.snackbarIcon}>✓</Text>
-              </View>
-              <View style={styles.snackbarContent}>
-                <Text style={styles.snackbarTitle}>Tudo pronto!</Text>
-                <Text style={styles.snackbarMessage}>
-                  {professionalsRequested === 1 
-                    ? 'Profissional selecionado e serviços cobertos'
-                    : `${professionalsRequested} profissionais selecionados e serviços cobertos`
-                  }
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
       )}
 
@@ -1951,6 +1952,24 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     zIndex: 1000,
+  },
+  snackbarTop: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   snackbarWarning: {
     backgroundColor: '#ffffff',
