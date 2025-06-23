@@ -890,8 +890,8 @@ class MultiServiceAvailabilityService:
         
         # Debug what's being returned to frontend (can be removed in production)
         print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
-        for service_slot in services_in_slot:
-            print(f"  {service_slot.service_name} → {service_slot.professional_name}")
+        for i, service_slot in enumerate(services_in_slot):
+            print(f"  [{i}] {service_slot.service_name} → {service_slot.professional_name} (ID: {service_slot.professional_id})")
         
         return services_in_slot
 
