@@ -222,13 +222,6 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
             <Text style={styles.compactChipText}>📅 {formatDateChip(selectedDate)}</Text>
           </View>
 
-          {/* Professionals Chip */}
-          <View style={styles.compactChip}>
-            <Text style={styles.compactChipText}>
-              👥 {professionalsRequested}
-            </Text>
-          </View>
-
           {/* Services Chip */}
           <View style={styles.compactChip}>
             <Text style={styles.compactChipText}>
@@ -273,19 +266,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
         // Infinite scroll configuration
         onEndReached={onEndReached}
         onEndReachedThreshold={0.1}
-        ListHeaderComponent={
-          <View style={styles.slotsHeader}>
-            <Text style={styles.slotsTitle}>
-              Horários disponíveis ({availableSlots.length})
-            </Text>
-            <Text style={styles.slotsSubtitle}>
-              {showAllSlots 
-                ? "Todos os horários disponíveis"
-                : `Mostrando ${Math.min(visibleCount, availableSlots.length)} de ${availableSlots.length} horários`
-              }
-            </Text>
-          </View>
-        }
+        ListHeaderComponent={null}
         ListFooterComponent={
           <View style={styles.footerContainer}>
             {/* Loading more indicator */}
