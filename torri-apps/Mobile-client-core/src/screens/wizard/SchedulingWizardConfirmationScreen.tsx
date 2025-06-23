@@ -15,6 +15,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   const [isBooking, setIsBooking] = useState(false);
   const [clientNotes, setClientNotes] = useState('');
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [confirmedBookingData, setConfirmedBookingData] = useState<any>(null);
   
   const {
     selectedServices,
@@ -74,6 +75,13 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
 
       await wizardApiService.createMultiServiceBooking(bookingRequest);
 
+      // Store booking data before clearing wizard state
+      setConfirmedBookingData({
+        selectedServices,
+        selectedDate,
+        selectedSlot,
+      });
+      
       // Clear all wizard state immediately after successful booking
       resetWizard();
       
@@ -311,19 +319,19 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
           <View style={styles.successSummaryContent}>
             <View style={styles.successRow}>
               <Text style={styles.successLabel}>📅 Data</Text>
-              <Text style={styles.successValue}>{formatDate(selectedDate)}</Text>
+              <Text style={styles.successValue}>{formatDate(confirmedBookingData?.selectedDate || '')}</Text>
             </View>
             
             <View style={styles.successRow}>
               <Text style={styles.successLabel}>🕐 Horário</Text>
               <Text style={styles.successValue}>
-                {formatTime(selectedSlot?.start_time || '')} - {formatTime(selectedSlot?.end_time || '')}
+                {formatTime(confirmedBookingData?.selectedSlot?.start_time || '')} - {formatTime(confirmedBookingData?.selectedSlot?.end_time || '')}
               </Text>
             </View>
             
             <View style={styles.successRow}>
               <Text style={styles.successLabel}>💼 Serviços</Text>
-              <Text style={styles.successValue}>{selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''}</Text>
+              <Text style={styles.successValue}>{confirmedBookingData?.selectedServices?.length || 0} serviço{(confirmedBookingData?.selectedServices?.length || 0) > 1 ? 's' : ''}</Text>
             </View>
             
             <View style={styles.successDivider} />
@@ -331,7 +339,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
             <View style={styles.successRow}>
               <Text style={styles.successTotalLabel}>Total</Text>
               <Text style={styles.successTotalValue}>
-                {formatPrice(selectedSlot?.total_price || 0)}
+                {formatPrice(confirmedBookingData?.selectedSlot?.total_price || 0)}
               </Text>
             </View>
           </View>
@@ -387,7 +395,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   }
 
   // Show success screen if booking is confirmed
-  if (bookingConfirmed) {
+  if (bookingConfirmed && confirmedBookingData) {
     return (
       <WizardContainer>
         {renderSuccessScreen()}
