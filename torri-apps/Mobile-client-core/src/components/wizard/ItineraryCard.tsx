@@ -129,12 +129,6 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
         ))}
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.totalPrice}>
-          {formatPrice(slot.total_price)}
-        </Text>
-      </View>
     </TouchableOpacity>
   );
 };
