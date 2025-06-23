@@ -118,15 +118,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
       setAvailableDates(dates);
       
-      // Note: API only returns available dates, not slot counts per date
-      // For performance reasons, we don't fetch slot counts for each date
-      // Available dates simply show a single dot indicating availability
-      const slotsData: {[key: string]: number} = {};
-      dates.forEach((date: string) => {
-        slotsData[date] = 1; // Just indicate availability, no specific count
-      });
-      setAvailabilityData(slotsData);
-      
     } catch (error) {
       setError('Erro ao carregar datas disponíveis. Tente novamente.');
     } finally {
@@ -174,7 +165,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
     
     // Clear previous month's availability data
     setAvailableDates([]);
-    setAvailabilityData({});
     
     // Load availability for the new month
     loadAvailableDates(year, monthNumber);
