@@ -115,7 +115,8 @@ const SchedulingWizardDateScreen: React.FC = () => {
       // Update current month state FIRST
       setCurrentMonth({ year: targetYear, month: targetMonth });
 
-      const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
+      // Use optimized calendar endpoint for better performance
+      const dates = await wizardApiService.getAvailableDatesForCalendar(serviceIds, targetYear, targetMonth);
       setAvailableDates(dates);
       
     } catch (error) {
