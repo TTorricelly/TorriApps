@@ -1954,9 +1954,10 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   snackbarTop: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: 16,
@@ -1970,6 +1971,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    zIndex: 1000,
   },
   snackbarWarning: {
     backgroundColor: '#ffffff',
