@@ -330,9 +330,15 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
               </Text>
             </View>
             
-            <View style={styles.successRow}>
+            <View style={styles.successServicesRow}>
               <Text style={styles.successLabel}>💼 Serviços</Text>
-              <Text style={styles.successValue}>{confirmedBookingData?.selectedServices?.length || 0} serviço{(confirmedBookingData?.selectedServices?.length || 0) > 1 ? 's' : ''}</Text>
+              <View style={styles.successServicesChips}>
+                {confirmedBookingData?.selectedServices?.map((service: any, index: number) => (
+                  <View key={index} style={styles.successServiceChip}>
+                    <Text style={styles.successServiceChipText}>{service.name}</Text>
+                  </View>
+                )) || []}
+              </View>
             </View>
             
             <View style={styles.successDivider} />
@@ -893,6 +899,33 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     textAlign: 'right',
     flex: 2,
+  },
+  
+  successServicesRow: {
+    flexDirection: 'column',
+    marginBottom: 16,
+  },
+  
+  successServicesChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 8,
+  },
+  
+  successServiceChip: {
+    backgroundColor: '#fdf2f8',
+    borderColor: '#ec4899',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  
+  successServiceChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#ec4899',
   },
   
   successDivider: {
