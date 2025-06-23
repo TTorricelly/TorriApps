@@ -24,9 +24,22 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
   } catch (error) {
     if (logErrors) {
       console.error('API Error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.response?.data
+      });
     }
     
-    // Return default value on error
+    // For authentication errors, throw the error instead of returning default
+    if (error.response?.status === 404 || error.response?.status === 401 || error.response?.status === 422) {
+      throw new Error(error.response?.data?.detail || error.response?.data?.message || `HTTP ${error.response?.status}: ${error.response?.statusText}`);
+    }
+    
+    // Return default value for other errors
     return defaultValue;
   }
 };
