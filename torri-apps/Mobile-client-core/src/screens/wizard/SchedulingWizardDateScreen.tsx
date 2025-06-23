@@ -81,15 +81,12 @@ const SchedulingWizardDateScreen: React.FC = () => {
       const dates = await wizardApiService.getAvailableDates(serviceIds, targetYear, targetMonth);
       setAvailableDates(dates);
       
-      // Get real slot counts from API
-      // Try to get availability counts, fallback to fixed values if not available
+      // Note: API only returns available dates, not slot counts per date
+      // For performance reasons, we don't fetch slot counts for each date
+      // Available dates simply show a single dot indicating availability
       const slotsData: {[key: string]: number} = {};
       dates.forEach((date: string) => {
-        // Using variable slot counts to simulate real availability
-        // This provides better UX than fixed values
-        const dayOfMonth = parseInt(date.split('-')[2]);
-        const slotCount = dayOfMonth % 7 === 0 ? 1 : dayOfMonth % 3 === 0 ? 6 : 3;
-        slotsData[date] = slotCount;
+        slotsData[date] = 1; // Just indicate availability, no specific count
       });
       setAvailabilityData(slotsData);
       
@@ -103,18 +100,10 @@ const SchedulingWizardDateScreen: React.FC = () => {
   const updateMarkedDates = () => {
     const marked: {[key: string]: any} = {};
 
-    // Mark available dates with multiple dots to indicate slot count ranges
+    // Mark available dates with a single dot indicating availability
     availableDates.forEach((date: string) => {
-      const slotCount = availabilityData[date] || 0;
-      
-      // Create dots based on slot count (1-2 dots for low, 3 dots for high availability)
-      const dots = [];
-      if (slotCount >= 1) dots.push({ color: '#ec4899' });
-      if (slotCount >= 3) dots.push({ color: '#ec4899' });
-      if (slotCount >= 6) dots.push({ color: '#ec4899' });
-      
       marked[date] = {
-        dots: dots,
+        dots: [{ color: '#ec4899' }], // Single pink dot for available dates
         disabled: false,
       };
     });
@@ -193,15 +182,6 @@ const SchedulingWizardDateScreen: React.FC = () => {
     loadAvailableDates(year, monthNumber);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
 
 
   const getTotalEstimatedTime = () => {
@@ -347,20 +327,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
                 <View style={styles.legendDot} />
-                <Text style={styles.legendText}>Poucos</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={styles.legendDot} />
-                <View style={styles.legendDot} />
-                <Text style={styles.legendText}>Médios</Text>
-              </View>
-            </View>
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={styles.legendDot} />
-                <View style={styles.legendDot} />
-                <View style={styles.legendDot} />
-                <Text style={styles.legendText}>Muitos</Text>
+                <Text style={styles.legendText}>Disponível</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, styles.grayDot]} />
@@ -505,8 +472,9 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 2,
+    justifyContent: 'center',
+    gap: 40,
+    marginVertical: 4,
   },
   legendItem: {
     flexDirection: 'row',
