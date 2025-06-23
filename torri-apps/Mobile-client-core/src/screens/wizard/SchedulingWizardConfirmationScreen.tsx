@@ -78,6 +78,9 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
 
       // Show modern success screen instead of alert
       setBookingConfirmed(true);
+      
+      // Clear local state immediately
+      setClientNotes('');
     } catch (error) {
       Alert.alert(
         'Erro no Agendamento',
