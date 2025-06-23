@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Clock, User, MapPin, CheckCircle } from 'lucide-react-native';
+import { CheckCircle } from 'lucide-react-native';
 
 interface ServiceInSlot {
   service_id: string;
@@ -41,14 +41,37 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
     return timeString.substring(0, 5);
   };
 
-  const getExecutionIcon = (type: string) => {
-    // Using text symbols since we need simple icons
-    return type === 'parallel' ? '║' : '↧';
-  };
-
   const formatPrice = (price: number) => {
     return `R$ ${price.toFixed(2).replace('.', ',')}`;
   };
+
+  // Calculate individual service start times based on execution type
+  const calculateServiceTimes = () => {
+    const services = slot.services.map((service, index) => {
+      let startTime: string;
+      
+      if (slot.execution_type === 'parallel') {
+        // All services start at the same time (parallel execution)
+        startTime = slot.start_time;
+      } else {
+        // Sequential execution - calculate cumulative start time
+        const previousDurations = slot.services
+          .slice(0, index)
+          .reduce((total, prev) => total + prev.duration_minutes, 0);
+        
+        const slotStartDate = new Date(`1970-01-01T${slot.start_time}`);
+        slotStartDate.setMinutes(slotStartDate.getMinutes() + previousDurations);
+        startTime = slotStartDate.toTimeString().substring(0, 5);
+      }
+      
+      return { ...service, calculated_start_time: startTime };
+    });
+    
+    return services;
+  };
+
+  const servicesWithTimes = calculateServiceTimes();
+  const professionalCount = new Set(slot.services.map(s => s.professional_id)).size;
 
   const accessibilityLabel = `Horário das ${formatTime(slot.start_time)} às ${formatTime(slot.end_time)}, total ${slot.total_duration_minutes} minutos, ${slot.services.length} serviços, ${formatPrice(slot.total_price)}`;
 
@@ -63,72 +86,51 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.timeSection}>
-          <Text style={styles.timeRange}>
-            {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
-          </Text>
-          <View style={styles.durationContainer}>
-            <Clock size={14} color="#6b7280" />
-            <Text style={styles.totalTime}>
-              {slot.total_duration_minutes} min
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.executionSection}>
-          <View style={styles.executionTypeContainer}>
-            <Text style={styles.executionIcon}>
-              {getExecutionIcon(slot.execution_type)}
-            </Text>
-            <Text style={styles.executionType}>
-              {slot.execution_type === 'parallel' ? 'Paralelo' : 'Sequencial'}
-            </Text>
-          </View>
-        </View>
-        
-        {isSelected && (
-          <View style={styles.selectedIcon}>
-            <CheckCircle size={24} color="#ec4899" />
-          </View>
-        )}
+      {/* Header with time range and summary */}
+      <View style={styles.headerRow}>
+        <Text style={styles.timeRange}>
+          {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
+        </Text>
+        <Text style={styles.totalDuration}>• Total {slot.total_duration_minutes} min</Text>
       </View>
+
+      {/* Summary row with professionals count and price */}
+      <View style={styles.summaryRow}>
+        <Text style={styles.professionalsCount}>👥 {professionalCount} pros</Text>
+        <Text style={styles.totalPrice}>💲{formatPrice(slot.total_price)}</Text>
+      </View>
+
+      {/* Divider */}
+      <View style={styles.divider} />
 
       {/* Services List */}
       <View style={styles.servicesList}>
-        {slot.services.map((service, index) => (
+        {servicesWithTimes.map((service, index) => (
           <View key={index} style={styles.serviceRow}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>
-                {service.service_name}
-              </Text>
-              <Text style={styles.serviceDuration}>
-                {service.duration_minutes} min
-              </Text>
-            </View>
-            
-            <View style={styles.assignmentInfo}>
-              <View style={styles.professionalInfo}>
-                <User size={12} color="#6b7280" />
-                <Text style={styles.professionalName}>
-                  {service.professional_name}
-                </Text>
-              </View>
-              
-              {service.station_name && (
-                <View style={styles.stationInfo}>
-                  <MapPin size={12} color="#6b7280" />
-                  <Text style={styles.stationName}>
-                    {service.station_name}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.serviceTime}>{service.calculated_start_time}</Text>
+            <Text style={styles.serviceName}>{service.service_name}</Text>
+            <Text style={styles.separator}>•</Text>
+            <Text style={styles.professionalName}>{service.professional_name}</Text>
           </View>
         ))}
       </View>
 
+      {/* Execution type indicator */}
+      <View style={styles.executionIndicator}>
+        <Text style={styles.executionIcon}>
+          {slot.execution_type === 'parallel' ? '║' : '↧'}
+        </Text>
+        <Text style={styles.executionLabel}>
+          {slot.execution_type === 'parallel' ? 'Paralelo' : 'Sequencial'}
+        </Text>
+      </View>
+
+      {/* Selected indicator */}
+      {isSelected && (
+        <View style={styles.selectedBadge}>
+          <CheckCircle size={20} color="#ec4899" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -141,7 +143,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     marginVertical: 6,
     marginHorizontal: 16,
-    overflow: 'hidden',
+    padding: 16,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -156,106 +159,97 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     backgroundColor: '#fdf2f8',
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  timeSection: {
-    flex: 1,
+    marginBottom: 8,
   },
   timeRange: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 4,
+    marginRight: 8,
   },
-  durationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  totalTime: {
+  totalDuration: {
     fontSize: 14,
     color: '#6b7280',
+    fontWeight: '500',
   },
-  executionSection: {
-    alignItems: 'center',
-  },
-  executionTypeContainer: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  executionIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ec4899',
-  },
-  executionType: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  selectedIcon: {
-    marginLeft: 12,
-  },
-  servicesList: {
-    padding: 16,
-    gap: 12,
-  },
-  serviceRow: {
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1f2937',
-    marginBottom: 2,
-  },
-  serviceDuration: {
+  professionalsCount: {
     fontSize: 14,
     color: '#6b7280',
+    fontWeight: '500',
   },
-  assignmentInfo: {
-    alignItems: 'flex-end',
-    gap: 4,
+  totalPrice: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '600',
   },
-  professionalInfo: {
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginBottom: 12,
+  },
+  servicesList: {
+    marginBottom: 12,
+  },
+  serviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    marginBottom: 6,
+    flexWrap: 'wrap',
+  },
+  serviceTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    width: 50,
+    marginRight: 8,
+  },
+  serviceName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginRight: 8,
+  },
+  separator: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginRight: 8,
   },
   professionalName: {
     fontSize: 14,
-    color: '#4b5563',
-  },
-  stationInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  stationName: {
-    fontSize: 12,
     color: '#6b7280',
   },
-  footer: {
-    padding: 16,
+  executionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
-    backgroundColor: '#f9fafb',
   },
-  totalPrice: {
-    fontSize: 18,
-    fontWeight: '700',
+  executionIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#ec4899',
-    textAlign: 'center',
+    marginRight: 6,
+  },
+  executionLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
   },
 });
 
