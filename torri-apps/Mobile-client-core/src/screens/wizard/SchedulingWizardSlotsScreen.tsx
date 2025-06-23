@@ -200,11 +200,6 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
   );
 
   const renderSummary = () => {
-    // Calculate total price
-    const totalPrice = selectedServices.reduce((total: number, service: any) => {
-      return total + parseFloat(service.price || '0');
-    }, 0);
-
     // Format date for chip
     const formatDateChip = (date: string) => {
       const dateObj = new Date(date + 'T00:00:00');
@@ -220,20 +215,6 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
           {/* Date Chip */}
           <View style={styles.compactChip}>
             <Text style={styles.compactChipText}>📅 {formatDateChip(selectedDate)}</Text>
-          </View>
-
-          {/* Services Chip */}
-          <View style={styles.compactChip}>
-            <Text style={styles.compactChipText}>
-              🛒 {selectedServices.length}
-            </Text>
-          </View>
-
-          {/* Price Chip */}
-          <View style={[styles.compactChip, styles.compactPriceChip]}>
-            <Text style={[styles.compactChipText, styles.compactPriceText]}>
-              R$ {totalPrice.toFixed(2).replace('.', ',')}
-            </Text>
           </View>
         </View>
       </View>

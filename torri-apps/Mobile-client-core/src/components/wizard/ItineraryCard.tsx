@@ -96,8 +96,8 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
 
       {/* Summary row with professionals count and price */}
       <View style={styles.summaryRow}>
-        <Text style={styles.professionalsCount}>👥 {professionalCount} pros</Text>
-        <Text style={styles.totalPrice}>💲{formatPrice(slot.total_price)}</Text>
+        <Text style={styles.professionalsCount}>👥 {professionalCount} profissionais</Text>
+        <Text style={styles.totalPrice}>{formatPrice(slot.total_price)}</Text>
       </View>
 
       {/* Divider */}
