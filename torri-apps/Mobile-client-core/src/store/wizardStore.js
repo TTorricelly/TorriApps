@@ -232,6 +232,7 @@ export const useWizardStore = create(
         currentStep: 1,
         isLoading: false,
         error: null,
+        selectedServices: [],
         selectedDate: null,
         availableDates: [],
         professionalsRequested: 1,
