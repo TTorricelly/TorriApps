@@ -859,6 +859,7 @@ class MultiServiceAvailabilityService:
         used_stations = set()
         
         for service, professional in assignments:
+            print(f"DEBUG LOOP: Processing assignment: {service.name} → {professional.full_name or professional.email} (ID: {professional.id})")
             # Assign station
             station = None
             for station_req in service.station_requirements:
@@ -874,7 +875,7 @@ class MultiServiceAvailabilityService:
                 if station:
                     break
             
-            services_in_slot.append(ServiceInSlot(
+            service_slot = ServiceInSlot(
                 service_id=service.id,
                 service_name=service.name,
                 professional_id=professional.id,
@@ -883,7 +884,9 @@ class MultiServiceAvailabilityService:
                 station_name=station.label if station else None,
                 duration_minutes=service.duration_minutes,
                 price=service.price
-            ))
+            )
+            print(f"DEBUG SLOT_CREATED: Created slot for {service_slot.service_name} → {service_slot.professional_name} (ID: {service_slot.professional_id})")
+            services_in_slot.append(service_slot)
         
         # Debug what's being returned to frontend (can be removed in production)
         print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
