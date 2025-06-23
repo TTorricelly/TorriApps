@@ -14,6 +14,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardConfirmationScreenNavigationProp>();
   const [isBooking, setIsBooking] = useState(false);
   const [clientNotes, setClientNotes] = useState('');
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
   
   const {
     selectedServices,
@@ -33,6 +34,23 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   const handleBack = () => {
     goToPreviousStep();
     navigation.goBack();
+  };
+
+  const handleSuccessComplete = () => {
+    resetWizard();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'WizardDate' }],
+    });
+    // Navigate to main app or appointments screen
+    navigation.getParent()?.goBack();
+  };
+
+  const handleViewAppointments = () => {
+    resetWizard();
+    // Navigate to appointments screen
+    navigation.getParent()?.goBack();
+    // Could navigate specifically to appointments tab here
   };
 
   const handleConfirmBooking = async () => {
@@ -56,26 +74,10 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         clientNotes.trim() || null // Client notes
       );
 
-      const result = await wizardApiService.createMultiServiceBooking(bookingRequest);
+      await wizardApiService.createMultiServiceBooking(bookingRequest);
 
-      Alert.alert(
-        'Agendamento Confirmado! 🎉',
-        `Seus serviços foram agendados com sucesso!\n\nNúmero do agendamento: ${result.appointment_group?.id || 'N/A'}\n\nVocê receberá uma confirmação por e-mail em breve.`,
-        [
-          {
-            text: 'Perfeito!',
-            onPress: () => {
-              resetWizard();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'WizardDate' }],
-              });
-              // Navigate to main app or appointments screen
-              navigation.getParent()?.goBack();
-            },
-          },
-        ]
-      );
+      // Show modern success screen instead of alert
+      setBookingConfirmed(true);
     } catch (error) {
       Alert.alert(
         'Erro no Agendamento',
@@ -277,11 +279,89 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
           <Text style={styles.noteIcon}>⏰</Text>
           <Text style={styles.noteText}>Atrasos de 15+ min podem ser reagendados</Text>
         </View>
-        
-        <View style={styles.noteRow}>
-          <Text style={styles.noteIcon}>📧</Text>
-          <Text style={styles.noteText}>Confirmação será enviada por e-mail</Text>
+      </View>
+    </View>
+  );
+
+  // Modern success screen (like Uber/Airbnb)
+  const renderSuccessScreen = () => (
+    <View style={styles.successContainer}>
+      <ScrollView contentContainerStyle={styles.successContent} showsVerticalScrollIndicator={false}>
+        {/* Success Icon & Title */}
+        <View style={styles.successHeader}>
+          <View style={styles.successIconContainer}>
+            <Text style={styles.successIcon}>🎉</Text>
+          </View>
+          <Text style={styles.successTitle}>Agendamento Confirmado!</Text>
+          <Text style={styles.successSubtitle}>
+            Seus serviços foram agendados com sucesso
+          </Text>
         </View>
+
+        {/* Appointment Summary Card */}
+        <View style={styles.successSummaryCard}>
+          <View style={styles.successSummaryHeader}>
+            <Text style={styles.successSummaryTitle}>Resumo do Agendamento</Text>
+          </View>
+          
+          <View style={styles.successSummaryContent}>
+            <View style={styles.successRow}>
+              <Text style={styles.successLabel}>📅 Data</Text>
+              <Text style={styles.successValue}>{formatDate(selectedDate)}</Text>
+            </View>
+            
+            <View style={styles.successRow}>
+              <Text style={styles.successLabel}>🕐 Horário</Text>
+              <Text style={styles.successValue}>
+                {formatTime(selectedSlot?.start_time || '')} - {formatTime(selectedSlot?.end_time || '')}
+              </Text>
+            </View>
+            
+            <View style={styles.successRow}>
+              <Text style={styles.successLabel}>💼 Serviços</Text>
+              <Text style={styles.successValue}>{selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''}</Text>
+            </View>
+            
+            <View style={styles.successDivider} />
+            
+            <View style={styles.successRow}>
+              <Text style={styles.successTotalLabel}>Total</Text>
+              <Text style={styles.successTotalValue}>
+                {formatPrice(selectedSlot?.total_price || 0)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Next Steps */}
+        <View style={styles.nextStepsCard}>
+          <Text style={styles.nextStepsTitle}>Próximos Passos</Text>
+          <View style={styles.nextStepItem}>
+            <Text style={styles.nextStepIcon}>📱</Text>
+            <Text style={styles.nextStepText}>Chegue com 10 min de antecedência</Text>
+          </View>
+          <View style={styles.nextStepItem}>
+            <Text style={styles.nextStepIcon}>💳</Text>
+            <Text style={styles.nextStepText}>Pagamento será feito no local</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Action Buttons */}
+      <View style={styles.successFooter}>
+        <TouchableOpacity
+          style={styles.primarySuccessButton}
+          onPress={handleSuccessComplete}
+        >
+          <Text style={styles.primarySuccessButtonText}>Concluir</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.secondarySuccessButton}
+          onPress={handleViewAppointments}
+        >
+          <Text style={styles.secondarySuccessButtonText}>Ver Meus Agendamentos</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -298,6 +378,15 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Nenhum horário selecionado</Text>
         </View>
+      </WizardContainer>
+    );
+  }
+
+  // Show success screen if booking is confirmed
+  if (bookingConfirmed) {
+    return (
+      <WizardContainer>
+        {renderSuccessScreen()}
       </WizardContainer>
     );
   }
@@ -692,6 +781,214 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#dc2626',
     textAlign: 'center',
+  },
+  
+  // Modern success screen styles (Uber/Airbnb inspired)
+  successContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  
+  successContent: {
+    padding: 24,
+    paddingBottom: 100, // Space for buttons
+  },
+  
+  successHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+    paddingTop: 40,
+  },
+  
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  
+  successIcon: {
+    fontSize: 40,
+  },
+  
+  successTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  
+  successSubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  
+  successSummaryCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  
+  successSummaryHeader: {
+    padding: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  
+  successSummaryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  
+  successSummaryContent: {
+    padding: 20,
+  },
+  
+  successRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  
+  successLabel: {
+    fontSize: 16,
+    color: '#6b7280',
+    flex: 1,
+  },
+  
+  successValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1f2937',
+    textAlign: 'right',
+    flex: 2,
+  },
+  
+  successDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  
+  successTotalLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  
+  successTotalValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#10b981',
+  },
+  
+  nextStepsCard: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+  },
+  
+  nextStepsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 16,
+  },
+  
+  nextStepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  
+  nextStepIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    width: 24,
+  },
+  
+  nextStepText: {
+    fontSize: 16,
+    color: '#0369a1',
+    flex: 1,
+    lineHeight: 24,
+  },
+  
+  successFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    padding: 24,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    gap: 12,
+  },
+  
+  primarySuccessButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  primarySuccessButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  
+  secondarySuccessButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  
+  secondarySuccessButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
   },
 });
 
