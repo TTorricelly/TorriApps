@@ -313,9 +313,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
             <Text style={styles.successIcon}>🎉</Text>
           </View>
           <Text style={styles.successTitle}>Agendamento Confirmado!</Text>
-          <Text style={styles.successSubtitle}>
-            Seus serviços foram agendados com sucesso
-          </Text>
         </View>
 
         {/* Appointment Summary Card */}
