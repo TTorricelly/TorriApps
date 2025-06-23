@@ -347,6 +347,7 @@ class MultiServiceAvailabilityService:
                         ))
         
         # Multi-professional combinations (3+ professionals) for parallel execution
+        three_plus_professional_combinations_added = False
         if professionals_requested >= 3 and can_parallel and max_parallel_pros >= 3:
             print(f"DEBUG: Generating 3+ professional combinations, requested: {professionals_requested}")
             print(f"DEBUG: Eligible professionals: {[p.full_name or p.email for p in eligible_professionals]}")
@@ -368,6 +369,7 @@ class MultiServiceAvailabilityService:
                             stations=available_stations,
                             execution_type="parallel"
                         ))
+                        three_plus_professional_combinations_added = True
                         print(f"DEBUG: Added 3+ professional resource combination")
                     else:
                         print(f"DEBUG: No available stations for combination")
@@ -375,7 +377,7 @@ class MultiServiceAvailabilityService:
                     print(f"DEBUG: Combination cannot handle all services")
         
         # Only generate 2-professional combinations if 3+ professionals weren't requested or none were found
-        elif professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
+        if not three_plus_professional_combinations_added and professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
