@@ -352,18 +352,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Next Steps */}
-        <View style={styles.nextStepsCard}>
-          <Text style={styles.nextStepsTitle}>Próximos Passos</Text>
-          <View style={styles.nextStepItem}>
-            <Text style={styles.nextStepIcon}>📱</Text>
-            <Text style={styles.nextStepText}>Chegue com 10 min de antecedência</Text>
-          </View>
-          <View style={styles.nextStepItem}>
-            <Text style={styles.nextStepIcon}>💳</Text>
-            <Text style={styles.nextStepText}>Pagamento será feito no local</Text>
-          </View>
-        </View>
       </ScrollView>
 
       {/* Action Button */}
@@ -945,40 +933,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#10b981',
-  },
-  
-  nextStepsCard: {
-    backgroundColor: '#f0f9ff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e0f2fe',
-  },
-  
-  nextStepsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 16,
-  },
-  
-  nextStepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  
-  nextStepIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    width: 24,
-  },
-  
-  nextStepText: {
-    fontSize: 16,
-    color: '#0369a1',
-    flex: 1,
-    lineHeight: 24,
   },
   
   successFooter: {
