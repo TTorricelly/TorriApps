@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -34,10 +34,12 @@ const SchedulingWizardDateScreen: React.FC = () => {
   } = useWizardStore();
 
   const [markedDates, setMarkedDates] = useState<{[key: string]: any}>({});
-  const [availabilityData, setAvailabilityData] = useState<{[key: string]: number}>({});
-  const [currentMonth, setCurrentMonth] = useState<{year: number, month: number}>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1
+    };
   });
 
   useEffect(() => {
@@ -52,14 +54,49 @@ const SchedulingWizardDateScreen: React.FC = () => {
   useEffect(() => {
     if (selectedServices.length > 0) {
       // Load current month's availability
-      const now = new Date();
-      loadAvailableDates(now.getFullYear(), now.getMonth() + 1);
+      loadAvailableDates(currentMonth.year, currentMonth.month);
     }
-  }, [selectedServices]);
+  }, [selectedServices.length]);
+
+  const markedDatesCalculated = useMemo(() => {
+    const marked: {[key: string]: any} = {};
+
+    availableDates.forEach((date: string) => {
+      marked[date] = {
+        dots: [{ color: '#ec4899' }],
+        disabled: false,
+      };
+    });
+
+    const today = new Date();
+    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    
+    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      if (!availableDates.includes(dateStr) && d >= today) {
+        marked[dateStr] = {
+          dots: [{ color: '#d1d5db' }],
+          disabled: true,
+          disableTouchEvent: false,
+        };
+      }
+    }
+
+    if (selectedDate) {
+      marked[selectedDate] = {
+        ...marked[selectedDate],
+        selected: true,
+        selectedColor: '#ec4899',
+        selectedTextColor: 'white',
+      };
+    }
+
+    return marked;
+  }, [availableDates, selectedDate]);
 
   useEffect(() => {
-    updateMarkedDates();
-  }, [availableDates, selectedDate, availabilityData]);
+    setMarkedDates(markedDatesCalculated);
+  }, [markedDatesCalculated]);
 
   const loadAvailableDates = async (year?: number, month?: number) => {
     if (selectedServices.length === 0) return;
@@ -97,46 +134,8 @@ const SchedulingWizardDateScreen: React.FC = () => {
     }
   };
 
-  const updateMarkedDates = () => {
-    const marked: {[key: string]: any} = {};
 
-    // Mark available dates with a single dot indicating availability
-    availableDates.forEach((date: string) => {
-      marked[date] = {
-        dots: [{ color: '#ec4899' }], // Single pink dot for available dates
-        disabled: false,
-      };
-    });
-
-    // Mark unavailable future dates with gray dots
-    const today = new Date();
-    const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    
-    for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      if (!availableDates.includes(dateStr) && d >= today) {
-        marked[dateStr] = {
-          dots: [{ color: '#d1d5db' }], // Single gray dot for unavailable
-          disabled: true,
-          disableTouchEvent: false,
-        };
-      }
-    }
-
-    // Mark selected date
-    if (selectedDate) {
-      marked[selectedDate] = {
-        ...marked[selectedDate],
-        selected: true,
-        selectedColor: '#ec4899',
-        selectedTextColor: 'white',
-      };
-    }
-
-    setMarkedDates(marked);
-  };
-
-  const handleDateSelect = (day: DateData) => {
+  const handleDateSelect = useCallback((day: DateData) => {
     const dateString = day.dateString;
 
     if (!availableDates.includes(dateString)) {
@@ -146,22 +145,21 @@ const SchedulingWizardDateScreen: React.FC = () => {
 
     setSelectedDate(dateString);
 
-    // Auto-navigate to next step if possible
     setTimeout(() => {
       if (canProceedToStep(2)) {
         goToNextStep();
         navigation.navigate('WizardProfessionals');
       }
     }, 500);
-  };
+  }, [availableDates, setSelectedDate, canProceedToStep, goToNextStep, navigation]);
 
-  const showUnavailabilityTooltip = () => {
+  const showUnavailabilityTooltip = useCallback(() => {
     Alert.alert(
       'Data Indisponível',
       'Não há horários disponíveis para os serviços escolhidos nesta data.',
       [{ text: 'OK' }]
     );
-  };
+  }, []);
 
   const handleBack = () => {
     navigation.goBack();
@@ -314,6 +312,7 @@ const SchedulingWizardDateScreen: React.FC = () => {
               disableArrowLeft={false}
               disableArrowRight={false}
               disableAllTouchEventsForDisabledDays={true}
+              removeClippedSubviews={true}
               renderArrow={(direction: 'left' | 'right') => (
                 <Text style={styles.calendarArrow}>
                   {direction === 'left' ? '‹' : '›'}
