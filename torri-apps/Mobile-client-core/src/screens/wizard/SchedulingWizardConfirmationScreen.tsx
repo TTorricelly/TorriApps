@@ -230,16 +230,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
           ))
         )}
       </View>
-      
-      {/* Total Section */}
-      <View style={styles.totalSection}>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalPrice}>
-            {formatPrice(selectedSlot?.total_price || 0)}
-          </Text>
-        </View>
-      </View>
     </View>
   );
 
