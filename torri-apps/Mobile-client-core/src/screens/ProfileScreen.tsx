@@ -12,7 +12,6 @@ import {
   ActivityIndicator, // Added for loading indicator
   Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
@@ -55,7 +54,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
 
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // editData state now uses EditableUserProfile and is initialized from storeUser
   const [editData, setEditData] = useState<EditableUserProfile>({
@@ -479,7 +477,54 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
                 justifyContent: 'center',
               }}
-              onPress={() => setShowDatePicker(true)}
+              onPress={() => {
+                // Create a simple date input using Alert
+                Alert.prompt(
+                  'Data de Nascimento',
+                  'Digite sua data de nascimento (DD/MM/AAAA):',
+                  [
+                    {
+                      text: 'Cancelar',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'OK',
+                      onPress: (text) => {
+                        if (text) {
+                          // Validate and parse DD/MM/YYYY format
+                          const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+                          const match = text.match(dateRegex);
+                          
+                          if (match) {
+                            const [, day, month, year] = match;
+                            const dayNum = parseInt(day, 10);
+                            const monthNum = parseInt(month, 10);
+                            const yearNum = parseInt(year, 10);
+                            
+                            // Basic validation
+                            if (dayNum >= 1 && dayNum <= 31 && 
+                                monthNum >= 1 && monthNum <= 12 && 
+                                yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
+                              
+                              // Convert to ISO format (YYYY-MM-DD)
+                              const isoDate = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
+                              setEditData({ ...editData, date_of_birth: isoDate });
+                            } else {
+                              Alert.alert('Erro', 'Data inválida. Use o formato DD/MM/AAAA com uma data válida.');
+                            }
+                          } else {
+                            Alert.alert('Erro', 'Formato inválido. Use o formato DD/MM/AAAA.');
+                          }
+                        }
+                      },
+                    },
+                  ],
+                  'plain-text',
+                  editData.date_of_birth ? 
+                    new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
+                    ''
+                );
+              }}
             >
               <Text style={{ 
                 fontSize: 16, 
@@ -487,27 +532,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               }}>
                 {editData.date_of_birth ? 
                   new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
-                  'Selecione sua data de nascimento'}
+                  'Toque para selecionar data de nascimento'}
               </Text>
             </TouchableOpacity>
           </View>
-          
-          {showDatePicker && (
-            <DateTimePicker
-              value={editData.date_of_birth ? new Date(editData.date_of_birth) : new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  const isoDate = selectedDate.toISOString().split('T')[0];
-                  setEditData({ ...editData, date_of_birth: isoDate });
-                }
-              }}
-              maximumDate={new Date()}
-              minimumDate={new Date(1900, 0, 1)}
-            />
-          )}
         </View>
 
         {/* Action Buttons */}
