@@ -249,18 +249,24 @@ class MultiServiceAvailabilityService:
             for professional in req.qualified_professionals:
                 all_qualified.add(professional)
         
+        print(f"DEBUG ELIGIBLE: All qualified professionals: {[p.full_name or p.email for p in all_qualified]}")
+        print(f"DEBUG ELIGIBLE: Specific professional IDs requested: {specific_professional_ids}")
         
         # Filter by specific professionals if provided
         if specific_professional_ids:
             specific_ids_str = [str(pid) for pid in specific_professional_ids]
+            print(f"DEBUG ELIGIBLE: Specific IDs as strings: {specific_ids_str}")
+            
             all_qualified = {
                 prof for prof in all_qualified 
                 if str(prof.id) in specific_ids_str
             }
+            print(f"DEBUG ELIGIBLE: After filtering by specific IDs: {[p.full_name or p.email for p in all_qualified]}")
         
         # Filter by availability on target date
         eligible_professionals = []
         for professional in all_qualified:
+            prof_name = professional.full_name or professional.email
             availability = get_daily_time_slots_for_professional(
                 self.db,
                 professional.id,
@@ -272,7 +278,11 @@ class MultiServiceAvailabilityService:
             # Check if professional has any available slots
             if any(slot.is_available for slot in availability.slots):
                 eligible_professionals.append(professional)
+                print(f"DEBUG ELIGIBLE: {prof_name} is available ({len(available_slots)} slots)")
+            else:
+                print(f"DEBUG ELIGIBLE: {prof_name} is NOT available (no available slots)")
         
+        print(f"DEBUG ELIGIBLE: Final eligible professionals: {[p.full_name or p.email for p in eligible_professionals]}")
         return eligible_professionals
     
     def _generate_resource_combinations(
@@ -908,18 +918,31 @@ class MultiServiceAvailabilityService:
         print(f"DEBUG ASSIGNMENT: Processing {len(services)} services with {len(professionals)} professionals")
         print(f"DEBUG ASSIGNMENT: Services: {[s.name for s in services]}")
         print(f"DEBUG ASSIGNMENT: Professionals: {[p.full_name or p.email for p in professionals]}")
+        
+        # Debug capability matrix
+        print("DEBUG ASSIGNMENT: Capability Matrix:")
+        for service in services:
+            capable_names = [p.full_name or p.email for p in capability_matrix.get(service.id, [])]
+            print(f"  {service.name}: {capable_names}")
+        
         print(f"DEBUG ASSIGNMENT: Assignment order: {[s.name for s in services_by_exclusivity]}")
         
         # Assign professionals to services
         for service in services_by_exclusivity:
             capable_profs = capability_matrix.get(service.id, [])
+            print(f"DEBUG ASSIGNMENT: Assigning {service.name}, capable: {[p.full_name or p.email for p in capable_profs]}")
+            print(f"DEBUG ASSIGNMENT: Used professionals so far: {[p for p in used_professionals]}")
             
             # Find a professional who hasn't been assigned yet
             available_prof = None
             for prof in capable_profs:
+                prof_name = prof.full_name or prof.email
                 if prof.id not in used_professionals:
                     available_prof = prof
+                    print(f"DEBUG ASSIGNMENT: Found available professional: {prof_name}")
                     break
+                else:
+                    print(f"DEBUG ASSIGNMENT: Professional {prof_name} already used")
             
             if available_prof:
                 assignments.append((service, available_prof))
