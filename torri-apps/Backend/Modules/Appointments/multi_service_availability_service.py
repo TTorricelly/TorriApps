@@ -869,6 +869,11 @@ class MultiServiceAvailabilityService:
                 price=service.price
             ))
         
+        # Debug what's being returned to frontend
+        print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
+        for service_slot in services_in_slot:
+            print(f"  {service_slot.service_name} → {service_slot.professional_name}")
+        
         return services_in_slot
 
     def _smart_professional_assignment(
