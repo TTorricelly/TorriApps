@@ -215,6 +215,7 @@ class MultiServiceAvailabilityService:
         
         requirements = []
         for service in services:
+            print(f"DEBUG SERVICE: {service.name} has qualified professionals: {[p.full_name or p.email for p in service.professionals]}")
             requirements.append(ServiceRequirement(
                 service=service,
                 duration_minutes=service.duration_minutes,
