@@ -148,7 +148,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         <View style={styles.iconContainer}>
           <Text style={styles.cardIcon}>💼</Text>
         </View>
-        <Text style={styles.cardTitle}>Serviços e Profissionais</Text>
+        <Text style={styles.cardTitle}>Serviços</Text>
         {selectedSlot?.execution_type === 'parallel' && (
           <View style={styles.parallelBadge}>
             <Text style={styles.parallelBadgeText}>⚡ Paralelo</Text>
@@ -207,49 +207,19 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
           ))
         )}
       </View>
-    </View>
-  );
-
-  // Modern pricing summary
-  const renderPricingSummary = () => (
-    <View style={styles.pricingCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.cardIcon}>💰</Text>
-        </View>
-        <Text style={styles.cardTitle}>Resumo do Investimento</Text>
-      </View>
       
-      <View style={styles.pricingContent}>
-        {selectedSlot?.services?.map((serviceInSlot: any, index: number) => (
-          <View key={index} style={styles.pricingRow}>
-            <Text style={styles.pricingServiceName}>{serviceInSlot.service_name}</Text>
-            <Text style={styles.pricingServicePrice}>
-              {formatPrice(parseFloat(serviceInSlot.price))}
-            </Text>
-          </View>
-        )) || (
-          selectedServices.map((service: Service, index: number) => (
-            <View key={index} style={styles.pricingRow}>
-              <Text style={styles.pricingServiceName}>{service.name}</Text>
-              <Text style={styles.pricingServicePrice}>
-                {formatPrice(parseFloat(service.price))}
-              </Text>
-            </View>
-          ))
-        )}
-        
-        <View style={styles.pricingDivider} />
-        
-        <View style={styles.pricingTotalRow}>
-          <Text style={styles.pricingTotalLabel}>Total</Text>
-          <Text style={styles.pricingTotalPrice}>
+      {/* Total Section */}
+      <View style={styles.totalSection}>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalPrice}>
             {formatPrice(selectedSlot?.total_price || 0)}
           </Text>
         </View>
       </View>
     </View>
   );
+
 
   // Enhanced important notes with better visual hierarchy
   const renderImportantNotes = () => (
@@ -313,7 +283,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderDateTimeCard()}
         {renderServiceAssignments()}
-        {renderPricingSummary()}
         {renderImportantNotes()}
         
         {/* Bottom spacing for better scroll experience */}
@@ -363,23 +332,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  
-  pricingCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -558,51 +510,28 @@ const styles = StyleSheet.create({
     maxWidth: 100,
   },
   
-  // Pricing styles
-  pricingContent: {
+  // Total section styles
+  totalSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: 16,
+    marginTop: 8,
   },
   
-  pricingRow: {
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
   },
   
-  pricingServiceName: {
-    fontSize: 14,
-    color: '#6b7280',
-    flex: 1,
-  },
-  
-  pricingServicePrice: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  
-  pricingDivider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 12,
-  },
-  
-  pricingTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  
-  pricingTotalLabel: {
+  totalLabel: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
   },
   
-  pricingTotalPrice: {
+  totalPrice: {
     fontSize: 24,
     fontWeight: '700',
     color: '#ec4899',
