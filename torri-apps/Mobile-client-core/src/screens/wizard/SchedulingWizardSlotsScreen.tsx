@@ -338,7 +338,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
               styles.confirmButtonText,
               !canConfirm && styles.disabledButtonText,
             ]}>
-              {selectedSlot ? 'Confirmar agendamento' : 'Selecione um horário'}
+              {selectedSlot ? 'Confirmar Horário' : 'Selecione um horário'}
             </Text>
           </TouchableOpacity>
         </View>
