@@ -337,9 +337,16 @@ class MultiServiceAvailabilityService:
         
         # Multi-professional combinations (3+ professionals) for parallel execution
         if professionals_requested >= 3 and can_parallel and max_parallel_pros >= 3:
+            print(f"DEBUG: Generating 3+ professional combinations, requested: {professionals_requested}")
+            print(f"DEBUG: Eligible professionals: {[p.full_name or p.email for p in eligible_professionals]}")
+            print(f"DEBUG: Can parallel: {can_parallel}, Max parallel pros: {max_parallel_pros}")
+            
             # Try combinations of exactly professionals_requested size
             for prof_combination in combinations(eligible_professionals, professionals_requested):
+                print(f"DEBUG: Testing combination: {[p.full_name or p.email for p in prof_combination]}")
+                
                 if self._professional_combination_can_handle_services(prof_combination, service_requirements):
+                    print(f"DEBUG: Combination can handle services - creating resource combination")
                     station_requirements = self._get_combined_station_requirements(service_requirements)
                     available_stations = self._get_available_stations(station_requirements)
                     
@@ -350,6 +357,11 @@ class MultiServiceAvailabilityService:
                             stations=available_stations,
                             execution_type="parallel"
                         ))
+                        print(f"DEBUG: Added 3+ professional resource combination")
+                    else:
+                        print(f"DEBUG: No available stations for combination")
+                else:
+                    print(f"DEBUG: Combination cannot handle all services")
 
         if professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
@@ -891,6 +903,11 @@ class MultiServiceAvailabilityService:
         assignments = []
         used_professionals = set()
         
+        print(f"DEBUG ASSIGNMENT: Processing {len(services)} services with {len(professionals)} professionals")
+        print(f"DEBUG ASSIGNMENT: Services: {[s.name for s in services]}")
+        print(f"DEBUG ASSIGNMENT: Professionals: {[p.full_name or p.email for p in professionals]}")
+        print(f"DEBUG ASSIGNMENT: Assignment order: {[s.name for s in services_by_exclusivity]}")
+        
         # Assign professionals to services
         for service in services_by_exclusivity:
             capable_profs = capability_matrix.get(service.id, [])
@@ -905,13 +922,18 @@ class MultiServiceAvailabilityService:
             if available_prof:
                 assignments.append((service, available_prof))
                 used_professionals.add(available_prof.id)
+                print(f"DEBUG ASSIGNMENT: Assigned {service.name} → {available_prof.full_name or available_prof.email}")
             else:
                 # Phase 2: No unique professional available, use conflict resolution
+                print(f"DEBUG ASSIGNMENT: No available prof for {service.name}, using conflict resolution")
                 assigned_prof = self._resolve_professional_conflict(
                     service, capable_profs, assignments, used_professionals
                 )
                 if assigned_prof:
                     assignments.append((service, assigned_prof))
+                    print(f"DEBUG ASSIGNMENT: Conflict resolution assigned {service.name} → {assigned_prof.full_name or assigned_prof.email}")
+        
+        print(f"DEBUG ASSIGNMENT: Final assignments: {[(s.name, p.full_name or p.email) for s, p in assignments]}")
         return assignments
 
     def _resolve_professional_conflict(
