@@ -565,6 +565,10 @@ class MultiServiceAvailabilityService:
                     "parallel"
                 )
                 
+                print(f"DEBUG WIZARD_SLOT: Creating WizardTimeSlot with services:")
+                for i, s in enumerate(services_in_slot):
+                    print(f"  [{i}] {s.service_name} → {s.professional_name} (ID: {s.professional_id})")
+                
                 wizard_slots.append(WizardTimeSlot(
                     id=slot_id,
                     start_time=slot_start_time,
