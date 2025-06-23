@@ -44,18 +44,18 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       index: 0,
       routes: [{ name: 'WizardDate' }],
     });
-    // Navigate to main app or appointments screen
+    // Navigate to main app and go to Agendamentos tab
     navigation.getParent()?.goBack();
+    
+    // Navigate to Agendamentos tab specifically
+    setTimeout(() => {
+      // This will navigate to the Agendamentos tab in the bottom navigator
+      navigation.getParent()?.getParent()?.navigate('BottomTabs', {
+        screen: 'Agendamentos'
+      });
+    }, 100);
   };
 
-  const handleViewAppointments = () => {
-    // Clear the original service cart/checkout
-    clearServices();
-    
-    // Navigate to appointments screen
-    navigation.getParent()?.goBack();
-    // Could navigate specifically to appointments tab here
-  };
 
   const handleConfirmBooking = async () => {
     if (!selectedSlot) {
@@ -367,20 +367,13 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Action Buttons */}
+      {/* Action Button */}
       <View style={styles.successFooter}>
         <TouchableOpacity
           style={styles.primarySuccessButton}
           onPress={handleSuccessComplete}
         >
           <Text style={styles.primarySuccessButtonText}>Concluir</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.secondarySuccessButton}
-          onPress={handleViewAppointments}
-        >
-          <Text style={styles.secondarySuccessButtonText}>Ver Meus Agendamentos</Text>
         </TouchableOpacity>
       </View>
     </View>
