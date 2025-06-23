@@ -6,7 +6,7 @@ import { useWizardStore } from '../../store/wizardStore';
 import useAuthStore from '../../store/authStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
-import { Service, Professional } from '../../types';
+import { Service } from '../../types';
 
 type SchedulingWizardConfirmationScreenNavigationProp = WizardNavigationProp<'WizardConfirmation'>;
 
@@ -17,8 +17,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   const {
     selectedServices,
     selectedDate,
-    professionalsRequested,
-    selectedProfessionals,
     selectedSlot,
     setCurrentStep,
     goToPreviousStep,
@@ -60,11 +58,11 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       const result = await wizardApiService.createMultiServiceBooking(bookingRequest);
 
       Alert.alert(
-        'Agendamento Confirmado!',
-        `Seus serviços foram agendados com sucesso.\n\nNúmero do agendamento: ${result.appointment_group?.id || 'N/A'}`,
+        'Agendamento Confirmado! 🎉',
+        `Seus serviços foram agendados com sucesso!\n\nNúmero do agendamento: ${result.appointment_group?.id || 'N/A'}\n\nVocê receberá uma confirmação por e-mail em breve.`,
         [
           {
-            text: 'OK',
+            text: 'Perfeito!',
             onPress: () => {
               resetWizard();
               navigation.reset({
@@ -78,7 +76,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
         ]
       );
     } catch (error) {
-      console.error('Error creating booking:', error);
       Alert.alert(
         'Erro no Agendamento',
         'Não foi possível confirmar o agendamento. Tente novamente.',
@@ -94,7 +91,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     return date.toLocaleDateString('pt-BR', {
       weekday: 'long',
       day: '2-digit',
-      month: '2-digit',
+      month: 'long',
       year: 'numeric',
     });
   };
@@ -107,122 +104,140 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     return `R$ ${price.toFixed(2).replace('.', ',')}`;
   };
 
-  const renderServicesSummary = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Serviços Selecionados</Text>
-      {selectedServices.map((service: Service, index: number) => (
-        <View key={index} style={styles.serviceItem}>
-          <View style={styles.serviceInfo}>
-            <Text style={styles.serviceName}>{service.name}</Text>
-            <Text style={styles.serviceDetails}>
-              {service.duration_minutes} min • {formatPrice(parseFloat(service.price))}
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+    }
+    return `${mins}min`;
+  };
+
+  // Modern card with gradient and better spacing
+  const renderDateTimeCard = () => (
+    <View style={styles.modernCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.cardIcon}>📅</Text>
+        </View>
+        <Text style={styles.cardTitle}>Data e Horário</Text>
+      </View>
+      
+      <View style={styles.dateTimeContent}>
+        <View style={styles.dateTimeMainInfo}>
+          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+          <View style={styles.timeRow}>
+            <Text style={styles.timeText}>
+              {formatTime(selectedSlot?.start_time || '')} - {formatTime(selectedSlot?.end_time || '')}
             </Text>
-            {service.description && (
-              <Text style={styles.serviceDescription}>{service.description}</Text>
-            )}
+            <View style={styles.durationBadge}>
+              <Text style={styles.durationText}>
+                {formatDuration(selectedSlot?.total_duration_minutes || 0)}
+              </Text>
+            </View>
           </View>
-        </View>
-      ))}
-      
-      <View style={styles.servicesTotal}>
-        <Text style={styles.servicesTotalText}>
-          Total: {selectedServices.length} serviço{selectedServices.length > 1 ? 's' : ''} • {formatPrice(selectedServices.reduce((sum: number, service: Service) => sum + parseFloat(service.price), 0))}
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderDateAndTime = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Data e Horário</Text>
-      <View style={styles.dateTimeCard}>
-        <View style={styles.dateTimeRow}>
-          <Text style={styles.dateTimeLabel}>📅 Data:</Text>
-          <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
-        </View>
-        <View style={styles.dateTimeRow}>
-          <Text style={styles.dateTimeLabel}>🕐 Horário:</Text>
-          <Text style={styles.dateTimeValue}>
-            {formatTime(selectedSlot?.start_time || '')} - {formatTime(selectedSlot?.end_time || '')}
-          </Text>
-        </View>
-        <View style={styles.dateTimeRow}>
-          <Text style={styles.dateTimeLabel}>⏱️ Duração:</Text>
-          <Text style={styles.dateTimeValue}>
-            {selectedSlot?.total_duration_minutes} minutos
-          </Text>
         </View>
       </View>
     </View>
   );
 
-  const renderProfessionals = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>
-        Profissional{professionalsRequested > 1 ? 'is' : ''} Selecionado{professionalsRequested > 1 ? 's' : ''}
-      </Text>
-      {selectedProfessionals.map((professional: Professional | null, index: number) => (
-        professional && (
-          <View key={professional.id} style={styles.professionalItem}>
-            <View style={styles.professionalAvatar}>
-              <Text style={styles.professionalAvatarText}>
-                {(professional.full_name || professional.email || 'U').charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.professionalInfo}>
-              <Text style={styles.professionalName}>
-                {professional.full_name || professional.email}
-              </Text>
-              <Text style={styles.professionalEmail}>{professional.email}</Text>
-            </View>
-          </View>
-        )
-      ))}
-      
-      {professionalsRequested > 1 && (
-        <View style={styles.parallelInfo}>
-          <Text style={styles.parallelInfoText}>
-            ⚡ Execução paralela com {professionalsRequested} profissionais
-          </Text>
+  // Enhanced service assignments with professional mapping
+  const renderServiceAssignments = () => (
+    <View style={styles.modernCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.cardIcon}>💼</Text>
         </View>
-      )}
-    </View>
-  );
-
-  const renderExecutionDetails = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Detalhes da Execução</Text>
-      <View style={styles.executionCard}>
-        <View style={styles.executionRow}>
-          <Text style={styles.executionLabel}>Tipo de execução:</Text>
-          <Text style={styles.executionValue}>
-            {selectedSlot?.execution_type === 'parallel' ? 'Paralela' : 'Sequencial'}
-          </Text>
-        </View>
+        <Text style={styles.cardTitle}>Serviços e Profissionais</Text>
         {selectedSlot?.execution_type === 'parallel' && (
-          <Text style={styles.executionNote}>
-            Os serviços serão realizados simultaneamente por profissionais diferentes.
-          </Text>
+          <View style={styles.parallelBadge}>
+            <Text style={styles.parallelBadgeText}>⚡ Paralelo</Text>
+          </View>
         )}
-        {selectedSlot?.execution_type === 'sequential' && (
-          <Text style={styles.executionNote}>
-            Os serviços serão realizados um após o outro pelo mesmo profissional.
-          </Text>
+      </View>
+      
+      <View style={styles.servicesContent}>
+        {selectedSlot?.services?.map((serviceInSlot: any, index: number) => (
+          <View key={index} style={styles.serviceAssignmentRow}>
+            <View style={styles.serviceMainInfo}>
+              <Text style={styles.serviceNameModern}>{serviceInSlot.service_name}</Text>
+              <View style={styles.serviceMetaRow}>
+                <Text style={styles.serviceDuration}>
+                  {formatDuration(serviceInSlot.duration_minutes)}
+                </Text>
+                <Text style={styles.servicePrice}>
+                  {formatPrice(parseFloat(serviceInSlot.price))}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.professionalAssignment}>
+              <View style={styles.professionalAvatarSmall}>
+                <Text style={styles.professionalAvatarTextSmall}>
+                  {(serviceInSlot.professional_name || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.professionalNameSmall}>
+                {serviceInSlot.professional_name}
+              </Text>
+            </View>
+          </View>
+        )) || (
+          // Fallback for when service assignments aren't available
+          selectedServices.map((service: Service, index: number) => (
+            <View key={index} style={styles.serviceAssignmentRow}>
+              <View style={styles.serviceMainInfo}>
+                <Text style={styles.serviceNameModern}>{service.name}</Text>
+                <View style={styles.serviceMetaRow}>
+                  <Text style={styles.serviceDuration}>
+                    {formatDuration(service.duration_minutes)}
+                  </Text>
+                  <Text style={styles.servicePrice}>
+                    {formatPrice(parseFloat(service.price))}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.professionalAssignment}>
+                <Text style={styles.professionalNameSmall}>
+                  Atribuição automática
+                </Text>
+              </View>
+            </View>
+          ))
         )}
       </View>
     </View>
   );
 
+  // Modern pricing summary
   const renderPricingSummary = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Resumo do Pagamento</Text>
-      <View style={styles.pricingCard}>
-        {selectedServices.map((service: Service, index: number) => (
+    <View style={styles.pricingCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.cardIcon}>💰</Text>
+        </View>
+        <Text style={styles.cardTitle}>Resumo do Investimento</Text>
+      </View>
+      
+      <View style={styles.pricingContent}>
+        {selectedSlot?.services?.map((serviceInSlot: any, index: number) => (
           <View key={index} style={styles.pricingRow}>
-            <Text style={styles.pricingServiceName}>{service.name}</Text>
-            <Text style={styles.pricingServicePrice}>{formatPrice(parseFloat(service.price))}</Text>
+            <Text style={styles.pricingServiceName}>{serviceInSlot.service_name}</Text>
+            <Text style={styles.pricingServicePrice}>
+              {formatPrice(parseFloat(serviceInSlot.price))}
+            </Text>
           </View>
-        ))}
+        )) || (
+          selectedServices.map((service: Service, index: number) => (
+            <View key={index} style={styles.pricingRow}>
+              <Text style={styles.pricingServiceName}>{service.name}</Text>
+              <Text style={styles.pricingServicePrice}>
+                {formatPrice(parseFloat(service.price))}
+              </Text>
+            </View>
+          ))
+        )}
         
         <View style={styles.pricingDivider} />
         
@@ -236,22 +251,36 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     </View>
   );
 
+  // Enhanced important notes with better visual hierarchy
   const renderImportantNotes = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Informações Importantes</Text>
-      <View style={styles.notesCard}>
-        <Text style={styles.noteItem}>
-          • Chegue com 10 minutos de antecedência
-        </Text>
-        <Text style={styles.noteItem}>
-          • Cancelamentos devem ser feitos com 24h de antecedência
-        </Text>
-        <Text style={styles.noteItem}>
-          • Em caso de atraso superior a 15 minutos, o horário poderá ser reagendado
-        </Text>
-        <Text style={styles.noteItem}>
-          • Você receberá uma confirmação por e-mail após o agendamento
-        </Text>
+    <View style={styles.notesCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconContainer}>
+          <Text style={styles.cardIcon}>ℹ️</Text>
+        </View>
+        <Text style={styles.cardTitle}>Informações Importantes</Text>
+      </View>
+      
+      <View style={styles.notesContent}>
+        <View style={styles.noteRow}>
+          <Text style={styles.noteIcon}>🕐</Text>
+          <Text style={styles.noteText}>Chegue com 10 minutos de antecedência</Text>
+        </View>
+        
+        <View style={styles.noteRow}>
+          <Text style={styles.noteIcon}>📞</Text>
+          <Text style={styles.noteText}>Cancelamentos com 24h de antecedência</Text>
+        </View>
+        
+        <View style={styles.noteRow}>
+          <Text style={styles.noteIcon}>⏰</Text>
+          <Text style={styles.noteText}>Atrasos de 15+ min podem ser reagendados</Text>
+        </View>
+        
+        <View style={styles.noteRow}>
+          <Text style={styles.noteIcon}>📧</Text>
+          <Text style={styles.noteText}>Confirmação será enviada por e-mail</Text>
+        </View>
       </View>
     </View>
   );
@@ -277,20 +306,21 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       <WizardHeader
         currentStep={4}
         totalSteps={4}
-        title="Confirmar agendamento"
+        title="Confirmar Agendamento"
         onBack={handleBack}
       />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderServicesSummary()}
-        {renderDateAndTime()}
-        {renderProfessionals()}
-        {renderExecutionDetails()}
+        {renderDateTimeCard()}
+        {renderServiceAssignments()}
         {renderPricingSummary()}
         {renderImportantNotes()}
+        
+        {/* Bottom spacing for better scroll experience */}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Confirm Button */}
+      {/* Enhanced Confirm Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
@@ -306,9 +336,14 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
               <Text style={styles.confirmButtonText}>Confirmando...</Text>
             </View>
           ) : (
-            <Text style={styles.confirmButtonText}>
-              Confirmar Agendamento • {formatPrice(selectedSlot.total_price)}
-            </Text>
+            <View style={styles.confirmButtonContent}>
+              <Text style={styles.confirmButtonText}>
+                Confirmar Agendamento
+              </Text>
+              <Text style={styles.confirmButtonPrice}>
+                {formatPrice(selectedSlot.total_price)}
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -319,249 +354,348 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#f8fafc',
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  serviceItem: {
+  
+  // Modern card styles
+  modernCard: {
     backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  serviceDetails: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  serviceDescription: {
-    fontSize: 12,
-    color: '#9ca3af',
-    lineHeight: 16,
-  },
-  servicesTotal: {
-    backgroundColor: '#f9fafb',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  servicesTotalText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    textAlign: 'center',
-  },
-  dateTimeCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dateTimeLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  dateTimeValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
-  },
-  professionalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  professionalAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ec4899',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  professionalAvatarText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-  },
-  professionalInfo: {
-    flex: 1,
-  },
-  professionalName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1f2937',
-  },
-  professionalEmail: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  parallelInfo: {
-    backgroundColor: '#fef3c7',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  parallelInfoText: {
-    fontSize: 14,
-    color: '#92400e',
-    textAlign: 'center',
-  },
-  executionCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  executionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  executionLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  executionValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
-  },
-  executionNote: {
-    fontSize: 12,
-    color: '#9ca3af',
-    lineHeight: 16,
-    fontStyle: 'italic',
-  },
-  pricingCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  pricingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pricingServiceName: {
-    fontSize: 14,
-    color: '#6b7280',
-    flex: 1,
-  },
-  pricingServicePrice: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  pricingDivider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
+    marginHorizontal: 16,
     marginVertical: 8,
-  },
-  pricingTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  pricingTotalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  pricingTotalPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ec4899',
-  },
-  notesCard: {
-    backgroundColor: '#f0f9ff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0f2fe',
-  },
-  noteItem: {
-    fontSize: 14,
-    color: '#0369a1',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    backgroundColor: 'white',
-  },
-  confirmButton: {
-    backgroundColor: '#ec4899',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
+  
+  pricingCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  
+  notesCard: {
+    backgroundColor: '#f0f9ff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+  },
+  
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  
+  cardIcon: {
+    fontSize: 16,
+  },
+  
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  
+  parallelBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  
+  parallelBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#92400e',
+  },
+  
+  // Date time content
+  dateTimeContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  
+  dateTimeMainInfo: {
+    gap: 12,
+  },
+  
+  dateText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1f2937',
+    textTransform: 'capitalize',
+  },
+  
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  
+  timeText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ec4899',
+  },
+  
+  durationBadge: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  
+  durationText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  
+  // Service assignments
+  servicesContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  
+  serviceAssignmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  
+  serviceMainInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  
+  serviceNameModern: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  
+  serviceMetaRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  
+  serviceDuration: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  
+  servicePrice: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#059669',
+  },
+  
+  professionalAssignment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  professionalAvatarSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ec4899',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  professionalAvatarTextSmall: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  
+  professionalNameSmall: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    maxWidth: 100,
+  },
+  
+  // Pricing styles
+  pricingContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  
+  pricingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  
+  pricingServiceName: {
+    fontSize: 14,
+    color: '#6b7280',
+    flex: 1,
+  },
+  
+  pricingServicePrice: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  
+  pricingDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 12,
+  },
+  
+  pricingTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  
+  pricingTotalLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  
+  pricingTotalPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ec4899',
+  },
+  
+  // Notes styles
+  notesContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  
+  noteIcon: {
+    fontSize: 16,
+    marginTop: 2,
+  },
+  
+  noteText: {
+    fontSize: 14,
+    color: '#0369a1',
+    lineHeight: 20,
+    flex: 1,
+  },
+  
+  // Footer and button
+  footer: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  
+  confirmButton: {
+    backgroundColor: '#ec4899',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    shadowColor: '#ec4899',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
   disabledButton: {
     backgroundColor: '#e5e7eb',
+    shadowOpacity: 0,
   },
+  
+  confirmButtonContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  
   confirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
   },
+  
+  confirmButtonPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+  },
+  
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
+  
+  bottomSpacing: {
+    height: 20,
+  },
+  
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
   },
+  
   errorText: {
     fontSize: 16,
     color: '#dc2626',
