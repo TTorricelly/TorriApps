@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import useAuthStore from '../../store/authStore';
@@ -40,20 +40,26 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   };
 
   const handleSuccessComplete = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'WizardDate' }],
-    });
-    // Navigate to main app and go to Agendamentos tab
-    navigation.getParent()?.goBack();
-    
-    // Navigate to Agendamentos tab specifically
-    setTimeout(() => {
-      // This will navigate to the Agendamentos tab in the bottom navigator
-      navigation.getParent()?.getParent()?.navigate('BottomTabs', {
-        screen: 'Agendamentos'
-      });
-    }, 100);
+    // Reset navigation stack and go directly to Agendamentos
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'BottomTabs',
+            state: {
+              routes: [
+                { name: 'Início' },
+                { name: 'Serviços' },
+                { name: 'Agendamentos' },
+                { name: 'Perfil' },
+              ],
+              index: 2, // Agendamentos tab index
+            },
+          },
+        ],
+      })
+    );
   };
 
 
