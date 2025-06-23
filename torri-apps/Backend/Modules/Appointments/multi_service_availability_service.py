@@ -335,6 +335,22 @@ class MultiServiceAvailabilityService:
                             execution_type=execution_type
                         ))
         
+        # Multi-professional combinations (3+ professionals) for parallel execution
+        if professionals_requested >= 3 and can_parallel and max_parallel_pros >= 3:
+            # Try combinations of exactly professionals_requested size
+            for prof_combination in combinations(eligible_professionals, professionals_requested):
+                if self._professional_combination_can_handle_services(prof_combination, service_requirements):
+                    station_requirements = self._get_combined_station_requirements(service_requirements)
+                    available_stations = self._get_available_stations(station_requirements)
+                    
+                    if available_stations:
+                        resource_combinations.append(ResourceCombination(
+                            services=[req.service for req in service_requirements],
+                            professionals=list(prof_combination),
+                            stations=available_stations,
+                            execution_type="parallel"
+                        ))
+
         if professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
             for prof_pair in combinations(eligible_professionals, 2):
@@ -374,6 +390,19 @@ class MultiServiceAvailabilityService:
         """Check if a pair of professionals can handle all services together."""
         combined_service_ids = set()
         for professional in professional_pair:
+            combined_service_ids.update(service.id for service in professional.services_offered)
+        
+        required_service_ids = {req.service.id for req in service_requirements}
+        return required_service_ids.issubset(combined_service_ids)
+    
+    def _professional_combination_can_handle_services(
+        self,
+        professional_combination: Tuple[User, ...],
+        service_requirements: List[ServiceRequirement]
+    ) -> bool:
+        """Check if a combination of professionals can handle all services together."""
+        combined_service_ids = set()
+        for professional in professional_combination:
             combined_service_ids.update(service.id for service in professional.services_offered)
         
         required_service_ids = {req.service.id for req in service_requirements}
@@ -862,47 +891,27 @@ class MultiServiceAvailabilityService:
         assignments = []
         used_professionals = set()
         
-        # Debug log the assignment process
-        print(f"Debug: Assignment order: {[s.name for s in services_by_exclusivity]}")
-        print(f"Debug: Capability matrix: {[(s.name, [p.full_name or p.email for p in capability_matrix[s.id]]) for s in services]}")
-        
         # Assign professionals to services
         for service in services_by_exclusivity:
             capable_profs = capability_matrix.get(service.id, [])
-            print(f"Debug: Processing {service.name}, capable profs: {[p.full_name or p.email for p in capable_profs]}")
-            
-            # Show which professionals are already used
-            used_prof_names = []
-            for prof in professionals:
-                if prof.id in used_professionals:
-                    used_prof_names.append(prof.full_name or prof.email)
-            print(f"Debug: Already used professionals: {used_prof_names}")
             
             # Find a professional who hasn't been assigned yet
             available_prof = None
             for prof in capable_profs:
-                print(f"Debug: Checking prof {prof.full_name or prof.email}, ID: {prof.id}, used: {prof.id in used_professionals}")
                 if prof.id not in used_professionals:
                     available_prof = prof
-                    print(f"Debug: Found available professional: {prof.full_name or prof.email}")
                     break
             
             if available_prof:
                 assignments.append((service, available_prof))
                 used_professionals.add(available_prof.id)
-                print(f"Debug: Assigned {service.name} to {available_prof.full_name or available_prof.email} (unique)")
-                print(f"Debug: Used professionals now: {used_professionals}")
             else:
                 # Phase 2: No unique professional available, use conflict resolution
-                print(f"Debug: No unique professional available for {service.name}, using conflict resolution")
                 assigned_prof = self._resolve_professional_conflict(
                     service, capable_profs, assignments, used_professionals
                 )
                 if assigned_prof:
                     assignments.append((service, assigned_prof))
-                    print(f"Debug: Assigned {service.name} to {assigned_prof.full_name or assigned_prof.email} (conflict resolution)")
-        
-        print(f"Debug: Final assignments: {[(s.name, p.full_name or p.email) for s, p in assignments]}")
         return assignments
 
     def _resolve_professional_conflict(
