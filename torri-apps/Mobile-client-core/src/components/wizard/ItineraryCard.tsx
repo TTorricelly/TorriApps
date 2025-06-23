@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CheckCircle } from 'lucide-react-native';
+import { formatDuration } from '../../utils/dateUtils';
 
 interface ServiceInSlot {
   service_id: string;
@@ -73,7 +74,7 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
   const servicesWithTimes = calculateServiceTimes();
   const professionalCount = new Set(slot.services.map(s => s.professional_id)).size;
 
-  const accessibilityLabel = `Horário das ${formatTime(slot.start_time)} às ${formatTime(slot.end_time)}, total ${slot.total_duration_minutes} minutos, ${slot.services.length} serviços, ${formatPrice(slot.total_price)}`;
+  const accessibilityLabel = `Horário das ${formatTime(slot.start_time)} às ${formatTime(slot.end_time)}, total ${formatDuration(slot.total_duration_minutes)}, ${slot.services.length} serviços, ${formatPrice(slot.total_price)}`;
 
   return (
     <TouchableOpacity
@@ -91,7 +92,7 @@ export const ItineraryCard: React.FC<ItineraryCardProps> = ({
         <Text style={styles.timeRange}>
           {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
         </Text>
-        <Text style={styles.totalDuration}>• Total {slot.total_duration_minutes} min</Text>
+        <Text style={styles.totalDuration}>• Total {formatDuration(slot.total_duration_minutes)}</Text>
       </View>
 
       {/* Summary row with professionals count and price */}

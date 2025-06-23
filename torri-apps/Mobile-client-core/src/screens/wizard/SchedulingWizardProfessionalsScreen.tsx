@@ -14,7 +14,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardProfessionalsScreenNavigationProp>();
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
-  const [showGuideMessage, setShowGuideMessage] = React.useState(true);
+  const [showGuideMessage, setShowGuideMessage] = React.useState(false);
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
   
   // Animation for ready button
@@ -65,9 +65,9 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
     }
   }, [selectedProfessionals, professionalsRequested]);
 
-  // Show guide message when selection changes and auto-hide after 4 seconds
+  // Show guide message only after user has made some interaction
   useEffect(() => {
-    if (!isValidSelection()) {
+    if (!isValidSelection() && getSelectedCount() > 0) {
       setShowGuideMessage(true);
       const timer = setTimeout(() => {
         setShowGuideMessage(false);
@@ -77,6 +77,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
       setShowGuideMessage(false);
     }
   }, [selectedProfessionals, professionalsRequested]);
+
 
 
   const loadConfiguration = async () => {
@@ -1011,24 +1012,20 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
         <View style={[styles.snackbarTop, styles.snackbarGuide]}>
           <View style={styles.snackbarIconContainer}>
             <Text style={styles.snackbarIcon}>
-              {getSelectedCount() === 0 ? '👥' : getSelectedCount() < professionalsRequested ? '✨' : '📋'}
+              {getSelectedCount() < professionalsRequested ? '✨' : '📋'}
             </Text>
           </View>
           <View style={styles.snackbarContent}>
             <Text style={styles.snackbarTitle}>
-              {getSelectedCount() === 0 
-                ? 'Escolha seus profissionais' 
-                : getSelectedCount() < professionalsRequested
-                  ? 'Quase lá!'
-                  : 'Verificando serviços'
+              {getSelectedCount() < professionalsRequested
+                ? 'Quase lá!'
+                : 'Verificando serviços'
               }
             </Text>
             <Text style={styles.snackbarMessage}>
-              {getSelectedCount() === 0 
-                ? 'Selecione o(s) profissional(is) para seus serviços'
-                : getSelectedCount() < professionalsRequested
-                  ? `Selecione mais ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} para continuar`
-                  : `Verifique se todos os serviços estão cobertos: ${getUncoveredServices().join(', ')}`
+              {getSelectedCount() < professionalsRequested
+                ? `Selecione mais ${professionalsRequested - getSelectedCount()} profissional${professionalsRequested - getSelectedCount() > 1 ? 'is' : ''} para continuar`
+                : `Verifique se todos os serviços estão cobertos: ${getUncoveredServices().join(', ')}`
               }
             </Text>
           </View>

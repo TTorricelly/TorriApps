@@ -762,7 +762,12 @@ class MultiServiceAvailabilityService:
         end_time: time
     ) -> List[ServiceInSlot]:
         """
-        Assign services to professionals for parallel execution.
+        Assign services to professionals for parallel execution with optimal 1:1 assignment.
+        
+        Algorithm:
+        1. Try to assign unique professionals to each service (1:1 mapping)
+        2. Use conflict resolution for overlapping capabilities
+        3. Fall back to reuse only when necessary
         
         Args:
             services: List of services to assign
@@ -774,35 +779,17 @@ class MultiServiceAvailabilityService:
         Returns:
             List of service assignments
         """
+        if not services or not professionals:
+            return []
+            
+        # Use smart assignment algorithm for optimal professional distribution
+        assignments = self._smart_professional_assignment(services, professionals)
+        
+        # Build service slots with station assignments
         services_in_slot = []
         used_stations = set()
-        used_professionals = set()
         
-        for i, service in enumerate(services):
-            # Assign professional - find one who can do this service and hasn't been assigned yet
-            professional = None
-            for prof in professionals:
-                if prof.id in used_professionals:
-                    continue  # Skip already assigned professionals
-                    
-                prof_service_ids = {s.id for s in prof.services_offered}
-                if service.id in prof_service_ids:
-                    professional = prof
-                    used_professionals.add(prof.id)
-                    break
-            
-            if not professional:
-                # Fallback: find any available professional (even if already assigned)
-                for prof in professionals:
-                    prof_service_ids = {s.id for s in prof.services_offered}
-                    if service.id in prof_service_ids:
-                        professional = prof
-                        break
-                
-                if not professional:
-                    # Last resort: rotation
-                    professional = professionals[i % len(professionals)]
-            
+        for service, professional in assignments:
             # Assign station
             station = None
             for station_req in service.station_requirements:
@@ -830,6 +817,125 @@ class MultiServiceAvailabilityService:
             ))
         
         return services_in_slot
+
+    def _smart_professional_assignment(
+        self, 
+        services: List[Service], 
+        professionals: List[User]
+    ) -> List[Tuple[Service, User]]:
+        """
+        Smart algorithm to assign professionals to services with optimal distribution.
+        
+        Strategy:
+        1. Prioritize services with fewer capable professionals (exclusivity)
+        2. Assign unique professionals when possible (1:1 mapping)
+        3. Use intelligent conflict resolution for overlapping capabilities
+        4. Fall back to reuse only when absolutely necessary
+        
+        Args:
+            services: List of services to assign
+            professionals: List of available professionals
+            
+        Returns:
+            List of (service, professional) assignments
+        """
+        # Build capability matrix: which professionals can do which services
+        capability_matrix = {}
+        for service in services:
+            capable_professionals = []
+            for prof in professionals:
+                prof_service_ids = {s.id for s in prof.services_offered}
+                if service.id in prof_service_ids:
+                    capable_professionals.append(prof)
+            capability_matrix[service.id] = capable_professionals
+        
+        # Sort services by exclusivity (fewest capable professionals first)
+        # This ensures exclusive services get assigned first
+        services_by_exclusivity = sorted(
+            services, 
+            key=lambda s: (
+                len(capability_matrix.get(s.id, [])),  # Fewer capable = higher priority
+                s.id  # Deterministic ordering
+            )
+        )
+        
+        assignments = []
+        used_professionals = set()
+        
+        # Phase 1: Assign unique professionals (1:1 mapping)
+        for service in services_by_exclusivity:
+            capable_profs = capability_matrix.get(service.id, [])
+            
+            # Find a professional who hasn't been assigned yet
+            available_prof = None
+            for prof in capable_profs:
+                if prof.id not in used_professionals:
+                    available_prof = prof
+                    break
+            
+            if available_prof:
+                assignments.append((service, available_prof))
+                used_professionals.add(available_prof.id)
+            else:
+                # Phase 2: No unique professional available, use conflict resolution
+                assigned_prof = self._resolve_professional_conflict(
+                    service, capable_profs, assignments, used_professionals
+                )
+                assignments.append((service, assigned_prof))
+        
+        return assignments
+
+    def _resolve_professional_conflict(
+        self,
+        service: Service,
+        capable_professionals: List[User],
+        current_assignments: List[Tuple[Service, User]],
+        used_professionals: Set[str]
+    ) -> User:
+        """
+        Resolve conflicts when no unique professional is available for a service.
+        
+        Conflict Resolution Strategy:
+        1. Prefer professionals with fewer current assignments
+        2. Among tied professionals, prefer those with more total capabilities
+        3. Fall back to first available as last resort
+        
+        Args:
+            service: Service that needs assignment
+            capable_professionals: Professionals who can do this service
+            current_assignments: Current service assignments
+            used_professionals: Set of already used professional IDs
+            
+        Returns:
+            Best professional to assign to this service
+        """
+        if not capable_professionals:
+            # Emergency fallback - should not happen in well-formed data
+            return None
+        
+        # Count current assignments per professional
+        assignment_counts = {}
+        for _, prof in current_assignments:
+            assignment_counts[prof.id] = assignment_counts.get(prof.id, 0) + 1
+        
+        # Evaluate each capable professional
+        best_prof = None
+        best_score = float('inf')
+        
+        for prof in capable_professionals:
+            current_load = assignment_counts.get(prof.id, 0)
+            total_capabilities = len(prof.services_offered)
+            
+            # Score: prioritize lower current load, then higher capabilities
+            # Lower score = better choice
+            score = (current_load * 1000) - total_capabilities
+            
+            if score < best_score:
+                best_score = score
+                best_prof = prof
+        
+        # If all else fails, use first capable professional
+        return best_prof or capable_professionals[0]
     
     def _assign_services_sequential(
         self,

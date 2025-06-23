@@ -5,6 +5,7 @@ import { WizardHeader, WizardContainer, ItineraryCard } from '../../components/w
 import { useWizardStore } from '../../store/wizardStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
+import { formatDuration } from '../../utils/dateUtils';
 
 type SchedulingWizardSlotsScreenNavigationProp = WizardNavigationProp<'WizardSlots'>;
 
@@ -316,7 +317,7 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
               {selectedSlot.start_time.substring(0, 5)} - {selectedSlot.end_time.substring(0, 5)}
             </Text>
             <Text style={styles.selectedSlotDetails}>
-              {selectedSlot.total_duration_minutes} min • R$ {selectedSlot.total_price.toFixed(2).replace('.', ',')}
+              {formatDuration(selectedSlot.total_duration_minutes)} • R$ {selectedSlot.total_price.toFixed(2).replace('.', ',')}
             </Text>
           </View>
         </View>
