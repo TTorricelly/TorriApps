@@ -14,6 +14,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   const navigation = useNavigation<SchedulingWizardProfessionalsScreenNavigationProp>();
   const [imageErrors, setImageErrors] = React.useState<{[key: string]: boolean}>({});
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
+  const [showGuideMessage, setShowGuideMessage] = React.useState(true);
   const [showProfessionalCountModal, setShowProfessionalCountModal] = React.useState(false);
   
   // Animation for ready button
@@ -54,12 +55,26 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
   useEffect(() => {
     if (isValidSelection()) {
       setShowSuccessMessage(true);
+      setShowGuideMessage(false); // Hide guide when selection is valid
       const timer = setTimeout(() => {
         setShowSuccessMessage(false);
       }, 3000);
       return () => clearTimeout(timer);
     } else {
       setShowSuccessMessage(false);
+    }
+  }, [selectedProfessionals, professionalsRequested]);
+
+  // Show guide message when selection changes and auto-hide after 4 seconds
+  useEffect(() => {
+    if (!isValidSelection()) {
+      setShowGuideMessage(true);
+      const timer = setTimeout(() => {
+        setShowGuideMessage(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowGuideMessage(false);
     }
   }, [selectedProfessionals, professionalsRequested]);
 
@@ -1162,7 +1177,7 @@ const SchedulingWizardProfessionalsScreen: React.FC = () => {
           </Animated.View>
           
           {/* Friendly Guide Messages */}
-          {!isValidSelection() && (
+          {showGuideMessage && !isValidSelection() && (
             <View style={[styles.snackbarOverlay, styles.snackbarGuide]}>
               <View style={styles.snackbarIconContainer}>
                 <Text style={styles.snackbarIcon}>
