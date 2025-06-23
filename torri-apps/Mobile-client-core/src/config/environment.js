@@ -48,15 +48,6 @@ const getEnvironmentConfig = () => {
 
 const config = getEnvironmentConfig();
 
-// Debug logging
-console.log('Environment Config Debug:', {
-  API_BASE_URL: config.API_BASE_URL,
-  ENVIRONMENT: config.ENVIRONMENT,
-  __DEV__: __DEV__,
-  REACT_NATIVE_API_BASE_URL: process.env.REACT_NATIVE_API_BASE_URL,
-  CODESPACE_NAME: process.env.CODESPACE_NAME,
-  GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN
-});
 
 export const API_BASE_URL = config.API_BASE_URL;
 export const ENVIRONMENT = config.ENVIRONMENT;

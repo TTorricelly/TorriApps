@@ -57,7 +57,6 @@ const AppointmentsScreen = () => {
   const loadAppointments = async (showRefreshLoader = false) => {
     // Check if user is authenticated before making API call
     if (!isAuthenticated || !user) {
-      console.log('[AppointmentsScreen] User not authenticated, skipping appointments load');
       setIsLoading(false);
       setRefreshing(false);
       setError('User not authenticated');
@@ -72,10 +71,8 @@ const AppointmentsScreen = () => {
       }
       setError(null);
       
-      console.log('[AppointmentsScreen] Loading appointments for user:', user.id);
       const data = await getUserAppointments();
       // Temporary debugging - remove once confirmed working
-      console.log('[AppointmentsScreen] Raw appointment data:', JSON.stringify(data, null, 2));
       setAppointments(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('[AppointmentsScreen] Error loading appointments:', err);

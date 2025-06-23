@@ -70,11 +70,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
     const fetchProfile = async () => {
       // Check if user is authenticated and if detailed profile info (e.g., phone_number) is missing
       if (isAuthenticated && storeUser && !storeUser.phone_number) {
-        console.log('[ProfileScreen] Attempting to fetch profile. isAuthenticated:', isAuthenticated, 'User has phone_number:', !!storeUser?.phone_number);
         setIsProfileLoading(true);
         try {
           const rawProfileData = await getUserProfile();
-          console.log('[ProfileScreen] Profile data fetched successfully');
           updateStoreProfile(rawProfileData); // Update store with detailed profile
         } catch (error) {
           console.error('[ProfileScreen] Error fetching profile:', error);
@@ -119,12 +117,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
         date_of_birth: editData.date_of_birth,
       };
 
-      console.log('[ProfileScreen] Updating profile with data:', updateData);
       
       // Call the API to update the user profile
       const updatedProfile = await updateUserProfile(updateData);
       
-      console.log('[ProfileScreen] Profile updated successfully:', updatedProfile);
       
       // Update the local store with the response from the API
       await updateStoreProfile(updatedProfile);
