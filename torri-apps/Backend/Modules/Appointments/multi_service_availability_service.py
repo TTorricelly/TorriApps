@@ -908,7 +908,7 @@ class MultiServiceAvailabilityService:
             services, 
             key=lambda s: (
                 len(capability_matrix.get(s.id, [])),  # Fewer capable = higher priority
-                s.id  # Deterministic ordering
+                s.name  # Deterministic ordering by name for consistency
             )
         )
         
@@ -926,6 +926,13 @@ class MultiServiceAvailabilityService:
             print(f"  {service.name}: {capable_names}")
         
         print(f"DEBUG ASSIGNMENT: Assignment order: {[s.name for s in services_by_exclusivity]}")
+        
+        # Check if we can achieve perfect 1:1 assignment with equal-capability services
+        if len(services) == len(professionals):
+            perfect_assignment = self._try_perfect_assignment(services, professionals, capability_matrix)
+            if perfect_assignment:
+                print("DEBUG ASSIGNMENT: Using perfect 1:1 assignment")
+                return perfect_assignment
         
         # Assign professionals to services
         for service in services_by_exclusivity:
@@ -960,6 +967,53 @@ class MultiServiceAvailabilityService:
         
         print(f"DEBUG ASSIGNMENT: Final assignments: {[(s.name, p.full_name or p.email) for s, p in assignments]}")
         return assignments
+
+    def _try_perfect_assignment(
+        self, 
+        services: List[Service], 
+        professionals: List[User], 
+        capability_matrix: Dict
+    ) -> List[Tuple[Service, User]]:
+        """
+        Try to find a perfect 1:1 assignment where each professional gets exactly one service.
+        Uses a greedy approach with backtracking for equal-capability scenarios.
+        
+        Args:
+            services: List of services to assign
+            professionals: List of available professionals
+            capability_matrix: Map of service_id -> capable professionals
+            
+        Returns:
+            List of (service, professional) assignments if perfect match found, None otherwise
+        """
+        from itertools import permutations
+        
+        print("DEBUG PERFECT: Attempting perfect 1:1 assignment")
+        
+        # Try different permutations of professional assignments
+        for prof_permutation in permutations(professionals):
+            assignment_valid = True
+            test_assignment = []
+            
+            for i, service in enumerate(services):
+                professional = prof_permutation[i]
+                capable_profs = capability_matrix.get(service.id, [])
+                
+                # Check if this professional can do this service
+                if professional in capable_profs:
+                    test_assignment.append((service, professional))
+                else:
+                    assignment_valid = False
+                    break
+            
+            if assignment_valid:
+                prof_names = [p.full_name or p.email for p in prof_permutation]
+                service_names = [s.name for s in services]
+                print(f"DEBUG PERFECT: Found valid assignment: {list(zip(service_names, prof_names))}")
+                return test_assignment
+        
+        print("DEBUG PERFECT: No perfect 1:1 assignment found")
+        return None
 
     def _resolve_professional_conflict(
         self,
