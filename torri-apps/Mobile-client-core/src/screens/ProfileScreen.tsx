@@ -12,6 +12,7 @@ import {
   ActivityIndicator, // Added for loading indicator
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
@@ -54,6 +55,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
 
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // editData state now uses EditableUserProfile and is initialized from storeUser
   const [editData, setEditData] = useState<EditableUserProfile>({
@@ -465,7 +467,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 zIndex: 1 
               }} 
             />
-            <TextInput
+            <TouchableOpacity
               style={{
                 width: '100%',
                 paddingLeft: 44,
@@ -474,40 +476,38 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 borderWidth: 1,
                 borderColor: '#d1d5db',
                 borderRadius: 12,
-                fontSize: 16,
                 backgroundColor: 'white',
+                justifyContent: 'center',
               }}
-              placeholder="DD/MM/AAAA"
-              value={editData.date_of_birth ? 
-                new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
-                ''}
-              onChangeText={(text) => {
-                // Simple date validation and formatting
-                const numbers = text.replace(/\D/g, '');
-                let formatted = numbers;
-                if (numbers.length >= 3) {
-                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-                }
-                if (numbers.length >= 5) {
-                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
-                }
-                
-                // Convert to ISO format for storage
-                if (numbers.length === 8) {
-                  const day = numbers.slice(0, 2);
-                  const month = numbers.slice(2, 4);
-                  const year = numbers.slice(4, 8);
-                  const isoDate = `${year}-${month}-${day}`;
-                  setEditData({ ...editData, date_of_birth: isoDate });
-                } else {
-                  // Update the display but don't set the ISO date until complete
-                  setEditData({ ...editData, date_of_birth: formatted });
-                }
-              }}
-              keyboardType="numeric"
-              maxLength={10}
-            />
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={{ 
+                fontSize: 16, 
+                color: editData.date_of_birth ? '#1f2937' : '#9ca3af' 
+              }}>
+                {editData.date_of_birth ? 
+                  new Date(editData.date_of_birth).toLocaleDateString('pt-BR') : 
+                  'Selecione sua data de nascimento'}
+              </Text>
+            </TouchableOpacity>
           </View>
+          
+          {showDatePicker && (
+            <DateTimePicker
+              value={editData.date_of_birth ? new Date(editData.date_of_birth) : new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  const isoDate = selectedDate.toISOString().split('T')[0];
+                  setEditData({ ...editData, date_of_birth: isoDate });
+                }
+              }}
+              maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
+            />
+          )}
         </View>
 
         {/* Action Buttons */}
