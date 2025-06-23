@@ -363,8 +363,9 @@ class MultiServiceAvailabilityService:
                         print(f"DEBUG: No available stations for combination")
                 else:
                     print(f"DEBUG: Combination cannot handle all services")
-
-        if professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
+        
+        # Only generate 2-professional combinations if 3+ professionals weren't requested or none were found
+        elif professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
