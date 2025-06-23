@@ -142,19 +142,19 @@ const AppointmentsScreen = () => {
       case 'SCHEDULED':
       case 'CONFIRMED':
         return {
-          icon: <Clock size={16} color="#3b82f6" />,
+          icon: <Clock size={16} color="#22c55e" />,
           text: 'Confirmado',
-          color: '#3b82f6',
-          bgColor: '#eff6ff',
-          borderColor: '#3b82f6'
-        };
-      case 'COMPLETED':
-        return {
-          icon: <CheckCircle size={16} color="#22c55e" />,
-          text: 'Concluído',
           color: '#22c55e',
           bgColor: '#f0fdf4',
           borderColor: '#22c55e'
+        };
+      case 'COMPLETED':
+        return {
+          icon: <CheckCircle size={16} color="#059669" />,
+          text: 'Concluído',
+          color: '#059669',
+          bgColor: '#ecfdf5',
+          borderColor: '#059669'
         };
       case 'CANCELLED':
         return {
