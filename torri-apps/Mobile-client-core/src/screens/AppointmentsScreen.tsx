@@ -247,6 +247,13 @@ const AppointmentsScreen = () => {
             <Text style={styles.timeText}>
               {appointment.start_time.substring(0, 5)}
             </Text>
+            {appointment.service?.duration_minutes && (
+              <View style={styles.durationBadgeSmall}>
+                <Text style={styles.durationTextSmall}>
+                  {appointment.service.duration_minutes}min
+                </Text>
+              </View>
+            )}
           </View>
           {appointment.price_at_booking && (
             <Text style={styles.priceText}>
@@ -265,10 +272,10 @@ const AppointmentsScreen = () => {
         )}
 
         {/* Expanded details section */}
-        {isExpanded && (
+        {isExpanded && (appointment.salon_name || appointment.salon_address) && (
           <View style={styles.expandedDetails}>
             <View style={styles.detailsHeader}>
-              <Text style={styles.detailsTitle}>Informações Completas</Text>
+              <Text style={styles.detailsTitle}>Informações do Local</Text>
             </View>
             
             {appointment.salon_name && (
@@ -284,18 +291,6 @@ const AppointmentsScreen = () => {
                 <Text style={styles.detailValue}>{appointment.salon_address}</Text>
               </View>
             )}
-            
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Duração:</Text>
-              <Text style={styles.detailValue}>
-                {appointment.service?.duration_minutes ? `${appointment.service.duration_minutes} min` : 'Não informado'}
-              </Text>
-            </View>
-            
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>ID do Agendamento:</Text>
-              <Text style={styles.detailValue}>{appointment.id.substring(0, 8)}...</Text>
-            </View>
           </View>
         )}
 
@@ -308,19 +303,21 @@ const AppointmentsScreen = () => {
             >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.detailsButton}
-              onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
-            >
-              <Text style={styles.detailsButtonText}>
-                {isExpanded ? 'Menos' : 'Detalhes'}
-              </Text>
-              <ChevronRight 
-                size={16} 
-                color="#ec4899" 
-                style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
-              />
-            </TouchableOpacity>
+            {(appointment.salon_name || appointment.salon_address) && (
+              <TouchableOpacity 
+                style={styles.detailsButton}
+                onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
+              >
+                <Text style={styles.detailsButtonText}>
+                  {isExpanded ? 'Menos' : 'Local'}
+                </Text>
+                <ChevronRight 
+                  size={16} 
+                  color="#ec4899" 
+                  style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </TouchableOpacity>
@@ -565,6 +562,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#22c55e',
     fontWeight: '600',
+  },
+  durationBadgeSmall: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  durationTextSmall: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
   },
   notesContainer: {
     marginHorizontal: 16,
