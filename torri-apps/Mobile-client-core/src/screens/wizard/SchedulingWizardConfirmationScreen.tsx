@@ -37,7 +37,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   };
 
   const handleSuccessComplete = () => {
-    resetWizard();
     navigation.reset({
       index: 0,
       routes: [{ name: 'WizardDate' }],
@@ -47,7 +46,6 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   };
 
   const handleViewAppointments = () => {
-    resetWizard();
     // Navigate to appointments screen
     navigation.getParent()?.goBack();
     // Could navigate specifically to appointments tab here
@@ -76,11 +74,14 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
 
       await wizardApiService.createMultiServiceBooking(bookingRequest);
 
-      // Show modern success screen instead of alert
-      setBookingConfirmed(true);
+      // Clear all wizard state immediately after successful booking
+      resetWizard();
       
       // Clear local state immediately
       setClientNotes('');
+      
+      // Show modern success screen
+      setBookingConfirmed(true);
     } catch (error) {
       Alert.alert(
         'Erro no Agendamento',
