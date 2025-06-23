@@ -125,6 +125,13 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const handleDateChipPress = () => {
+    // Navigate back to date selection
+    goToPreviousStep(); // Go to step 2 (professionals) 
+    goToPreviousStep(); // Go to step 1 (date)
+    navigation.navigate('WizardDate');
+  };
+
   const canConfirm = canProceedToStep(4);
   const hasMoreSlots = visibleCount < availableSlots.length;
   const currentSlots = showAllSlots ? availableSlots : availableSlots.slice(0, visibleCount);
@@ -213,10 +220,14 @@ const SchedulingWizardSlotsScreen: React.FC = () => {
     return (
       <View style={styles.summaryContainer}>
         <View style={styles.compactChipsRow}>
-          {/* Date Chip */}
-          <View style={styles.compactChip}>
+          {/* Date Chip - Tappable */}
+          <TouchableOpacity 
+            style={[styles.compactChip, styles.tappableDateChip]} 
+            onPress={handleDateChipPress}
+            activeOpacity={0.7}
+          >
             <Text style={styles.compactChipText}>📅 {formatDateChip(selectedDate)}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -379,6 +390,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#475569',
+  },
+  tappableDateChip: {
+    borderWidth: 1,
+    borderColor: '#ec4899',
+    backgroundColor: '#fdf2f8',
+    shadowColor: '#ec4899',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   compactPriceText: {
     color: '#92400e',
