@@ -531,16 +531,26 @@ class MultiServiceAvailabilityService:
             max_duration
         )
         
+        # Pre-calculate optimal professional assignments once for all slots
+        perfect_assignments = None
+        if len(combination.services) == len(combination.professionals):
+            perfect_assignments = self._smart_professional_assignment(
+                combination.services, 
+                combination.professionals
+            )
+            print(f"DEBUG PARALLEL: Pre-calculated perfect assignments: {[(s.name, p.full_name or p.email) for s, p in perfect_assignments]}")
+        
         # Create wizard time slots
         wizard_slots = []
         for slot_start_time, slot_end_time in simultaneous_slots:
-            # Assign services to professionals
+            # Assign services to professionals using predefined assignments
             services_in_slot = self._assign_services_to_professionals_parallel(
                 combination.services,
                 combination.professionals,
                 combination.stations,
                 slot_start_time,
-                slot_end_time
+                slot_end_time,
+                perfect_assignments
             )
             
             if services_in_slot:
@@ -812,7 +822,8 @@ class MultiServiceAvailabilityService:
         professionals: List[User],
         stations: Dict[str, List[Station]],
         start_time: time,
-        end_time: time
+        end_time: time,
+        predefined_assignments: List[Tuple[Service, User]] = None
     ) -> List[ServiceInSlot]:
         """
         Assign services to professionals for parallel execution with optimal 1:1 assignment.
@@ -835,8 +846,13 @@ class MultiServiceAvailabilityService:
         if not services or not professionals:
             return []
             
-        # Use smart assignment algorithm for optimal professional distribution
-        assignments = self._smart_professional_assignment(services, professionals)
+        # Use predefined assignments if provided, otherwise calculate new assignments
+        if predefined_assignments:
+            assignments = predefined_assignments
+            print("DEBUG ASSIGNMENT: Using predefined assignments for parallel execution")
+        else:
+            # Use smart assignment algorithm for optimal professional distribution
+            assignments = self._smart_professional_assignment(services, professionals)
         
         # Build service slots with station assignments
         services_in_slot = []
@@ -869,10 +885,10 @@ class MultiServiceAvailabilityService:
                 price=service.price
             ))
         
-        # Debug what's being returned to frontend
-        print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
-        for service_slot in services_in_slot:
-            print(f"  {service_slot.service_name} → {service_slot.professional_name}")
+        # Debug what's being returned to frontend (can be removed in production)
+        # print("DEBUG SERVICES_IN_SLOT: Final services being returned to frontend:")
+        # for service_slot in services_in_slot:
+        #     print(f"  {service_slot.service_name} → {service_slot.professional_name}")
         
         return services_in_slot
 

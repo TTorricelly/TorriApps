@@ -90,7 +90,21 @@ class WizardApiService {
       () => apiClient.get(endpoint, { params }),
       {
         defaultValue: [],
-        transformData: (data) => data?.available_slots || []
+        transformData: (data) => {
+          const slots = data?.available_slots || [];
+          // Debug log the received data
+          console.log('DEBUG FRONTEND: Received slots from backend:', JSON.stringify(slots, null, 2));
+          
+          // Debug log each slot's service assignments
+          slots.forEach((slot, index) => {
+            console.log(`DEBUG FRONTEND: Slot ${index + 1} service assignments:`);
+            slot.services?.forEach(service => {
+              console.log(`  ${service.service_name} → ${service.professional_name}`);
+            });
+          });
+          
+          return slots;
+        }
       }
     );
   }
