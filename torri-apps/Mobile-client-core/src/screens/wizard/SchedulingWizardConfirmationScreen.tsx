@@ -49,6 +49,9 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   };
 
   const handleViewAppointments = () => {
+    // Clear the original service cart/checkout
+    clearServices();
+    
     // Navigate to appointments screen
     navigation.getParent()?.goBack();
     // Could navigate specifically to appointments tab here
