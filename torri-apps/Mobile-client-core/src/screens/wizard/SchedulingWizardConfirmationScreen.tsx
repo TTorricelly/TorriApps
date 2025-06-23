@@ -378,7 +378,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
     </View>
   );
 
-  if (!selectedSlot) {
+  if (!selectedSlot && !bookingConfirmed) {
     return (
       <WizardContainer>
         <WizardHeader
