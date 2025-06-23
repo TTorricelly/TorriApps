@@ -328,7 +328,8 @@ class MultiServiceAvailabilityService:
         
         # Multi-professional execution when single professional approach fails
         # Trigger when no single professional can handle all services, regardless of parallel capability
-        if len(resource_combinations) == 0 and len(service_requirements) > 1:
+        # But only if we're not specifically requesting 3+ professionals
+        if len(resource_combinations) == 0 and len(service_requirements) > 1 and professionals_requested < 3:
             # Try both sequential and parallel execution with different professionals
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
@@ -377,7 +378,7 @@ class MultiServiceAvailabilityService:
                     print(f"DEBUG: Combination cannot handle all services")
         
         # Only generate 2-professional combinations if 3+ professionals weren't requested or none were found
-        if not three_plus_professional_combinations_added and professionals_requested >= 2 and can_parallel and max_parallel_pros >= 2:
+        if not three_plus_professional_combinations_added and professionals_requested == 2 and can_parallel and max_parallel_pros >= 2:
             # Two professional combinations for parallel execution
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
