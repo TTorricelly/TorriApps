@@ -83,7 +83,8 @@ export const getAvailableTimeSlots = async (serviceId, professionalId, date) => 
       const weeklyAvailability = await getProfessionalWeeklyAvailability(professionalId);
       
       // Simple fallback: generate basic time slots based on day of week
-      const selectedDate = new Date(date);
+      // Fix timezone issue by explicitly adding time component
+      const selectedDate = new Date(date + 'T00:00:00');
       const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
       // Filter slots for the selected day of week and generate time slots
