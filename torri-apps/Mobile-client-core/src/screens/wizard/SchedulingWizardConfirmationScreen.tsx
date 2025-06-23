@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { WizardHeader, WizardContainer } from '../../components/wizard';
 import { useWizardStore } from '../../store/wizardStore';
 import useAuthStore from '../../store/authStore';
+import useServicesStore from '../../store/servicesStore';
 import { wizardApiService } from '../../services/wizardApiService';
 import { WizardNavigationProp } from '../../navigation/SchedulingWizardNavigator';
 import { Service } from '../../types';
@@ -27,6 +28,7 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
   } = useWizardStore();
   
   const { user } = useAuthStore();
+  const { clearServices } = useServicesStore();
 
   React.useEffect(() => {
     setCurrentStep(4);
@@ -84,6 +86,9 @@ const SchedulingWizardConfirmationScreen: React.FC = () => {
       
       // Clear all wizard state immediately after successful booking
       resetWizard();
+      
+      // Clear the original service cart/checkout
+      clearServices();
       
       // Clear local state immediately
       setClientNotes('');
