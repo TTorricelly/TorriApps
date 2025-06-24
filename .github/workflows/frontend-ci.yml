@@ -20,13 +20,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: torri-apps/Web-admin/package-lock.json
     
     - name: Install dependencies
       run: |
         cd torri-apps/Web-admin
-        npm ci
+        rm -rf node_modules package-lock.json
+        npm install
     
     - name: Run tests
       run: |
