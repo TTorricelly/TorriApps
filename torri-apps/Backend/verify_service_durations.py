@@ -45,9 +45,10 @@ def verify_service_durations():
         # Check for any services with invalid durations
         invalid_duration_services = db.query(Service).filter(
             Service.is_active == True,
-            (Service.duration_minutes <= 0) | (Service.duration_minutes.is_(None))
+            (Service.duration_minutes <= 0)
+            | (Service.duration_minutes.is_(None))
         ).all()
-        
+
         if invalid_duration_services:
             print('\n⚠️  Services with invalid durations:')
             print('-' * 40)
@@ -55,13 +56,13 @@ def verify_service_durations():
                 print(f'  {service.name}: {service.duration_minutes} minutes')
         else:
             print('\n✅ All active services have valid duration_minutes values')
-        
     except Exception as e:
         print(f'Error querying services: {e}')
         import traceback
         traceback.print_exc()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     verify_service_durations()
