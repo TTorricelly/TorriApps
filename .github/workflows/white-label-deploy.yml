@@ -26,12 +26,12 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
     
     - name: Setup Ruby
       uses: ruby/setup-ruby@v1
@@ -44,10 +44,9 @@ jobs:
     
     - name: Deploy white-label app
       run: |
-        chmod +x Infrastructure/Scripts/White-label-deploy.sh
-        ./Infrastructure/Scripts/White-label-deploy.sh ${{ github.event.inputs.brand }} ${{ github.event.inputs.platform }}
+        chmod +x torri-apps/Infrastructure/Scripts/White-label-deploy.sh
+        ./torri-apps/Infrastructure/Scripts/White-label-deploy.sh ${{ github.event.inputs.brand }} ${{ github.event.inputs.platform }}
       env:
         FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
         FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
         MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-

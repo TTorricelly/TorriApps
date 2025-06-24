@@ -1,0 +1,95 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'torri-apps/Backend/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'torri-apps/Backend/**' ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        cd torri-apps/Backend
+        pip install -r Requirements.txt
+        pip install -r Requirements-dev.txt
+    
+    - name: Run tests
+      run: |
+        cd torri-apps/Backend
+        python -m pytest Tests/
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+    
+    - name: Run linting
+      run: |
+        cd torri-apps/Backend
+        flake8 .
+        black --check .
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    
+    - name: Configure Docker for GCR
+      run: gcloud auth configure-docker
+    
+    - name: Build Docker image
+      run: |
+        cd torri-apps/Backend
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:${{ github.sha }} .
+        docker tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:${{ github.sha }} gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:latest
+    
+    - name: Push Docker image
+      run: |
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:${{ github.sha }}
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:latest
+    
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy torri-backend \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-backend:${{ github.sha }} \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated \
+          --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          --port 8080 \
+          --memory 1Gi \
+          --cpu 1 \
+          --min-instances 0 \
+          --max-instances 10
