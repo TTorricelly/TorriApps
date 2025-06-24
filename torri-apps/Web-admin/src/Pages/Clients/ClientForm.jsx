@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { clientsApi } from '../../Services/clients'; // Changed from professionalsApi
+import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber, preparePhoneDataForSubmission } from '../../utils/phoneUtils';
 // import { servicesApi } from '../../Services/services'; // Removed servicesApi
 
 // Removed ServiceTagSelector component as it's not needed for clients
@@ -119,9 +120,17 @@ const ClientDataForm = ({
                 name="phone_number"
                 label="Telefone"
                 type="tel"
-                placeholder="(XX) XXXXX-XXXX"
+                placeholder="(11) 99999-9999"
                 value={formData.phone_number || ''}
                 onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                onBlur={(e) => {
+                  // Format phone for display when user finishes editing
+                  const value = e.target.value;
+                  if (value && isValidPhoneNumber(value)) {
+                    const formatted = formatPhoneForDisplay(normalizePhoneNumber(value));
+                    handleInputChange('phone_number', formatted);
+                  }
+                }}
                 error={!!errors.phone_number}
                 className="bg-bg-primary border-bg-tertiary text-text-primary"
                 labelProps={{ className: "text-text-secondary" }}
@@ -435,15 +444,16 @@ export default function ClientForm() { // Renamed component
     try {
       setIsSaving(true);
 
-      const dataToSave = {
+      // Prepare data with normalized phone number
+      const dataToSave = preparePhoneDataForSubmission({
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
-        phone_number: formData.phone_number?.trim() || null, // Send null if empty
+        phone_number: formData.phone_number?.trim() || null, // Will be normalized by preparePhoneDataForSubmission
         date_of_birth: formData.date_of_birth || null, // Send null if empty
         hair_type: formData.hair_type || null, // Send null if empty
         gender: formData.gender || null, // Send null if empty
         is_active: formData.is_active,
-      };
+      });
 
       if (!isEditMode) {
         dataToSave.password = formData.password;

@@ -5,6 +5,7 @@ from typing import Union
 
 from .models import Company
 from .schemas import CompanyCreate, CompanyUpdate
+from Core.Utils.Helpers import normalize_phone_number
 
 
 def get_company(db: Session, company_id: Union[UUID, str]) -> Optional[Company]:
@@ -25,11 +26,14 @@ def get_active_company(db: Session) -> Optional[Company]:
 
 def create_company(db: Session, company_data: CompanyCreate) -> Company:
     """Create a new company."""
+    # Normalize contact phone if provided
+    normalized_contact_phone = normalize_phone_number(company_data.contact_phone) if company_data.contact_phone else None
+    
     db_company = Company(
         name=company_data.name,
         logo_url=company_data.logo_url,
         contact_email=company_data.contact_email,
-        contact_phone=company_data.contact_phone,
+        contact_phone=normalized_contact_phone,
         is_active=company_data.is_active
     )
     db.add(db_company)
@@ -47,6 +51,11 @@ def update_company(db: Session, company_id: Union[UUID, str], company_data: Comp
     
     # Update only provided fields
     update_data = company_data.dict(exclude_unset=True)
+    
+    # Handle phone number normalization if contact_phone is being updated
+    if 'contact_phone' in update_data and update_data['contact_phone'] is not None:
+        update_data['contact_phone'] = normalize_phone_number(update_data['contact_phone'])
+    
     for field, value in update_data.items():
         setattr(db_company, field, value)
     

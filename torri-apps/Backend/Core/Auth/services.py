@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from Core.Auth.models import User # Adjusted import path
 # Schemas will be used for type hinting and response models, but UserCreate is not directly used here
 # from Core.Auth.Schemas import UserCreate
 from Core.Security.hashing import verify_password
+from Core.Utils.Helpers import normalize_phone_number
 # create_access_token is used in routes, not directly in this service function for authentication logic
 # from Core.Security.jwt import create_access_token
 # HTTPException is typically raised in routes, services usually return data or None/False
@@ -43,12 +44,22 @@ def authenticate_user(db: Session, email_or_phone: str, password: str) -> tuple[
                 User.is_active == True
             ).first()
         else:
-            # Clean phone number (remove spaces, dashes, parentheses) for comparison
-            cleaned_phone = re.sub(r'[\s\-\(\)]', '', email_or_phone)
-            user = db.query(User).filter(
-                User.phone_number == cleaned_phone,
+            # Normalize the input phone number (remove all non-digit characters)
+            normalized_input_phone = normalize_phone_number(email_or_phone)
+            
+            # Query users and normalize their phone numbers for comparison
+            # We need to find users where the normalized phone number matches
+            users = db.query(User).filter(
+                User.phone_number.isnot(None),
                 User.is_active == True
-            ).first()
+            ).all()
+            
+            # Find matching user by comparing normalized phone numbers
+            user = None
+            for u in users:
+                if normalize_phone_number(u.phone_number) == normalized_input_phone:
+                    user = u
+                    break
         
         if not user:
             return None, "Email or phone number not found."

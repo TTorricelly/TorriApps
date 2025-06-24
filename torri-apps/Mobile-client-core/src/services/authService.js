@@ -1,18 +1,23 @@
 import { withApiErrorHandling, buildApiEndpoint } from '../utils/apiHelpers';
+import { normalizeEmailOrPhone, normalizePhoneNumber } from '../utils/phoneUtils';
 import apiClient from '../config/api';
 
 export const login = async (emailOrPhone, password) => {
   const endpoint = buildApiEndpoint('auth/login');
   
+  // Normalize the input according to best practices
+  const normalizedEmailOrPhone = normalizeEmailOrPhone(emailOrPhone);
+  
   console.log('[AuthService] Login attempt:', {
     endpoint,
-    emailOrPhone: emailOrPhone?.substring(0, 3) + '***',
+    original: emailOrPhone,
+    normalized: normalizedEmailOrPhone,
     hasPassword: !!password
   });
   
   return withApiErrorHandling(
     () => apiClient.post(endpoint, {
-      email_or_phone: emailOrPhone,
+      email_or_phone: normalizedEmailOrPhone,
       password,
     }),
     {
@@ -29,8 +34,22 @@ export const login = async (emailOrPhone, password) => {
 export const register = async (userData) => {
   const endpoint = buildApiEndpoint('users/register');
   
+  // Normalize phone number in registration data as well
+  const normalizedUserData = {
+    ...userData,
+    phone_number: userData.phone_number ? normalizePhoneNumber(userData.phone_number) : userData.phone_number
+  };
+  
+  console.log('[AuthService] Registration attempt:', {
+    endpoint,
+    email: normalizedUserData.email,
+    hasPhone: !!normalizedUserData.phone_number,
+    originalPhone: userData.phone_number,
+    normalizedPhone: normalizedUserData.phone_number
+  });
+  
   return withApiErrorHandling(
-    () => apiClient.post(endpoint, userData),
+    () => apiClient.post(endpoint, normalizedUserData),
     {
       defaultValue: null,
       transformData: (data) => data,

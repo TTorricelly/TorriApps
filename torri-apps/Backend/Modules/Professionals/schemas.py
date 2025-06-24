@@ -33,20 +33,24 @@ class ServiceBasic(BaseModel):
 class ProfessionalBase(BaseModel):
     full_name: str
     email: str
+    phone_number: Optional[str] = None
     is_active: bool = True
 
 class ProfessionalCreate(ProfessionalBase):
     password: str
+    phone_number: Optional[str] = None
     role: str = "PROFISSIONAL"  # Fixed role for professionals
 
 class ProfessionalUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
+    phone_number: Optional[str] = None
     is_active: Optional[bool] = None
 
 class Professional(ProfessionalBase):
     id: UUID
     role: str
+    phone_number: Optional[str] = None
     services_offered: List[ServiceBasic] = []
     photo_url: Optional[str] = None  # Full URL to the photo file
     

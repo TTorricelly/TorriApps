@@ -7,6 +7,7 @@ from Core.Auth.models import User # Updated import
 from Core.Auth.Schemas import UserCreate, UserUpdate, User as UserSchema # Updated imports
 from Core.Security.hashing import get_password_hash # For creating/updating password
 from Core.Auth.constants import UserRole # For role validation
+from Core.Utils.Helpers import normalize_phone_number
 
 def get_user_by_email(db: Session, email: str) -> User | None: # Renamed, removed tenant_id, updated return type
     return db.query(User).filter(User.email == email).first() # Updated query
@@ -37,12 +38,15 @@ def create_user(db: Session, user_data: UserCreate) -> User: # Removed tenant_id
 
     hashed_password = get_password_hash(user_data.password)
 
+    # Normalize phone number if provided
+    normalized_phone = normalize_phone_number(user_data.phone_number) if user_data.phone_number else None
+    
     db_user = User( # Updated model
         email=user_data.email,
         hashed_password=hashed_password,
         role=user_data.role,
         full_name=user_data.full_name,
-        phone_number=user_data.phone_number,
+        phone_number=normalized_phone,
         date_of_birth=user_data.date_of_birth,
         hair_type=user_data.hair_type,
         gender=user_data.gender,
@@ -92,6 +96,10 @@ def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> User | Non
                 detail="New email already registered by another user." # Updated detail
             )
 
+    # Handle phone number normalization if phone_number is being updated
+    if 'phone_number' in update_data and update_data['phone_number'] is not None:
+        update_data['phone_number'] = normalize_phone_number(update_data['phone_number'])
+    
     for field, value in update_data.items():
         if hasattr(db_user, field) and field != "password": # Password already handled
             setattr(db_user, field, value)

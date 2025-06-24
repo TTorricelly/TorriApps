@@ -13,6 +13,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber } from '../utils/phoneUtils';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
@@ -56,6 +57,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [dateInputValue, setDateInputValue] = useState('');
+  const [phoneDisplayValue, setPhoneDisplayValue] = useState('');
 
   // editData state now uses EditableUserProfile and is initialized from storeUser
   const [editData, setEditData] = useState<EditableUserProfile>({
@@ -106,6 +108,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
         setDateInputValue(formattedDate);
       } else {
         setDateInputValue('');
+      }
+      
+      // Initialize phone display value
+      if (storeUser.phone_number) {
+        setPhoneDisplayValue(formatPhoneForDisplay(storeUser.phone_number));
+      } else {
+        setPhoneDisplayValue('');
       }
     }
   }, [storeUser]);
@@ -265,8 +274,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
               }}
               placeholder="(11) 99999-9999"
-            value={editData.phone_number}
-            onChangeText={(text) => setEditData({ ...editData, phone_number: text })}
+              value={phoneDisplayValue}
+              onChangeText={(text) => {
+                // Update display value for user-friendly formatting
+                setPhoneDisplayValue(text);
+                
+                // Store normalized phone number in edit data
+                const normalized = normalizePhoneNumber(text);
+                setEditData({ ...editData, phone_number: normalized });
+              }}
+              onBlur={() => {
+                // Format phone for display when user finishes editing
+                if (editData.phone_number && isValidPhoneNumber(editData.phone_number)) {
+                  setPhoneDisplayValue(formatPhoneForDisplay(editData.phone_number));
+                }
+              }}
               keyboardType="phone-pad"
             />
           </View>
@@ -566,6 +588,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   setDateInputValue(formattedDate);
                 } else {
                   setDateInputValue('');
+                }
+                
+                // Reset phone display value
+                if (storeUser.phone_number) {
+                  setPhoneDisplayValue(formatPhoneForDisplay(storeUser.phone_number));
+                } else {
+                  setPhoneDisplayValue('');
                 }
               }
               setCurrentView('profile');

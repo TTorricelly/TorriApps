@@ -17,6 +17,7 @@ import {
   Lock,
 } from 'lucide-react-native';
 import * as authService from '../services/authService';
+import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber } from '../utils/phoneUtils';
 
 // Phone icon component (since lucide-react-native doesn't have a good phone icon)
 const PhoneIcon = ({ size = 20, color = "#9ca3af" }) => (
@@ -48,6 +49,7 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneDisplayValue, setPhoneDisplayValue] = useState('');
 
   const handleSignup = async () => {
     if (!signupData.name || !signupData.email || !signupData.password) {
@@ -57,6 +59,12 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
 
     if (signupData.password.length < 6) {
       Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    // Validate phone number if provided
+    if (signupData.phone && !isValidPhoneNumber(signupData.phone)) {
+      Alert.alert('Erro', 'Por favor, insira um número de telefone válido.');
       return;
     }
 
@@ -232,8 +240,21 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
                     backgroundColor: 'white',
                   }}
                   placeholder="(11) 99999-9999"
-                  value={signupData.phone}
-                  onChangeText={(text) => setSignupData({ ...signupData, phone: text })}
+                  value={phoneDisplayValue}
+                  onChangeText={(text) => {
+                    // Update display value for user-friendly formatting
+                    setPhoneDisplayValue(text);
+                    
+                    // Store normalized phone number in signup data
+                    const normalized = normalizePhoneNumber(text);
+                    setSignupData({ ...signupData, phone: normalized });
+                  }}
+                  onBlur={() => {
+                    // Format phone for display when user finishes editing
+                    if (signupData.phone && isValidPhoneNumber(signupData.phone)) {
+                      setPhoneDisplayValue(formatPhoneForDisplay(signupData.phone));
+                    }
+                  }}
                   keyboardType="phone-pad"
                   autoCorrect={false}
                 />

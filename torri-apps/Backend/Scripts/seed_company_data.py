@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from Config.Settings import settings
 from Modules.Company.models import Company
 from Core.Database.base import Base
+from Core.Utils.Helpers import normalize_phone_number
 
 def create_sample_company():
     """Create a sample company entry."""
@@ -40,7 +41,7 @@ def create_sample_company():
             name="Salão Belle Époque",
             logo_url="https://example.com/logo.png",
             contact_email="contato@belleepoque.com",
-            contact_phone="+55 11 99999-9999",
+            contact_phone=normalize_phone_number("+55 11 99999-9999"),
             is_active=True
         )
         
