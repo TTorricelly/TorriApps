@@ -20,5 +20,9 @@ RUN mkdir -p public/uploads
 # Expose port
 EXPOSE 8080
 
+# Set environment variables for Cloud Run
+ENV PORT=8080
+ENV PYTHONPATH=/app
+
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
