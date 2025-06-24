@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 88
+ignore = E501,W503,W293,W391,W292,F401,E302,E305,E402,F541,E261
+exclude = 
+    migrations/,
+    __pycache__/,
+    .git/,
+    node_modules/,
+    *.pyc,
+    .pytest_cache/,
+    test_tenant_migration.py.skip
