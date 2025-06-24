@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     # Schema configuration (from environment variable)
     default_schema_name: str = "public"  # Read from DEFAULT_SCHEMA_NAME env var
     
+    # File storage configuration
+    use_cloud_storage: bool = False  # Read from USE_CLOUD_STORAGE env var
+    
     # Timezone configuration (from environment variable)
     # Examples: "America/Sao_Paulo", "America/New_York", "Europe/London", "UTC"
     # Add TIMEZONE=America/Sao_Paulo to .env file for Brazil timezone

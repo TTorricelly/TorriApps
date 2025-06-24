@@ -41,6 +41,41 @@ alembic revision --autogenerate -m "Migration message"
 alembic upgrade head
 ```
 
+### Frontend Development
+```bash
+# Navigate to web admin directory
+cd torri-apps/Web-admin
+
+# Install dependencies
+yarn install
+
+# Run development server
+yarn dev
+
+# Build for production
+yarn build
+```
+
+## Deployment
+
+### Google Cloud Platform
+The project is deployed on Google Cloud using:
+- **Cloud Run**: Containerized deployment for backend and frontend
+- **Cloud Storage**: File upload persistence (replaces ephemeral container storage)
+- **Artifact Registry**: Docker image storage
+- **GitHub Actions**: Automated CI/CD
+
+See `ai_docs/google-cloud-deployment.md` for complete deployment guide.
+
+### Environment Variables (Production)
+- `DATABASE_URL`: Supabase PostgreSQL connection string
+- `USE_CLOUD_STORAGE=true`: Enables Google Cloud Storage for file uploads
+- `CORS_ORIGINS`: Frontend URLs (semicolon-separated)
+
+### Deployment URLs
+- **Backend**: https://torri-backend-419996576894.us-central1.run.app
+- **Frontend**: https://torri-frontend-419996576894.us-central1.run.app
+
 ### Testing
 - **Framework**: pytest with SQLAlchemy fixtures
 - **Test Database**: SQLite in-memory for speed
