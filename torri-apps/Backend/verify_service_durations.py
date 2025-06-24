@@ -21,11 +21,13 @@ def verify_service_durations():
 
     try:
         # Query services with their duration_minutes
-        services = db.query(Service).filter(Service.is_active == True).limit(10).all()
-        
+        services = db.query(Service).filter(
+            Service.is_active.is_(True)
+        ).limit(10).all()
+
         print('Current Services in Database:')
         print('=' * 60)
-        
+
         if not services:
             print('No active services found in database')
         else:
@@ -37,14 +39,16 @@ def verify_service_durations():
                 print(f'  Category ID: {service.category_id}')
                 print(f'  Active: {service.is_active}')
                 print()
-        
+
         # Check total count
-        total_count = db.query(Service).filter(Service.is_active == True).count()
+        total_count = db.query(Service).filter(
+            Service.is_active.is_(True)
+        ).count()
         print(f'Total active services: {total_count}')
-        
+
         # Check for any services with invalid durations
         invalid_duration_services = db.query(Service).filter(
-            Service.is_active == True,
+            Service.is_active.is_(True),
             (Service.duration_minutes <= 0)
             | (Service.duration_minutes.is_(None))
         ).all()
