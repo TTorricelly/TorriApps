@@ -1,3 +1,5 @@
+import os
+from typing import List
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -14,7 +16,53 @@ class Settings(BaseSettings):
     
     # API configuration
     API_V1_PREFIX: str = "/api/v1"
-    SERVER_HOST: str = "http://localhost:8000" # Base URL for serving static files etc. - Override with SERVER_HOST env var
+    SERVER_HOST: str = "http://localhost:8000"
+    
+    # CORS configuration - configurable origins
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081,http://localhost:4200"
+    
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Convert CORS_ORIGINS string to list, with environment-aware defaults"""
+        origins = self.CORS_ORIGINS.split(",")
+        
+        # Auto-detect Codespaces environment and add appropriate origins
+        if self.is_codespaces:
+            codespace_name = os.getenv("CODESPACE_NAME")
+            domain = os.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+            if codespace_name and domain:
+                # Add Codespaces URLs for common frontend ports
+                codespaces_origins = [
+                    f"https://{codespace_name}-3000.{domain}",  # React
+                    f"https://{codespace_name}-5173.{domain}",  # Vite
+                    f"https://{codespace_name}-8080.{domain}",  # Vue
+                    f"https://{codespace_name}-4200.{domain}",  # Angular
+                ]
+                origins.extend(codespaces_origins)
+        
+        return [origin.strip() for origin in origins if origin.strip()]
+    
+    @property
+    def is_codespaces(self) -> bool:
+        """Detect if running in GitHub Codespaces"""
+        return bool(os.getenv("CODESPACE_NAME"))
+    
+    @property
+    def auto_server_host(self) -> str:
+        """Auto-detect server host based on environment"""
+        # Use explicit SERVER_HOST if set
+        if self.SERVER_HOST != "http://localhost:8000":
+            return self.SERVER_HOST
+            
+        # Auto-detect Codespaces
+        if self.is_codespaces:
+            codespace_name = os.getenv("CODESPACE_NAME")
+            domain = os.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+            if codespace_name and domain:
+                return f"https://{codespace_name}-8000.{domain}"
+        
+        # Fallback to configured value
+        return self.SERVER_HOST
     
     # Schema configuration (from environment variable)
     default_schema_name: str = "public"  # Read from DEFAULT_SCHEMA_NAME env var

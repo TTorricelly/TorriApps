@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -15,6 +16,8 @@ import {
   Mail,
   Lock,
 } from 'lucide-react-native';
+import * as authService from '../services/authService';
+import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber } from '../utils/phoneUtils';
 
 // Phone icon component (since lucide-react-native doesn't have a good phone icon)
 const PhoneIcon = ({ size = 20, color = "#9ca3af" }) => (
@@ -45,16 +48,61 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
     email: '',
     password: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [phoneDisplayValue, setPhoneDisplayValue] = useState('');
 
-  const handleSignup = () => {
-    if (signupData.name && signupData.phone && signupData.email && signupData.password) {
-      if (signupData.password.length < 6) {
-        Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
-        return;
-      }
-      onAccountCreated();
-    } else {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+  const handleSignup = async () => {
+    if (!signupData.name || !signupData.email || !signupData.password) {
+      Alert.alert('Erro', 'Por favor, preencha pelo menos nome, email e senha.');
+      return;
+    }
+
+    if (signupData.password.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    // Validate phone number if provided
+    if (signupData.phone && !isValidPhoneNumber(signupData.phone)) {
+      Alert.alert('Erro', 'Por favor, insira um número de telefone válido.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Prepare registration data
+      const registrationData = {
+        full_name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        phone_number: signupData.phone || null, // Optional field
+      };
+
+      console.log('[CreateAccountScreen] Registering user with data:', registrationData);
+      
+      // Call the registration API
+      const userData = await authService.register(registrationData);
+      
+      console.log('[CreateAccountScreen] User registered successfully:', userData);
+      
+      // Show success message
+      Alert.alert(
+        'Conta Criada!', 
+        'Sua conta foi criada com sucesso. Faça login para continuar.',
+        [
+          {
+            text: 'OK',
+            onPress: onAccountCreated
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('[CreateAccountScreen] Registration error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+      Alert.alert('Erro no Cadastro', errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,8 +240,21 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
                     backgroundColor: 'white',
                   }}
                   placeholder="(11) 99999-9999"
-                  value={signupData.phone}
-                  onChangeText={(text) => setSignupData({ ...signupData, phone: text })}
+                  value={phoneDisplayValue}
+                  onChangeText={(text) => {
+                    // Update display value for user-friendly formatting
+                    setPhoneDisplayValue(text);
+                    
+                    // Store normalized phone number in signup data
+                    const normalized = normalizePhoneNumber(text);
+                    setSignupData({ ...signupData, phone: normalized });
+                  }}
+                  onBlur={() => {
+                    // Format phone for display when user finishes editing
+                    if (signupData.phone && isValidPhoneNumber(signupData.phone)) {
+                      setPhoneDisplayValue(formatPhoneForDisplay(signupData.phone));
+                    }
+                  }}
                   keyboardType="phone-pad"
                   autoCorrect={false}
                 />
@@ -298,16 +359,21 @@ const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
               style={{
                 width: '100%',
                 paddingVertical: 18,
-                backgroundColor: '#ec4899',
+                backgroundColor: isLoading ? '#f8bbd0' : '#ec4899',
                 borderRadius: 12,
                 alignItems: 'center',
                 marginBottom: 24,
               }}
               onPress={handleSignup}
+              disabled={isLoading}
             >
-              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-                Cadastrar
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+                  Cadastrar
+                </Text>
+              )}
             </TouchableOpacity>
 
             {/* Terms and Privacy */}

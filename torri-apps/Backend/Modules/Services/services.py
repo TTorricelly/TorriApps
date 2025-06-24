@@ -51,13 +51,11 @@ def _validate_professionals(db: Session, professional_ids: List[UUID]) -> List[U
     if not professional_ids:
         return []
 
-    # Convert UUIDs to strings for database comparison
-    professional_ids_str = [str(pid) for pid in professional_ids]
-    # tenant_id_str removed
+    # PostgreSQL UUID fields expect UUID objects, not strings
 
     # Check if all provided IDs are valid User IDs with PROFISSIONAL role
     stmt = select(User).where( # Updated model UserTenant to User
-        User.id.in_(professional_ids_str), # Updated model UserTenant to User
+        User.id.in_(professional_ids), # PostgreSQL UUID comparison
         # UserTenant.tenant_id == tenant_id_str, # Removed tenant_id filter
         User.role == UserRole.PROFISSIONAL # Ensure they are professionals. Updated model UserTenant to User
     )
@@ -65,7 +63,7 @@ def _validate_professionals(db: Session, professional_ids: List[UUID]) -> List[U
 
     if len(valid_professionals) != len(set(professional_ids)): # Use set to count unique IDs provided
         # Find which IDs were problematic for a more detailed error, or keep it generic
-        found_ids = {UUID(prof.id) for prof in valid_professionals} # prof.id is str, convert to UUID for comparison with UUID list
+        found_ids = {prof.id for prof in valid_professionals} # prof.id is UUID in PostgreSQL
         missing_or_invalid_ids = [pid for pid in professional_ids if pid not in found_ids] # pid is UUID
         detail = f"Invalid or non-professional user ID(s) provided: {missing_or_invalid_ids}." # Removed tenant from detail
         if len(valid_professionals) != len(professional_ids): # If duplicate IDs were passed
@@ -97,7 +95,7 @@ def create_category(db: Session, category_data: CategoryCreate, icon_path: Optio
 
 def get_category_by_id(db: Session, category_id: UUID) -> Category | None:
     # SIMPLIFIED: Get category by ID only (no tenant filtering)
-    stmt = select(Category).where(Category.id == str(category_id)) # Convert UUID to string for MySQL
+    stmt = select(Category).where(Category.id == category_id) # PostgreSQL UUID comparison
     return db.execute(stmt).scalars().first()
 
 def get_all_categories(db: Session, skip: int = 0, limit: int = 100) -> List[CategorySchema]:
@@ -181,8 +179,7 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
         )
 
     service_dict = service_data.model_dump(exclude={'professional_ids'})
-    # Convert UUID fields to strings for MySQL compatibility
-    service_dict['category_id'] = str(service_dict['category_id'])
+    # PostgreSQL with UUID(as_uuid=True) expects UUID objects, not strings
     db_service = Service(**service_dict)
 
     # Professionals relationship temporarily disabled
@@ -196,7 +193,7 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
 
 def get_service_with_details_by_id(db: Session, service_id: UUID) -> Service | None:
     # SIMPLIFIED: Get service by ID only (no tenant filtering)
-    stmt = select(Service).where(Service.id == str(service_id)).options( # MODIFIED: Explicitly cast service_id to string
+    stmt = select(Service).where(Service.id == service_id).options( # PostgreSQL UUID comparison
         joinedload(Service.category)
     )
     return db.execute(stmt).scalars().first()
@@ -214,7 +211,7 @@ def get_services( # Renamed from get_services_by_tenant
         joinedload(Service.category)
     )
     if category_id:
-        stmt = stmt.where(Service.category_id == str(category_id)) # Explicitly cast category_id to string
+        stmt = stmt.where(Service.category_id == category_id) # PostgreSQL UUID comparison
 
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
@@ -229,7 +226,7 @@ def get_all_services(
         joinedload(Service.category)
     )
     if category_id:
-        stmt = stmt.where(Service.category_id == str(category_id)) # Corrected line
+        stmt = stmt.where(Service.category_id == category_id) # PostgreSQL UUID comparison
 
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     # Ensure the return is a list of Service model instances
@@ -239,12 +236,10 @@ def get_all_services(
 def update_service(db: Session, db_service: Service, service_data: ServiceUpdate) -> Service:
     update_dict = service_data.model_dump(exclude_unset=True, exclude={'professional_ids'})
     
-    # Convert UUID fields to strings for MySQL compatibility
-    if 'category_id' in update_dict and update_dict['category_id'] is not None:
-        update_dict['category_id'] = str(update_dict['category_id'])
+    # PostgreSQL UUID fields expect UUID objects, not strings
 
     if 'category_id' in update_dict and update_dict['category_id'] != db_service.category_id:
-        new_category = get_category_by_id(db, UUID(update_dict['category_id']))
+        new_category = get_category_by_id(db, update_dict['category_id'])  # PostgreSQL UUID field
         if not new_category:
             db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"New category ID {update_dict['category_id']} not found.")
@@ -264,7 +259,7 @@ def update_service(db: Session, db_service: Service, service_data: ServiceUpdate
 
     db.commit()
     # Re-fetch with relationships for the response
-    return get_service_with_details_by_id(db, UUID(db_service.id))
+    return get_service_with_details_by_id(db, db_service.id)
 
 
 def delete_service(db: Session, service_id: UUID) -> bool:

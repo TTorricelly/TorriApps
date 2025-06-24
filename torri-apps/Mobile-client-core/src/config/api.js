@@ -1,26 +1,33 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // Adjust path as needed
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Or your preferred storage
-import { API_BASE_URL } from './environment'; // Use environment-specific base URL
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from './environment';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL, // Use environment config instead of shared constants
   headers: {
     'Content-Type': 'application/json',
   },
+  // Configure parameter serialization for FastAPI compatibility
+  paramsSerializer: function (params) {
+    const searchParams = new URLSearchParams();
+    for (const key in params) {
+      const value = params[key];
+      if (Array.isArray(value)) {
+        // Send arrays as multiple parameters with the same key (FastAPI format)
+        value.forEach(item => searchParams.append(key, item));
+      } else if (value !== null && value !== undefined) {
+        searchParams.append(key, value);
+      }
+    }
+    return searchParams.toString();
+  },
 });
 
 apiClient.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('authToken'); // Key for storing token
-    console.log('API Request Interceptor - Token:', token ? 'Present' : 'Missing');
-    console.log('API Request Interceptor - URL:', config.url);
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('API Request Interceptor - Authorization header set');
-    } else {
-      console.log('API Request Interceptor - No token found in AsyncStorage');
     }
     return config;
   },

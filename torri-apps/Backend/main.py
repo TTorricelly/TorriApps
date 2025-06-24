@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # Import CORS middleware
 from fastapi.staticfiles import StaticFiles
 
+# Import settings configuration
+from Config.Settings import settings
+
 # Using absolute imports for main.py
 from Core.Auth.Routes import router as auth_router
 from Modules.Users.routes import router as users_router
@@ -9,8 +12,13 @@ from Modules.Services.routes import categories_router, services_router
 from Modules.Availability.routes import router as availability_router
 from Modules.Appointments.routes import router as appointments_router
 from Modules.Professionals.routes import router as professionals_router
+from Modules.Stations.routes import router as stations_router
+from Modules.Settings.routes import router as settings_router
+from Modules.Company.routes import router as company_router
 import Modules.Professionals  # Import module to register models
+import Modules.Company.models  # Import Company models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
+from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:
 # from .Modules.AdminMaster.routes import router as admin_master_router
 
@@ -25,17 +33,8 @@ app = FastAPI(
 )
 
 # --- CORS Middleware ---
-# TODO: Move origins to settings.py or .env for production/staging environments
-origins = [
-    "http://localhost",       # Common for local development
-    "http://localhost:3000",  # React default
-    "http://localhost:5173",  # Vite default port
-    "http://localhost:8080",  # Vue default
-    "http://localhost:8081",  # Often used for Vue/Angular
-    "http://localhost:4200",  # Angular default
-    # Add any other frontend origins used for development or deployed environments
-    # e.g., "https://your-frontend-domain.com"
-]
+# Dynamic CORS origins based on environment configuration
+origins = settings.cors_origins_list
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,6 +52,10 @@ app.add_middleware(
 # Add custom exception handlers to the app.
 add_exception_handlers(app)
 
+# --- Relationship Configuration ---
+# Configure SQLAlchemy relationships after all models are loaded
+configure_relationships()
+
 # --- API Routers ---
 # The routers are defined with their own prefixes (e.g., /auth, /users).
 # If a global prefix like /api/v1 is desired for all of them,
@@ -69,6 +72,9 @@ app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["S
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
 app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
 app.include_router(professionals_router, prefix=API_V1_PREFIX, tags=["Professionals Management"])
+app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
+app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
+app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

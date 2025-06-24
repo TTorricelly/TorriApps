@@ -18,3 +18,4 @@ Icon?
 **/env/
 **/venv/
 **/.venv/
+.watchman-cookie*

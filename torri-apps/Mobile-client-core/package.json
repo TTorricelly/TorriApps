@@ -31,6 +31,8 @@
     "nativewind": "^4.1.23",
     "react": "18.2.0",
     "react-native": "0.75.4",
+    "react-native-calendars": "^1.1312.1",
+    "react-native-date-picker": "^5.0.13",
     "react-native-gesture-handler": "^2.11.0",
     "react-native-reanimated": "^3.18.0",
     "react-native-render-html": "^6.3.4",

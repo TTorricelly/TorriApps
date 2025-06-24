@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship # Added for relationships
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
@@ -14,7 +14,7 @@ from .constants import UserRole, HairType, Gender # Import Gender
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     
     email = Column(String(120), unique=True, index=True, nullable=False)  # Now globally unique
     hashed_password = Column(String(255), nullable=False)
@@ -36,44 +36,51 @@ class User(Base):
     # This might require the table to be imported or defined before this model is fully processed,
     # or for metadata to be shared/ordered correctly.
     # Using a string for `secondary` assumes it's in the same `Base.metadata`.
-    services_offered = relationship(
-        "Service",
-        secondary="service_professionals_association",
-        back_populates="professionals"
-    )
+    # services_offered = relationship(
+    #     "Modules.Services.models.Service",
+    #     secondary="service_professionals_association",
+    #     back_populates="professionals"
+    # )
 
-    # Relationships to Appointments
-    client_appointments = relationship(
-        "Modules.Appointments.models.Appointment",  # String type hint
-        foreign_keys="[Modules.Appointments.models.Appointment.client_id]", # Module path to Appointment model and its client_id
-        back_populates="client",
-        cascade="all, delete-orphan" # Added cascade as it's common for appointments
-    )
+    # Relationships to Appointments - temporarily disabled to avoid circular imports
+    # client_appointments = relationship(
+    #     "Modules.Appointments.models.Appointment",  # String type hint
+    #     foreign_keys="[Modules.Appointments.models.Appointment.client_id]", # Module path to Appointment model and its client_id
+    #     back_populates="client",
+    #     cascade="all, delete-orphan" # Added cascade as it's common for appointments
+    # )
 
-    professional_appointments = relationship(
-        "Modules.Appointments.models.Appointment", # String type hint
-        foreign_keys="[Modules.Appointments.models.Appointment.professional_id]", # Module path to Appointment model and its professional_id
-        back_populates="professional",
-        cascade="all, delete-orphan" # Added cascade
-    )
+    # professional_appointments = relationship(
+    #     "Modules.Appointments.models.Appointment", # String type hint
+    #     foreign_keys="[Modules.Appointments.models.Appointment.professional_id]", # Module path to Appointment model and its professional_id
+    #     back_populates="professional",
+    #     cascade="all, delete-orphan" # Added cascade
+    # )
 
-    # Professional-specific relationships - commented out to avoid circular imports
-    # Will be added dynamically after models are loaded
+    # Relationship to AppointmentGroups (multi-service bookings) - temporarily disabled 
+    # appointment_groups = relationship(
+    #     "Modules.Appointments.models.AppointmentGroup",
+    #     foreign_keys="[Modules.Appointments.models.AppointmentGroup.client_id]",
+    #     back_populates="client",
+    #     cascade="all, delete-orphan"
+    # )
+
+    # Professional-specific relationships - temporarily disabled to avoid circular imports
     # availability_schedule = relationship(
-    #     "ProfessionalAvailability",
+    #     "Modules.Professionals.models.ProfessionalAvailability",
     #     back_populates="professional",
     #     cascade="all, delete-orphan"
     # )
     
     # blocked_times = relationship(
-    #     "ProfessionalBlockedTime", 
+    #     "Modules.Professionals.models.ProfessionalBlockedTime", 
     #     back_populates="professional",
     #     cascade="all, delete-orphan"
     # )
     
     # recurring_breaks = relationship(
-    #     "ProfessionalBreak",
-    #     back_populates="professional", 
+    #     "Modules.Professionals.models.ProfessionalBreak",
+    #     back_populates="professional",
     #     cascade="all, delete-orphan"
     # )
 

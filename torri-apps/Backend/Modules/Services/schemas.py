@@ -47,6 +47,9 @@ class ServiceBase(BaseModel):
     # Commission percentage: 0.00 to 100.00
     commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None, example=Decimal("10.50"))
     is_active: bool = Field(default=True, example=True)
+    # Parallel service execution fields
+    parallelable: bool = Field(default=False, example=False, description="True if service can run concurrently with other services")
+    max_parallel_pros: int = Field(default=1, gt=0, example=1, description="Maximum number of professionals that can work simultaneously")
     category_id: UUID
 
 class ServiceCreate(ServiceBase):
@@ -60,6 +63,9 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     price: Optional[condecimal(gt=0, max_digits=10, decimal_places=2)] = Field(None)
     commission_percentage: Optional[condecimal(ge=0, le=100, max_digits=5, decimal_places=2)] = Field(None)
     is_active: Optional[bool] = Field(None)
+    # Parallel service execution fields
+    parallelable: Optional[bool] = Field(None, description="True if service can run concurrently with other services")
+    max_parallel_pros: Optional[int] = Field(None, gt=0, description="Maximum number of professionals that can work simultaneously")
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change

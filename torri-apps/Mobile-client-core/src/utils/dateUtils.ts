@@ -73,3 +73,21 @@ export const isPastDate = (dateOption: DateOption): boolean => {
   const today = new Date().toISOString().split('T')[0];
   return dateOption.fullDate < today;
 };
+
+/**
+ * Formats duration in minutes to hours and minutes format
+ * @param minutes - Duration in minutes
+ * @returns Formatted duration string (e.g., "1h 30min", "45min", "2h")
+ */
+export const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  
+  if (hours > 0 && mins > 0) {
+    return `${hours}h ${mins}min`;
+  } else if (hours > 0) {
+    return `${hours}h`;
+  } else {
+    return `${mins}min`;
+  }
+};

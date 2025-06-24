@@ -8,6 +8,7 @@ from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
 from Core.Security.hashing import get_password_hash
 from Core.Utils.file_handler import file_handler
+from Core.Utils.Helpers import normalize_phone_number
 from Modules.Services.models import Service
 from .models import ProfessionalAvailability, ProfessionalBlockedTime, ProfessionalBreak, DayOfWeek
 from .schemas import (
@@ -19,8 +20,14 @@ from .schemas import (
 )
 
 # Helper function to convert professional with photo URL
-def _add_photo_url_to_professional(professional: User, db: Session = None, base_url: str = "http://localhost:8000") -> Professional: # Changed UserTenant to User
+def _add_photo_url_to_professional(professional: User, db: Session = None, base_url: str = None) -> Professional: # Changed UserTenant to User
     """Convert User model to Professional schema with photo_url."""
+    from Config.Settings import settings
+    
+    # Use settings if base_url not provided
+    if base_url is None:
+        base_url = settings.auto_server_host
+    
     photo_url = None
     if professional.photo_path:
         photo_url = file_handler.get_public_url(professional.photo_path, base_url)
@@ -44,6 +51,7 @@ def _add_photo_url_to_professional(professional: User, db: Session = None, base_
         id=UUID(str(professional.id)),
         full_name=professional.full_name or "",
         email=professional.email,
+        phone_number=professional.phone_number,
         is_active=professional.is_active,
         role=professional.role.value,
         services_offered=services_offered,
@@ -80,12 +88,16 @@ def create_professional(db: Session, professional_data: ProfessionalCreate) -> P
     # Hash password
     hashed_password = get_password_hash(professional_data.password)
     
+    # Normalize phone number if provided
+    normalized_phone = normalize_phone_number(professional_data.phone_number) if professional_data.phone_number else None
+    
     # Create professional
     db_professional = User( # Changed UserTenant to User
         email=professional_data.email,
         hashed_password=hashed_password,
         role=UserRole.PROFISSIONAL,
         full_name=professional_data.full_name,
+        phone_number=normalized_phone,
         is_active=professional_data.is_active
         # tenant_id removed
     )
@@ -118,6 +130,11 @@ def update_professional(db: Session, professional_id: UUID, professional_data: P
     
     # Update fields
     update_data = professional_data.model_dump(exclude_unset=True)
+    
+    # Handle phone number normalization if phone_number is being updated
+    if 'phone_number' in update_data and update_data['phone_number'] is not None:
+        update_data['phone_number'] = normalize_phone_number(update_data['phone_number'])
+    
     for field, value in update_data.items():
         setattr(db_professional, field, value)
     

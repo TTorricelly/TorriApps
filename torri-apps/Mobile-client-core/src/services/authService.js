@@ -1,40 +1,62 @@
+import { withApiErrorHandling, buildApiEndpoint } from '../utils/apiHelpers';
+import { normalizeEmailOrPhone, normalizePhoneNumber } from '../utils/phoneUtils';
 import apiClient from '../config/api';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // Adjust path as needed
 
-export const login = async (email, password) => {
-  try {
-    const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, {
-      email,
+export const login = async (emailOrPhone, password) => {
+  const endpoint = buildApiEndpoint('auth/login');
+  
+  // Normalize the input according to best practices
+  const normalizedEmailOrPhone = normalizeEmailOrPhone(emailOrPhone);
+  
+  console.log('[AuthService] Login attempt:', {
+    endpoint,
+    original: emailOrPhone,
+    normalized: normalizedEmailOrPhone,
+    hasPassword: !!password
+  });
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, {
+      email_or_phone: normalizedEmailOrPhone,
       password,
-    });
-    // Assuming the token is in response.data.access_token
-    // User details are expected to be in the JWT itself.
-    return response.data;
-  } catch (error) {
-    // Enhance error handling based on actual API error structure
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      throw new Error(error.response.data.detail || 'Login failed');
-    } else if (error.request) {
-      // The request was made but no response was received
-      throw new Error('Login failed: No response from server.');
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      throw new Error(`Login failed: ${error.message}`);
+    }),
+    {
+      defaultValue: null,
+      transformData: (data) => {
+        console.log('[AuthService] Login successful');
+        return data;
+      },
+      logErrors: true
     }
-  }
+  );
 };
 
-// Example for a potential future function:
-// export const register = async (userData) => {
-//   try {
-//     const response = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, userData);
-//     return response.data;
-//   } catch (error) {
-//     throw new Error(error.response?.data?.detail || 'Registration failed');
-//   }
-// };
+export const register = async (userData) => {
+  const endpoint = buildApiEndpoint('users/register');
+  
+  // Normalize phone number in registration data as well
+  const normalizedUserData = {
+    ...userData,
+    phone_number: userData.phone_number ? normalizePhoneNumber(userData.phone_number) : userData.phone_number
+  };
+  
+  console.log('[AuthService] Registration attempt:', {
+    endpoint,
+    email: normalizedUserData.email,
+    hasPhone: !!normalizedUserData.phone_number,
+    originalPhone: userData.phone_number,
+    normalizedPhone: normalizedUserData.phone_number
+  });
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, normalizedUserData),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
 
 // Example for a potential future function:
 // export const refreshToken = async (currentToken) => {

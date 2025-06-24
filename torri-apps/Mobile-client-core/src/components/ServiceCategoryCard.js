@@ -20,7 +20,6 @@ const ServiceCategoryCard = ({ categoryName, iconColor = '#CCCCCC', onPress }) =
   const cardBackgroundColor = lightenColor(iconColor, 85);
 
   const handlePress = () => {
-    console.log(`Category pressed: ${categoryName}`);
     onPress?.(categoryName);
   };
 

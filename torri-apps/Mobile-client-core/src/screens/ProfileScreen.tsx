@@ -10,15 +10,16 @@ import {
   Image, // Added for photo display
   StyleSheet, // Added for styles
   ActivityIndicator, // Added for loading indicator
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber } from '../utils/phoneUtils';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { API_ENDPOINTS } from '../../../Shared/Constans/Api'; // For potential photo URL construction
 import {
   User,
   Mail,
   Calendar,
   Edit3,
-  HelpCircle,
   LogOut,
 } from 'lucide-react-native';
 import useAuthStore from '../store/authStore'; // Import the auth store
@@ -40,6 +41,9 @@ interface EditableUserProfile {
   fullName: string; // Changed from name to fullName to match storeUser
   email: string;
   phone_number: string; // Changed from phone to phone_number
+  hair_type?: 'LISO' | 'ONDULADO' | 'CACHEADO' | 'CRESPO';
+  gender?: 'MASCULINO' | 'FEMININO' | 'OUTROS';
+  date_of_birth?: string;
   // photo_path could be part of editing in a more advanced version
 }
 
@@ -52,12 +56,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
 
   const [currentView, setCurrentView] = useState<'profile' | 'edit'>('profile');
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [dateInputValue, setDateInputValue] = useState('');
+  const [phoneDisplayValue, setPhoneDisplayValue] = useState('');
 
   // editData state now uses EditableUserProfile and is initialized from storeUser
   const [editData, setEditData] = useState<EditableUserProfile>({
     fullName: storeUser?.fullName || '',
     email: storeUser?.email || '',
     phone_number: storeUser?.phone_number || '',
+    hair_type: storeUser?.hair_type,
+    gender: storeUser?.gender,
+    date_of_birth: storeUser?.date_of_birth,
   });
 
   // Effect to fetch user profile details when authenticated
@@ -65,11 +74,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
     const fetchProfile = async () => {
       // Check if user is authenticated and if detailed profile info (e.g., phone_number) is missing
       if (isAuthenticated && storeUser && !storeUser.phone_number) {
-        console.log('[ProfileScreen] Attempting to fetch profile. isAuthenticated:', isAuthenticated, 'User has phone_number:', !!storeUser?.phone_number);
         setIsProfileLoading(true);
         try {
           const rawProfileData = await getUserProfile();
-          console.log('[ProfileScreen] Profile data fetched successfully');
           updateStoreProfile(rawProfileData); // Update store with detailed profile
         } catch (error) {
           console.error('[ProfileScreen] Error fetching profile:', error);
@@ -90,7 +97,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
         fullName: storeUser.fullName || '',
         email: storeUser.email || '',
         phone_number: storeUser.phone_number || '',
+        hair_type: storeUser.hair_type,
+        gender: storeUser.gender,
+        date_of_birth: storeUser.date_of_birth,
       });
+      
+      // Initialize date input value
+      if (storeUser.date_of_birth) {
+        const formattedDate = new Date(storeUser.date_of_birth).toLocaleDateString('pt-BR');
+        setDateInputValue(formattedDate);
+      } else {
+        setDateInputValue('');
+      }
+      
+      // Initialize phone display value
+      if (storeUser.phone_number) {
+        setPhoneDisplayValue(formatPhoneForDisplay(storeUser.phone_number));
+      } else {
+        setPhoneDisplayValue('');
+      }
     }
   }, [storeUser]);
 
@@ -106,14 +131,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
         full_name: editData.fullName,
         email: editData.email,
         phone_number: editData.phone_number,
+        hair_type: editData.hair_type,
+        gender: editData.gender,
+        date_of_birth: editData.date_of_birth,
       };
 
-      console.log('[ProfileScreen] Updating profile with data:', updateData);
       
       // Call the API to update the user profile
       const updatedProfile = await updateUserProfile(updateData);
       
-      console.log('[ProfileScreen] Profile updated successfully:', updatedProfile);
       
       // Update the local store with the response from the API
       await updateStoreProfile(updatedProfile);
@@ -126,7 +152,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
       
     } catch (error) {
       console.error('[ProfileScreen] Error updating profile:', error);
-      Alert.alert('Erro', `Não foi possível atualizar o perfil: ${error.message}`);
+      Alert.alert('Erro', `Não foi possível atualizar o perfil: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   };
 
@@ -149,8 +175,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
   };
 
   const renderEditProfile = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={{ padding: 24 }}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={{ padding: 24 }}>
         {/* Header Text */}
         <View style={{ marginBottom: 24, alignItems: 'center' }}>
           <Text style={{ 
@@ -243,8 +274,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                 backgroundColor: 'white',
               }}
               placeholder="(11) 99999-9999"
-            value={editData.phone_number}
-            onChangeText={(text) => setEditData({ ...editData, phone_number: text })}
+              value={phoneDisplayValue}
+              onChangeText={(text) => {
+                // Update display value for user-friendly formatting
+                setPhoneDisplayValue(text);
+                
+                // Store normalized phone number in edit data
+                const normalized = normalizePhoneNumber(text);
+                setEditData({ ...editData, phone_number: normalized });
+              }}
+              onBlur={() => {
+                // Format phone for display when user finishes editing
+                if (editData.phone_number && isValidPhoneNumber(editData.phone_number)) {
+                  setPhoneDisplayValue(formatPhoneForDisplay(editData.phone_number));
+                }
+              }}
               keyboardType="phone-pad"
             />
           </View>
@@ -292,6 +336,228 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
           </View>
         </View>
 
+        {/* Hair Type Field */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ 
+            fontSize: 14, 
+            fontWeight: '500', 
+            color: '#374151', 
+            marginBottom: 8 
+          }}>
+            Tipo de Cabelo
+          </Text>
+          <View style={{ position: 'relative' }}>
+            <View style={{ 
+              position: 'absolute', 
+              left: 12, 
+              top: 18, 
+              zIndex: 1,
+              width: 20,
+              height: 20,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 16 }}>💇</Text>
+            </View>
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                paddingLeft: 44,
+                paddingRight: 16,
+                paddingVertical: 16,
+                borderWidth: 1,
+                borderColor: '#d1d5db',
+                borderRadius: 12,
+                backgroundColor: 'white',
+              }}
+              onPress={() => {
+                const options = [
+                  { label: 'Cacheado', value: 'CACHEADO' },
+                  { label: 'Crespo', value: 'CRESPO' },
+                  { label: 'Liso', value: 'LISO' },
+                  { label: 'Ondulado', value: 'ONDULADO' },
+                ];
+                if (Platform.OS === 'ios') {
+                  Alert.alert(
+                    'Tipo de Cabelo',
+                    '',
+                    [
+                      ...options.map(option => ({
+                        text: option.label,
+                        onPress: () => setEditData({ ...editData, hair_type: option.value as any }),
+                      })),
+                      { text: 'Cancelar', style: 'cancel' },
+                    ]
+                  );
+                } else {
+                  Alert.alert(
+                    'Tipo de Cabelo',
+                    '',
+                    options.map(option => ({
+                      text: option.label,
+                      onPress: () => setEditData({ ...editData, hair_type: option.value as any }),
+                    }))
+                  );
+                }
+              }}
+            >
+              <Text style={{ fontSize: 16, color: editData.hair_type ? '#1f2937' : '#9ca3af' }}>
+                {editData.hair_type ? 
+                  editData.hair_type.charAt(0) + editData.hair_type.slice(1).toLowerCase() : 
+                  'Selecione o tipo de cabelo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Gender Field */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ 
+            fontSize: 14, 
+            fontWeight: '500', 
+            color: '#374151', 
+            marginBottom: 8 
+          }}>
+            Gênero
+          </Text>
+          <View style={{ position: 'relative' }}>
+            <User 
+              size={20} 
+              color="#9ca3af" 
+              style={{ 
+                position: 'absolute', 
+                left: 12, 
+                top: 18, 
+                zIndex: 1 
+              }} 
+            />
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                paddingLeft: 44,
+                paddingRight: 16,
+                paddingVertical: 16,
+                borderWidth: 1,
+                borderColor: '#d1d5db',
+                borderRadius: 12,
+                backgroundColor: 'white',
+              }}
+              onPress={() => {
+                const options = [
+                  { label: 'Masculino', value: 'MASCULINO' },
+                  { label: 'Feminino', value: 'FEMININO' },
+                  { label: 'Outros', value: 'OUTROS' },
+                ];
+                if (Platform.OS === 'ios') {
+                  Alert.alert(
+                    'Gênero',
+                    '',
+                    [
+                      ...options.map(option => ({
+                        text: option.label,
+                        onPress: () => setEditData({ ...editData, gender: option.value as any }),
+                      })),
+                      { text: 'Cancelar', style: 'cancel' },
+                    ]
+                  );
+                } else {
+                  Alert.alert(
+                    'Gênero',
+                    '',
+                    options.map(option => ({
+                      text: option.label,
+                      onPress: () => setEditData({ ...editData, gender: option.value as any }),
+                    }))
+                  );
+                }
+              }}
+            >
+              <Text style={{ fontSize: 16, color: editData.gender ? '#1f2937' : '#9ca3af' }}>
+                {editData.gender ? 
+                  editData.gender.charAt(0) + editData.gender.slice(1).toLowerCase() : 
+                  'Selecione o gênero'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Date of Birth Field */}
+        <View style={{ marginBottom: 32 }}>
+          <Text style={{ 
+            fontSize: 14, 
+            fontWeight: '500', 
+            color: '#374151', 
+            marginBottom: 8 
+          }}>
+            Data de Nascimento
+          </Text>
+          <View style={{ position: 'relative' }}>
+            <Calendar 
+              size={20} 
+              color="#9ca3af" 
+              style={{ 
+                position: 'absolute', 
+                left: 12, 
+                top: 18, 
+                zIndex: 1 
+              }} 
+            />
+            <TextInput
+              style={{
+                width: '100%',
+                paddingLeft: 44,
+                paddingRight: 16,
+                paddingVertical: 16,
+                borderWidth: 1,
+                borderColor: '#d1d5db',
+                borderRadius: 12,
+                fontSize: 16,
+                backgroundColor: 'white',
+              }}
+              placeholder="DD/MM/AAAA"
+              value={dateInputValue}
+              onChangeText={(text) => {
+                // Simple date validation and formatting
+                const numbers = text.replace(/\D/g, '');
+                let formatted = numbers;
+                if (numbers.length >= 3) {
+                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
+                }
+                if (numbers.length >= 5) {
+                  formatted = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
+                }
+                
+                // Update the display value immediately
+                setDateInputValue(formatted);
+                
+                // Convert to ISO format for storage only when complete
+                if (numbers.length === 8) {
+                  const day = numbers.slice(0, 2);
+                  const month = numbers.slice(2, 4);
+                  const year = numbers.slice(4, 8);
+                  
+                  // Basic validation
+                  const dayNum = parseInt(day, 10);
+                  const monthNum = parseInt(month, 10);
+                  const yearNum = parseInt(year, 10);
+                  
+                  if (dayNum >= 1 && dayNum <= 31 && 
+                      monthNum >= 1 && monthNum <= 12 && 
+                      yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
+                    const isoDate = `${year}-${month}-${day}`;
+                    setEditData({ ...editData, date_of_birth: isoDate });
+                  }
+                } else {
+                  // Clear the ISO date if incomplete
+                  setEditData({ ...editData, date_of_birth: undefined });
+                }
+              }}
+              keyboardType="numeric"
+              maxLength={10}
+            />
+          </View>
+        </View>
+
         {/* Action Buttons */}
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity
@@ -311,7 +577,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   fullName: storeUser.fullName || '',
                   email: storeUser.email || '',
                   phone_number: storeUser.phone_number || '',
+                  hair_type: storeUser.hair_type,
+                  gender: storeUser.gender,
+                  date_of_birth: storeUser.date_of_birth,
                 });
+                
+                // Reset date input value
+                if (storeUser.date_of_birth) {
+                  const formattedDate = new Date(storeUser.date_of_birth).toLocaleDateString('pt-BR');
+                  setDateInputValue(formattedDate);
+                } else {
+                  setDateInputValue('');
+                }
+                
+                // Reset phone display value
+                if (storeUser.phone_number) {
+                  setPhoneDisplayValue(formatPhoneForDisplay(storeUser.phone_number));
+                } else {
+                  setPhoneDisplayValue('');
+                }
               }
               setCurrentView('profile');
             }}
@@ -336,8 +620,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const renderProfileView = () => {
@@ -392,17 +677,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               </Text>
 
               <View style={{ gap: 12 }}>
-                {/* Name */}
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <User size={20} color="#6b7280" style={{ marginRight: 12 }} />
-                  <View>
-                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Nome</Text>
-                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                      {storeUser?.fullName || 'Não informado'}
-                    </Text>
-                  </View>
-                </View>
-
                 {/* Email */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Mail size={20} color="#6b7280" style={{ marginRight: 12 }} />
@@ -427,18 +701,47 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
                   </View>
                 </View>
 
-                {/* Role - only show if it exists */}
-                {storeUser?.role ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <User size={20} color="#6b7280" style={{ marginRight: 12 }} />
-                    <View>
-                      <Text style={{ fontSize: 14, color: '#6b7280' }}>Perfil</Text>
-                      <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
-                        {storeUser.role}
-                      </Text>
-                    </View>
+                {/* Hair Type */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ marginRight: 12, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 16 }}>💇</Text>
                   </View>
-                ) : null}
+                  <View>
+                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Tipo de Cabelo</Text>
+                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
+                      {storeUser?.hair_type ? 
+                        storeUser.hair_type.charAt(0) + storeUser.hair_type.slice(1).toLowerCase() : 
+                        'Não informado'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Gender */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <User size={20} color="#6b7280" style={{ marginRight: 12 }} />
+                  <View>
+                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Gênero</Text>
+                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
+                      {storeUser?.gender ? 
+                        storeUser.gender.charAt(0) + storeUser.gender.slice(1).toLowerCase() : 
+                        'Não informado'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Date of Birth */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Calendar size={20} color="#6b7280" style={{ marginRight: 12 }} />
+                  <View>
+                    <Text style={{ fontSize: 14, color: '#6b7280' }}>Data de Nascimento</Text>
+                    <Text style={{ fontSize: 16, color: '#1f2937', fontWeight: '500' }}>
+                      {storeUser?.date_of_birth ? 
+                        new Date(storeUser.date_of_birth).toLocaleDateString('pt-BR') : 
+                        'Não informado'}
+                    </Text>
+                  </View>
+                </View>
+
               </View>
             </View>
           </View>

@@ -27,7 +27,7 @@ async def login_for_access_token(
 
     user, error_message = auth_services.authenticate_user( # Renamed and simplified call
         db,
-        email=login_request.email,
+        email_or_phone=login_request.email_or_phone,
         password=login_request.password
         # tenant_id argument removed
     )

@@ -39,6 +39,14 @@ from .schedule_service import (
     get_daily_schedule_data
 )
 
+# Import wizard functions
+from .wizard_service import (
+    get_available_professionals_for_wizard,
+    get_multi_service_availability,
+    create_multi_service_booking,
+    get_available_dates_for_services
+)
+
 # Re-export all functions for backward compatibility
 __all__ = [
     # Utility functions (private)
@@ -60,5 +68,11 @@ __all__ = [
     'mark_appointment_as_no_show',
     'update_appointment_details',
     'update_appointment_with_multiple_services',
-    'get_daily_schedule_data'
+    'get_daily_schedule_data',
+    
+    # Wizard functions
+    'get_available_professionals_for_wizard',
+    'get_multi_service_availability',
+    'create_multi_service_booking',
+    'get_available_dates_for_services'
 ]

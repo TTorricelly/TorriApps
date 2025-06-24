@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle } from 'lucide-react-native';
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle, XCircle, ChevronRight } from 'lucide-react-native';
 import { getUserAppointments, cancelAppointment } from '../services/appointmentService';
 import { formatDateForDisplay } from '../utils/dateUtils';
 import { DateOption } from '../types';
@@ -38,7 +38,7 @@ interface Appointment {
   professional?: UserBasicInfo;
   service?: ServiceBasicInfo;
   
-  // Legacy fields for backward compatibility (might not be populated)
+  // Legacy fields for backward compatibility
   service_name?: string;
   professional_name?: string;
   observations?: string;
@@ -53,11 +53,10 @@ const AppointmentsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const loadAppointments = async (showRefreshLoader = false) => {
-    // Check if user is authenticated before making API call
     if (!isAuthenticated || !user) {
-      console.log('[AppointmentsScreen] User not authenticated, skipping appointments load');
       setIsLoading(false);
       setRefreshing(false);
       setError('User not authenticated');
@@ -72,10 +71,7 @@ const AppointmentsScreen = () => {
       }
       setError(null);
       
-      console.log('[AppointmentsScreen] Loading appointments for user:', user.id);
       const data = await getUserAppointments();
-      // Temporary debugging - remove once confirmed working
-      console.log('[AppointmentsScreen] Raw appointment data:', JSON.stringify(data, null, 2));
       setAppointments(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('[AppointmentsScreen] Error loading appointments:', err);
@@ -88,7 +84,6 @@ const AppointmentsScreen = () => {
   };
 
   useEffect(() => {
-    // Only load appointments when auth loading is complete and user is authenticated
     if (!authLoading) {
       loadAppointments();
     }
@@ -111,7 +106,7 @@ const AppointmentsScreen = () => {
             try {
               await cancelAppointment(appointmentId);
               Alert.alert('Sucesso', 'Agendamento cancelado com sucesso');
-              loadAppointments(); // Reload appointments
+              loadAppointments();
             } catch (err: any) {
               Alert.alert('Erro', err.message || 'Falha ao cancelar agendamento');
             }
@@ -121,9 +116,8 @@ const AppointmentsScreen = () => {
     );
   };
 
-  // Helper function to convert date string to DateOption for formatting
   const formatAppointmentDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    const date = new Date(dateString + 'T00:00:00');
     const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
                        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -138,59 +132,70 @@ const AppointmentsScreen = () => {
     return formatDateForDisplay(dateOption);
   };
 
-  const getStatusIcon = (status: string) => {
+  const formatPrice = (price?: number): string => {
+    if (!price || typeof price !== 'number') return '';
+    return `R$ ${price.toFixed(2).replace('.', ',')}`;
+  };
+
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case 'SCHEDULED':
       case 'CONFIRMED':
-        return <Clock size={20} color="#3b82f6" />;
+        return {
+          icon: <Clock size={16} color="#22c55e" />,
+          text: 'Confirmado',
+          color: '#22c55e',
+          bgColor: '#f0fdf4',
+          borderColor: '#22c55e'
+        };
       case 'COMPLETED':
-        return <CheckCircle size={20} color="#22c55e" />;
+        return {
+          icon: <CheckCircle size={16} color="#059669" />,
+          text: 'Concluído',
+          color: '#059669',
+          bgColor: '#ecfdf5',
+          borderColor: '#059669'
+        };
       case 'CANCELLED':
-        return <XCircle size={20} color="#ef4444" />;
+        return {
+          icon: <XCircle size={16} color="#ef4444" />,
+          text: 'Cancelado',
+          color: '#ef4444',
+          bgColor: '#fef2f2',
+          borderColor: '#ef4444'
+        };
       case 'NO_SHOW':
-        return <AlertCircle size={20} color="#f59e0b" />;
+        return {
+          icon: <AlertCircle size={16} color="#f59e0b" />,
+          text: 'Faltou',
+          color: '#f59e0b',
+          bgColor: '#fffbeb',
+          borderColor: '#f59e0b'
+        };
       case 'IN_PROGRESS':
-        return <Clock size={20} color="#f59e0b" />;
+        return {
+          icon: <Clock size={16} color="#f59e0b" />,
+          text: 'Em Andamento',
+          color: '#f59e0b',
+          bgColor: '#fffbeb',
+          borderColor: '#f59e0b'
+        };
       default:
-        return <Clock size={20} color="#6b7280" />;
+        return {
+          icon: <Clock size={16} color="#6b7280" />,
+          text: status,
+          color: '#6b7280',
+          bgColor: '#f9fafb',
+          borderColor: '#6b7280'
+        };
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED':
-        return 'Agendado';
-      case 'CONFIRMED':
-        return 'Confirmado';
-      case 'IN_PROGRESS':
-        return 'Em Andamento';
-      case 'COMPLETED':
-        return 'Concluído';
-      case 'CANCELLED':
-        return 'Cancelado';
-      case 'NO_SHOW':
-        return 'Faltou';
-      default:
-        return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED':
-      case 'CONFIRMED':
-        return '#3b82f6';
-      case 'IN_PROGRESS':
-        return '#f59e0b';
-      case 'COMPLETED':
-        return '#22c55e';
-      case 'CANCELLED':
-        return '#ef4444';
-      case 'NO_SHOW':
-        return '#f59e0b';
-      default:
-        return '#6b7280';
-    }
+  const isUpcomingAppointment = (appointment: Appointment): boolean => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    return (appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') && 
+           appointment.appointment_date >= today;
   };
 
   const filterAppointments = () => {
@@ -198,126 +203,139 @@ const AppointmentsScreen = () => {
     const today = now.toISOString().split('T')[0];
     
     if (activeTab === 'upcoming') {
-      // Check for both SCHEDULED and CONFIRMED as upcoming appointments
-      return appointments.filter(apt => 
-        (apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED') && apt.appointment_date >= today
-      );
+      return appointments.filter(apt => isUpcomingAppointment(apt));
     } else {
-      // History includes completed, cancelled, no-show appointments, or past appointments
-      return appointments.filter(apt => 
-        (apt.status === 'COMPLETED' || apt.status === 'CANCELLED' || apt.status === 'NO_SHOW') || apt.appointment_date < today
-      );
+      return appointments.filter(apt => !isUpcomingAppointment(apt));
     }
   };
 
-  const renderAppointmentCard = (appointment: Appointment) => (
-    <View key={appointment.id} style={{
-      backgroundColor: 'white',
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: '#e5e7eb',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2
-    }}>
-      {/* Header with service name and status */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', flex: 1 }}>
-          {appointment.service?.name || appointment.service_name || 'Serviço não informado'}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-          {getStatusIcon(appointment.status)}
-          <Text style={{ 
-            marginLeft: 4, 
-            fontSize: 14, 
-            fontWeight: '500',
-            color: getStatusColor(appointment.status)
-          }}>
-            {getStatusText(appointment.status)}
-          </Text>
-        </View>
-      </View>
+  const renderAppointmentCard = (appointment: Appointment) => {
+    const statusConfig = getStatusConfig(appointment.status);
+    const serviceName = appointment.service?.name || appointment.service_name || 'Serviço não informado';
+    const professionalName = appointment.professional?.full_name || appointment.professional_name || 'Profissional não informado';
+    const isUpcoming = isUpcomingAppointment(appointment);
+    const isExpanded = expandedCard === appointment.id;
 
-      {/* Date and time */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <Calendar size={16} color="#6b7280" />
-        <Text style={{ marginLeft: 8, fontSize: 14, color: '#6b7280' }}>
-          {formatAppointmentDate(appointment.appointment_date)} às {appointment.start_time}
-        </Text>
-      </View>
-
-      {/* Professional */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <User size={16} color="#6b7280" />
-        <Text style={{ marginLeft: 8, fontSize: 14, color: '#6b7280' }}>
-          {appointment.professional?.full_name || appointment.professional_name || 'Profissional não informado'}
-        </Text>
-      </View>
-
-      {/* Salon info */}
-      {appointment.salon_name && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-          <MapPin size={16} color="#6b7280" />
-          <Text style={{ marginLeft: 8, fontSize: 14, color: '#6b7280' }}>
-            {appointment.salon_name}
-          </Text>
-        </View>
-      )}
-
-      {/* Observations */}
-      {(appointment.notes_by_client || appointment.observations) && (
-        <View style={{ 
-          backgroundColor: '#f9fafb', 
-          borderRadius: 8, 
-          padding: 12, 
-          marginBottom: 12 
-        }}>
-          <Text style={{ fontSize: 14, color: '#6b7280', fontStyle: 'italic' }}>
-            Observações: {appointment.notes_by_client || appointment.observations}
-          </Text>
-        </View>
-      )}
-
-      {/* Action buttons for scheduled appointments */}
-      {(appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') && (
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-          <TouchableOpacity
-            style={{
-              flex: 1,
-              backgroundColor: '#ef4444',
-              padding: 12,
-              borderRadius: 8,
-              alignItems: 'center'
-            }}
-            onPress={() => handleCancelAppointment(appointment.id)}
-          >
-            <Text style={{ color: 'white', fontSize: 14, fontWeight: '500' }}>
-              Cancelar
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  // Show loading while authentication is being verified
-  if (authLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-          <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
-              Meus Agendamentos
+      <TouchableOpacity 
+        key={appointment.id} 
+        style={[styles.appointmentCard, { borderLeftColor: statusConfig.borderColor }]}
+        activeOpacity={0.7}
+        onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
+      >
+        {/* Header with service and status */}
+        <View style={styles.cardHeader}>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceName}>{serviceName}</Text>
+            <Text style={styles.professionalName}>{professionalName}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+            {statusConfig.icon}
+            <Text style={[styles.statusText, { color: statusConfig.color }]}>
+              {statusConfig.text}
             </Text>
           </View>
+        </View>
+
+        {/* Date and time row */}
+        <View style={styles.dateTimeRow}>
+          <View style={styles.dateTimeInfo}>
+            <Calendar size={18} color="#ec4899" />
+            <Text style={styles.dateText}>
+              {formatAppointmentDate(appointment.appointment_date)}
+            </Text>
+            <Text style={styles.timeText}>
+              {appointment.start_time.substring(0, 5)}
+            </Text>
+            {appointment.service?.duration_minutes && (
+              <View style={styles.durationBadgeSmall}>
+                <Text style={styles.durationTextSmall}>
+                  {appointment.service.duration_minutes}min
+                </Text>
+              </View>
+            )}
+          </View>
+          {appointment.price_at_booking && (
+            <Text style={styles.priceText}>
+              {formatPrice(appointment.price_at_booking)}
+            </Text>
+          )}
+        </View>
+
+        {/* Notes if available */}
+        {(appointment.notes_by_client || appointment.observations) && (
+          <View style={styles.notesContainer}>
+            <Text style={styles.notesText}>
+              {appointment.notes_by_client || appointment.observations}
+            </Text>
+          </View>
+        )}
+
+        {/* Expanded details section */}
+        {isExpanded && (appointment.salon_name || appointment.salon_address) && (
+          <View style={styles.expandedDetails}>
+            <View style={styles.detailsHeader}>
+              <Text style={styles.detailsTitle}>Informações do Local</Text>
+            </View>
+            
+            {appointment.salon_name && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Local:</Text>
+                <Text style={styles.detailValue}>{appointment.salon_name}</Text>
+              </View>
+            )}
+            
+            {appointment.salon_address && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Endereço:</Text>
+                <Text style={styles.detailValue}>{appointment.salon_address}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Action button for upcoming appointments */}
+        {isUpcoming && (
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => handleCancelAppointment(appointment.id)}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            {(appointment.salon_name || appointment.salon_address) && (
+              <TouchableOpacity 
+                style={styles.detailsButton}
+                onPress={() => setExpandedCard(isExpanded ? null : appointment.id)}
+              >
+                <Text style={styles.detailsButtonText}>
+                  {isExpanded ? 'Menos' : 'Local'}
+                </Text>
+                <ChevronRight 
+                  size={16} 
+                  color="#ec4899" 
+                  style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // Loading states remain the same as original
+  if (authLoading) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.headerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Meus Agendamentos</Text>
+          </View>
         </SafeAreaView>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#ec4899" />
-          <Text style={{ marginTop: 10, color: '#374151' }}>Verificando autenticação...</Text>
+          <Text style={styles.loadingText}>Verificando autenticação...</Text>
         </View>
       </View>
     );
@@ -325,69 +343,45 @@ const AppointmentsScreen = () => {
 
   if (isLoading && !refreshing) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-        <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-          <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
-              Meus Agendamentos
-            </Text>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.headerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Meus Agendamentos</Text>
           </View>
         </SafeAreaView>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#ec4899" />
-          <Text style={{ marginTop: 10, color: '#374151' }}>Carregando agendamentos...</Text>
+          <Text style={styles.loadingText}>Carregando agendamentos...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ec4899' }}>
-      {/* Header */}
-      <SafeAreaView style={{ backgroundColor: '#ec4899' }}>
-        <View style={{ backgroundColor: '#ec4899', padding: 16 }}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
-            Meus Agendamentos
-          </Text>
+    <View style={styles.container}>
+      {/* Modern Header */}
+      <SafeAreaView style={styles.headerContainer}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Meus Agendamentos</Text>
         </View>
       </SafeAreaView>
 
-      {/* Tabs */}
-      <View style={{ backgroundColor: '#ec4899', paddingHorizontal: 16, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 4 }}>
+      {/* Modern Tab Selector */}
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabsWrapper}>
           <TouchableOpacity
-            style={{
-              flex: 1,
-              backgroundColor: activeTab === 'upcoming' ? 'white' : 'transparent',
-              paddingVertical: 8,
-              borderRadius: 6,
-              alignItems: 'center'
-            }}
+            style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
             onPress={() => setActiveTab('upcoming')}
           >
-            <Text style={{ 
-              color: activeTab === 'upcoming' ? '#ec4899' : 'white', 
-              fontWeight: '600',
-              fontSize: 14
-            }}>
+            <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
               Próximos
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={{
-              flex: 1,
-              backgroundColor: activeTab === 'history' ? 'white' : 'transparent',
-              paddingVertical: 8,
-              borderRadius: 6,
-              alignItems: 'center'
-            }}
+            style={[styles.tab, activeTab === 'history' && styles.tabActive]}
             onPress={() => setActiveTab('history')}
           >
-            <Text style={{ 
-              color: activeTab === 'history' ? '#ec4899' : 'white', 
-              fontWeight: '600',
-              fontSize: 14
-            }}>
+            <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
               Histórico
             </Text>
           </TouchableOpacity>
@@ -395,49 +389,38 @@ const AppointmentsScreen = () => {
       </View>
 
       {/* Main Content */}
-      <View style={{ flex: 1, backgroundColor: 'white' }}>
+      <View style={styles.content}>
         {error ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+          <View style={styles.errorContainer}>
             <AlertCircle size={48} color="#ef4444" />
-            <Text style={{ color: '#ef4444', textAlign: 'center', marginTop: 16, marginBottom: 10 }}>
-              Erro ao carregar agendamentos:
-            </Text>
-            <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 20 }}>
-              {error}
-            </Text>
-            <TouchableOpacity 
-              onPress={() => loadAppointments()} 
-              style={{ 
-                paddingVertical: 10, 
-                paddingHorizontal: 20, 
-                backgroundColor: '#ec4899', 
-                borderRadius: 8 
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Tentar Novamente</Text>
+            <Text style={styles.errorTitle}>Erro ao carregar agendamentos</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadAppointments()}>
+              <Text style={styles.retryButtonText}>Tentar Novamente</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <ScrollView 
-            style={{ flex: 1, padding: 16 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-            }
+            style={styles.scrollView}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+            showsVerticalScrollIndicator={false}
           >
             {filterAppointments().length === 0 ? (
-              <View style={{ alignItems: 'center', paddingTop: 40 }}>
+              <View style={styles.emptyContainer}>
                 <Calendar size={64} color="#d1d5db" />
-                <Text style={{ fontSize: 18, fontWeight: '600', color: '#6b7280', marginTop: 16, textAlign: 'center' }}>
+                <Text style={styles.emptyTitle}>
                   {activeTab === 'upcoming' ? 'Nenhum agendamento próximo' : 'Nenhum item no histórico'}
                 </Text>
-                <Text style={{ fontSize: 14, color: '#9ca3af', marginTop: 8, textAlign: 'center' }}>
+                <Text style={styles.emptyMessage}>
                   {activeTab === 'upcoming' 
                     ? 'Quando você agendar um serviço, ele aparecerá aqui' 
                     : 'Seus agendamentos passados aparecerão aqui'}
                 </Text>
               </View>
             ) : (
-              filterAppointments().map(renderAppointmentCard)
+              <View style={styles.appointmentsList}>
+                {filterAppointments().map(renderAppointmentCard)}
+              </View>
             )}
           </ScrollView>
         )}
@@ -445,5 +428,299 @@ const AppointmentsScreen = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ec4899',
+  },
+  headerContainer: {
+    backgroundColor: '#ec4899',
+  },
+  header: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+  },
+  tabsContainer: {
+    backgroundColor: '#ec4899',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  tabsWrapper: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  tabTextActive: {
+    color: '#ec4899',
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  appointmentsList: {
+    padding: 16,
+  },
+  appointmentCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 16,
+    paddingBottom: 12,
+  },
+  serviceInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  serviceName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  professionalName: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  dateTimeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#4b5563',
+    fontWeight: '500',
+  },
+  timeText: {
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  priceText: {
+    fontSize: 16,
+    color: '#22c55e',
+    fontWeight: '600',
+  },
+  durationBadgeSmall: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  durationTextSmall: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  notesContainer: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ec4899',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  cancelButton: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  detailsButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fdf2f8',
+    borderWidth: 1,
+    borderColor: '#f9a8d4',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 4,
+  },
+  detailsButtonText: {
+    color: '#ec4899',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ef4444',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  retryButton: {
+    backgroundColor: '#ec4899',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: '#9ca3af',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  expandedDetails: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  detailsHeader: {
+    marginBottom: 12,
+  },
+  detailsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '400',
+    flex: 2,
+    textAlign: 'right',
+  },
+});
 
 export default AppointmentsScreen;

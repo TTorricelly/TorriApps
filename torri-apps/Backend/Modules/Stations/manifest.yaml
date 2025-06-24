@@ -1,0 +1,17 @@
+name: Stations
+description: Resource management module for tracking physical stations and their requirements for services
+version: 1.0.0
+entities:
+  - StationType
+  - Station
+  - ServiceStationRequirement
+features:
+  - Station type management (hair chairs, manicure tables, spa rooms, etc.)
+  - Physical station instances with labels and active status
+  - Service station requirements mapping with quantities
+dependencies:
+  - Services (for ServiceStationRequirement relationship)
+database_tables:
+  - station_types
+  - stations
+  - service_station_requirements

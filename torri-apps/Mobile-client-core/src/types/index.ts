@@ -9,6 +9,9 @@ export type UserType = {
   isActive?: boolean;
   phone_number?: string;
   photo_path?: string;
+  hair_type?: 'LISO' | 'ONDULADO' | 'CACHEADO' | 'CRESPO';
+  gender?: 'MASCULINO' | 'FEMININO' | 'OUTROS';
+  date_of_birth?: string; // ISO date string
   // Add other fields that your user object might contain
 } | null;
 
@@ -36,6 +39,9 @@ export interface Service {
   image_ondulado?: string | null;
   image_cacheado?: string | null;
   image_crespo?: string | null;
+  // Parallel service execution fields
+  parallelable?: boolean; // True if service can run concurrently with other services
+  max_parallel_pros?: number; // Maximum number of professionals that can work simultaneously
 }
 
 // Professional interface for service providers
@@ -46,7 +52,8 @@ export interface Professional {
   is_active?: boolean;
   role?: string;
   services_offered?: Service[];
-  photo_url?: string; // Full URL from backend
+  photo_url?: string; // Full URL from backend (legacy)
+  photo_path?: string; // Relative path from backend (current API)
   
   // Legacy support for existing components
   name?: string; // Computed from full_name for backward compatibility
@@ -123,4 +130,26 @@ export interface AppointmentConfirmationProps extends BaseScreenProps {
   setObservations: (observations: string) => void;
   salonInfo: SalonInfo;
   scrollRef: React.RefObject<any>;
+}
+
+// Station entities for resource management
+export interface StationType {
+  id: string; // UUID as string
+  code: string; // 'hair_chair', 'mani_table', etc.
+  name: string; // 'Cadeira de Corte', 'Mesa de Manicure', etc.
+}
+
+export interface Station {
+  id: string; // UUID as string
+  type_id: string; // UUID as string - foreign key to StationType
+  label: string; // 'Hair Chair #2', 'Spa Room A', etc.
+  is_active: boolean; // Allow soft-hide
+  station_type?: StationType; // Nested station type information
+}
+
+export interface ServiceStationRequirement {
+  service_id: string; // UUID as string - foreign key to Service
+  station_type_id: string; // UUID as string - foreign key to StationType
+  qty: number; // Quantity required (default 1)
+  station_type?: StationType; // Nested station type information
 }

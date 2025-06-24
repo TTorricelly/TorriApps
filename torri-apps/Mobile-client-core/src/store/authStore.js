@@ -69,7 +69,6 @@ const useAuthStore = create((set, get) => ({
 
   // Action to update user profile data from /users/me endpoint
   setProfile: async (profileData) => {
-    console.log('[authStore] setProfile called with profileData:', JSON.stringify(profileData, null, 2));
     try {
       // Merge new profile data with existing user data (especially from JWT)
       // Ensure essential fields from JWT (like id, email, role) are not overwritten if not present in profileData
@@ -77,7 +76,6 @@ const useAuthStore = create((set, get) => ({
 
       // Get current user data for logging and merging
       const currentUserData = get().user;
-      console.log('[authStore] Current user state before setProfile merge:', JSON.stringify(currentUserData, null, 2));
 
       const updatedUserData = {
         ...currentUserData, // existing data from JWT
@@ -87,7 +85,6 @@ const useAuthStore = create((set, get) => ({
       };
 
       // Log the data that will be set
-      console.log('[authStore] New user state after setProfile merge (before setting to AsyncStorage and state):', JSON.stringify(updatedUserData, null, 2));
 
       // Persist the updated user data
       await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(updatedUserData));

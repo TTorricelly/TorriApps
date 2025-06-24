@@ -39,7 +39,7 @@ def check_dependencies():
         with open("Requirements.txt", "r") as f:
             requirements = f.read()
         
-        required_deps = ["alembic", "sqlalchemy", "click", "mysql-connector-python"]
+        required_deps = ["alembic", "sqlalchemy", "click", "psycopg2-binary"]
         missing_deps = []
         
         for dep in required_deps:

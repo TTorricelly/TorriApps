@@ -3,10 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity, Image, Modal, ActivityIndicat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RenderHtml from 'react-native-render-html';
 import useAuthStore from '../store/authStore';
+import useServicesStore from '../store/servicesStore';
 import { getUserProfile } from '../services/userService';
 import { getCategories, getServicesByCategory } from '../services/categoryService';
 import { getAvailableTimeSlots } from '../services/appointmentService';
-import { API_BASE_URL } from '../config/environment';
+import { buildAssetUrl } from '../utils/urlHelpers';
 import { 
   Scissors,
   User, 
@@ -15,6 +16,7 @@ import {
   Calendar,
   CheckCircle,
   X,
+  Eye,
 } from 'lucide-react-native';
 
 // Import shared types and new components
@@ -32,6 +34,7 @@ import { generateAvailableDates, formatDateForDisplay as formatDateUtil } from '
 import { getProfessionalsForService } from '../services/professionalService';
 import AppointmentScreen from './AppointmentScreen';
 import AppointmentConfirmationScreen from './AppointmentConfirmationScreen';
+import ServiceDetailsView from '../components/ServiceDetailsView';
 
 interface HomeScreenProps {
   navigation: any; // This is usually provided by react-navigation
@@ -40,7 +43,9 @@ interface HomeScreenProps {
 
 interface HomeScreenRef {
   resetToCategories: () => void;
+  navigateToCategories: () => void;
   navigateToOrders: () => void;
+  navigateToCategoryServices: (categoryId: string) => void;
 }
 
 // Helper functions for formatting
@@ -60,14 +65,7 @@ const formatPrice = (priceStr: string | undefined | null) => {
 
 // Helper function to construct full image URLs from relative paths
 const getFullImageUrl = (relativePath: string | null | undefined): string | null => {
-  if (!relativePath) return null;
-  // If it's already a full URL, check if it needs localhost replacement
-  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    // Replace localhost with the actual server IP for mobile device compatibility
-    return relativePath.replace('http://localhost:8000', API_BASE_URL);
-  }
-  // Construct full URL by prepending base URL from environment config
-  return `${API_BASE_URL}${relativePath}`;
+  return buildAssetUrl(relativePath);
 };
 
 // Define the inner component function with explicit types for props and ref
@@ -83,6 +81,11 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   const [observations, setObservations] = useState('');
   const [imagePopupVisible, setImagePopupVisible] = useState(false);
   const [selectedImageForPopup, setSelectedImageForPopup] = useState<string | null>(null);
+  const [serviceDetailsModalVisible, setServiceDetailsModalVisible] = useState(false);
+  const [selectedServiceForModal, setSelectedServiceForModal] = useState<Service | null>(null);
+
+  // Generate available dates dynamically (today + next 30 days)
+  const availableDates: DateOption[] = generateAvailableDates(30);
 
   // Create appointment state object for new components
   const appointmentState: AppointmentState = {
@@ -119,6 +122,14 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     isAuthenticated: state.isAuthenticated,
     setProfile: state.setProfile,
     logout: state.logout,
+  }));
+
+  // Services store integration
+  const { selectedServices, toggleService, clearServices, getTotalPrice } = useServicesStore((state) => ({
+    selectedServices: state.selectedServices,
+    toggleService: state.toggleService,
+    clearServices: state.clearServices,
+    getTotalPrice: state.getTotalPrice,
   }));
 
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -352,6 +363,23 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setCurrentScreen('categories');
       setSelectedCategory(null);
       setSelectedService(null);
+      clearServices();
+      setSelectedDate(null);
+      setSelectedProfessional(null);
+      setSelectedTime(null);
+      setObservations('');
+      // Clear time slots
+      setAvailableTimes([]);
+      setTimeSlotsError(null);
+      setIsLoadingTimeSlots(false);
+      setTimeout(() => scrollToTop(categoriesScrollRef), 0);
+    },
+    navigateToCategories: () => {
+      // Navigate to categories without clearing the cart
+      setCurrentScreen('categories');
+      setSelectedCategory(null);
+      setSelectedService(null);
+      // DON'T clear services - preserve the cart
       setSelectedDate(null);
       setSelectedProfessional(null);
       setSelectedTime(null);
@@ -366,6 +394,25 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       setCurrentScreen('orders');
       // Potentially pass some order confirmation data to this screen in the future
       setTimeout(() => scrollToTop(ordersScrollRef), 0);
+    },
+    navigateToCategoryServices: (categoryId: string) => {
+      // Find the category by ID
+      const category = fetchedCategories.find(cat => cat.id === categoryId);
+      if (category) {
+        setSelectedCategory(category);
+        setCurrentScreen('services');
+        setSelectedService(null);
+        // DON'T clear services - preserve the cart
+        setSelectedDate(null);
+        setSelectedProfessional(null);
+        setSelectedTime(null);
+        setObservations('');
+        // Clear time slots
+        setAvailableTimes([]);
+        setTimeSlotsError(null);
+        setIsLoadingTimeSlots(false);
+        setTimeout(() => scrollToTop(servicesScrollRef), 0);
+      }
     },
   }));
 
@@ -461,8 +508,6 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
 //     },
 //   };
 
-  // Generate available dates dynamically (today + next 30 days)
-  const availableDates: DateOption[] = generateAvailableDates(30);
 
   const salonInfo: SalonInfo = {
     name: "Salão Charme & Estilo",
@@ -482,15 +527,43 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     setImagePopupVisible(true);
   };
 
+  const handleImagePressFromModal = (imageUrl: string) => {
+    // When viewing image from service details modal, we need to temporarily hide the service modal
+    // and show the image modal, then restore the service modal when image modal closes
+    setSelectedImageForPopup(imageUrl);
+    setServiceDetailsModalVisible(false); // Hide service modal first
+    setImagePopupVisible(true);
+  };
+
+  const closeImagePopupFromModal = () => {
+    setImagePopupVisible(false);
+    setSelectedImageForPopup(null);
+    // Restore the service details modal if we had one open
+    if (selectedServiceForModal) {
+      setServiceDetailsModalVisible(true);
+    }
+  };
+
   const closeImagePopup = () => {
     setImagePopupVisible(false);
     setSelectedImageForPopup(null);
+  };
+
+  const handleShowServiceDetails = (service: Service) => {
+    setSelectedServiceForModal(service);
+    setServiceDetailsModalVisible(true);
+  };
+
+  const closeServiceDetailsModal = () => {
+    setServiceDetailsModalVisible(false);
+    setSelectedServiceForModal(null);
   };
 
   const handleCategoryClick = (category: Category) => {
     setSelectedCategory(category);
     setCurrentScreen('services');
     setSelectedService(null);
+    // Don't clear services - allow users to select from multiple categories
     setTimeout(() => scrollToTop(servicesScrollRef), 0);
   };
 
@@ -541,15 +614,35 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
       {/* Main Content */}
       <View style={{ flex: 1, backgroundColor: 'white' }}>
         <ScrollView ref={categoriesScrollRef} style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 }}>
-        <Text style={{
-          fontSize: 30,
-          fontWeight: 'bold',
-          textAlign: 'center',
-          color: '#374151',
-          marginBottom: 32
-        }}>
-          Nossos Serviços
-        </Text>
+        <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <Text style={{
+            fontSize: 30,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: '#374151',
+            marginBottom: 8
+          }}>
+            Nossos Serviços
+          </Text>
+          {selectedServices.length > 0 && (
+            <View style={{
+              backgroundColor: '#ec4899',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 20,
+              flexDirection: 'row',
+              alignItems: 'center'
+            }}>
+              <Text style={{
+                color: 'white',
+                fontSize: 14,
+                fontWeight: '600'
+              }}>
+                {selectedServices.length} {selectedServices.length === 1 ? 'serviço selecionado' : 'serviços selecionados'}
+              </Text>
+            </View>
+          )}
+        </View>
 
         {fetchedCategories.length === 0 && !isLoadingCategories && !categoryError && (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 50 }}>
@@ -676,9 +769,16 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
           }} style={{ marginRight: 16 }}>
             <ArrowLeft size={24} color="white" />
           </TouchableOpacity>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
-            {selectedCategory?.name}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white' }}>
+              {selectedCategory?.name}
+            </Text>
+            {selectedServices.length > 0 && (
+              <Text style={{ fontSize: 14, color: '#fce7f3', marginTop: 2 }}>
+                {selectedServices.length} {selectedServices.length === 1 ? 'serviço selecionado' : 'serviços selecionados'}
+              </Text>
+            )}
+          </View>
         </View>
       </SafeAreaView>
 
@@ -690,73 +790,155 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
               <Text style={{ color: '#6b7280', fontSize: 16 }}>Nenhum serviço encontrado para esta categoria.</Text>
             </View>
           )}
-          {fetchedServices.map((service) => (
-            <TouchableOpacity
-              key={service.id} // Ensure service.id is string (UUID)
-              style={{
-                borderWidth: 2,
-                borderColor: selectedService?.id === service.id ? '#ec4899' : '#e5e7eb',
-                backgroundColor: selectedService?.id === service.id ? '#fdf2f8' : 'white',
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 16,
-                flexDirection: 'row',
-                alignItems: 'flex-start'
-              }}
-              onPress={() => setSelectedService(service)}
-            >
-              <View style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                borderWidth: 2,
-                borderColor: selectedService?.id === service.id ? '#ec4899' : '#d1d5db',
-                backgroundColor: selectedService?.id === service.id ? '#ec4899' : 'white',
-                marginRight: 16,
-                marginTop: 4,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {selectedService?.id === service.id && (
-                  <View style={{ width: 12, height: 12, backgroundColor: 'white', borderRadius: 6 }} />
-                )}
+          {fetchedServices.map((service: Service) => {
+            const isSelected = selectedServices.some((s: Service) => s.id === service.id);
+            return (
+              <View
+                key={service.id} // Ensure service.id is string (UUID)
+                style={{
+                  borderWidth: 2,
+                  borderColor: isSelected ? '#ec4899' : '#e5e7eb',
+                  backgroundColor: isSelected ? '#fdf2f8' : 'white',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 16,
+                }}
+              >
+                {/* Top row with service info and pill toggle */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <TouchableOpacity 
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      toggleService(service);
+                    }}
+                  >
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 8 }}>
+                      {service.name}
+                    </Text>
+                    <Text style={{ fontSize: 16, color: '#6b7280', marginBottom: 8 }}>
+                      Duração: {formatDuration(service.duration_minutes)}
+                    </Text>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#ec4899' }}>
+                      {formatPrice(service.price)}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {/* Pill Toggle */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      toggleService(service);
+                    }}
+                    style={{
+                      width: 52,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? '#ec4899' : '#e5e7eb',
+                      marginLeft: 16,
+                      marginTop: 4,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      paddingHorizontal: 4,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                  >
+                    {/* Toggle Circle */}
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: 'white',
+                        position: 'absolute',
+                        left: isSelected ? 28 : 4,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 2,
+                        elevation: 3,
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Details button */}
+                <TouchableOpacity
+                  onPress={() => handleShowServiceDetails(service)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#e2e8f0'
+                  }}
+                >
+                  <Eye size={18} color="#64748b" style={{ marginRight: 8 }} />
+                  <Text style={{ 
+                    fontSize: 14, 
+                    fontWeight: '500', 
+                    color: '#64748b' 
+                  }}>
+                    Ver detalhes
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 8 }}>
-                  {service.name}
-                </Text>
-                <Text style={{ fontSize: 16, color: '#6b7280', marginBottom: 8 }}>
-                  Duração: {formatDuration(service.duration_minutes)}
-                </Text>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#ec4899' }}>
-                  {formatPrice(service.price)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </ScrollView>
 
         {/* Confirm Button */}
-        <View style={{ padding: 16, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: selectedService ? '#ec4899' : '#d1d5db',
-              padding: 16,
-              borderRadius: 12,
+        <View style={{ backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+          {/* Total Price Display */}
+          {selectedServices.length > 0 && (
+            <View style={{ 
+              paddingHorizontal: 16, 
+              paddingTop: 16, 
+              paddingBottom: 8,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
               alignItems: 'center'
-            }}
-            disabled={!selectedService}
-            onPress={() => {
-              if (selectedService) {
-                setCurrentScreen('service-details');
-                setTimeout(() => scrollToTop(serviceDetailsScrollRef), 0);
-              }
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-              Confirmar Seleção
-            </Text>
-          </TouchableOpacity>
+            }}>
+              <Text style={{ fontSize: 16, color: '#6b7280', fontWeight: '500' }}>
+                Total ({selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}):
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ec4899' }}>
+                R$ {getTotalPrice().toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+          )}
+
+          <View style={{ padding: 16, paddingTop: selectedServices.length > 0 ? 8 : 16 }}>
+            <TouchableOpacity
+              style={{
+                backgroundColor: selectedServices.length > 0 ? '#ec4899' : '#d1d5db',
+                padding: 16,
+                borderRadius: 12,
+                alignItems: 'center'
+              }}
+              disabled={selectedServices.length === 0}
+              onPress={() => {
+                if (selectedServices.length > 0) {
+                  // For now, navigate to services tab with the selected services
+                  navigation.navigate('Serviços');
+                }
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+                {selectedServices.length === 0 
+                  ? 'Selecione pelo menos um serviço' 
+                  : `Continuar (${selectedServices.length})`
+                }
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -1073,6 +1255,7 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
                 setCurrentScreen('categories');
                 setSelectedCategory(null);
                 setSelectedService(null);
+                clearServices();
                 setSelectedDate(null);
                 setSelectedProfessional(null);
                 setSelectedTime(null);
@@ -1115,62 +1298,67 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
   );
 
   // Render the image popup modal - define this BEFORE the main render logic
-  const renderImagePopup = () => (
-    <Modal
-      visible={imagePopupVisible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={closeImagePopup}
-    >
-      <TouchableOpacity
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-        activeOpacity={1}
-        onPress={closeImagePopup}
+  const renderImagePopup = () => {
+    // Determine which close handler to use based on whether we have a service modal open
+    const handleCloseImage = selectedServiceForModal ? closeImagePopupFromModal : closeImagePopup;
+    
+    return (
+      <Modal
+        visible={imagePopupVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseImage}
       >
-        {/* Close button */}
         <TouchableOpacity
           style={{
-            position: 'absolute',
-            top: 60,
-            right: 20,
-            zIndex: 1,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: 20,
-            width: 40,
-            height: 40,
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
             justifyContent: 'center',
             alignItems: 'center',
           }}
-          onPress={closeImagePopup}
+          activeOpacity={1}
+          onPress={handleCloseImage}
         >
-          <X size={24} color="#000" />
-        </TouchableOpacity>
-
-        {/* Expanded image */}
-        {selectedImageForPopup && (
+          {/* Close button */}
           <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: 60,
+              right: 20,
+              zIndex: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 20,
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            onPress={handleCloseImage}
           >
-            <Image
-              source={{ uri: selectedImageForPopup }}
-              style={{
-                width: width * 0.9,
-                height: width * 0.9,
-                borderRadius: 12,
-              }}
-              resizeMode="contain"
-            />
+            <X size={24} color="#000" />
           </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    </Modal>
-  );
+
+          {/* Expanded image */}
+          {selectedImageForPopup && (
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Image
+                source={{ uri: selectedImageForPopup }}
+                style={{
+                  width: width * 0.9,
+                  height: width * 0.9,
+                  borderRadius: 12,
+                }}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
 
   // Main render logic with modal overlay
   const renderCurrentScreen = () => {
@@ -1229,10 +1417,134 @@ const HomeScreenInner: React.ForwardRefRenderFunction<HomeScreenRef, HomeScreenP
     return renderCategoriesScreen();
   };
 
+  // Render service details modal
+  const renderServiceDetailsModal = () => (
+    <Modal
+      visible={serviceDetailsModalVisible}
+      animationType="slide"
+      transparent={false}
+      onRequestClose={closeServiceDetailsModal}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+        {/* Modal Header */}
+        <View style={{ backgroundColor: '#ec4899', paddingHorizontal: 16, paddingVertical: 20, flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity 
+            onPress={closeServiceDetailsModal}
+            style={{ 
+              marginRight: 16,
+              padding: 8,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
+            <X size={20} color="white" />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white', flex: 1 }} numberOfLines={1}>
+            {selectedServiceForModal?.name}
+          </Text>
+        </View>
+
+        {/* Modal Content */}
+        <View style={{ flex: 1 }}>
+          {selectedServiceForModal && (
+            <ServiceDetailsView 
+              service={selectedServiceForModal}
+              onImagePress={handleImagePressFromModal}
+            />
+          )}
+          
+          {/* Action Buttons */}
+          <View style={{ 
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: 'white',
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            borderTopWidth: 1,
+            borderTopColor: '#e5e7eb',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 5,
+          }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {/* Add/Remove Toggle Button */}
+              {selectedServiceForModal && (() => {
+                const isSelected = selectedServices.some((s: Service) => s.id === selectedServiceForModal.id);
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      toggleService(selectedServiceForModal);
+                    }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: isSelected ? '#ef4444' : '#ec4899',
+                      paddingVertical: 16,
+                      paddingHorizontal: 20,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Text style={{ 
+                      color: 'white', 
+                      fontSize: 16, 
+                      fontWeight: 'bold',
+                      textAlign: 'center'
+                    }}>
+                      {isSelected ? 'Remover' : 'Adicionar'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={closeServiceDetailsModal}
+                style={{
+                  backgroundColor: '#f3f4f6',
+                  paddingVertical: 16,
+                  paddingHorizontal: 20,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  minWidth: 80,
+                }}
+              >
+                <X size={20} color="#6b7280" style={{ marginRight: 8 }} />
+                <Text style={{ 
+                  color: '#6b7280', 
+                  fontSize: 16, 
+                  fontWeight: '500'
+                }}>
+                  Fechar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+
   return (
     <>
       {renderCurrentScreen()}
       {renderImagePopup()}
+      {renderServiceDetailsModal()}
     </>
   );
 }; // This correctly closes HomeScreenInner

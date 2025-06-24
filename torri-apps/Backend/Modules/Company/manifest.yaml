@@ -1,0 +1,14 @@
+name: "Company"
+version: "1.0.0"
+description: "Company management module for salon/business information"
+author: "TorriApps"
+dependencies: []
+routes:
+  - prefix: "/company"
+    module: "routes"
+models:
+  - "models"
+permissions:
+  - "GESTOR" # Full access to company management
+public_endpoints:
+  - "/company/info" # Public endpoint for mobile app

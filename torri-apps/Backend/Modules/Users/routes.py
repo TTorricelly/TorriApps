@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response # Added 
 from sqlalchemy.orm import Session
 
 # Schemas
-from Core.Auth.Schemas import User as UserSchema, UserCreate, UserUpdate # Updated imports
+from Core.Auth.Schemas import User as UserSchema, UserCreate, UserUpdate, PublicRegistrationRequest # Updated imports
 # Database dependency
 from Core.Database.dependencies import get_db
 # User services
@@ -22,6 +22,31 @@ router = APIRouter(
     # The X-Tenant-ID header will be implicitly checked by get_current_user_tenant for most routes.
     # For routes accessible by multiple roles, specific checks might be needed if behavior differs.
 )
+
+@router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+def register_new_client(
+    registration_data: PublicRegistrationRequest,
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Public endpoint for client registration.
+    Creates a new user with CLIENTE role.
+    """
+    # Convert PublicRegistrationRequest to UserCreate with CLIENTE role
+    user_data = UserCreate(
+        email=registration_data.email,
+        full_name=registration_data.full_name,
+        phone_number=registration_data.phone_number,
+        password=registration_data.password,
+        role=UserRole.CLIENTE,  # Always set to CLIENTE for public registration
+        date_of_birth=registration_data.date_of_birth,
+        hair_type=registration_data.hair_type,
+        gender=registration_data.gender
+    )
+    
+    # Create the user using the existing service
+    db_user = user_services.create_user(db=db, user_data=user_data)
+    return db_user
 
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
 def create_new_user(
@@ -83,8 +108,8 @@ def update_current_user_profile(
 @router.get("/", response_model=List[UserSchema]) # Updated schema
 def read_users_in_tenant( # Function name might be misleading now, consider renaming to read_all_users
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can list all users.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))], # Updated type
+    # GESTOR and ATENDENTE can list all users (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))], # Updated type
     skip: int = 0,
     limit: int = 100
 ):
@@ -100,8 +125,8 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
 def read_user_by_id(
     user_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can fetch arbitrary users by ID.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))] # Updated type
+    # GESTOR and ATENDENTE can fetch users by ID (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))] # Updated type
 ):
     """
     Get a specific user by ID.
@@ -117,8 +142,8 @@ def update_existing_user(
     user_id: UUID,
     user_update_data: UserUpdate, # Updated schema
     db: Annotated[Session, Depends(get_db)],
-    # Only a GESTOR can update users.
-    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))] # Updated type
+    # GESTOR and ATENDENTE can update users (for client management).
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))] # Updated type
 ):
     """
     Update a user's details (email, full_name, role, is_active).

@@ -1,4 +1,8 @@
+import { withApiErrorHandling, buildApiEndpoint, transformEntityWithImages } from '../utils/apiHelpers';
 import apiClient from '../config/api';
+
+// Image fields for professional data
+const PROFESSIONAL_IMAGE_FIELDS = ['photo_url', 'avatar_url', 'profile_picture_url'];
 
 /**
  * Get all professionals with optional filters
@@ -9,26 +13,20 @@ import apiClient from '../config/api';
  * @returns {Promise<Array>} Array of professional objects
  */
 export const getAllProfessionals = async (filters = {}) => {
-  try {
-    const params = new URLSearchParams();
-    if (filters.search) params.append('search', filters.search);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.service_id) params.append('service_id', filters.service_id);
-    
-    const queryString = params.toString();
-    const url = queryString ? `/professionals/?${queryString}` : '/professionals/';
-    
-    const response = await apiClient.get(`/api/v1${url}`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professionals');
-    } else if (error.request) {
-      throw new Error('Failed to fetch professionals: No response from server');
-    } else {
-      throw new Error(`Failed to fetch professionals: ${error.message}`);
+  const endpoint = buildApiEndpoint('professionals');
+  
+  const params = {};
+  if (filters.search) params.search = filters.search;
+  if (filters.status) params.status = filters.status;
+  if (filters.service_id) params.service_id = filters.service_id;
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint, { params }),
+    {
+      defaultValue: [],
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-  }
+  );
 };
 
 /**
@@ -37,19 +35,19 @@ export const getAllProfessionals = async (filters = {}) => {
  * @returns {Promise<Object>} Professional object
  */
 export const getProfessionalById = async (professionalId) => {
-  try {
-    const response = await apiClient.get(`/api/v1/professionals/${professionalId}/`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professional details');
-    } else if (error.request) {
-      throw new Error('Failed to fetch professional: No response from server');
-    } else {
-      throw new Error(`Failed to fetch professional: ${error.message}`);
+  const endpoint = buildApiEndpoint(`professionals/${professionalId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-  }
+  );
 };
+
+// Image fields for service data
+const SERVICE_IMAGE_FIELDS = ['image_url', 'liso_image_url', 'ondulado_image_url', 'cacheado_image_url', 'crespo_image_url'];
 
 /**
  * Get services offered by a specific professional
@@ -57,55 +55,48 @@ export const getProfessionalById = async (professionalId) => {
  * @returns {Promise<Array>} Array of service objects
  */
 export const getProfessionalServices = async (professionalId) => {
-  try {
-    const response = await apiClient.get(`/api/v1/professionals/${professionalId}/services/`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professional services');
-    } else if (error.request) {
-      throw new Error('Failed to fetch services: No response from server');
-    } else {
-      throw new Error(`Failed to fetch services: ${error.message}`);
+  const endpoint = buildApiEndpoint(`professionals/${professionalId}/services`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: [],
+      transformData: (data) => transformEntityWithImages(data, SERVICE_IMAGE_FIELDS)
     }
-  }
+  );
 };
 
 /**
  * Get professionals who can perform a specific service
- * This is a temporary implementation that gets all active professionals
- * and filters them based on their services_offered array
+ * This implementation gets all active professionals and filters them based on their services_offered array
  * @param {string} serviceId - Service ID
  * @returns {Promise<Array>} Array of professional objects who can perform the service
  */
 export const getProfessionalsForService = async (serviceId) => {
-  try {
-    // Get all active professionals first (note the trailing slash to avoid 307 redirect)
-    const response = await apiClient.get(`/api/v1/professionals/`);
-    const allProfessionals = response.data;
-    
-    if (!Array.isArray(allProfessionals)) {
-      return [];
+  return withApiErrorHandling(
+    async () => {
+      // Get all active professionals first
+      const allProfessionals = await getAllProfessionals({ status: 'active' });
+      
+      if (!Array.isArray(allProfessionals)) {
+        return [];
+      }
+      
+      // Filter professionals who can perform this service
+      const filteredProfessionals = allProfessionals.filter(professional => {
+        // Check if the professional has services_offered and if it includes our serviceId
+        return professional.services_offered && 
+               Array.isArray(professional.services_offered) &&
+               professional.services_offered.some(service => service.id === serviceId);
+      });
+      
+      return { data: filteredProfessionals };
+    },
+    {
+      defaultValue: [],
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-    
-    // Filter professionals who can perform this service
-    const filteredProfessionals = allProfessionals.filter(professional => {
-      // Check if the professional has services_offered and if it includes our serviceId
-      return professional.services_offered && 
-             Array.isArray(professional.services_offered) &&
-             professional.services_offered.some(service => service.id === serviceId);
-    });
-    
-    return filteredProfessionals;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch professionals for service');
-    } else if (error.request) {
-      throw new Error('Failed to fetch professionals: No response from server');
-    } else {
-      throw new Error(`Failed to fetch professionals: ${error.message}`);
-    }
-  }
+  );
 };
 
 /**
@@ -114,18 +105,15 @@ export const getProfessionalsForService = async (serviceId) => {
  * @returns {Promise<Object>} Schedule data with professionals and their appointments
  */
 export const getDailySchedule = async (date) => {
-  try {
-    const response = await apiClient.get(`/api/v1/appointments/daily-schedule/${date}`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to fetch daily schedule');
-    } else if (error.request) {
-      throw new Error('Failed to fetch schedule: No response from server');
-    } else {
-      throw new Error(`Failed to fetch schedule: ${error.message}`);
+  const endpoint = buildApiEndpoint(`appointments/daily-schedule/${date}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: { date, professionals: [] },
+      transformData: (data) => data
     }
-  }
+  );
 };
 
 /**
@@ -134,18 +122,15 @@ export const getDailySchedule = async (date) => {
  * @returns {Promise<Object>} Created professional object
  */
 export const createProfessional = async (professionalData) => {
-  try {
-    const response = await apiClient.post('/api/v1/professionals', professionalData);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to create professional');
-    } else if (error.request) {
-      throw new Error('Failed to create professional: No response from server');
-    } else {
-      throw new Error(`Failed to create professional: ${error.message}`);
+  const endpoint = buildApiEndpoint('professionals');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, professionalData),
+    {
+      defaultValue: null,
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-  }
+  );
 };
 
 /**
@@ -155,16 +140,13 @@ export const createProfessional = async (professionalData) => {
  * @returns {Promise<Object>} Updated professional object
  */
 export const updateProfessional = async (professionalId, updateData) => {
-  try {
-    const response = await apiClient.put(`/api/v1/professionals/${professionalId}`, updateData);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data.detail || 'Failed to update professional');
-    } else if (error.request) {
-      throw new Error('Failed to update professional: No response from server');
-    } else {
-      throw new Error(`Failed to update professional: ${error.message}`);
+  const endpoint = buildApiEndpoint(`professionals/${professionalId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.put(endpoint, updateData),
+    {
+      defaultValue: null,
+      transformData: (data) => transformEntityWithImages(data, PROFESSIONAL_IMAGE_FIELDS)
     }
-  }
+  );
 };

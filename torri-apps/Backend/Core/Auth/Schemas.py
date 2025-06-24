@@ -1,8 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from uuid import UUID
 from .constants import UserRole, HairType, Gender # Import Gender
 from datetime import date # Import date
 from typing import Optional
+import re
 
 class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr
@@ -83,12 +84,33 @@ class TokenData(BaseModel): # Represents data to be encoded in the token
     # Add any other data you want to store in the token payload, e.g., user_id
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email_or_phone: str
     password: str
     # tenant_id was previously passed via header, now removed system-wide.
+    
+    @field_validator('email_or_phone')
+    def validate_email_or_phone(cls, v):
+        # Check if it's a valid email
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        # Check if it's a valid phone (digits, optional + at start, spaces, dashes, parentheses)
+        phone_pattern = r'^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$'
+        
+        if not (re.match(email_pattern, v) or re.match(phone_pattern, v)):
+            raise ValueError('Must be a valid email or phone number')
+        return v
 
-# EnhancedLoginRequest schema removed as the /enhanced-login route was deleted
-# class EnhancedLoginRequest(BaseModel): # Consider if this schema is still needed or can be merged/simplified
-#     email: EmailStr
-#     password: str
-#     # tenant_id removed
+# Public Registration Request Schema
+class PublicRegistrationRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    phone_number: Optional[str] = None
+    password: str
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
+    
+    @field_validator('password')
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters long')
+        return v

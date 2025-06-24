@@ -1,6 +1,6 @@
 from uuid import uuid4
 from sqlalchemy import Column, String, Integer, Enum, Date, Time, ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from Config.Database import Base # Base for tenant-specific models
@@ -14,8 +14,8 @@ class ProfessionalAvailability(Base):
     __tablename__ = "professional_availability"
     # This table stores recurring weekly availability for professionals.
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
@@ -36,10 +36,10 @@ class ProfessionalBreak(Base):
     __tablename__ = "professional_breaks"
     # This table stores recurring breaks within a professional's availability.
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # Cross-schema foreign keys are handled at application level for multi-tenant isolation
-    tenant_id = Column(CHAR(36), nullable=False, index=True) # This field might be redundant now if users table is global
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True) # This field might be redundant now if users table is global
 
     day_of_week = Column(Enum(DayOfWeek, values_callable=lambda obj: [e.value for e in obj]), nullable=False) # Monday=0, Sunday=6
     start_time = Column(Time, nullable=False) # Format: HH:MM:SS
@@ -61,8 +61,8 @@ class ProfessionalBlockedTime(Base):
     __tablename__ = "professional_blocked_time"
     # This table stores specific one-off blocked times or entire days off for professionals.
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid4()))
-    professional_user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     blocked_date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False) # Nullable if block_type is DAY_OFF
