@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Convert CORS_ORIGINS string to list, with environment-aware defaults"""
-        origins = self.CORS_ORIGINS.split(",")
+        # Support both comma and semicolon separators
+        if ";" in self.CORS_ORIGINS:
+            origins = self.CORS_ORIGINS.split(";")
+        else:
+            origins = self.CORS_ORIGINS.split(",")
         
         # Auto-detect Codespaces environment and add appropriate origins
         if self.is_codespaces:
