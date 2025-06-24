@@ -13,3 +13,4 @@ redis==5.0.1
 celery==5.3.4
 pydantic-settings
 click==8.1.7
+google-cloud-storage==2.10.0
