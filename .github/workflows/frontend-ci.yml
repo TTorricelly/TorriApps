@@ -63,24 +63,24 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
     
-    - name: Configure Docker for GCR
-      run: gcloud auth configure-docker gcr.io
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
     
     - name: Build Docker image
       run: |
         cd torri-apps/Web-admin
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:${{ github.sha }} .
-        docker tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:${{ github.sha }} gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:latest
+        docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:${{ github.sha }} .
+        docker tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:${{ github.sha }} us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:latest
     
     - name: Push Docker image
       run: |
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:${{ github.sha }}
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:latest
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:${{ github.sha }}
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:latest
     
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy torri-frontend \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/torri-frontend:${{ github.sha }} \
+          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-frontend:${{ github.sha }} \
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated \
