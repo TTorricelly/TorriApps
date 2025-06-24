@@ -98,4 +98,5 @@ jobs:
           --memory 1Gi \
           --cpu 1 \
           --min-instances 0 \
-          --max-instances 10
+          --max-instances 10 \
+          --timeout 900

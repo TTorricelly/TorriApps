@@ -24,5 +24,8 @@ EXPOSE 8080
 ENV PORT=8080
 ENV PYTHONPATH=/app
 
-# Run the application
-CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+# Add startup timeout settings
+ENV UVICORN_TIMEOUT_KEEP_ALIVE=120
+
+# Run the application with extended timeout
+CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120
