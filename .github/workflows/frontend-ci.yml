@@ -42,12 +42,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: frontend-build-files
-        path: torri-apps/Web-admin/build/
+        path: torri-apps/Web-admin/dist/
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     
     steps:
     - uses: actions/checkout@v4
