@@ -25,7 +25,23 @@ engine = create_engine(
     echo=settings.debug,         # Show SQL in debug mode
     connect_args=connect_args
 )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Set the PostgreSQL search_path to use the specified schema
+from sqlalchemy import event, text
+@event.listens_for(engine, "connect")
+def set_search_path(dbapi_connection, connection_record):
+    with dbapi_connection.cursor() as cursor:
+        # Set search path for this connection
+        cursor.execute(f"SET search_path TO {settings.default_schema_name}, public")
+        print(f"Set search_path to: {settings.default_schema_name}, public")
+
+# Set search path for each engine checkout
+@event.listens_for(engine, "checkout")
+def set_search_path_on_checkout(dbapi_connection, connection_record, connection_proxy):
+    with dbapi_connection.cursor() as cursor:
+        cursor.execute(f"SET search_path TO {settings.default_schema_name}, public")
 
 # Single Base for all models - no need for separate Public/Tenant bases
 Base = declarative_base()
