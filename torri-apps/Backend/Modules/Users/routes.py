@@ -1,7 +1,7 @@
 from typing import List, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response # Added Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query # Added Response and Query
 from sqlalchemy.orm import Session
 
 # Schemas
@@ -111,14 +111,20 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
     # GESTOR and ATENDENTE can list all users (for client management).
     current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))], # Updated type
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    role: str = Query(None, description="Filter users by role (e.g., CLIENTE)")
 ):
     """
-    Retrieve all users.
+    Retrieve all users, optionally filtered by role.
     """
     users = user_services.get_users( # Renamed service call, tenant_id argument removed
         db, skip=skip, limit=limit
     )
+    
+    # Filter by role if specified
+    if role:
+        users = [user for user in users if user.role == role]
+    
     return users
 
 @router.get("/{user_id}", response_model=UserSchema) # Updated schema

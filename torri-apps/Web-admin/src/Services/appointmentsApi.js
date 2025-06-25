@@ -21,7 +21,7 @@ export const getDailySchedule = async (date) => {
   try {
     // The backend endpoint is /api/v1/appointments/daily-schedule/{schedule_date}
     // apiClient should be configured with the base URL (e.g., http://localhost:8000/api/v1)
-    const response = await apiClient.get(`/appointments/daily-schedule/${dateString}`);
+    const response = await apiClient.get(`/api/v1/appointments/daily-schedule/${dateString}`);
 
     // The backend response is expected to be DailyScheduleResponseSchema:
     // { date: "YYYY-MM-DD", professionals_schedule: List[ProfessionalScheduleSchema] }
