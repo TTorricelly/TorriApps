@@ -1,7 +1,13 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import StaticPool
+import time
+import logging
 from .Settings import settings
+
+logger = logging.getLogger(__name__)
 
 # SIMPLIFIED: Single schema configuration - no complex multi-tenant pool management needed
 # PostgreSQL connection configuration for Codespaces
@@ -10,18 +16,24 @@ if settings.database_url.startswith('postgresql://'):
     # PostgreSQL specific settings for Supabase in Codespaces
     connect_args = {
         "sslmode": "require",  # Required for Supabase
-        "connect_timeout": 30,  # Longer timeout for Codespaces
+        "connect_timeout": 300,  # 5 minutes timeout for very unreliable connections
         "application_name": "torriapps-backend",
+        "keepalives_idle": 60,   # Start keepalives after 1 minute
+        "keepalives_interval": 5,  # Check every 5 seconds
+        "keepalives_count": 20,  # 20 retry attempts
+        "tcp_user_timeout": 300000,  # 5 minutes TCP timeout (milliseconds)
+        "options": "-c statement_timeout=300000",  # 5 minute statement timeout
     }
 
+# Create engine with maximum resilience settings
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,          # Validates connections before use
-    pool_recycle=3600,           # Recycle connections every hour
-    pool_size=10,                # Reduced pool size for single schema
-    max_overflow=15,             # Reduced overflow for single schema
+    pool_recycle=900,            # Recycle connections every 15 minutes
+    pool_size=3,                 # Very small pool size
+    max_overflow=5,              # Small overflow
     pool_reset_on_return='commit',  # Reset connection state on return
-    pool_timeout=30,             # Max wait time for connection from pool
+    pool_timeout=180,            # 3 minutes wait time for connection from pool
     echo=settings.debug,         # Show SQL in debug mode
     connect_args=connect_args
 )
@@ -54,10 +66,26 @@ BasePublic = Base
 
 
 def get_db():
-    """Yield a new database session for request handling."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Yield a new database session for request handling with retry logic."""
+    max_retries = 3
+    retry_delay = 1  # Start with 1 second delay
+    
+    for attempt in range(max_retries):
+        try:
+            db = SessionLocal()
+            # Test the connection immediately
+            db.execute("SELECT 1")
+            try:
+                yield db
+                break  # Success, exit retry loop
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt == max_retries - 1:
+                # Last attempt failed, re-raise the exception
+                raise
+            # Wait before retrying with exponential backoff
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Double the delay for next attempt
 

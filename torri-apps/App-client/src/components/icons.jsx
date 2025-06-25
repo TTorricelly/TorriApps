@@ -1,0 +1,46 @@
+// Icon components using Lucide React icons for web
+import { 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Phone,
+  Loader2,
+  User,
+  Calendar,
+  Clock,
+  MapPin,
+  Home,
+  Settings,
+  LogOut,
+  Search,
+  Plus,
+  Minus,
+  X,
+  Check,
+  AlertCircle,
+  Info
+} from 'lucide-react'
+
+export {
+  Mail,
+  Lock, 
+  Eye,
+  EyeOff,
+  Phone,
+  Loader2,
+  User,
+  Calendar,
+  Clock,
+  MapPin,
+  Home,
+  Settings,
+  LogOut,
+  Search,
+  Plus,
+  Minus,
+  X,
+  Check,
+  AlertCircle,
+  Info
+}

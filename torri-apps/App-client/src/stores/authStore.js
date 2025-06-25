@@ -1,0 +1,168 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { jwtDecode } from 'jwt-decode'
+
+export const useAuthStore = create(
+  persist(
+    (set, get) => ({
+      // State
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+
+      // Actions
+      login: async (tokenData) => {
+        try {
+          set({ isLoading: true })
+          
+          // Decode JWT token using proper library
+          const decodedToken = jwtDecode(tokenData.access_token);
+          
+          // Check token expiry
+          if (decodedToken.exp * 1000 <= Date.now()) {
+            set({ isLoading: false })
+            throw new Error('Token has expired')
+          }
+          
+          // Standardize user data structure to match mobile app
+          const user = {
+            id: decodedToken.user_id || decodedToken.sub,
+            email: decodedToken.sub || decodedToken.email, // 'sub' is typically the email
+            fullName: decodedToken.full_name || decodedToken.name || 'User',
+            role: decodedToken.role || 'client',
+            isActive: decodedToken.is_active !== false // Default to true if not specified
+          }
+
+          // Store token in the standardized location for API client
+          localStorage.setItem('authToken', tokenData.access_token);
+
+          set({
+            user,
+            token: tokenData.access_token,
+            isAuthenticated: true,
+            isLoading: false
+          })
+
+          return user
+        } catch (error) {
+          set({ isLoading: false })
+          console.error("Failed to decode token or store data:", error);
+          throw new Error('Failed to process login token')
+        }
+      },
+
+      logout: () => {
+        // Clear both storage locations
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('torri-auth-storage');
+        
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false
+        })
+      },
+
+      setLoading: (loading) => {
+        set({ isLoading: loading })
+      },
+
+      // Helper to get current user
+      getCurrentUser: () => get().user,
+      
+      // Helper to get auth token
+      getToken: () => get().token,
+
+      // Validate stored token on app startup
+      validateStoredToken: () => {
+        const state = get();
+        let token = state.token;
+        
+        // If no token in state, try to get from localStorage
+        if (!token) {
+          token = localStorage.getItem('authToken');
+          if (!token) {
+            // Try fallback location
+            const authStorage = localStorage.getItem('torri-auth-storage');
+            if (authStorage) {
+              try {
+                const parsedStorage = JSON.parse(authStorage);
+                token = parsedStorage.state?.token;
+              } catch (error) {
+                console.warn('Failed to parse auth storage:', error);
+              }
+            }
+          }
+        }
+        
+        if (!token) {
+          return false;
+        }
+
+        try {
+          const decodedToken = jwtDecode(token);
+          
+          // Check if token is expired
+          if (decodedToken.exp * 1000 <= Date.now()) {
+            console.log('[AuthStore] Token expired, logging out');
+            state.logout();
+            return false;
+          }
+          
+          // If token is valid but not in state, restore it
+          if (!state.token) {
+            console.log('[AuthStore] Restoring valid token to state');
+            const user = {
+              id: decodedToken.user_id || decodedToken.sub,
+              email: decodedToken.sub || decodedToken.email,
+              fullName: decodedToken.full_name || decodedToken.name || 'User',
+              role: decodedToken.role || 'client',
+              isActive: decodedToken.is_active !== false
+            };
+            
+            // Ensure token is in standardized location
+            localStorage.setItem('authToken', token);
+            
+            set({
+              user,
+              token,
+              isAuthenticated: true,
+              isLoading: false
+            });
+          }
+          
+          return true;
+        } catch (error) {
+          console.error('[AuthStore] Invalid token, logging out:', error);
+          state.logout();
+          return false;
+        }
+      },
+
+      // Update user profile data (similar to mobile app)
+      setProfile: (profileData) => {
+        const currentUser = get().user;
+        
+        const updatedUser = {
+          ...currentUser,
+          ...profileData,
+          // Ensure essential fields from JWT are not overwritten
+          id: profileData.id || currentUser?.id,
+          email: profileData.email || currentUser?.email,
+        };
+
+        set({ user: updatedUser });
+      },
+    }),
+    {
+      name: 'torri-auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+)
