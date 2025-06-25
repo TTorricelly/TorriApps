@@ -16,7 +16,7 @@ if settings.database_url.startswith('postgresql://'):
     # PostgreSQL specific settings for Supabase in Codespaces
     connect_args = {
         "sslmode": "require",  # Required for Supabase
-        "connect_timeout": 300,  # 5 minutes timeout for very unreliable connections
+        "connect_timeout": 60,   # 60 seconds timeout - safe for Supabase wake-up
         "application_name": "torriapps-backend",
         "keepalives_idle": 60,   # Start keepalives after 1 minute
         "keepalives_interval": 5,  # Check every 5 seconds
