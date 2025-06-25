@@ -4,7 +4,8 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ServicesPage from './pages/ServicesPage'
 import AppointmentsPage from './pages/AppointmentsPage'
-import ProfilePage from './pages/ProfilePage'
+import ProfilePage from './pages/ProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
 import SchedulingWizardPage from './pages/SchedulingWizardPage'
 import { useAuthStore } from './stores/authStore'
 
@@ -50,6 +51,11 @@ function App() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile/edit" element={
+          <ProtectedRoute>
+            <EditProfilePage />
           </ProtectedRoute>
         } />
         <Route path="/scheduling-wizard" element={
