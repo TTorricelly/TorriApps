@@ -26,7 +26,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd torri-apps/App-client
-        npm ci
+        npm ci --include=dev
     
     - name: Run linting
       run: |
