@@ -155,6 +155,28 @@ export const useAuthStore = create(
 
         set({ user: updatedUser });
       },
+
+      // Role-based helper functions
+      isClient: () => {
+        const user = get().user;
+        return user?.role === 'client';
+      },
+
+      isProfessional: () => {
+        const user = get().user;
+        return ['professional', 'receptionist', 'manager', 'admin'].includes(user?.role);
+      },
+
+      hasRole: (roles) => {
+        const user = get().user;
+        if (!user) return false;
+        return Array.isArray(roles) ? roles.includes(user.role) : user.role === roles;
+      },
+
+      getUserRole: () => {
+        const user = get().user;
+        return user?.role || 'client';
+      },
     }),
     {
       name: 'torri-auth-storage',
