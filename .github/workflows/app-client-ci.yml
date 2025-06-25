@@ -1,0 +1,92 @@
+name: App Client PWA CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'torri-apps/App-client/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'torri-apps/App-client/**' ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: torri-apps/App-client/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd torri-apps/App-client
+        npm ci
+    
+    - name: Run linting
+      run: |
+        cd torri-apps/App-client
+        npm run lint
+    
+    - name: Build PWA application
+      run: |
+        cd torri-apps/App-client
+        VITE_API_BASE_URL=https://torri-backend-419996576894.us-central1.run.app npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-client-build-files
+        path: torri-apps/App-client/dist/
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
+    
+    - name: Build Docker image
+      run: |
+        cd torri-apps/App-client
+        docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:${{ github.sha }} .
+        docker tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:${{ github.sha }} us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:latest
+    
+    - name: Push Docker image
+      run: |
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:${{ github.sha }}
+        docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:latest
+    
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy torri-app-client \
+          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/torri-apps/torri-app-client:${{ github.sha }} \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated \
+          --port 8080 \
+          --memory 512Mi \
+          --cpu 1 \
+          --min-instances 0 \
+          --max-instances 5 \
+          --timeout 300 \
+          --set-env-vars VITE_API_BASE_URL=https://torri-backend-419996576894.us-central1.run.app

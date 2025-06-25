@@ -75,7 +75,7 @@ export default defineConfig({
         target: 'http://192.168.1.7:8000',
         changeOrigin: true,
         secure: false,
-        configure: (proxy, options) => {
+        configure: (_proxy, options) => {
           console.log('🔗 API Proxy configured - target:', options.target);
         }
       },
@@ -83,7 +83,7 @@ export default defineConfig({
         target: 'http://192.168.1.7:8000',
         changeOrigin: true,
         secure: false,
-        configure: (proxy, options) => {
+        configure: (_proxy, options) => {
           console.log('🔗 Uploads proxy configured - target:', options.target);
         }
       },
@@ -106,8 +106,10 @@ export default defineConfig({
   },
   define: {
     // Make environment variables available to the app
-    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development')
+    __DEV__: JSON.stringify(process?.env?.NODE_ENV === 'development'),
+    __PROD__: JSON.stringify(process?.env?.NODE_ENV === 'production')
   },
+  envDir: '.',
   build: {
     outDir: 'dist',
     sourcemap: true

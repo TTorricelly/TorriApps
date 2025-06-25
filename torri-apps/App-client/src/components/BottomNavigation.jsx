@@ -4,7 +4,6 @@
  * Only UI components are adapted for web - all logic preserved
  */
 
-import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, ShoppingCart, Calendar, User } from 'lucide-react';
 import useServicesStore from '../stores/servicesStore';

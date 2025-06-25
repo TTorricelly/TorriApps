@@ -87,7 +87,7 @@ export const normalizeEmailOrPhone = (input) => {
   if (!input) return input;
   
   // Import here to avoid circular dependencies
-  const { normalizeEmailOrPhone: normalize } = require('./phoneUtils');
+  const { normalizeEmailOrPhone: normalize } = import('./phoneUtils');
   return normalize(input);
 };
 
@@ -143,7 +143,7 @@ export const createCrudApi = (config) => {
     getAll: async (params = {}) => {
       return withApiErrorHandling(
         () => {
-          const apiClient = require('../config/api').default;
+          const apiClient = import('../config/api').default;
           return apiClient.get(apiEndpoint, { params });
         },
         {
@@ -160,7 +160,7 @@ export const createCrudApi = (config) => {
     getById: async (id) => {
       return withApiErrorHandling(
         () => {
-          const apiClient = require('../config/api').default;
+          const apiClient = import('../config/api').default;
           return apiClient.get(`${apiEndpoint}/${id}`);
         },
         {
@@ -174,7 +174,7 @@ export const createCrudApi = (config) => {
     create: async (data) => {
       return withApiErrorHandling(
         () => {
-          const apiClient = require('../config/api').default;
+          const apiClient = import('../config/api').default;
           return apiClient.post(apiEndpoint, data);
         },
         {
@@ -188,7 +188,7 @@ export const createCrudApi = (config) => {
     update: async (id, data) => {
       return withApiErrorHandling(
         () => {
-          const apiClient = require('../config/api').default;
+          const apiClient = import('../config/api').default;
           return apiClient.put(`${apiEndpoint}/${id}`, data);
         },
         {
@@ -202,7 +202,7 @@ export const createCrudApi = (config) => {
     delete: async (id) => {
       return withApiErrorHandling(
         () => {
-          const apiClient = require('../config/api').default;
+          const apiClient = import('../config/api').default;
           return apiClient.delete(`${apiEndpoint}/${id}`);
         },
         {

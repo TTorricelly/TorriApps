@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ServicesPage from './pages/ServicesPage'
 import AppointmentsPage from './pages/AppointmentsPage'
-import ProfilePage from './pages/ProfilePage';
-import EditProfilePage from './pages/EditProfilePage';
+import ProfilePage from './pages/ProfilePage'
+import EditProfilePage from './pages/EditProfilePage'
 import SchedulingWizardPage from './pages/SchedulingWizardPage'
 import { useAuthStore } from './stores/authStore'
 

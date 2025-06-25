@@ -107,7 +107,7 @@ export const formatPhone = (phone) => {
   if (!phone || typeof phone !== 'string') return phone;
   
   // Import phone utils to avoid circular dependency
-  const { formatPhoneForDisplay } = require('./phoneUtils');
+  const { formatPhoneForDisplay } = import('./phoneUtils');
   return formatPhoneForDisplay(phone);
 };
 

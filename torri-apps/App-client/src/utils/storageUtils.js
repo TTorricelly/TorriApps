@@ -169,7 +169,7 @@ export const getStorageSize = (type = STORAGE_TYPES.LOCAL) => {
     
     let totalSize = 0;
     for (const key in storage) {
-      if (storage.hasOwnProperty(key)) {
+      if (storage.hasOwnProperty.call(obj, key)) {
         totalSize += storage[key].length + key.length;
       }
     }
