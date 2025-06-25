@@ -23,43 +23,25 @@ RUN npm run build
 # Production stage with Nginx
 FROM nginx:alpine
 
+# Remove default nginx configuration
+RUN rm /etc/nginx/conf.d/default.conf
+
 # Copy custom nginx configuration
 COPY <<EOF /etc/nginx/conf.d/default.conf
 server {
     listen 8080;
-    server_name localhost;
+    server_name _;
     
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private must-revalidate no_last_modified no_etag auth;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
-    add_header Referrer-Policy "strict-origin-when-cross-origin";
-
-    # PWA specific headers
-    add_header Cache-Control "public, max-age=31536000" always;
     
     # Root location
     location / {
         root /usr/share/nginx/html;
-        index index.html index.htm;
+        index index.html;
         try_files \$uri \$uri/ /index.html;
-        
-        # PWA manifest and service worker cache control
-        location ~* \.(manifest\.json|sw\.js|workbox-.*.js)\$ {
-            add_header Cache-Control "public, max-age=0, must-revalidate";
-        }
-        
-        # Static assets cache control
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
-            add_header Cache-Control "public, max-age=31536000, immutable";
-        }
     }
 
     # Health check endpoint
@@ -73,15 +55,6 @@ EOF
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Set permissions for nginx user (nginx user already exists in nginx:alpine)
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d
-
-# Switch to non-root user
-USER nginx
 
 # Expose port 8080 (Cloud Run requirement)
 EXPOSE 8080
