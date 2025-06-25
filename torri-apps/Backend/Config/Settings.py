@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     SERVER_HOST: str = "http://localhost:8000"
     
     # CORS configuration - configurable origins
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081,http://localhost:4200"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081,http://localhost:4200,https://torri-frontend-419996576894.us-central1.run.app,https://torri-app-client-419996576894.us-central1.run.app"
     
     @property
     def cors_origins_list(self) -> List[str]:
