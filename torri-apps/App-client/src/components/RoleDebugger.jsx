@@ -23,7 +23,7 @@ const RoleDebugger = () => {
     setProfile({ role: newRole });
     
     // Navigate to appropriate dashboard based on new role
-    if (['professional', 'receptionist', 'manager', 'admin'].includes(newRole)) {
+    if (['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(newRole)) {
       navigate('/professional/dashboard');
     } else {
       navigate('/dashboard');
@@ -59,6 +59,11 @@ const RoleDebugger = () => {
             <p className="text-xs text-gray-600">
               Current Role: <span className="font-medium">{getUserRole()}</span>
             </p>
+            {user?.originalRole && (
+              <p className="text-xs text-gray-500">
+                Original Role: <span className="font-medium">{user.originalRole}</span>
+              </p>
+            )}
             <p className="text-xs text-gray-600">
               Is Professional: <span className="font-medium">{isProfessional() ? 'Yes' : 'No'}</span>
             </p>
@@ -76,44 +81,44 @@ const RoleDebugger = () => {
               <p className="text-xs text-gray-500 mb-2">Switch Role:</p>
               <div className="grid grid-cols-2 gap-1">
             <button
-              onClick={() => switchRole('client')}
+              onClick={() => switchRole('CLIENTE')}
               className={`text-xs px-2 py-1 rounded ${
-                user?.role === 'client' 
+                user?.role === 'CLIENTE' 
                   ? 'bg-blue-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Client
+              Cliente
             </button>
             <button
-              onClick={() => switchRole('professional')}
+              onClick={() => switchRole('PROFISSIONAL')}
               className={`text-xs px-2 py-1 rounded ${
-                user?.role === 'professional' 
+                user?.role === 'PROFISSIONAL' 
                   ? 'bg-pink-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Professional
+              Profissional
             </button>
             <button
-              onClick={() => switchRole('receptionist')}
+              onClick={() => switchRole('ATENDENTE')}
               className={`text-xs px-2 py-1 rounded ${
-                user?.role === 'receptionist' 
+                user?.role === 'ATENDENTE' 
                   ? 'bg-green-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Receptionist
+              Atendente
             </button>
             <button
-              onClick={() => switchRole('manager')}
+              onClick={() => switchRole('GESTOR')}
               className={`text-xs px-2 py-1 rounded ${
-                user?.role === 'manager' 
+                user?.role === 'GESTOR' 
                   ? 'bg-purple-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Manager
+              Gestor
             </button>
               </div>
             </div>

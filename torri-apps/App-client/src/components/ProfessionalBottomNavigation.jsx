@@ -26,6 +26,13 @@ const ProfessionalBottomNavigation = () => {
       icon: LayoutDashboard,
       path: '/professional/dashboard',
       isActive: location.pathname === '/professional/dashboard'
+    },
+    {
+      id: 'agenda',
+      label: 'Agenda',
+      icon: Calendar,
+      path: '/professional/agenda',
+      isActive: location.pathname === '/professional/agenda'
     }
     // Future expansion items (commented for now):
     // {

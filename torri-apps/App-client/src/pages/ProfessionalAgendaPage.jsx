@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
+import ClientDetailsModal from '../components/ClientDetailsModal';
 import { 
   Calendar, 
   ChevronLeft,
@@ -50,6 +51,10 @@ const ProfessionalAgendaPage = () => {
   const [calendarData, setCalendarData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [professionalsLoading, setProfessionalsLoading] = useState(true);
+  
+  // Client details modal state
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   // Professionals data from API
   const [professionals, setProfessionals] = useState([]);
@@ -302,6 +307,18 @@ const ProfessionalAgendaPage = () => {
   const selectDate = (date) => {
     setSelectedDate(date);
     setShowCalendar(false);
+  };
+
+  // Handle appointment card click
+  const handleAppointmentClick = (appointmentId) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowClientModal(true);
+  };
+
+  // Handle modal close
+  const handleCloseClientModal = () => {
+    setShowClientModal(false);
+    setSelectedAppointmentId(null);
   };
 
   // Get professional initials for avatar fallback
@@ -590,9 +607,10 @@ const ProfessionalAgendaPage = () => {
     const isShort = appointment.duration <= 30; // 30 minutes or less
     
     return (
-      <div
+      <button
         key={appointment.id}
-        className={`absolute rounded-lg border-2 ${isShort ? 'p-1' : 'p-2'} ${getStatusColor(appointment.status)}`}
+        onClick={() => handleAppointmentClick(appointment.id)}
+        className={`absolute rounded-lg border-2 ${isShort ? 'p-1' : 'p-2'} ${getStatusColor(appointment.status)} cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105 text-left w-full`}
         style={{
           top: `${position * 3}rem`,
           height: height,
@@ -630,7 +648,7 @@ const ProfessionalAgendaPage = () => {
             </div>
           </div>
         )}
-      </div>
+      </button>
     );
   };
 
@@ -761,6 +779,13 @@ const ProfessionalAgendaPage = () => {
       {renderFAB()}
       
       <ProfessionalBottomNavigation />
+      
+      {/* Client Details Modal */}
+      <ClientDetailsModal
+        isOpen={showClientModal}
+        onClose={handleCloseClientModal}
+        appointmentId={selectedAppointmentId}
+      />
     </div>
   );
 };

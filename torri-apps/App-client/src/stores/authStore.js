@@ -25,12 +25,25 @@ export const useAuthStore = create(
             throw new Error('Token has expired')
           }
           
+          // Map backend roles to frontend roles for consistency
+          const roleMapping = {
+            'manager': 'GESTOR',
+            'admin': 'GESTOR', 
+            'receptionist': 'ATENDENTE',
+            'professional': 'PROFISSIONAL',
+            'client': 'CLIENTE'
+          };
+          
+          const backendRole = decodedToken.role || 'client';
+          const mappedRole = roleMapping[backendRole] || backendRole;
+          
           // Standardize user data structure to match mobile app
           const user = {
             id: decodedToken.user_id || decodedToken.sub,
             email: decodedToken.sub || decodedToken.email, // 'sub' is typically the email
             fullName: decodedToken.full_name || decodedToken.name || 'User',
-            role: decodedToken.role || 'client',
+            role: mappedRole,
+            originalRole: backendRole, // Keep original for debugging
             isActive: decodedToken.is_active !== false // Default to true if not specified
           }
 
@@ -114,11 +127,25 @@ export const useAuthStore = create(
           // If token is valid but not in state, restore it
           if (!state.token) {
             console.log('[AuthStore] Restoring valid token to state');
+            
+            // Apply the same role mapping as in login
+            const roleMapping = {
+              'manager': 'GESTOR',
+              'admin': 'GESTOR', 
+              'receptionist': 'ATENDENTE',
+              'professional': 'PROFISSIONAL',
+              'client': 'CLIENTE'
+            };
+            
+            const backendRole = decodedToken.role || 'client';
+            const mappedRole = roleMapping[backendRole] || backendRole;
+            
             const user = {
               id: decodedToken.user_id || decodedToken.sub,
               email: decodedToken.sub || decodedToken.email,
               fullName: decodedToken.full_name || decodedToken.name || 'User',
-              role: decodedToken.role || 'client',
+              role: mappedRole,
+              originalRole: backendRole,
               isActive: decodedToken.is_active !== false
             };
             
@@ -159,12 +186,12 @@ export const useAuthStore = create(
       // Role-based helper functions
       isClient: () => {
         const user = get().user;
-        return user?.role === 'client';
+        return user?.role === 'CLIENTE';
       },
 
       isProfessional: () => {
         const user = get().user;
-        return ['professional', 'receptionist', 'manager', 'admin'].includes(user?.role);
+        return ['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(user?.role);
       },
 
       hasRole: (roles) => {
@@ -175,7 +202,7 @@ export const useAuthStore = create(
 
       getUserRole: () => {
         const user = get().user;
-        return user?.role || 'client';
+        return user?.role || 'CLIENTE';
       },
     }),
     {

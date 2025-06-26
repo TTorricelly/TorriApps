@@ -14,7 +14,7 @@ import { useAuthStore } from './stores/authStore'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
-  return ['professional', 'receptionist', 'manager', 'admin'].includes(role);
+  return ['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(role);
 }
 
 // Protected Route Component
@@ -67,34 +67,34 @@ function App() {
         
         {/* Client Routes - Only accessible by clients */}
         <Route path="/dashboard" element={
-          <RoleBasedRoute allowedRoles={['client']}>
+          <RoleBasedRoute allowedRoles={['CLIENTE']}>
             <DashboardPage />
           </RoleBasedRoute>
         } />
         <Route path="/services" element={
-          <RoleBasedRoute allowedRoles={['client']}>
+          <RoleBasedRoute allowedRoles={['CLIENTE']}>
             <ServicesPage />
           </RoleBasedRoute>
         } />
         <Route path="/appointments" element={
-          <RoleBasedRoute allowedRoles={['client']}>
+          <RoleBasedRoute allowedRoles={['CLIENTE']}>
             <AppointmentsPage />
           </RoleBasedRoute>
         } />
         <Route path="/scheduling-wizard" element={
-          <RoleBasedRoute allowedRoles={['client']}>
+          <RoleBasedRoute allowedRoles={['CLIENTE']}>
             <SchedulingWizardPage />
           </RoleBasedRoute>
         } />
         
         {/* Professional Routes - Only accessible by salon staff */}
         <Route path="/professional/dashboard" element={
-          <RoleBasedRoute allowedRoles={['professional', 'receptionist', 'manager', 'admin']}>
+          <RoleBasedRoute allowedRoles={['PROFISSIONAL', 'ATENDENTE', 'GESTOR']}>
             <ProfessionalDashboardPage />
           </RoleBasedRoute>
         } />
         <Route path="/professional/agenda" element={
-          <RoleBasedRoute allowedRoles={['professional', 'receptionist', 'manager', 'admin']}>
+          <RoleBasedRoute allowedRoles={['PROFISSIONAL', 'ATENDENTE', 'GESTOR']}>
             <ProfessionalAgendaPage />
           </RoleBasedRoute>
         } />

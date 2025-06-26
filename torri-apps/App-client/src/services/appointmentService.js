@@ -85,3 +85,61 @@ export const cancelAppointment = async (appointmentId) => {
     }
   );
 };
+
+/**
+ * Fetches detailed appointment information including client details
+ * @param {string} appointmentId - The ID of the appointment
+ * @returns {Promise<Object>} Detailed appointment data with client info
+ */
+export const getAppointmentDetails = async (appointmentId) => {
+  const endpoint = buildApiEndpoint(`appointments/${appointmentId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Fetches client information by client ID (using users endpoint since clients are users with CLIENTE role)
+ * @param {string} clientId - The ID of the client
+ * @returns {Promise<Object>} Client profile data
+ */
+export const getClientInfo = async (clientId) => {
+  const endpoint = buildApiEndpoint(`users/${clientId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Fetches client appointment history
+ * @param {string} clientId - The ID of the client
+ * @returns {Promise<Array>} Array of client's appointment history
+ */
+export const getClientAppointmentHistory = async (clientId) => {
+  const endpoint = buildApiEndpoint(`appointments`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint, {
+      params: {
+        client_id: clientId
+      }
+    }),
+    {
+      defaultValue: [],
+      transformData: (data) => Array.isArray(data) ? data : [],
+      logErrors: true
+    }
+  );
+};
