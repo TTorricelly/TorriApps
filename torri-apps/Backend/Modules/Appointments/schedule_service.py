@@ -73,7 +73,7 @@ def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleRe
             appointment_details.append(
                 AppointmentDetailSchema(
                     id=appt.id,
-                    client_name=client.full_name if client and client.full_name else (client.email if client else "Cliente Desconhecido"),
+                    client_name=client.full_name if client and client.full_name else (client.email.split('@')[0].title() if client and client.email else "Cliente Desconhecido"),
                     start_time=appointment_start_datetime,
                     duration_minutes=duration,
                     services=service_tags,

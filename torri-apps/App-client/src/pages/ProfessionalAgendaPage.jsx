@@ -15,21 +15,30 @@ import {
   User,
   Clock,
   Plus,
-  Loader2
+  Loader2,
+  CalendarCheck,
+  CheckCircle,
+  PlayCircle,
+  XCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 // Import API services
 import { 
   getCalendarAppointments, 
   getDailySchedule,
+  getCalendarAvailability,
   processCalendarData,
   getAppointmentDensity,
   formatDateForApi,
   getMonthRange
 } from '../services/calendarService';
+import { getAllProfessionals } from '../services/professionalService';
+import { useAuthStore } from '../stores/authStore';
 
 const ProfessionalAgendaPage = () => {
   const navigate = useNavigate();
+  const { validateStoredToken, isAuthenticated } = useAuthStore();
   
   // State management
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -38,58 +47,12 @@ const ProfessionalAgendaPage = () => {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isLandscape, setIsLandscape] = useState(false);
   const [scheduleData, setScheduleData] = useState(null);
+  const [calendarData, setCalendarData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [professionalsLoading, setProfessionalsLoading] = useState(true);
 
-  // Mock professionals data (replace with actual API)
-  const [professionals] = useState([
-    {
-      id: '1',
-      name: 'Ana Silva',
-      photoUrl: null,
-      appointments: [
-        {
-          id: '1',
-          clientName: 'Maria Santos',
-          startTime: '09:00',
-          endTime: '10:00',
-          duration: 60,
-          services: ['Corte de Cabelo'],
-          status: 'CONFIRMED'
-        },
-        {
-          id: '2',
-          clientName: 'João Costa',
-          startTime: '14:30',
-          endTime: '16:00',
-          duration: 90,
-          services: ['Escova Progressiva'],
-          status: 'SCHEDULED'
-        }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Carlos Mendes',
-      photoUrl: null,
-      appointments: [
-        {
-          id: '3',
-          clientName: 'Lucas Oliveira',
-          startTime: '10:00',
-          endTime: '11:30',
-          duration: 90,
-          services: ['Corte + Barba'],
-          status: 'IN_PROGRESS'
-        }
-      ]
-    },
-    {
-      id: '3',
-      name: 'Beatriz Lima',
-      photoUrl: null,
-      appointments: []
-    }
-  ]);
+  // Professionals data from API
+  const [professionals, setProfessionals] = useState([]);
 
   // Time slots configuration (30-minute intervals from 8:00 to 20:00)
   const generateTimeSlots = () => {
@@ -105,6 +68,15 @@ const ProfessionalAgendaPage = () => {
 
   const timeSlots = generateTimeSlots();
 
+  // Validate authentication on component mount
+  useEffect(() => {
+    const isValid = validateStoredToken();
+    if (!isValid && !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+  }, [validateStoredToken, isAuthenticated, navigate]);
+
   // Check screen orientation
   useEffect(() => {
     const checkOrientation = () => {
@@ -116,14 +88,91 @@ const ProfessionalAgendaPage = () => {
     return () => window.removeEventListener('resize', checkOrientation);
   }, []);
 
-  // Load schedule data (mock implementation)
+  // Load professionals data
+  useEffect(() => {
+    const loadProfessionals = async () => {
+      try {
+        setProfessionalsLoading(true);
+        const professionalsData = await getAllProfessionals();
+        // Transform data to match expected format
+        const transformedProfessionals = professionalsData.map(prof => ({
+          id: prof.id,
+          name: prof.full_name || prof.name,
+          photoUrl: prof.photo_url || prof.avatar_url || null,
+          appointments: [] // Will be loaded in schedule data
+        }));
+        setProfessionals(transformedProfessionals);
+      } catch (error) {
+        console.error('Error loading professionals:', error);
+        setProfessionals([]);
+      } finally {
+        setProfessionalsLoading(false);
+      }
+    };
+
+    loadProfessionals();
+  }, []);
+
+  // Load schedule data from API
   useEffect(() => {
     const loadSchedule = async () => {
-      setIsLoading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setScheduleData({ professionals });
-      setIsLoading(false);
+      if (professionals.length === 0 || !selectedDate) return;
+      
+      try {
+        setIsLoading(true);
+        const dateString = formatDateForApi(selectedDate);
+        console.log('📅 Loading schedule for date:', dateString);
+        const dailyScheduleData = await getDailySchedule(dateString);
+        console.log('📋 Daily schedule response:', dailyScheduleData);
+        
+        // Merge schedule data with professionals
+        const professionalsWithAppointments = professionals.map(professional => {
+          const professionalSchedule = dailyScheduleData?.professionals_schedule?.find(
+            p => p.professional_id === professional.id
+          );
+          
+          console.log(`📋 Professional ${professional.name} (${professional.id}):`, professionalSchedule);
+          
+          // Debug: Log appointment structure
+          if (professionalSchedule?.appointments?.length > 0) {
+            console.log('📋 Sample appointment data:', professionalSchedule.appointments[0]);
+          }
+          
+          // Transform appointments to match expected format
+          const transformedAppointments = (professionalSchedule?.appointments || []).map(apt => ({
+            id: apt.id,
+            clientName: apt.client_name || 'Cliente',
+            startTime: new Date(apt.start_time).toLocaleTimeString('en-US', { 
+              hour12: false, 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            endTime: apt.end_time ? new Date(apt.end_time).toLocaleTimeString('en-US', { 
+              hour12: false, 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }) : null,
+            duration: apt.duration_minutes || 60,
+            services: (apt.services || []).map(service => 
+              typeof service === 'string' ? service : service.name || service.service_name || 'Serviço'
+            ),
+            status: apt.status || 'SCHEDULED'
+          }));
+          
+          return {
+            ...professional,
+            appointments: transformedAppointments
+          };
+        });
+        
+        setScheduleData({ professionals: professionalsWithAppointments });
+      } catch (error) {
+        console.error('Error loading schedule:', error);
+        // Fallback to professionals without appointments
+        setScheduleData({ professionals });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadSchedule();
@@ -195,33 +244,37 @@ const ProfessionalAgendaPage = () => {
     return isSameDay(date, new Date());
   };
 
+  // Load calendar data for appointment indicators
+  useEffect(() => {
+    // TODO: Implement proper calendar API endpoint in backend
+    // For now, disable calendar indicators and focus on daily appointments
+    setCalendarData({});
+  }, [calendarDate]);
+
   // Check if a date has appointments
   const hasAppointments = (date) => {
-    // This would check against actual appointment data
-    // For now, using mock data - you'd replace this with real API data
-    const dateString = date.toISOString().split('T')[0];
-    
-    // Mock: Add appointments for demo (every 3rd day has appointments)
-    return date.getDate() % 3 === 0;
+    if (!calendarData) return false;
+    const dateString = formatDateForApi(date);
+    return calendarData[dateString]?.appointmentCount > 0;
   };
 
   // Get appointment count for a date
   const getAppointmentCount = (date) => {
-    if (!hasAppointments(date)) return 0;
-    
-    // Mock data - replace with actual appointment counting logic
-    const dayOfMonth = date.getDate();
-    if (dayOfMonth % 7 === 0) return 5; // Heavy day
-    if (dayOfMonth % 5 === 0) return 3; // Medium day
-    return 1; // Light day
+    if (!calendarData) return 0;
+    const dateString = formatDateForApi(date);
+    return calendarData[dateString]?.appointmentCount || 0;
   };
 
   // Get appointment indicator color based on count
   const getAppointmentIndicatorColor = (count) => {
-    if (count === 0) return '';
-    if (count >= 4) return 'bg-red-500'; // Heavy day
-    if (count >= 2) return 'bg-amber-500'; // Medium day
-    return 'bg-green-500'; // Light day
+    const density = getAppointmentDensity(count);
+    const colorMap = {
+      'none': '',
+      'light': 'bg-green-500',
+      'medium': 'bg-amber-500', 
+      'heavy': 'bg-red-500'
+    };
+    return colorMap[density] || '';
   };
 
   // Professional navigation
@@ -281,6 +334,19 @@ const ProfessionalAgendaPage = () => {
       'CANCELLED': 'bg-red-100 border-red-300 text-red-800'
     };
     return statusMap[status] || 'bg-gray-100 border-gray-300 text-gray-800';
+  };
+
+  // Get status icon
+  const getStatusIcon = (status) => {
+    const iconMap = {
+      'SCHEDULED': CalendarCheck,
+      'CONFIRMED': CheckCircle,
+      'IN_PROGRESS': PlayCircle,
+      'COMPLETED': CheckCircle2,
+      'CANCELLED': XCircle
+    };
+    const IconComponent = iconMap[status] || CalendarCheck;
+    return <IconComponent size={12} className="text-current opacity-70" />;
   };
 
   // Render header
@@ -455,7 +521,7 @@ const ProfessionalAgendaPage = () => {
 
   // Render professional header (portrait mode)
   const renderProfessionalHeader = () => {
-    if (isLandscape) return null;
+    if (isLandscape || professionals.length === 0) return null;
 
     const currentProfessional = professionals[currentProfessionalIndex];
     
@@ -508,7 +574,9 @@ const ProfessionalAgendaPage = () => {
   const renderTimeSlot = (time, index) => (
     <div
       key={time}
-      className="flex items-center justify-center text-xs text-gray-500 border-b border-gray-100 bg-gray-50"
+      className={`flex items-center justify-center text-xs text-gray-500 border-b border-gray-100 ${
+        index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+      }`}
       style={{ height: '3rem' }}
     >
       {time}
@@ -519,11 +587,12 @@ const ProfessionalAgendaPage = () => {
   const renderAppointment = (appointment, professionalIndex) => {
     const position = getAppointmentPosition(appointment.startTime);
     const height = getAppointmentHeight(appointment.duration);
+    const isShort = appointment.duration <= 30; // 30 minutes or less
     
     return (
       <div
         key={appointment.id}
-        className={`absolute rounded-lg border-2 p-2 ${getStatusColor(appointment.status)}`}
+        className={`absolute rounded-lg border-2 ${isShort ? 'p-1' : 'p-2'} ${getStatusColor(appointment.status)}`}
         style={{
           top: `${position * 3}rem`,
           height: height,
@@ -532,15 +601,35 @@ const ProfessionalAgendaPage = () => {
           zIndex: 10
         }}
       >
-        <div className="text-xs font-medium mb-1 truncate">
-          {appointment.clientName}
+        {/* Status icon in top-right corner */}
+        <div className="absolute top-1 right-1">
+          {getStatusIcon(appointment.status)}
         </div>
-        <div className="text-xs text-gray-600 mb-1">
-          {appointment.startTime} - {appointment.endTime}
-        </div>
-        <div className="text-xs truncate">
-          {appointment.services.join(', ')}
-        </div>
+        
+        {isShort ? (
+          // Compact layout for short appointments (30 min or less)
+          <div className="text-xs space-y-0 pr-4">
+            <div className="font-medium truncate leading-tight">
+              {appointment.clientName}
+            </div>
+            <div className="text-gray-600 truncate leading-tight">
+              {appointment.startTime} • {appointment.services.join(', ')}
+            </div>
+          </div>
+        ) : (
+          // Full layout for longer appointments
+          <div className="pr-4">
+            <div className="text-xs font-medium mb-1 truncate">
+              {appointment.clientName}
+            </div>
+            <div className="text-xs text-gray-600 mb-1">
+              {appointment.startTime} - {appointment.endTime}
+            </div>
+            <div className="text-xs truncate">
+              {appointment.services.join(', ')}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -578,7 +667,9 @@ const ProfessionalAgendaPage = () => {
         {timeSlots.map((time, index) => (
           <div
             key={`slot-${time}`}
-            className="border-b border-gray-100"
+            className={`border-b border-gray-100 ${
+              index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+            }`}
             style={{ height: '3rem' }}
           />
         ))}
@@ -593,28 +684,54 @@ const ProfessionalAgendaPage = () => {
 
   // Render schedule grid
   const renderScheduleGrid = () => {
-    if (isLoading) {
+    if (professionalsLoading || isLoading) {
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
-            <p className="text-gray-500">Carregando agenda...</p>
+            <p className="text-gray-500">
+              {professionalsLoading ? 'Carregando profissionais...' : 'Carregando agenda...'}
+            </p>
           </div>
         </div>
       );
     }
 
+    if (professionals.length === 0) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <User size={48} className="mx-auto mb-2 opacity-50" />
+            <p>Nenhum profissional encontrado</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Use schedule data (professionals with appointments) if available, otherwise fallback to basic professionals
+    const professionalsWithAppointments = scheduleData?.professionals || professionals;
+    
     const visibleProfessionals = isLandscape 
-      ? professionals 
-      : [professionals[currentProfessionalIndex]];
+      ? professionalsWithAppointments 
+      : (professionalsWithAppointments[currentProfessionalIndex] ? [professionalsWithAppointments[currentProfessionalIndex]] : []);
+    
+    console.log('🎯 Rendering professionals:', visibleProfessionals.map(p => ({
+      name: p.name,
+      appointmentCount: p.appointments?.length || 0,
+      appointments: p.appointments
+    })));
 
     return (
       <div className="flex-1 overflow-auto">
         <div className="flex">
           {/* Time column */}
           <div className="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-            {/* Header spacer for landscape mode */}
-            {isLandscape && <div className="h-14 border-b border-gray-200" />}
+            {/* Header spacer for landscape mode - match professional header height exactly */}
+            {isLandscape && (
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-2 z-20">
+                <div className="h-8"></div>
+              </div>
+            )}
             
             {timeSlots.map(renderTimeSlot)}
           </div>

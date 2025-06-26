@@ -13,53 +13,69 @@ import { withApiErrorHandling } from '../utils/apiHelpers';
  * @param {number} month - Month (1-12)
  * @returns {Promise<Object>} Calendar data with appointment counts per day
  */
-export const getCalendarAppointments = withApiErrorHandling(async (year, month) => {
-  const response = await apiClient.get('/api/v1/appointments/calendar', {
-    params: {
-      year,
-      month
+export const getCalendarAppointments = async (year, month) => {
+  return withApiErrorHandling(
+    () => apiClient.get('/api/v1/appointments/calendar', {
+      params: {
+        year,
+        month
+      }
+    }),
+    {
+      defaultValue: {},
+      logErrors: true
     }
-  });
-  
-  return response.data;
-});
+  );
+};
 
 /**
  * Get daily schedule for a specific date (for the agenda view)
  * @param {string} date - Date in YYYY-MM-DD format
  * @returns {Promise<Object>} Daily schedule with appointments by professional
  */
-export const getDailySchedule = withApiErrorHandling(async (date) => {
-  const response = await apiClient.get(`/api/v1/appointments/daily-schedule/${date}`);
-  
-  return response.data;
-});
+export const getDailySchedule = async (date) => {
+  return withApiErrorHandling(
+    () => apiClient.get(`/api/v1/appointments/daily-schedule/${date}`),
+    {
+      defaultValue: { professionals: [] },
+      logErrors: true
+    }
+  );
+};
 
 /**
  * Get appointment summary for a specific date
  * @param {string} date - Date in YYYY-MM-DD format
  * @returns {Promise<Object>} Appointment summary with counts and basic info
  */
-export const getDateAppointmentSummary = withApiErrorHandling(async (date) => {
-  const response = await apiClient.get('/api/v1/appointments/date-summary', {
-    params: { date }
-  });
-  
-  return response.data;
-});
+export const getDateAppointmentSummary = async (date) => {
+  return withApiErrorHandling(
+    () => apiClient.get('/api/v1/appointments/date-summary', {
+      params: { date }
+    }),
+    {
+      defaultValue: {},
+      logErrors: true
+    }
+  );
+};
 
 /**
  * Get appointment count for multiple dates (batch operation)
  * @param {string[]} dates - Array of dates in YYYY-MM-DD format
  * @returns {Promise<Object>} Object with date as key and appointment count as value
  */
-export const getBatchAppointmentCounts = withApiErrorHandling(async (dates) => {
-  const response = await apiClient.post('/api/v1/appointments/batch-counts', {
-    dates
-  });
-  
-  return response.data;
-});
+export const getBatchAppointmentCounts = async (dates) => {
+  return withApiErrorHandling(
+    () => apiClient.post('/api/v1/appointments/batch-counts', {
+      dates
+    }),
+    {
+      defaultValue: {},
+      logErrors: true
+    }
+  );
+};
 
 /**
  * Get available dates for calendar month (optimized for fast loading)
@@ -68,18 +84,22 @@ export const getBatchAppointmentCounts = withApiErrorHandling(async (dates) => {
  * @param {number} month - Month (1-12)
  * @returns {Promise<Object>} Available dates with appointment indicators
  */
-export const getCalendarAvailability = withApiErrorHandling(async (year, month) => {
-  const response = await apiClient.get('/api/v1/appointments/wizard/available-dates-fast', {
-    params: {
-      year,
-      month,
-      // For salon staff, we want to see all days regardless of availability
-      include_unavailable: true
+export const getCalendarAvailability = async (year, month) => {
+  return withApiErrorHandling(
+    () => apiClient.get('/api/v1/appointments/wizard/available-dates-fast', {
+      params: {
+        year,
+        month,
+        // For salon staff, we want to see all days regardless of availability
+        include_unavailable: true
+      }
+    }),
+    {
+      defaultValue: {},
+      logErrors: true
     }
-  });
-  
-  return response.data;
-});
+  );
+};
 
 /**
  * Process calendar data for appointment indicators
@@ -133,7 +153,11 @@ export const getAppointmentDensity = (count, maxCapacity = null) => {
  * @returns {string} Date in YYYY-MM-DD format
  */
 export const formatDateForApi = (date) => {
-  return date.toISOString().split('T')[0];
+  // Use local timezone instead of UTC to avoid date shifting
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 /**

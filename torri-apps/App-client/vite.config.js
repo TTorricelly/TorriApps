@@ -72,7 +72,7 @@ export default defineConfig({
     host: true, // Expose to network
     proxy: {
       '/api': {
-        target: 'http://192.168.1.7:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         configure: (_proxy, options) => {
@@ -80,7 +80,7 @@ export default defineConfig({
         }
       },
       '/uploads': {
-        target: 'http://192.168.1.7:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         configure: (_proxy, options) => {
@@ -88,17 +88,17 @@ export default defineConfig({
         }
       },
       '/static': {
-        target: 'http://192.168.1.7:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/media': {
-        target: 'http://192.168.1.7:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       },
       '/files': {
-        target: 'http://192.168.1.7:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
       }

@@ -34,7 +34,7 @@ engine = create_engine(
     max_overflow=5,              # Small overflow
     pool_reset_on_return='commit',  # Reset connection state on return
     pool_timeout=180,            # 3 minutes wait time for connection from pool
-    echo=settings.debug,         # Show SQL in debug mode
+    echo=False,                  # Disable SQL logging for cleaner console
     connect_args=connect_args
 )
 
