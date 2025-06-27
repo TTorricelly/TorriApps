@@ -14,7 +14,8 @@ import {
   ChevronRightIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
-  BuildingStorefrontIcon
+  BuildingStorefrontIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
@@ -71,6 +72,14 @@ const menuItems = [
     icon: UsersIcon,
     items: [
       { title: 'Lista', path: '/clients' } // Changed path here
+    ]
+  },
+  {
+    id: 'financial',
+    title: 'Financeiro',
+    icon: BanknotesIcon,
+    items: [
+      { title: 'Comissões', path: '/commissions' }
     ]
   },
   {
