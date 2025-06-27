@@ -24,7 +24,7 @@ COPY . .
 RUN mkdir -p public/uploads
 
 # Create startup script
-COPY scripts/start_cloud_run.sh /start_cloud_run.sh
+COPY Scripts/start_cloud_run.sh /start_cloud_run.sh
 RUN chmod +x /start_cloud_run.sh
 
 # Expose port
