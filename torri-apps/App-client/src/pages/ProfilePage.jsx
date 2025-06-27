@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
+import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import ViewModeSwitcher from '../components/ViewModeSwitcher';
 import { useAuthStore } from '../stores/authStore';
+import { useViewModeStore } from '../stores/viewModeStore';
 import { getUserProfile } from '../services/userService';
 import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar } from 'lucide-react';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, logout, setProfile } = useAuthStore();
+  const { user, logout, setProfile, isProfessional } = useAuthStore();
+  const { isProfessionalMode } = useViewModeStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -152,7 +155,12 @@ const ProfilePage = () => {
           )}
         </div>
       </div>
-      <BottomNavigation />
+      {/* Show appropriate navigation based on user type and current mode */}
+      {isProfessional() && isProfessionalMode() ? (
+        <ProfessionalBottomNavigation />
+      ) : (
+        <BottomNavigation />
+      )}
     </div>
   )
 }
