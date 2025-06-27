@@ -45,7 +45,7 @@ def get_appointment_for_modification(
     can_modify = False
     if requesting_user.role in [UserRole.GESTOR, UserRole.ATENDENTE]:
         can_modify = True
-    elif requesting_user.role == UserRole.CLIENTE and str(appointment.client_id) == str(requesting_user.id): # Use .id
+    elif str(appointment.client_id) == str(requesting_user.id): # Allow any user to modify appointments where they are the client
         can_modify = True
     elif requesting_user.role == UserRole.PROFISSIONAL and str(appointment.professional_id) == str(requesting_user.id): # Use .id
         can_modify = True

@@ -101,9 +101,17 @@ def create_multi_service_booking(
             detail="Você não tem permissão para criar agendamentos"
         )
     
-    # Validate client exists
+    # Validate client exists - allow both CLIENTE and professionals (who can act as clients)
     client = db.get(User, str(booking_data.client_id))
-    if not client or client.role != UserRole.CLIENTE:
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cliente não encontrado"
+        )
+    
+    # Allow CLIENTE role or professionals booking for themselves
+    allowed_client_roles = [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.GESTOR, UserRole.ATENDENTE]
+    if client.role not in allowed_client_roles:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cliente não encontrado"

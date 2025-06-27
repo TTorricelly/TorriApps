@@ -33,9 +33,11 @@ def validate_and_get_appointment_dependencies(
 
     if not client: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found.") 
-    # Role check for client can be done here if User has a generic role or a specific CLIENT role
-    # if client.role != UserRole.CLIENTE: # Assuming CLIENTE role exists
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User specified as client does not have the 'CLIENTE' role.")
+    
+    # Allow professionals to act as clients
+    allowed_client_roles = [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.GESTOR, UserRole.ATENDENTE]
+    if client.role not in allowed_client_roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User cannot act as client.")
 
 
     if not (professional and professional.role == UserRole.PROFISSIONAL): 
@@ -63,9 +65,11 @@ def create_appointment(
 
     # 1. Validate dependencies and permissions
     if requesting_user.role not in [UserRole.GESTOR, UserRole.ATENDENTE]:
-        # If client is booking for themselves, their ID must match appointment_data.client_id
-        if str(requesting_user.id) != str(appointment_data.client_id) or requesting_user.role != UserRole.CLIENTE: # Use .id for User
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients can only book appointments for themselves.")
+        # If user is booking for themselves, their ID must match appointment_data.client_id
+        # Allow CLIENTE, PROFISSIONAL, GESTOR, ATENDENTE to book for themselves
+        allowed_self_booking_roles = [UserRole.CLIENTE, UserRole.PROFISSIONAL, UserRole.GESTOR, UserRole.ATENDENTE]
+        if str(requesting_user.id) != str(appointment_data.client_id) or requesting_user.role not in allowed_self_booking_roles:
+             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Users can only book appointments for themselves.")
     # If Gestor/Atendente is booking, they can book for any client_id.
     # The client_id in appointment_data will be used.
 
