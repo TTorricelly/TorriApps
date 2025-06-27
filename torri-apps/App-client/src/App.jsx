@@ -9,8 +9,11 @@ import EditProfilePage from './pages/EditProfilePage'
 import SchedulingWizardPage from './pages/SchedulingWizardPage'
 import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage'
 import ProfessionalAgendaPage from './pages/ProfessionalAgendaPage'
-import RoleDebugger from './components/RoleDebugger'
+import ClientsPage from './pages/ClientsPage'
+import ClientDetailPage from './pages/ClientDetailPage'
+import ClientFormPage from './pages/ClientFormPage'
 import { useAuthStore } from './stores/authStore'
+import { useViewModeStore } from './stores/viewModeStore'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -23,15 +26,41 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
-// Role-based Route Component
-const RoleBasedRoute = ({ children, allowedRoles }) => {
+// Role-based Route Component with View Mode Support
+const RoleBasedRoute = ({ children, allowedRoles, professionalOnly = false }) => {
   const { isAuthenticated, user } = useAuthStore()
+  const { currentMode } = useViewModeStore()
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
   
+  // For professional-only routes, check if user is professional and in professional mode
+  if (professionalOnly) {
+    const isProf = isProfessionalRole(user?.role)
+    const inProfMode = currentMode === 'professional'
+    
+    if (!isProf || !inProfMode) {
+      console.log('[RoleBasedRoute] Professional-only route access denied:', {
+        userRole: user?.role,
+        isProfessional: isProf,
+        currentMode,
+        route: 'professional-only'
+      })
+      return <Navigate to="/dashboard" replace />
+    }
+    
+    return children
+  }
+  
+  // For role-based routes, check actual user roles
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    // Debug logging for role mismatch
+    console.log('[RoleBasedRoute] Access denied:', {
+      userRole: user?.role,
+      allowedRoles,
+      user: user
+    })
     // If user role is not allowed, redirect to appropriate dashboard
     return <Navigate to={isProfessionalRole(user?.role) ? "/professional/dashboard" : "/dashboard"} replace />
   }
@@ -41,23 +70,28 @@ const RoleBasedRoute = ({ children, allowedRoles }) => {
 
 function App() {
   const { isAuthenticated, validateStoredToken, user } = useAuthStore()
+  const { currentMode } = useViewModeStore()
 
   // Validate token on app startup
   useEffect(() => {
     validateStoredToken()
   }, [])
 
-  // Smart redirect based on user role
+  // Smart redirect based on user role and view mode
   const getDefaultRedirectPath = () => {
     if (!isAuthenticated || !user) return '/login'
-    return isProfessionalRole(user.role) ? '/professional/dashboard' : '/dashboard'
+    
+    // If user is a professional, check their current view mode
+    if (isProfessionalRole(user.role)) {
+      return currentMode === 'client' ? '/dashboard' : '/professional/dashboard'
+    }
+    
+    // Regular clients always go to client dashboard
+    return '/dashboard'
   }
 
   return (
     <div className="h-full w-full">
-      {/* Role Debugger for development testing */}
-      <RoleDebugger />
-      
       <Routes>
         <Route 
           path="/" 
@@ -65,37 +99,57 @@ function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         
-        {/* Client Routes - Only accessible by clients */}
+        {/* Client Routes - Accessible by clients OR professionals in client mode */}
         <Route path="/dashboard" element={
-          <RoleBasedRoute allowedRoles={['CLIENTE']}>
+          <ProtectedRoute>
             <DashboardPage />
-          </RoleBasedRoute>
+          </ProtectedRoute>
         } />
         <Route path="/services" element={
-          <RoleBasedRoute allowedRoles={['CLIENTE']}>
+          <ProtectedRoute>
             <ServicesPage />
-          </RoleBasedRoute>
+          </ProtectedRoute>
         } />
         <Route path="/appointments" element={
-          <RoleBasedRoute allowedRoles={['CLIENTE']}>
+          <ProtectedRoute>
             <AppointmentsPage />
-          </RoleBasedRoute>
+          </ProtectedRoute>
         } />
         <Route path="/scheduling-wizard" element={
-          <RoleBasedRoute allowedRoles={['CLIENTE']}>
+          <ProtectedRoute>
             <SchedulingWizardPage />
-          </RoleBasedRoute>
+          </ProtectedRoute>
         } />
         
-        {/* Professional Routes - Only accessible by salon staff */}
+        {/* Professional Routes - Only accessible by salon staff in professional mode */}
         <Route path="/professional/dashboard" element={
-          <RoleBasedRoute allowedRoles={['PROFISSIONAL', 'ATENDENTE', 'GESTOR']}>
+          <RoleBasedRoute professionalOnly={true}>
             <ProfessionalDashboardPage />
           </RoleBasedRoute>
         } />
         <Route path="/professional/agenda" element={
-          <RoleBasedRoute allowedRoles={['PROFISSIONAL', 'ATENDENTE', 'GESTOR']}>
+          <RoleBasedRoute professionalOnly={true}>
             <ProfessionalAgendaPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/clients" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <ClientsPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/clients/new" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <ClientFormPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/clients/:clientId" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <ClientDetailPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/clients/:clientId/edit" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <ClientFormPage />
           </RoleBasedRoute>
         } />
         

@@ -222,7 +222,10 @@ const ProfessionalDashboardPage = () => {
           <span className="text-sm font-medium">Ver Agenda</span>
         </button>
         
-        <button className="bg-blue-500 text-white p-4 rounded-xl text-center hover:bg-blue-600 transition-smooth">
+        <button 
+          onClick={() => navigate('/professional/clients')}
+          className="bg-blue-500 text-white p-4 rounded-xl text-center hover:bg-blue-600 transition-smooth"
+        >
           <Users size={24} className="mx-auto mb-2" />
           <span className="text-sm font-medium">Clientes</span>
         </button>

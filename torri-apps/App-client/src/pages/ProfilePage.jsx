@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
+import ViewModeSwitcher from '../components/ViewModeSwitcher';
 import { useAuthStore } from '../stores/authStore';
 import { getUserProfile } from '../services/userService';
 import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar } from 'lucide-react';
@@ -117,8 +118,11 @@ const ProfilePage = () => {
                 </div>
               </div>
 
+              {/* View Mode Switcher - Only for professional users */}
+              <ViewModeSwitcher />
+
               {/* Menu Options */}
-              <div className="space-y-3 mb-8">
+              <div className="space-y-3 mb-8 mt-6">
                 <button className="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-smooth">
                   <div className="flex items-center space-x-3">
                     <Settings size={20} className="text-gray-400" />

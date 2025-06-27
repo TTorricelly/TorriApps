@@ -19,7 +19,22 @@ import {
   X,
   Check,
   AlertCircle,
-  Info
+  Info,
+  Users,
+  ChevronRight,
+  UserX,
+  RefreshCw,
+  ArrowLeft,
+  Edit,
+  Trash2,
+  AlertTriangle,
+  Scissors,
+  TrendingUp,
+  Bell,
+  Star,
+  Save,
+  ArrowLeftRight,
+  Briefcase
 } from 'lucide-react'
 
 export {
@@ -42,5 +57,20 @@ export {
   X,
   Check,
   AlertCircle,
-  Info
+  Info,
+  Users,
+  ChevronRight,
+  UserX,
+  RefreshCw,
+  ArrowLeft,
+  Edit,
+  Trash2,
+  AlertTriangle,
+  Scissors,
+  TrendingUp,
+  Bell,
+  Star,
+  Save,
+  ArrowLeftRight,
+  Briefcase
 }

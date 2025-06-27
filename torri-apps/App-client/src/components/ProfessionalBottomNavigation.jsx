@@ -33,6 +33,20 @@ const ProfessionalBottomNavigation = () => {
       icon: Calendar,
       path: '/professional/agenda',
       isActive: location.pathname === '/professional/agenda'
+    },
+    {
+      id: 'clients',
+      label: 'Clientes',
+      icon: Users,
+      path: '/professional/clients',
+      isActive: location.pathname.startsWith('/professional/clients')
+    },
+    {
+      id: 'profile',
+      label: 'Perfil',
+      icon: User,
+      path: '/profile',
+      isActive: location.pathname === '/profile'
     }
     // Future expansion items (commented for now):
     // {
