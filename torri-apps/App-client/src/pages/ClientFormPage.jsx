@@ -21,13 +21,7 @@ const ClientFormPage = () => {
   const isEditing = Boolean(clientId && clientId !== 'new')
   const canManageClients = hasRole(['GESTOR', 'ATENDENTE'])
 
-  // Redirect if no permission
-  if (!canManageClients) {
-    navigate('/professional/dashboard')
-    return null
-  }
-
-  // Form state
+  // Form state - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -43,6 +37,13 @@ const ClientFormPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [validationErrors, setValidationErrors] = useState({})
+
+  // Handle permission check in useEffect instead of early return
+  useEffect(() => {
+    if (!canManageClients) {
+      navigate('/professional/dashboard')
+    }
+  }, [canManageClients, navigate])
 
   // Load client data if editing
   useEffect(() => {
@@ -188,6 +189,11 @@ const ClientFormPage = () => {
         <Loader2 size={32} className="text-pink-500 animate-spin" />
       </div>
     )
+  }
+
+  // Permission check - render nothing if no permission
+  if (!canManageClients) {
+    return null
   }
 
   return (
