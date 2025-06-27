@@ -19,6 +19,7 @@ import {
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
 import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
 import DailySchedulePage from './Pages/Appointments/DailySchedulePage.jsx'; // Import DailySchedulePage
+import CommissionsPage from './Pages/Commissions/CommissionsPage.jsx'; // Import CommissionsPage
 // SalonProfilePage imported from ./Pages index
 
 // Placeholder components for new routes
@@ -60,6 +61,9 @@ function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/create" element={<ClientForm />} />
           <Route path="/clients/edit/:clientId" element={<ClientForm />} />
+          
+          {/* Commissions Routes */}
+          <Route path="/commissions" element={<CommissionsPage />} />
           
           {/* Stations Routes */}
           <Route path="/stations/types" element={<StationTypesPage />} />

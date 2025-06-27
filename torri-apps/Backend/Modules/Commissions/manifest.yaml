@@ -1,0 +1,54 @@
+name: "Commissions"
+description: "Commission management module for salon professionals"
+version: "1.0.0"
+author: "TorriApps"
+
+# Module configuration
+enabled: true
+dependencies:
+  - "Core.Auth"
+  - "Modules.Appointments"
+  - "Modules.Services"
+  - "Modules.Users"
+
+# API endpoints
+endpoints:
+  - path: "/commissions"
+    methods: ["GET", "POST"]
+    description: "List and create commissions"
+  - path: "/commissions/{id}"
+    methods: ["GET", "PATCH"]
+    description: "Get and update specific commission"
+  - path: "/commissions/kpis"
+    methods: ["GET"]
+    description: "Get commission dashboard KPIs"
+  - path: "/commissions/payments"
+    methods: ["POST"]
+    description: "Process commission payments"
+  - path: "/commissions/export/csv"
+    methods: ["GET"]
+    description: "Export commissions to CSV"
+
+# Database tables
+tables:
+  - "commissions"
+  - "commission_payments"
+  - "commission_payment_items"
+
+# Permissions
+permissions:
+  - role: "GESTOR"
+    access: "full"
+  - role: "ADMIN"  
+    access: "full"
+  - role: "PROFISSIONAL"
+    access: "read_own"
+
+# Features
+features:
+  - "Automatic commission calculation"
+  - "Manual commission adjustments"
+  - "Batch payment processing"
+  - "Commission KPI dashboard"
+  - "CSV export functionality"
+  - "Payment history tracking"

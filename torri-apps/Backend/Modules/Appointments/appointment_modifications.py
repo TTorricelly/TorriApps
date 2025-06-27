@@ -192,6 +192,16 @@ def complete_appointment(
                                      # This field might need more context in a real payment flow.
     db.commit()
 
+    # Auto-create commission for completed appointment
+    try:
+        from Modules.Commissions.services import CommissionService
+        commission_service = CommissionService(db)
+        commission_service.create_commission_for_appointment(appointment_id)
+    except Exception as e:
+        # Log the error but don't fail the appointment completion
+        # In production, you'd want proper logging here
+        print(f"Warning: Failed to create commission for appointment {appointment_id}: {str(e)}")
+
     # Removed audit logging
     return get_appointment_by_id(db, appointment_id, requesting_user) # tenant_id argument removed
 
