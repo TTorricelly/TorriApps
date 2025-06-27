@@ -93,10 +93,14 @@ jobs:
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated \
-          --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          --set-env-vars DATABASE_URL=${{ secrets.CLOUD_SQL_DATABASE_URL }} \
+          --set-env-vars CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_PROJECT_ID }}:us-central1:torri-apps-db \
           --set-env-vars CORS_ORIGINS="http://localhost:3000;http://localhost:5173;https://torri-frontend-419996576894.us-central1.run.app;https://torri-app-client-419996576894.us-central1.run.app" \
           --set-env-vars USE_CLOUD_STORAGE=true \
           --set-env-vars DEFAULT_SCHEMA_NAME=prod \
+          --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }} \
+          --set-env-vars TIMEZONE=America/Sao_Paulo \
+          --set-cloudsql-instances ${{ secrets.GCP_PROJECT_ID }}:us-central1:torri-apps-db \
           --port 8080 \
           --memory 1Gi \
           --cpu 1 \

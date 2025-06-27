@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_db
-from Core.Auth.dependencies import get_current_user
+from Core.Auth.dependencies import get_current_user_from_db, require_role
 from Core.Auth.models import User
 from Core.Auth.constants import UserRole
 
@@ -27,14 +27,8 @@ def get_commission_service(db: Session = Depends(get_db)) -> CommissionService:
     return CommissionService(db)
 
 
-def check_commission_permissions(current_user: User = Depends(get_current_user)):
-    """Check if user has permissions to access commission endpoints."""
-    if current_user.role not in [UserRole.GESTOR, UserRole.ADMIN]:
-        raise HTTPException(
-            status_code=403,
-            detail="Only salon managers and administrators can access commission data"
-        )
-    return current_user
+# Use require_role for commission access control - only GESTOR can access commissions
+# Note: ADMIN role might not exist in this system, using GESTOR for now
 
 
 @router.get("/", response_model=List[CommissionResponse])
@@ -46,7 +40,7 @@ async def list_commissions(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """
     List commissions with optional filters and pagination.
@@ -74,7 +68,7 @@ async def get_commission_kpis(
     date_from: date = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: date = Query(None, description="Filter to date (YYYY-MM-DD)"),
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """
     Get commission KPIs for dashboard display.
@@ -93,7 +87,7 @@ async def get_commission_kpis(
 async def get_commission(
     commission_id: UUID,
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """Get a specific commission by ID."""
     commission = commission_service.get_commission_by_id(commission_id)
@@ -108,7 +102,7 @@ async def update_commission(
     commission_id: UUID,
     commission_update: CommissionUpdate,
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """
     Update a commission.
@@ -125,7 +119,7 @@ async def update_commission(
 async def create_commission_payment(
     payment_data: CommissionPaymentCreate,
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """
     Create a batch payment for multiple commissions.
@@ -147,7 +141,7 @@ async def export_commissions_csv(
     date_from: date = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: date = Query(None, description="Filter to date (YYYY-MM-DD)"),
     commission_service: CommissionService = Depends(get_commission_service),
-    current_user: User = Depends(check_commission_permissions)
+    current_user: User = Depends(require_role([UserRole.GESTOR]))
 ):
     """
     Export commission data as CSV file.

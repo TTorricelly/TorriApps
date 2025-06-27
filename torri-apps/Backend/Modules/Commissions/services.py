@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_, func, desc, asc
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
-from Core.Database.session import get_db
+from Core.Database.dependencies import get_db
 from Core.Auth.models import User
 from Modules.Appointments.models import Appointment
 from Modules.Services.models import Service

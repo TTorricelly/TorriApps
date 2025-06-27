@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     # Add TIMEZONE=America/Sao_Paulo to .env file for Brazil timezone
     timezone: str = "UTC"  # Read from TIMEZONE env var, defaults to UTC
     
+    # Cloud SQL connection settings
+    cloud_sql_connection_name: str = ""  # For Cloud Run deployment
+    
     # Legacy multi-tenant settings (deprecated but kept for compatibility)
     public_database_url: str = ""  # Will use database_url if empty
     tenant_url_template: str = ""  # Will use database_url if empty
