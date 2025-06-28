@@ -80,3 +80,95 @@ async def login_for_access_token(
 #     user = auth_services.authenticate_user(db, tenant_id=x_tenant_id, email=form_data.username, password=form_data.password)
 #     # ... rest of the logic
 #     return {"access_token": access_token, "token_type": "bearer"}
+
+# Social Authentication Routes
+
+@router.post("/google/verify", response_model=Schemas.Token)
+async def google_auth_verify(
+    request: Schemas.GoogleAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify Google ID token and authenticate/create user
+    """
+    try:
+        # Verify Google token and get user profile
+        user_profile = await auth_services.verify_google_token(
+            request.id_token, 
+            request.access_token
+        )
+        
+        # Find or create user based on social profile
+        user, is_new_user = await auth_services.find_or_create_social_user(
+            db, 
+            user_profile, 
+            'google'
+        )
+        
+        # Create JWT token
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        token_data = {
+            "sub": user.email,
+            "role": user.role.value,
+            "user_id": str(user.id),
+            "full_name": user.full_name,
+            "is_active": user.is_active
+        }
+        
+        access_token = create_access_token(
+            data=token_data, expires_delta=access_token_expires
+        )
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Google authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+@router.post("/facebook/verify", response_model=Schemas.Token)
+async def facebook_auth_verify(
+    request: Schemas.FacebookAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify Facebook access token and authenticate/create user
+    """
+    try:
+        # Verify Facebook token and get user profile
+        user_profile = await auth_services.verify_facebook_token(
+            request.access_token,
+            request.user_id
+        )
+        
+        # Find or create user based on social profile
+        user, is_new_user = await auth_services.find_or_create_social_user(
+            db, 
+            user_profile, 
+            'facebook'
+        )
+        
+        # Create JWT token
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        token_data = {
+            "sub": user.email,
+            "role": user.role.value,
+            "user_id": str(user.id),
+            "full_name": user.full_name,
+            "is_active": user.is_active
+        }
+        
+        access_token = create_access_token(
+            data=token_data, expires_delta=access_token_expires
+        )
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Facebook authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"}
+        )

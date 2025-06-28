@@ -14,3 +14,6 @@ celery==5.3.4
 pydantic-settings
 click==8.1.7
 google-cloud-storage==2.10.0
+google-auth==2.23.4
+aiohttp==3.9.1
+Pillow==10.1.0

@@ -5,7 +5,9 @@ import { useAuthStore } from '../stores/authStore'
 import { useViewModeStore } from '../stores/viewModeStore'
 import { authService } from '../services/authService'
 import { companyService } from '../services/companyService'
+import { socialAuthService } from '../services/socialAuthService'
 import { runAuthTests } from '../utils/authTestUtils'
+import SocialLoginButtons from '../components/SocialLoginButtons'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -22,8 +24,10 @@ const LoginPage = () => {
   const [password, setPassword] = useState('')
   const [companyName, setCompanyName] = useState('Nome do Salão')
   const [error, setError] = useState('')
+  const [socialLoading, setSocialLoading] = useState(null) // 'google', 'facebook', or null
+  const [socialAuthReady, setSocialAuthReady] = useState({ google: false, facebook: false })
 
-  // Fetch company information when component mounts
+  // Fetch company information and initialize social auth when component mounts
   useEffect(() => {
     const fetchCompanyInfo = async () => {
       try {
@@ -36,7 +40,18 @@ const LoginPage = () => {
       }
     }
 
+    const initializeSocialAuth = async () => {
+      try {
+        const results = await socialAuthService.initializeSocialAuth()
+        setSocialAuthReady(results)
+        console.log('Social auth initialization results:', results)
+      } catch (error) {
+        console.error('Failed to initialize social auth:', error)
+      }
+    }
+
     fetchCompanyInfo()
+    initializeSocialAuth()
     
     // Run authentication tests in development
     if (import.meta.env.DEV) {
@@ -82,9 +97,68 @@ const LoginPage = () => {
     }
   }
 
-  const handleSocialLogin = (provider) => {
-    // Placeholder for social login
-    setError(`Social login com ${provider} não implementado ainda.`)
+  const handleGoogleLogin = async () => {
+    if (!socialAuthReady.google) {
+      setError('Google Sign-In não está disponível. Tente novamente.')
+      return
+    }
+
+    setSocialLoading('google')
+    setError('')
+    
+    try {
+      const tokenData = await socialAuthService.authenticateWithGoogle()
+      
+      if (tokenData) {
+        const user = await login(tokenData)
+        
+        // Smart redirect based on user role and view mode
+        if (user && isProfessionalRole(user.role)) {
+          const redirectPath = currentMode === 'client' ? '/dashboard' : '/professional/dashboard'
+          navigate(redirectPath)
+        } else {
+          navigate('/dashboard')
+        }
+      } else {
+        setError('Falha na autenticação com Google. Tente novamente.')
+      }
+    } catch (error) {
+      setError(error.message || 'Erro ao fazer login com Google.')
+    } finally {
+      setSocialLoading(null)
+    }
+  }
+
+  const handleFacebookLogin = async () => {
+    if (!socialAuthReady.facebook) {
+      setError('Facebook Login não está disponível. Tente novamente.')
+      return
+    }
+
+    setSocialLoading('facebook')
+    setError('')
+    
+    try {
+      const tokenData = await socialAuthService.authenticateWithFacebook()
+      
+      if (tokenData) {
+        const user = await login(tokenData)
+        
+        // Smart redirect based on user role and view mode
+        if (user && isProfessionalRole(user.role)) {
+          const redirectPath = currentMode === 'client' ? '/dashboard' : '/professional/dashboard'
+          navigate(redirectPath)
+        } else {
+          navigate('/dashboard')
+        }
+      } else {
+        setError('Falha na autenticação com Facebook. Tente novamente.')
+      }
+    } catch (error) {
+      setError(error.message || 'Erro ao fazer login com Facebook.')
+    } finally {
+      setSocialLoading(null)
+    }
   }
 
   const handleCreateAccount = () => {
@@ -216,23 +290,12 @@ const LoginPage = () => {
           </div>
 
           {/* Social Login Buttons */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('Google')}
-              className="w-full py-4 border border-gray-300 text-gray-700 font-medium rounded-xl button-press transition-smooth hover:bg-gray-50"
-            >
-              Continuar com Google
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('Facebook')}
-              className="w-full py-4 border border-gray-300 text-gray-700 font-medium rounded-xl button-press transition-smooth hover:bg-gray-50"
-            >
-              Continuar com Facebook
-            </button>
-          </div>
+          <SocialLoginButtons
+            onGoogleLogin={handleGoogleLogin}
+            onFacebookLogin={handleFacebookLogin}
+            isLoading={socialLoading}
+            disabled={isLoading}
+          />
 
           {/* Alternative Login Help */}
           <div className="text-center mt-8 pb-8">

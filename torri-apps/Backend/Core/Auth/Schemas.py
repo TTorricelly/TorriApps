@@ -12,6 +12,9 @@ class UserBase(BaseModel): # Renamed from UserTenantBase
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
+    social_provider: Optional[str] = None
+    social_id: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
 class UserCreate(UserBase): # Renamed from UserTenantCreate
     password: str
@@ -42,6 +45,9 @@ class User(UserBase): # Renamed from UserTenant
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     photo_path: Optional[str] = None # Added field
+    social_provider: Optional[str] = None
+    social_id: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -114,3 +120,32 @@ class PublicRegistrationRequest(BaseModel):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
+
+# Social Authentication Request Schemas
+class SocialAuthRequest(BaseModel):
+    provider: str  # 'google' or 'facebook'
+    access_token: str  # Token from social provider
+    
+    @field_validator('provider')
+    def validate_provider(cls, v):
+        if v not in ['google', 'facebook']:
+            raise ValueError('Provider must be either "google" or "facebook"')
+        return v
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str  # Google ID token
+    access_token: str  # Google access token
+    
+class FacebookAuthRequest(BaseModel):
+    access_token: str  # Facebook access token
+    user_id: str  # Facebook user ID
+
+# Social User Profile Schema (from provider APIs)
+class SocialUserProfile(BaseModel):
+    id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+    birthday: Optional[str] = None  # Will be parsed to date
+    gender: Optional[str] = None
+    provider: str

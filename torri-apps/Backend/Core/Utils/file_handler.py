@@ -118,6 +118,67 @@ class FileHandler:
         
         return relative_path
     
+    async def save_file_async(
+        self, 
+        file_data: bytes, 
+        filename: str, 
+        subdirectory: str = "icons",
+        file_type: str = "application/octet-stream"
+    ) -> str:
+        """
+        Save raw file data and return the relative path.
+        Used for programmatically saving files (e.g., downloaded images).
+        
+        Args:
+            file_data: Raw file bytes
+            filename: Name of the file (should include extension)
+            subdirectory: Subdirectory path (e.g., "users/123/profile")
+            file_type: MIME type of the file
+        
+        Returns:
+            str: Relative path to the saved file
+        """
+        # Validate file size
+        if len(file_data) > MAX_FILE_SIZE:
+            raise ValueError(f"File too large. Maximum size allowed: {MAX_FILE_SIZE // (1024*1024)}MB")
+        
+        # Create the relative path for storage
+        relative_path = f"/uploads/{subdirectory}/{filename}"
+        
+        if self.use_cloud_storage:
+            # Save to Google Cloud Storage
+            try:
+                blob_name = f"{subdirectory}/{filename}"
+                blob = self.bucket.blob(blob_name)
+                blob.upload_from_string(file_data, content_type=file_type)
+                logger.info(f"Uploaded file to Cloud Storage: {blob_name}")
+            except Exception as e:
+                logger.error(f"Failed to upload to Cloud Storage: {e}")
+                raise ValueError(f"Failed to save file to cloud storage: {str(e)}")
+        else:
+            # Save to local filesystem (fallback)
+            upload_dir = Path(self.base_upload_dir) / subdirectory
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            file_path = upload_dir / filename
+            
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(file_data)
+                logger.info(f"Saved file locally: {file_path}")
+            except Exception as e:
+                raise ValueError(f"Failed to save file: {str(e)}")
+        
+        return relative_path
+    
+    def get_file_url(self, file_path: str) -> str:
+        """Get public URL for a file path"""
+        if self.use_cloud_storage and file_path:
+            # Extract blob name from relative path
+            blob_name = file_path.lstrip("/").replace("uploads/", "", 1)
+            return f"https://storage.googleapis.com/{self.bucket_name}/{blob_name}"
+        else:
+            return file_path  # Return relative path for local storage
+    
     def delete_file(self, file_path: str) -> bool:
         """
         Delete a file given its relative path.

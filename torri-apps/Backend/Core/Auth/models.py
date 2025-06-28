@@ -28,6 +28,11 @@ class User(Base):
     
     # Photo fields for professionals
     photo_path = Column(String(500), nullable=True)  # Path to uploaded photo file
+    
+    # Social login fields
+    social_provider = Column(String(50), nullable=True)  # 'google', 'facebook', etc.
+    social_id = Column(String(255), nullable=True)  # Unique ID from social provider
+    profile_picture_url = Column(String(500), nullable=True)  # URL to social profile picture
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model
