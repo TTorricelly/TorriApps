@@ -13,11 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 
 const KPICard = ({ title, value, subtitle, icon: Icon, color, isLoading }) => (
-  <Card className="shadow-md">
-    <CardBody className="p-4">
+  <Card className="bg-bg-secondary border border-bg-tertiary shadow-card hover:shadow-card-hover transition-shadow duration-normal">
+    <CardBody className="p-4 bg-bg-secondary">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <Typography variant="small" className="text-blue-gray-600 font-medium mb-1">
+          <Typography variant="small" className="text-text-secondary font-medium mb-1">
             {title}
           </Typography>
           {isLoading ? (
@@ -30,17 +30,14 @@ const KPICard = ({ title, value, subtitle, icon: Icon, color, isLoading }) => (
                 {value}
               </Typography>
               {subtitle && (
-                <Typography variant="small" className="text-blue-gray-500 mt-1">
+                <Typography variant="small" className="text-text-tertiary mt-1">
                   {subtitle}
                 </Typography>
               )}
             </>
           )}
         </div>
-        <div className={`p-3 rounded-full ${color === 'text-green-600' ? 'bg-green-50' : 
-                                            color === 'text-orange-600' ? 'bg-orange-50' : 
-                                            color === 'text-blue-600' ? 'bg-blue-50' : 
-                                            'bg-gray-50'}`}>
+        <div className="p-3 rounded-full bg-bg-tertiary">
           <Icon className={`h-6 w-6 ${color}`} />
         </div>
       </div>
@@ -73,7 +70,7 @@ export default function CommissionKPICards({ kpis, isLoading }) {
         value={formatCurrency(kpis.total_pending)}
         subtitle={`${kpis.pending_count} comissões pendentes`}
         icon={ClockIcon}
-        color="text-orange-600"
+        color="text-status-warning"
         isLoading={isLoading}
       />
 
@@ -83,7 +80,7 @@ export default function CommissionKPICards({ kpis, isLoading }) {
         value={formatCurrency(kpis.total_paid)}
         subtitle="Este período"
         icon={CheckCircleIcon}
-        color="text-green-600"
+        color="text-status-success"
         isLoading={isLoading}
       />
 
@@ -93,7 +90,7 @@ export default function CommissionKPICards({ kpis, isLoading }) {
         value={formatCurrency(kpis.total_this_period)}
         subtitle={`${kpis.commission_count} comissões`}
         icon={CurrencyDollarIcon}
-        color="text-blue-600"
+        color="text-accent-primary"
         isLoading={isLoading}
       />
 
@@ -103,7 +100,7 @@ export default function CommissionKPICards({ kpis, isLoading }) {
         value={formatCurrency(kpis.last_payment_amount)}
         subtitle={formatDate(kpis.last_payment_date)}
         icon={BanknotesIcon}
-        color="text-gray-600"
+        color="text-accent-secondary"
         isLoading={isLoading}
       />
     </div>

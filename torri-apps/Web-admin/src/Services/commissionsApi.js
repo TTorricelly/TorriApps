@@ -1,6 +1,6 @@
 import api from './api';
 
-const API_BASE = '/commissions';
+const API_BASE = '/api/v1/commissions';
 
 export const commissionsApi = {
   /**
@@ -18,7 +18,7 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(API_BASE, { params: cleanParams });
+      const response = await api.get(`${API_BASE}/`, { params: cleanParams });
       
       // Assuming the API returns data directly for now
       // In a real pagination setup, you might get { data, total_count, page, etc. }

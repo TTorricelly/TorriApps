@@ -233,25 +233,25 @@ export default function CommissionsPage() {
   }, [commissions, selectedCommissions]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 bg-bg-primary min-h-screen">
       {/* Alert */}
       {alert.show && (
-        <Alert
-          color={alert.type === 'error' ? 'red' : 'green'}
-          className="mb-4"
-          onClose={() => setAlert({ show: false, message: '', type: 'success' })}
-        >
-          {alert.message}
-        </Alert>
+        <div className="fixed top-4 right-4 z-50 w-96">
+          <Alert
+            open={alert.show}
+            onClose={() => setAlert({ ...alert, show: false })}
+            color={alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'amber' : 'green'}
+            className="mb-4"
+          >
+            {alert.message}
+          </Alert>
+        </div>
       )}
 
       {/* Header */}
       <div className="mb-6">
-        <Typography variant="h4" className="text-blue-gray-800 mb-2">
+        <Typography variant="h4" className="text-text-primary mb-2">
           Comissões
-        </Typography>
-        <Typography variant="paragraph" className="text-blue-gray-600">
-          Gerencie as comissões dos profissionais do salão
         </Typography>
       </div>
 
@@ -259,8 +259,8 @@ export default function CommissionsPage() {
       <CommissionKPICards kpis={kpis} isLoading={isLoading} />
 
       {/* Filters and Actions */}
-      <Card className="mb-6">
-        <CardBody>
+      <Card className="mb-6 bg-bg-secondary border border-bg-tertiary">
+        <CardBody className="bg-bg-secondary">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <CommissionFilters
@@ -274,8 +274,7 @@ export default function CommissionsPage() {
               <ExportButton onExport={handleExport} />
               
               <Button
-                color="green"
-                className="flex items-center gap-2"
+                className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
                 disabled={selectedCommissions.length === 0}
                 onClick={handleMarkAsPaid}
               >
@@ -287,8 +286,8 @@ export default function CommissionsPage() {
 
           {/* Selection Summary */}
           {selectedCommissions.length > 0 && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <Typography variant="small" className="text-blue-800">
+            <div className="mt-4 p-3 bg-bg-primary rounded-lg border border-bg-tertiary">
+              <Typography variant="small" className="text-text-primary">
                 {selectedCommissions.length} comissões selecionadas • 
                 Total: <span className="font-semibold">R$ {selectedTotal}</span>
               </Typography>
@@ -298,8 +297,8 @@ export default function CommissionsPage() {
       </Card>
 
       {/* Commission Table */}
-      <Card>
-        <CardBody className="px-0">
+      <Card className="bg-bg-secondary border border-bg-tertiary">
+        <CardBody className="px-0 bg-bg-secondary">
           <CommissionTable
             commissions={commissions}
             selectedCommissions={selectedCommissions}
@@ -312,7 +311,7 @@ export default function CommissionsPage() {
           {/* Pagination */}
           {pagination.total_count > pagination.page_size && (
             <div className="flex justify-between items-center mt-6 px-6">
-              <Typography variant="small" className="text-blue-gray-600">
+              <Typography variant="small" className="text-text-secondary">
                 Mostrando {((pagination.page - 1) * pagination.page_size) + 1} até{' '}
                 {Math.min(pagination.page * pagination.page_size, pagination.total_count)} de{' '}
                 {pagination.total_count} comissões
@@ -324,6 +323,7 @@ export default function CommissionsPage() {
                   size="sm"
                   disabled={pagination.page === 1}
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
                 >
                   Anterior
                 </Button>
@@ -333,6 +333,7 @@ export default function CommissionsPage() {
                   size="sm"
                   disabled={pagination.page * pagination.page_size >= pagination.total_count}
                   onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
                 >
                   Próxima
                 </Button>

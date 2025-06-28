@@ -89,7 +89,7 @@ export const getDailySchedule = async (date) => {
  */
 export const createAppointment = async (appointmentData) => {
   try {
-    const response = await apiClient.post('/appointments', appointmentData);
+    const response = await apiClient.post('/api/v1/appointments/', appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error creating appointment:", error.response?.data || error.message);
@@ -107,7 +107,7 @@ export const createAppointment = async (appointmentData) => {
  */
 export const updateAppointment = async (appointmentId, appointmentData) => {
   try {
-    const response = await apiClient.put(`/appointments/${appointmentId}`, appointmentData);
+    const response = await apiClient.put(`/api/v1/appointments/${appointmentId}`, appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error updating appointment:", error.response?.data || error.message);
@@ -125,7 +125,7 @@ export const updateAppointment = async (appointmentId, appointmentData) => {
  */
 export const updateAppointmentWithMultipleServices = async (appointmentId, appointmentData) => {
   try {
-    const response = await apiClient.put(`/appointments/${appointmentId}/multiple-services`, appointmentData);
+    const response = await apiClient.put(`/api/v1/appointments/${appointmentId}/multiple-services`, appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error updating appointment with multiple services:", error.response?.data || error.message);
@@ -146,7 +146,7 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
     // The backend PATCH endpoint for cancel expects an Optional[AppointmentCancelPayload].
     // An empty body or a body with { "reason": null/undefined } should be acceptable if reason is optional.
     // If reasonPayload is null, apiClient.patch might send an empty body or just the headers.
-    const response = await apiClient.patch(`/appointments/${appointmentId}/cancel`, reasonPayload);
+    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/cancel`, reasonPayload);
     return response.data; // The cancel endpoint returns the updated appointment
   } catch (error) {
     console.error("Error cancelling appointment:", error.response?.data || error.message);
@@ -163,7 +163,7 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
  *//* this function iis not being called anywhere in the codebase
 export const getAppointmentById = async (appointmentId) => {
   try {
-    const response = await apiClient.get(`/appointments/${appointmentId}`);
+    const response = await apiClient.get(`/api/v1/appointments/${appointmentId}`);
 
     return response.data;
   } catch (error) {
