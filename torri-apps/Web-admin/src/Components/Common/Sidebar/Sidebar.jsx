@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { 
@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
+import { getCompanyInfo } from '../../../Services/company';
 
 const menuItems = [
   {
@@ -99,7 +100,29 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState(['dashboard']); // Dashboard expanded by default
+  const [companyLogo, setCompanyLogo] = useState('/logo-torriapps.png'); // Default logo
   const { userEmail, clearAuth, tenantData, userData } = useAuthStore();
+
+  // Fetch company logo on mount
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      try {
+        const companyInfo = await getCompanyInfo();
+        if (companyInfo.logo_url) {
+          // Handle both relative and absolute URLs
+          const logoSrc = companyInfo.logo_url.startsWith('http') 
+            ? companyInfo.logo_url 
+            : `${window.location.origin}${companyInfo.logo_url}`;
+          setCompanyLogo(logoSrc);
+        }
+      } catch (error) {
+        console.error('Error fetching company logo:', error);
+        // Keep the fallback logo on error
+      }
+    };
+
+    fetchCompanyLogo();
+  }, []);
 
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => 
@@ -150,9 +173,13 @@ export default function Sidebar() {
       <div className="p-l border-b border-bg-tertiary flex-shrink-0">
         <div className="flex justify-center mb-s">
           <img 
-            src="/logo-torriapps.png" 
-            alt="Reilo" 
-            className="h-28 w-auto"
+            src={companyLogo} 
+            alt="Company Logo" 
+            className="h-28 w-auto object-contain"
+            onError={(e) => {
+              // Fallback to default logo if company logo fails to load
+              e.target.src = '/logo-torriapps.png';
+            }}
           />
         </div>
        

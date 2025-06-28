@@ -105,3 +105,26 @@ export const deleteCompany = async (companyId) => {
     throw error;
   }
 };
+
+/**
+ * Upload company logo (admin only)
+ * @param {string} companyId - Company ID
+ * @param {File} logoFile - Logo image file
+ * @returns {Promise<Object>} Updated company data
+ */
+export const uploadCompanyLogo = async (companyId, logoFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('logo', logoFile);
+    
+    const response = await api.post(`/api/v1/company/${companyId}/logo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading company logo:', error);
+    throw error;
+  }
+};

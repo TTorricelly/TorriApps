@@ -17,7 +17,7 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import { getCompanyInfo, updateCompany, createCompany } from '../../Services/company';
+import { getCompanyInfo, updateCompany, createCompany, uploadCompanyLogo } from '../../Services/company';
 
 const SalonProfilePage = () => {
   const [companyData, setCompanyData] = useState({
@@ -32,6 +32,11 @@ const SalonProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [isNewCompany, setIsNewCompany] = useState(false);
+  
+  // Logo upload states
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Load company data on component mount
   useEffect(() => {
@@ -129,6 +134,84 @@ const SalonProfilePage = () => {
     }, 5000);
   };
 
+  const handleLogoFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        showAlert('Apenas arquivos JPG e PNG são permitidos', 'error');
+        return;
+      }
+
+      // Validate file size (2MB limit)
+      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+      if (file.size > maxSize) {
+        showAlert('O arquivo deve ter no máximo 2MB', 'error');
+        return;
+      }
+
+      setLogoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile || !companyData.id) {
+      showAlert('Selecione um arquivo de logo primeiro', 'error');
+      return;
+    }
+
+    try {
+      setIsUploadingLogo(true);
+      const updatedCompany = await uploadCompanyLogo(companyData.id, logoFile);
+      
+      // Update company data with new logo URL
+      setCompanyData(prev => ({ ...prev, logo_url: updatedCompany.logo_url }));
+      
+      // Clear the file input and preview
+      setLogoFile(null);
+      setLogoPreview(null);
+      
+      showAlert('Logo atualizado com sucesso!', 'success');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      showAlert('Erro ao fazer upload do logo', 'error');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    // Reset file input
+    const fileInput = document.getElementById('logo-upload');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const getLogoUrl = () => {
+    if (logoPreview) return logoPreview;
+    if (companyData.logo_url) {
+      // Handle both relative and absolute URLs
+      if (companyData.logo_url.startsWith('http')) {
+        return companyData.logo_url;
+      } else {
+        // Assuming the backend serves files from a specific endpoint
+        return `${window.location.origin}${companyData.logo_url}`;
+      }
+    }
+    return null;
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64 bg-bg-primary min-h-screen">
@@ -189,27 +272,79 @@ const SalonProfilePage = () => {
               />
             </div>
 
-            {/* Logo URL */}
+            {/* Logo Upload */}
             <div>
               <Typography variant="h6" className="mb-2 text-text-primary">
-                URL do Logo
+                Logo da Empresa
               </Typography>
-              <Input
-                size="lg"
-                placeholder="https://exemplo.com/logo.png"
-                icon={<PhotoIcon className="h-5 w-5 text-text-secondary" />}
-                value={companyData.logo_url}
-                onChange={(e) => handleInputChange('logo_url', e.target.value)}
-                className="bg-bg-primary border-bg-tertiary text-text-primary placeholder:text-text-tertiary"
-                labelProps={{
-                  className: "text-text-secondary before:content-none after:content-none",
-                }}
-                containerProps={{
-                  className: "text-text-primary"
-                }}
-              />
-              <Typography className="text-xs mt-1 text-text-tertiary">
-                URL de uma imagem para o logo da empresa (opcional)
+              
+              {/* Current Logo Display */}
+              {getLogoUrl() && (
+                <div className="mb-4 flex items-center gap-4">
+                  <div className="w-24 h-24 border border-bg-tertiary rounded-lg overflow-hidden bg-bg-primary">
+                    <img
+                      src={getLogoUrl()}
+                      alt="Logo da empresa"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Typography className="text-sm text-text-primary">
+                      Logo atual
+                    </Typography>
+                    {logoPreview && (
+                      <Button
+                        size="sm"
+                        variant="text"
+                        color="red"
+                        onClick={handleRemoveLogo}
+                        className="text-status-error hover:bg-status-error/10 p-1"
+                      >
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* File Upload Input */}
+              <div className="flex items-center gap-4">
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={handleLogoFileChange}
+                  className="hidden"
+                />
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  className="border-accent-primary text-accent-primary hover:bg-accent-primary/10"
+                  onClick={() => document.getElementById('logo-upload').click()}
+                  disabled={isUploadingLogo}
+                >
+                  <PhotoIcon className="h-4 w-4 mr-2" />
+                  Selecionar Logo
+                </Button>
+                
+                {logoFile && (
+                  <Button
+                    size="sm"
+                    className="bg-accent-primary hover:bg-accent-primary/90 text-white"
+                    onClick={handleLogoUpload}
+                    disabled={isUploadingLogo || !companyData.id}
+                  >
+                    {isUploadingLogo && <Spinner className="h-4 w-4 mr-2" />}
+                    {isUploadingLogo ? 'Enviando...' : 'Fazer Upload'}
+                  </Button>
+                )}
+              </div>
+              
+              <Typography className="text-xs mt-2 text-text-tertiary">
+                Formatos aceitos: JPG, PNG (máx. 2MB). {!isNewCompany && 'Salve as informações da empresa primeiro se ela for nova.'}
               </Typography>
             </div>
 

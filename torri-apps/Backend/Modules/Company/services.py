@@ -2,10 +2,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from typing import Union
+from fastapi import UploadFile
 
 from .models import Company
 from .schemas import CompanyCreate, CompanyUpdate
 from Core.Utils.Helpers import normalize_phone_number
+from Core.Utils.file_handler import save_file, delete_file
 
 
 def get_company(db: Session, company_id: Union[UUID, str]) -> Optional[Company]:
@@ -79,3 +81,35 @@ def delete_company(db: Session, company_id: Union[UUID, str]) -> bool:
 def get_company_by_name(db: Session, name: str) -> Optional[Company]:
     """Get a company by name."""
     return db.query(Company).filter(Company.name == name, Company.is_active == True).first()
+
+
+def upload_company_logo(db: Session, company_id: Union[UUID, str], logo_file: UploadFile) -> Optional[Company]:
+    """Upload company logo image."""
+    company_id_str = str(company_id) if isinstance(company_id, UUID) else company_id
+    db_company = db.query(Company).filter(Company.id == company_id_str).first()
+    if not db_company:
+        return None
+    
+    try:
+        # Delete old logo if it exists
+        if db_company.logo_url:
+            old_logo_path = db_company.logo_url.replace('/uploads/', '')
+            try:
+                delete_file(old_logo_path)
+            except Exception as e:
+                # Log the error but don't fail the upload
+                print(f"Warning: Could not delete old logo file: {e}")
+        
+        # Save new logo file
+        file_path = save_file(logo_file, "company/logos")
+        
+        # Update company with new logo path
+        db_company.logo_url = f"/uploads/{file_path}"
+        db.commit()
+        db.refresh(db_company)
+        
+        return db_company
+    
+    except Exception as e:
+        db.rollback()
+        raise e

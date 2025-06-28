@@ -1,7 +1,7 @@
 from typing import List, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 
 # Schemas
@@ -121,4 +121,34 @@ def delete_company(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company not found or delete failed"
+        )
+
+
+@router.post("/{company_id}/logo", response_model=CompanySchema)
+def upload_company_logo(
+    company_id: UUID,
+    logo: Annotated[UploadFile, File()],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))]
+):
+    """
+    Upload company logo. Only GESTOR can upload company logos.
+    """
+    try:
+        company = company_services.upload_company_logo(db, company_id=company_id, logo_file=logo)
+        if company is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Company not found"
+            )
+        return company
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload logo: {str(e)}"
         )
