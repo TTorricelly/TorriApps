@@ -10,13 +10,23 @@ from .Settings import settings
 logger = logging.getLogger(__name__)
 
 # SIMPLIFIED: Single schema configuration - no complex multi-tenant pool management needed
-# PostgreSQL connection configuration for Codespaces
+# PostgreSQL connection configuration
 connect_args = {}
 if settings.database_url.startswith('postgresql://'):
-    # PostgreSQL specific settings for Supabase in Codespaces
+    # Configure SSL based on connection type
+    if '/cloudsql/' in settings.database_url:
+        # Cloud Run with Unix socket - disable SSL
+        ssl_mode = "disable"
+    elif 'localhost' in settings.database_url or '127.0.0.1' in settings.database_url:
+        # Local development - prefer SSL but don't require
+        ssl_mode = "prefer"
+    else:
+        # External Cloud SQL connection - require SSL
+        ssl_mode = "require"
+    
     connect_args = {
-        "sslmode": "require",  # Required for Supabase
-        "connect_timeout": 60,   # 60 seconds timeout - safe for Supabase wake-up
+        "sslmode": ssl_mode,
+        "connect_timeout": 60,   # 60 seconds timeout
         "application_name": "torriapps-backend",
         "keepalives_idle": 60,   # Start keepalives after 1 minute
         "keepalives_interval": 5,  # Check every 5 seconds
