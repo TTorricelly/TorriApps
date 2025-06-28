@@ -25,7 +25,7 @@ const ProfilePage = () => {
     };
 
     fetchProfile();
-  }, [setProfile]);
+  }, []); // Empty dependency array - only run once on mount
 
   const handleLogout = () => {
     logout();

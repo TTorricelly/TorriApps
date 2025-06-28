@@ -26,7 +26,7 @@ class CommissionService:
     def __init__(self, db: Session):
         self.db = db
     
-    async def create_commission_for_appointment(self, appointment_id: UUID) -> Optional[Commission]:
+    def create_commission_for_appointment(self, appointment_id: UUID) -> Optional[Commission]:
         """
         Creates a commission record for a completed appointment.
         Called automatically when appointment status changes to COMPLETED.
@@ -60,11 +60,16 @@ class CommissionService:
             if not service or service.commission_percentage is None:
                 return None
                 
-            # Calculate commission value
-            commission_value = self.calculate_commission_value(
-                appointment.price_at_booking, 
-                service.commission_percentage
-            )
+            # Calculate commission value with validation
+            try:
+                commission_value = self.calculate_commission_value(
+                    appointment.price_at_booking, 
+                    service.commission_percentage
+                )
+            except ValueError as e:
+                # Log the error but don't create commission with invalid data
+                print(f"Commission calculation failed for appointment {appointment_id}: {e}")
+                return None
             
             # Create commission record
             commission = Commission(
@@ -102,8 +107,26 @@ class CommissionService:
             
         Returns:
             Calculated commission value
+            
+        Raises:
+            ValueError: If input values are invalid
         """
-        if service_price <= 0 or commission_percentage <= 0:
+        if service_price is None or commission_percentage is None:
+            raise ValueError("Service price and commission percentage cannot be None")
+            
+        if service_price < 0:
+            raise ValueError(f"Service price cannot be negative, got: {service_price}")
+            
+        if service_price == 0:
+            return Decimal('0.00')
+            
+        if commission_percentage < 0:
+            raise ValueError(f"Commission percentage cannot be negative, got: {commission_percentage}")
+            
+        if commission_percentage > 100:
+            raise ValueError(f"Commission percentage cannot exceed 100%, got: {commission_percentage}")
+            
+        if commission_percentage == 0:
             return Decimal('0.00')
             
         commission_value = (service_price * commission_percentage) / Decimal('100')
@@ -144,11 +167,46 @@ class CommissionService:
             .limit(filters.page_size)\
             .all()
         
-        # Convert to response format with additional data
+        # Convert to response format with additional data using joins to avoid N+1 queries
         response_commissions = []
-        for commission in commissions:
-            commission_response = self._build_commission_response(commission)
-            response_commissions.append(commission_response)
+        if commissions:
+            # Get all related data in batch queries
+            professional_ids = [c.professional_id for c in commissions]
+            appointment_ids = [c.appointment_id for c in commissions]
+            
+            # Fetch professionals data
+            professionals = {p.id: p for p in self.db.query(User).filter(User.id.in_(professional_ids)).all()}
+            
+            # Fetch appointments data  
+            appointments = {a.id: a for a in self.db.query(Appointment).filter(Appointment.id.in_(appointment_ids)).all()}
+            
+            # Fetch services data
+            service_ids = [a.service_id for a in appointments.values() if a.service_id]
+            services = {s.id: s for s in self.db.query(Service).filter(Service.id.in_(service_ids)).all()}
+            
+            for commission in commissions:
+                professional = professionals.get(commission.professional_id)
+                appointment = appointments.get(commission.appointment_id)
+                service = services.get(appointment.service_id) if appointment else None
+                
+                commission_response = CommissionResponse(
+                    id=commission.id,
+                    professional_id=commission.professional_id,
+                    appointment_id=commission.appointment_id,
+                    service_price=commission.service_price,
+                    commission_percentage=commission.commission_percentage,
+                    calculated_value=commission.calculated_value,
+                    adjusted_value=commission.adjusted_value,
+                    adjustment_reason=commission.adjustment_reason,
+                    payment_status=commission.payment_status,
+                    created_at=commission.created_at,
+                    updated_at=commission.updated_at,
+                    professional_name=professional.full_name or professional.email if professional else None,
+                    service_name=service.name if service else None,
+                    appointment_date=appointment.appointment_date if appointment else None,
+                    final_value=commission.adjusted_value or commission.calculated_value
+                )
+                response_commissions.append(commission_response)
         
         return response_commissions, total_count
     
@@ -275,6 +333,14 @@ class CommissionService:
         expected_total = sum((c.adjusted_value or c.calculated_value) for c in commissions)
         if abs(payment_data.total_amount - expected_total) > Decimal('0.01'):
             raise ValueError(f"Total amount mismatch. Expected: {expected_total}, Got: {payment_data.total_amount}")
+            
+        # Validate payment amount is positive
+        if payment_data.total_amount <= 0:
+            raise ValueError(f"Payment amount must be positive, got: {payment_data.total_amount}")
+            
+        # Validate payment date is not in the future
+        if payment_data.payment_date > date.today():
+            raise ValueError("Payment date cannot be in the future")
         
         # Create payment record
         payment = CommissionPayment(
@@ -310,7 +376,7 @@ class CommissionService:
     
     def get_commission_export_data(self, filters: CommissionFilters) -> List[CommissionExportRow]:
         """
-        Gets commission data formatted for CSV export.
+        Gets commission data formatted for CSV export using optimized joins.
         
         Args:
             filters: Filters to apply
@@ -318,7 +384,25 @@ class CommissionService:
         Returns:
             List of CommissionExportRow objects
         """
-        query = self.db.query(Commission)
+        # Use joins to fetch all related data in a single query
+        query = self.db.query(
+            Commission,
+            User.full_name.label('professional_name'),
+            User.email.label('professional_email'),
+            Appointment.appointment_date,
+            Service.name.label('service_name'),
+            CommissionPayment.payment_date
+        ).join(
+            User, Commission.professional_id == User.id
+        ).join(
+            Appointment, Commission.appointment_id == Appointment.id
+        ).join(
+            Service, Appointment.service_id == Service.id
+        ).outerjoin(
+            CommissionPaymentItem, Commission.id == CommissionPaymentItem.commission_id
+        ).outerjoin(
+            CommissionPayment, CommissionPaymentItem.payment_id == CommissionPayment.id
+        )
         
         # Apply filters
         if filters.professional_id:
@@ -333,31 +417,20 @@ class CommissionService:
         if filters.date_to:
             query = query.filter(Commission.created_at <= filters.date_to)
         
-        commissions = query.order_by(desc(Commission.created_at)).all()
+        results = query.order_by(desc(Commission.created_at)).all()
         
         export_rows = []
-        for commission in commissions:
-            # Get related data
-            professional = self.db.query(User).filter(User.id == commission.professional_id).first()
-            appointment = self.db.query(Appointment).filter(Appointment.id == commission.appointment_id).first()
-            service = self.db.query(Service).filter(Service.id == appointment.service_id).first() if appointment else None
-            
-            # Get payment date if paid
-            payment_date = None
-            if commission.payment_status == CommissionPaymentStatus.PAID:
-                payment_item = self.db.query(CommissionPaymentItem)\
-                    .filter(CommissionPaymentItem.commission_id == commission.id)\
-                    .first()
-                if payment_item:
-                    payment = self.db.query(CommissionPayment)\
-                        .filter(CommissionPayment.id == payment_item.payment_id)\
-                        .first()
-                    payment_date = payment.payment_date if payment else None
+        for result in results:
+            commission = result[0]  # Commission object
+            professional_name = result[1] or result[2] or 'Unknown'  # full_name or email
+            appointment_date = result[3] or date.today()
+            service_name = result[4] or 'Unknown'
+            payment_date = result[5]  # Will be None if not paid
             
             export_row = CommissionExportRow(
-                professional_name=professional.full_name or professional.email if professional else 'Unknown',
-                appointment_date=appointment.appointment_date if appointment else date.today(),
-                service_name=service.name if service else 'Unknown',
+                professional_name=professional_name,
+                appointment_date=appointment_date,
+                service_name=service_name,
                 service_price=commission.service_price,
                 commission_percentage=commission.commission_percentage,
                 calculated_value=commission.calculated_value,

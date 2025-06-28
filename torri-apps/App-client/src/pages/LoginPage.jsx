@@ -2,13 +2,20 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Phone, Loader2 } from '../components/icons'
 import { useAuthStore } from '../stores/authStore'
+import { useViewModeStore } from '../stores/viewModeStore'
 import { authService } from '../services/authService'
 import { companyService } from '../services/companyService'
 import { runAuthTests } from '../utils/authTestUtils'
 
+// Helper function to check if user is professional
+const isProfessionalRole = (role) => {
+  return ['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(role);
+}
+
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, isLoading, setLoading } = useAuthStore()
+  const { currentMode } = useViewModeStore()
   
   const [showPassword, setShowPassword] = useState(false)
   const [emailOrPhone, setEmailOrPhone] = useState('')
@@ -54,8 +61,17 @@ const LoginPage = () => {
       const tokenData = await authService.login(emailOrPhone, password)
       
       if (tokenData) {
-        await login(tokenData)
-        navigate('/dashboard')
+        const user = await login(tokenData)
+        
+        // Smart redirect based on user role and view mode
+        if (user && isProfessionalRole(user.role)) {
+          // Professional users: respect their current view mode
+          const redirectPath = currentMode === 'client' ? '/dashboard' : '/professional/dashboard'
+          navigate(redirectPath)
+        } else {
+          // Regular clients always go to client dashboard
+          navigate('/dashboard')
+        }
       } else {
         setError('Credenciais inválidas. Tente novamente.')
       }

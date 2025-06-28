@@ -156,7 +156,7 @@ const HomePageInner = ({ navigation }, ref) => {
       }
     };
     fetchProfile();
-  }, [isAuthenticated, user, setProfile, storeLogout]);
+  }, [isAuthenticated, user?.id, user?.phone_number]); // Use specific user properties instead of whole user object
 
   // Load categories function (identical to mobile)
   const loadCategories = async () => {
