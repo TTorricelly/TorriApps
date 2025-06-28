@@ -93,7 +93,7 @@ jobs:
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated \
-          --set-env-vars DATABASE_URL=${{ secrets.CLOUD_SQL_DATABASE_URL }} \
+          --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }} \
           --set-env-vars CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_PROJECT_ID }}:us-central1:torri-apps-db \
           --set-env-vars CORS_ORIGINS="http://localhost:3000;http://localhost:5173;https://torri-frontend-419996576894.us-central1.run.app;https://torri-app-client-419996576894.us-central1.run.app" \
           --set-env-vars USE_CLOUD_STORAGE=true \
