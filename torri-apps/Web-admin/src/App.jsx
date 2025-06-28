@@ -20,6 +20,8 @@ import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage
 import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
 import DailySchedulePage from './Pages/Appointments/DailySchedulePage.jsx'; // Import DailySchedulePage
 import CommissionsPage from './Pages/Commissions/CommissionsPage.jsx'; // Import CommissionsPage
+import UsersPage from './Pages/Users/UsersPage.jsx'; // Import UsersPage
+import UserForm from './Pages/Users/UserForm.jsx'; // Import UserForm
 // SalonProfilePage imported from ./Pages index
 
 // Placeholder components for new routes
@@ -28,7 +30,6 @@ const AppointmentHistory = () => <div className="p-6">Histórico de Agendamentos
 const ProfessionalsAvailability = () => <div className="p-6">Disponibilidades - Em desenvolvimento</div>;
 // const ClientsList = () => <div className="p-6">Lista de Clientes - Em desenvolvimento</div>; // Remove placeholder
 // SalonProfile component moved to separate file
-const SettingsUsers = () => <div className="p-6">Usuários - Em desenvolvimento</div>;
 const Billing = () => <div className="p-6">Plano & Pagamento - Em desenvolvimento</div>;
 
 function App() {
@@ -72,7 +73,9 @@ function App() {
           {/* Settings Routes */}
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/salon-profile" element={<SalonProfilePage />} />
-          <Route path="/settings/users" element={<SettingsUsers />} />
+          <Route path="/settings/users" element={<UsersPage />} />
+          <Route path="/settings/users/create" element={<UserForm />} />
+          <Route path="/settings/users/edit/:userId" element={<UserForm />} />
           <Route path="/settings/billing" element={<Billing />} />
           
           {/* Legacy Routes */}
