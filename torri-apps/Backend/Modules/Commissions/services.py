@@ -1,11 +1,18 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from uuid import UUID
+import io
 
 from sqlalchemy import and_, or_, func, desc, asc
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
 from Core.Database.dependencies import get_db
 from Core.Auth.models import User
@@ -15,7 +22,8 @@ from .models import Commission, CommissionPayment, CommissionPaymentItem
 from .schemas import (
     CommissionCreate, CommissionUpdate, CommissionResponse, 
     CommissionPaymentCreate, CommissionPaymentResponse,
-    CommissionFilters, CommissionKPIs, CommissionExportRow
+    CommissionFilters, CommissionKPIs, CommissionExportRow,
+    CommissionExportFilters
 )
 from .constants import CommissionPaymentStatus, CommissionPaymentMethod
 
@@ -374,7 +382,7 @@ class CommissionService:
         
         return self._build_payment_response(payment)
     
-    def get_commission_export_data(self, filters: CommissionFilters) -> List[CommissionExportRow]:
+    def get_commission_export_data(self, filters: Union[CommissionFilters, CommissionExportFilters]) -> List[CommissionExportRow]:
         """
         Gets commission data formatted for CSV export using optimized joins.
         
@@ -488,3 +496,776 @@ class CommissionService:
             professional_name=professional.full_name or professional.email if professional else None,
             commission_count=commission_count
         )
+    
+    def generate_commission_pdf(self, filters: Union[CommissionFilters, CommissionExportFilters]) -> bytes:
+        """
+        Generates a PDF report of commission data.
+        
+        Args:
+            filters: Filters to apply
+            
+        Returns:
+            PDF content as bytes
+        """
+        # Get commission data
+        export_data = self.get_commission_export_data(filters)
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.HexColor('#1f2937'),
+            alignment=1,  # Center alignment
+            spaceAfter=30
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        title = Paragraph("Relatório de Comissões", title_style)
+        story.append(title)
+        
+        # Add filters info if any
+        filter_info = []
+        if filters.professional_id:
+            filter_info.append(f"Profissional: {filters.professional_id}")
+        if filters.payment_status:
+            filter_info.append(f"Status: {filters.payment_status}")
+        if filters.date_from:
+            filter_info.append(f"Data inicial: {filters.date_from.strftime('%d/%m/%Y')}")
+        if filters.date_to:
+            filter_info.append(f"Data final: {filters.date_to.strftime('%d/%m/%Y')}")
+        
+        if filter_info:
+            filter_text = " | ".join(filter_info)
+            filter_para = Paragraph(f"<b>Filtros aplicados:</b> {filter_text}", styles['Normal'])
+            story.append(filter_para)
+            story.append(Spacer(1, 20))
+        
+        # Add generation date
+        gen_date = datetime.now().strftime('%d/%m/%Y às %H:%M')
+        date_para = Paragraph(f"<b>Gerado em:</b> {gen_date}", styles['Normal'])
+        story.append(date_para)
+        story.append(Spacer(1, 20))
+        
+        if not export_data:
+            no_data_para = Paragraph("Nenhuma comissão encontrada para os filtros aplicados.", styles['Normal'])
+            story.append(no_data_para)
+        else:
+            # Create table data
+            headers = [
+                'Profissional',
+                'Data',
+                'Serviço',
+                'Preço',
+                'Comissão %',
+                'Valor Calculado',
+                'Valor Ajustado',
+                'Valor Final',
+                'Status'
+            ]
+            
+            table_data = [headers]
+            
+            # Add data rows
+            for row in export_data:
+                table_data.append([
+                    row.professional_name,
+                    row.appointment_date.strftime('%d/%m/%Y'),
+                    row.service_name[:25] + '...' if len(row.service_name) > 25 else row.service_name,
+                    f'R$ {row.service_price:.2f}'.replace('.', ','),
+                    f'{row.commission_percentage:.1f}%',
+                    f'R$ {row.calculated_value:.2f}'.replace('.', ','),
+                    f'R$ {row.adjusted_value:.2f}'.replace('.', ',') if row.adjusted_value else '-',
+                    f'R$ {row.final_value:.2f}'.replace('.', ','),
+                    'Pago' if row.payment_status == 'PAID' else 'Pendente' if row.payment_status == 'PENDING' else 'Estornado'
+                ])
+            
+            # Create table
+            table = Table(table_data, colWidths=[
+                1.1*inch,  # Profissional
+                0.7*inch,  # Data
+                1.0*inch,  # Serviço
+                0.7*inch,  # Preço
+                0.7*inch,  # Comissão %
+                1.0*inch,  # Valor Calculado
+                1.0*inch,  # Valor Ajustado
+                0.9*inch,  # Valor Final
+                0.7*inch   # Status
+            ])
+            
+            # Style the table
+            table.setStyle(TableStyle([
+                # Header style
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                
+                # Data rows style
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 7),
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Professional name left aligned
+                ('ALIGN', (2, 1), (2, -1), 'LEFT'),  # Service name left aligned
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),  # Numbers right aligned
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                
+                # Borders
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+                
+                # Alternating row colors
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+            ]))
+            
+            story.append(table)
+            
+            # Add summary
+            story.append(Spacer(1, 30))
+            
+            # Calculate totals
+            total_pending = sum(row.final_value for row in export_data if row.payment_status == 'PENDING')
+            total_paid = sum(row.final_value for row in export_data if row.payment_status == 'PAID')
+            total_overall = sum(row.final_value for row in export_data)
+            
+            summary_data = [
+                ['Resumo', ''],
+                ['Total de comissões:', f'{len(export_data)}'],
+                ['Total pendente:', f'R$ {total_pending:.2f}'.replace('.', ',')],
+                ['Total pago:', f'R$ {total_paid:.2f}'.replace('.', ',')],
+                ['Total geral:', f'R$ {total_overall:.2f}'.replace('.', ',')]
+            ]
+            
+            summary_table = Table(summary_data, colWidths=[2*inch, 1.5*inch])
+            summary_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            ]))
+            
+            story.append(summary_table)
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes
+    
+    def generate_commission_receipt_pdf(self, filters: Union[CommissionFilters, CommissionExportFilters]) -> bytes:
+        """
+        Generates a PDF receipt for paid commissions based on filters.
+        This is used to re-generate receipts for previously paid commissions.
+        
+        Args:
+            filters: Filters to apply (should include payment_status=PAID)
+            
+        Returns:
+            PDF content as bytes
+        """
+        # Force payment status to PAID for receipts
+        filters.payment_status = CommissionPaymentStatus.PAID
+        
+        # Get commission data
+        export_data = self.get_commission_export_data(filters)
+        
+        if not export_data:
+            raise ValueError("Nenhuma comissão paga encontrada para os filtros aplicados")
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ReceiptTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            textColor=colors.HexColor('#1f2937'),
+            alignment=1,  # Center alignment
+            spaceAfter=20
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'ReceiptSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#4b5563'),
+            alignment=1,  # Center alignment
+            spaceAfter=30
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        title = Paragraph("RECIBO DE PAGAMENTO DE COMISSÕES", title_style)
+        story.append(title)
+        
+        # Receipt info
+        receipt_info = Paragraph(
+            f"<b>Data de Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+            subtitle_style
+        )
+        story.append(receipt_info)
+        
+        # Period and professional info
+        period_start = min(row.appointment_date for row in export_data)
+        period_end = max(row.appointment_date for row in export_data)
+        professionals = list(set(row.professional_name for row in export_data))
+        total_amount = sum(row.final_value for row in export_data)
+        
+        payment_info_data = [
+            ['INFORMAÇÕES DO RECIBO', ''],
+            ['Profissional(is):', ', '.join(professionals)],
+            ['Período:', f'{period_start.strftime("%d/%m/%Y")} a {period_end.strftime("%d/%m/%Y")}'],
+            ['Total de Comissões:', f'{len(export_data)} item(s)'],
+            ['Valor Total:', f'R$ {total_amount:.2f}'.replace('.', ',')],
+        ]
+        
+        payment_info_table = Table(payment_info_data, colWidths=[2.5*inch, 4*inch])
+        payment_info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        story.append(payment_info_table)
+        story.append(Spacer(1, 30))
+        
+        # Commission details
+        story.append(Paragraph("<b>DETALHAMENTO DAS COMISSÕES PAGAS</b>", styles['Heading3']))
+        story.append(Spacer(1, 15))
+        
+        # Create commission details table
+        commission_headers = [
+            'Data',
+            'Profissional',
+            'Serviço',
+            'Preço Serviço',
+            'Comissão %',
+            'Valor Comissão'
+        ]
+        
+        commission_data = [commission_headers]
+        
+        for row in export_data:
+            commission_data.append([
+                row.appointment_date.strftime('%d/%m/%Y'),
+                row.professional_name[:20] + '...' if len(row.professional_name) > 20 else row.professional_name,
+                row.service_name[:25] + '...' if len(row.service_name) > 25 else row.service_name,
+                f'R$ {row.service_price:.2f}'.replace('.', ','),
+                f'{row.commission_percentage:.1f}%',
+                f'R$ {row.final_value:.2f}'.replace('.', ',')
+            ])
+        
+        commission_table = Table(commission_data, colWidths=[
+            0.8*inch,  # Data
+            1.4*inch,  # Profissional
+            1.8*inch,  # Serviço
+            1.0*inch,  # Preço
+            0.7*inch,  # %
+            1.0*inch   # Valor
+        ])
+        
+        commission_table.setStyle(TableStyle([
+            # Header style
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            
+            # Data rows style
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Date center
+            ('ALIGN', (1, 1), (2, -1), 'LEFT'),    # Professional and service left
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),  # Numbers right
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+        ]))
+        
+        story.append(commission_table)
+        story.append(Spacer(1, 30))
+        
+        # Total summary
+        total_data = [
+            ['TOTAL DAS COMISSÕES PAGAS', f'R$ {total_amount:.2f}'.replace('.', ',')]
+        ]
+        
+        total_table = Table(total_data, colWidths=[4*inch, 2*inch])
+        total_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 14),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('GRID', (0, 0), (-1, -1), 2, colors.HexColor('#1f2937')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        
+        story.append(total_table)
+        story.append(Spacer(1, 50))
+        
+        # Footer
+        footer_text = Paragraph(
+            f"<i>Este recibo apresenta o detalhamento de comissões pagas no período "
+            f"de {period_start.strftime('%d/%m/%Y')} a {period_end.strftime('%d/%m/%Y')}.</i>",
+            styles['Normal']
+        )
+        story.append(footer_text)
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes
+    
+    def generate_payment_receipt_pdf(self, payment_id: UUID) -> bytes:
+        """
+        Generates a PDF receipt for a commission payment.
+        
+        Args:
+            payment_id: UUID of the commission payment
+            
+        Returns:
+            PDF content as bytes
+        """
+        # Get payment with related data
+        payment = self.db.query(CommissionPayment)\
+            .options(joinedload(CommissionPayment.payment_items))\
+            .filter(CommissionPayment.id == payment_id)\
+            .first()
+        
+        if not payment:
+            raise ValueError(f"Payment with ID {payment_id} not found")
+        
+        # Get professional data
+        professional = self.db.query(User).filter(User.id == payment.professional_id).first()
+        
+        # Get commission details
+        commission_ids = [item.commission_id for item in payment.payment_items]
+        commissions = self.db.query(Commission)\
+            .filter(Commission.id.in_(commission_ids))\
+            .all()
+        
+        # Get appointment and service details
+        appointment_ids = [c.appointment_id for c in commissions]
+        appointments = {a.id: a for a in self.db.query(Appointment).filter(Appointment.id.in_(appointment_ids)).all()}
+        
+        service_ids = [a.service_id for a in appointments.values() if a.service_id]
+        services = {s.id: s for s in self.db.query(Service).filter(Service.id.in_(service_ids)).all()}
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ReceiptTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            textColor=colors.HexColor('#1f2937'),
+            alignment=1,  # Center alignment
+            spaceAfter=20
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'ReceiptSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#4b5563'),
+            alignment=1,  # Center alignment
+            spaceAfter=30
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        title = Paragraph("RECIBO DE PAGAMENTO DE COMISSÃO", title_style)
+        story.append(title)
+        
+        # Receipt number and date
+        receipt_info = Paragraph(
+            f"<b>Recibo Nº:</b> {str(payment.id)[:8].upper()}<br/>"
+            f"<b>Data de Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+            subtitle_style
+        )
+        story.append(receipt_info)
+        
+        # Payment information
+        payment_info_data = [
+            ['DADOS DO PAGAMENTO', ''],
+            ['Profissional:', professional.full_name or professional.email if professional else 'N/A'],
+            ['Valor Total:', f'R$ {payment.total_amount:.2f}'.replace('.', ',')],
+            ['Forma de Pagamento:', {
+                'CASH': 'Dinheiro',
+                'PIX': 'PIX',
+                'BANK_TRANSFER': 'Transferência Bancária',
+                'CARD': 'Cartão',
+                'OTHER': 'Outro'
+            }.get(payment.payment_method.value, payment.payment_method.value)],
+            ['Data de Pagamento:', payment.payment_date.strftime('%d/%m/%Y')],
+            ['Período:', f'{payment.period_start.strftime("%d/%m/%Y")} a {payment.period_end.strftime("%d/%m/%Y")}'],
+        ]
+        
+        if payment.notes:
+            payment_info_data.append(['Observações:', payment.notes])
+        
+        payment_info_table = Table(payment_info_data, colWidths=[2.5*inch, 4*inch])
+        payment_info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        story.append(payment_info_table)
+        story.append(Spacer(1, 30))
+        
+        # Commission details
+        story.append(Paragraph("<b>DETALHAMENTO DAS COMISSÕES</b>", styles['Heading3']))
+        story.append(Spacer(1, 15))
+        
+        # Create commission details table
+        commission_headers = [
+            'Data',
+            'Serviço',
+            'Preço Serviço',
+            'Comissão %',
+            'Valor Comissão'
+        ]
+        
+        commission_data = [commission_headers]
+        
+        for commission in commissions:
+            appointment = appointments.get(commission.appointment_id)
+            service = services.get(appointment.service_id) if appointment else None
+            
+            commission_data.append([
+                appointment.appointment_date.strftime('%d/%m/%Y') if appointment else '-',
+                service.name[:30] + '...' if service and len(service.name) > 30 else (service.name if service else 'N/A'),
+                f'R$ {commission.service_price:.2f}'.replace('.', ','),
+                f'{commission.commission_percentage:.1f}%',
+                f'R$ {(commission.adjusted_value or commission.calculated_value):.2f}'.replace('.', ',')
+            ])
+        
+        commission_table = Table(commission_data, colWidths=[
+            1.0*inch,  # Data
+            2.2*inch,  # Serviço
+            1.2*inch,  # Preço
+            0.8*inch,  # %
+            1.2*inch   # Valor
+        ])
+        
+        commission_table.setStyle(TableStyle([
+            # Header style
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            
+            # Data rows style
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Date center
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Service left
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),  # Numbers right
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+        ]))
+        
+        story.append(commission_table)
+        story.append(Spacer(1, 30))
+        
+        # Total summary
+        total_data = [
+            ['TOTAL PAGO', f'R$ {payment.total_amount:.2f}'.replace('.', ',')]
+        ]
+        
+        total_table = Table(total_data, colWidths=[4*inch, 2*inch])
+        total_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 14),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('GRID', (0, 0), (-1, -1), 2, colors.HexColor('#1f2937')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        
+        story.append(total_table)
+        story.append(Spacer(1, 50))
+        
+        # Footer
+        footer_text = Paragraph(
+            f"<i>Este recibo comprova o pagamento de comissões no valor de "
+            f"R$ {payment.total_amount:.2f}".replace('.', ',') + 
+            f" realizado em {payment.payment_date.strftime('%d/%m/%Y')}.</i>",
+            styles['Normal']
+        )
+        story.append(footer_text)
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes
+    
+    def generate_commission_receipt_pdf(self, filters: Union[CommissionFilters, CommissionExportFilters]) -> bytes:
+        """
+        Generates a PDF receipt for paid commissions based on filters.
+        This is used to re-generate receipts for previously paid commissions.
+        
+        Args:
+            filters: Filters to apply (should include payment_status=PAID)
+            
+        Returns:
+            PDF content as bytes
+        """
+        # Force payment status to PAID for receipts
+        filters.payment_status = CommissionPaymentStatus.PAID
+        
+        # Get commission data
+        export_data = self.get_commission_export_data(filters)
+        
+        if not export_data:
+            raise ValueError("Nenhuma comissão paga encontrada para os filtros aplicados")
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ReceiptTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            textColor=colors.HexColor('#1f2937'),
+            alignment=1,  # Center alignment
+            spaceAfter=20
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'ReceiptSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#4b5563'),
+            alignment=1,  # Center alignment
+            spaceAfter=30
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        title = Paragraph("RECIBO DE PAGAMENTO DE COMISSÕES", title_style)
+        story.append(title)
+        
+        # Receipt info
+        receipt_info = Paragraph(
+            f"<b>Data de Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+            subtitle_style
+        )
+        story.append(receipt_info)
+        
+        # Period and professional info
+        period_start = min(row.appointment_date for row in export_data)
+        period_end = max(row.appointment_date for row in export_data)
+        professionals = list(set(row.professional_name for row in export_data))
+        total_amount = sum(row.final_value for row in export_data)
+        
+        payment_info_data = [
+            ['INFORMAÇÕES DO RECIBO', ''],
+            ['Profissional(is):', ', '.join(professionals)],
+            ['Período:', f'{period_start.strftime("%d/%m/%Y")} a {period_end.strftime("%d/%m/%Y")}'],
+            ['Total de Comissões:', f'{len(export_data)} item(s)'],
+            ['Valor Total:', f'R$ {total_amount:.2f}'.replace('.', ',')],
+        ]
+        
+        payment_info_table = Table(payment_info_data, colWidths=[2.5*inch, 4*inch])
+        payment_info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        story.append(payment_info_table)
+        story.append(Spacer(1, 30))
+        
+        # Commission details
+        story.append(Paragraph("<b>DETALHAMENTO DAS COMISSÕES PAGAS</b>", styles['Heading3']))
+        story.append(Spacer(1, 15))
+        
+        # Create commission details table
+        commission_headers = [
+            'Data',
+            'Profissional',
+            'Serviço',
+            'Preço Serviço',
+            'Comissão %',
+            'Valor Comissão'
+        ]
+        
+        commission_data = [commission_headers]
+        
+        for row in export_data:
+            commission_data.append([
+                row.appointment_date.strftime('%d/%m/%Y'),
+                row.professional_name[:20] + '...' if len(row.professional_name) > 20 else row.professional_name,
+                row.service_name[:25] + '...' if len(row.service_name) > 25 else row.service_name,
+                f'R$ {row.service_price:.2f}'.replace('.', ','),
+                f'{row.commission_percentage:.1f}%',
+                f'R$ {row.final_value:.2f}'.replace('.', ',')
+            ])
+        
+        commission_table = Table(commission_data, colWidths=[
+            0.8*inch,  # Data
+            1.4*inch,  # Profissional
+            1.8*inch,  # Serviço
+            1.0*inch,  # Preço
+            0.7*inch,  # %
+            1.0*inch   # Valor
+        ])
+        
+        commission_table.setStyle(TableStyle([
+            # Header style
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1f2937')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            
+            # Data rows style
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Date center
+            ('ALIGN', (1, 1), (2, -1), 'LEFT'),    # Professional and service left
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),  # Numbers right
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+            
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+        ]))
+        
+        story.append(commission_table)
+        story.append(Spacer(1, 30))
+        
+        # Total summary
+        total_data = [
+            ['TOTAL DAS COMISSÕES PAGAS', f'R$ {total_amount:.2f}'.replace('.', ',')]
+        ]
+        
+        total_table = Table(total_data, colWidths=[4*inch, 2*inch])
+        total_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 14),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('GRID', (0, 0), (-1, -1), 2, colors.HexColor('#1f2937')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        
+        story.append(total_table)
+        story.append(Spacer(1, 50))
+        
+        # Footer
+        footer_text = Paragraph(
+            f"<i>Este recibo apresenta o detalhamento de comissões pagas no período "
+            f"de {period_start.strftime('%d/%m/%Y')} a {period_end.strftime('%d/%m/%Y')}.</i>",
+            styles['Normal']
+        )
+        story.append(footer_text)
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes

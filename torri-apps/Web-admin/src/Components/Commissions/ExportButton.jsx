@@ -12,6 +12,7 @@ import {
   ChevronDownIcon,
   DocumentIcon,
   TableCellsIcon,
+  ReceiptRefundIcon,
 } from '@heroicons/react/24/outline';
 
 export default function ExportButton({ onExport }) {
@@ -61,15 +62,29 @@ export default function ExportButton({ onExport }) {
         <MenuItem 
           className="flex items-center gap-3"
           onClick={() => handleExport('pdf')}
-          disabled={true} // Future feature
         >
-          <DocumentIcon className="h-4 w-4 text-blue-gray-300" />
+          <DocumentIcon className="h-4 w-4" />
           <div>
-            <Typography variant="small" className="font-medium text-blue-gray-400">
+            <Typography variant="small" className="font-medium">
               Exportar PDF
             </Typography>
-            <Typography variant="tiny" className="text-blue-gray-300">
-              Em breve
+            <Typography variant="tiny" className="text-blue-gray-500">
+              Relatório detalhado em PDF
+            </Typography>
+          </div>
+        </MenuItem>
+
+        <MenuItem 
+          className="flex items-center gap-3"
+          onClick={() => handleExport('receipt')}
+        >
+          <ReceiptRefundIcon className="h-4 w-4" />
+          <div>
+            <Typography variant="small" className="font-medium">
+              Exportar Recibo
+            </Typography>
+            <Typography variant="tiny" className="text-blue-gray-500">
+              Recibo de pagamento (apenas comissões pagas)
             </Typography>
           </div>
         </MenuItem>

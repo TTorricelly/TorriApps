@@ -4,7 +4,7 @@ import {
   ArrowLeftIcon, ArrowRightIcon, CalendarDaysIcon, ExclamationTriangleIcon, LockClosedIcon,
   PencilIcon, TrashIcon, PlusIcon, ClockIcon, UserIcon
 } from "@heroicons/react/24/solid";
-import { getDailySchedule, createAppointment, updateAppointment, updateAppointmentWithMultipleServices, cancelAppointment } from '../../Services/appointmentsApi'; // Updated import
+import { getDailySchedule, createAppointment, updateAppointment, updateAppointmentWithMultipleServices, cancelAppointment, completeAppointment, markAppointmentAsNoShow } from '../../Services/appointmentsApi'; // Updated import
 import { servicesApi } from '../../Services/services';
 import { professionalsApi } from '../../Services/professionals'; // Added import
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
@@ -384,9 +384,20 @@ const DailySchedulePage = () => {
       }
       
       if (editingAppointment) {
-        // Update existing appointment (single service only)
-        await updateAppointment(editingAppointment.id, appointmentData);
-        console.log('Appointment updated successfully');
+        // Check if status is being changed to COMPLETED
+        if (appointmentForm.status === 'COMPLETED') {
+          // Use specific complete endpoint (triggers commission creation)
+          await completeAppointment(editingAppointment.id);
+          console.log('Appointment completed successfully (commission created)');
+        } else if (appointmentForm.status === 'NO_SHOW') {
+          // Use specific no-show endpoint
+          await markAppointmentAsNoShow(editingAppointment.id);
+          console.log('Appointment marked as no-show successfully');
+        } else {
+          // Use general update for other status changes and field updates
+          await updateAppointment(editingAppointment.id, appointmentData);
+          console.log('Appointment updated successfully');
+        }
       } else {
         // Create new appointment (single service only)
         await createAppointment(appointmentData);

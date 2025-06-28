@@ -49,7 +49,9 @@ export default function PaymentModal({
   }, 0);
 
   const professionalId = commissions.length > 0 ? commissions[0].professional_id : null;
-  const professionalName = commissions.length > 0 ? commissions[0].professional_name : '';
+  
+  // Get all unique professional names
+  const allProfessionalNames = Array.from(new Set(commissions.map(c => c.professional_name))).join(', ');
 
   // Auto-calculate period based on commission dates
   useEffect(() => {
@@ -141,26 +143,26 @@ export default function PaymentModal({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} handler={handleClose} size="lg">
-      <DialogHeader className="flex items-center gap-2">
-        <BanknotesIcon className="h-6 w-6 text-green-600" />
+    <Dialog open={isOpen} handler={handleClose} size="lg" className="bg-bg-secondary border border-bg-tertiary">
+      <DialogHeader className="flex items-center gap-2 bg-bg-secondary text-text-primary">
+        <BanknotesIcon className="h-6 w-6 text-status-success" />
         Registrar Pagamento de Comissão
       </DialogHeader>
       
-      <DialogBody divider className="space-y-6 max-h-96 overflow-y-auto">
+      <DialogBody divider className="space-y-6 max-h-96 overflow-y-auto bg-bg-secondary border-bg-tertiary">
         {/* Payment Summary */}
-        <div className="bg-blue-50 rounded-lg p-4">
-          <Typography variant="h6" className="text-blue-800 mb-2">
+        <div className="bg-bg-primary rounded-lg p-4 border border-bg-tertiary">
+          <Typography variant="h6" className="text-text-primary mb-2">
             Resumo do Pagamento
           </Typography>
           <div className="space-y-1">
-            <Typography variant="small" className="text-blue-700">
-              <span className="font-medium">Profissional:</span> {professionalName}
+            <Typography variant="small" className="text-text-secondary">
+              <span className="font-medium">Profissionais:</span> {allProfessionalNames}
             </Typography>
-            <Typography variant="small" className="text-blue-700">
+            <Typography variant="small" className="text-text-secondary">
               <span className="font-medium">Comissões:</span> {commissions.length} item(s)
             </Typography>
-            <Typography variant="h6" className="text-blue-800 font-bold">
+            <Typography variant="h6" className="text-accent-primary font-bold">
               <span className="font-medium">Total:</span> {formatCurrency(totalAmount)}
             </Typography>
           </div>
@@ -168,16 +170,21 @@ export default function PaymentModal({
 
         {/* Commission Details */}
         <div>
-          <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+          <Typography variant="small" className="font-medium text-text-primary mb-2">
             Comissões Incluídas
           </Typography>
-          <div className="bg-gray-50 rounded-lg p-3 max-h-32 overflow-y-auto">
-            {commissions.map((commission, index) => (
+          <div className="bg-bg-primary rounded-lg p-3 max-h-32 overflow-y-auto border border-bg-tertiary">
+            {commissions.map((commission) => (
               <div key={commission.id} className="flex justify-between items-center py-1">
-                <Typography variant="tiny" className="text-blue-gray-600">
-                  {commission.service_name} - {new Date(commission.appointment_date).toLocaleDateString('pt-BR')}
-                </Typography>
-                <Typography variant="tiny" className="font-medium">
+                <div className="flex flex-col">
+                  <Typography variant="tiny" className="text-text-secondary">
+                    {commission.service_name} - {new Date(commission.appointment_date).toLocaleDateString('pt-BR')}
+                  </Typography>
+                  <Typography variant="tiny" className="text-text-tertiary font-medium">
+                    {commission.professional_name}
+                  </Typography>
+                </div>
+                <Typography variant="tiny" className="font-medium text-text-primary">
                   {formatCurrency(parseFloat(commission.adjusted_value || commission.calculated_value))}
                 </Typography>
               </div>
@@ -189,22 +196,27 @@ export default function PaymentModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Payment Method */}
           <div>
-            <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+            <Typography variant="small" className="font-medium text-text-primary mb-2">
               Forma de Pagamento *
             </Typography>
             <Select
               value={formData.payment_method}
               onChange={(value) => handleInputChange('payment_method', value)}
               error={!!errors.payment_method}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              menuProps={{
+                className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto"
+              }}
             >
               {paymentMethods.map((method) => (
-                <Option key={method.value} value={method.value}>
+                <Option key={method.value} value={method.value} className="text-text-primary hover:bg-bg-tertiary">
                   {method.label}
                 </Option>
               ))}
             </Select>
             {errors.payment_method && (
-              <Typography variant="tiny" className="text-red-500 mt-1">
+              <Typography variant="tiny" className="text-status-error mt-1">
                 {errors.payment_method}
               </Typography>
             )}
@@ -212,7 +224,7 @@ export default function PaymentModal({
 
           {/* Payment Date */}
           <div>
-            <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+            <Typography variant="small" className="font-medium text-text-primary mb-2">
               Data do Pagamento *
             </Typography>
             <Input
@@ -220,9 +232,11 @@ export default function PaymentModal({
               value={formData.payment_date}
               onChange={(e) => handleInputChange('payment_date', e.target.value)}
               error={!!errors.payment_date}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
             />
             {errors.payment_date && (
-              <Typography variant="tiny" className="text-red-500 mt-1">
+              <Typography variant="tiny" className="text-status-error mt-1">
                 {errors.payment_date}
               </Typography>
             )}
@@ -230,7 +244,7 @@ export default function PaymentModal({
 
           {/* Period Start */}
           <div>
-            <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+            <Typography variant="small" className="font-medium text-text-primary mb-2">
               Período Inicial *
             </Typography>
             <Input
@@ -238,9 +252,11 @@ export default function PaymentModal({
               value={formData.period_start}
               onChange={(e) => handleInputChange('period_start', e.target.value)}
               error={!!errors.period_start}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
             />
             {errors.period_start && (
-              <Typography variant="tiny" className="text-red-500 mt-1">
+              <Typography variant="tiny" className="text-status-error mt-1">
                 {errors.period_start}
               </Typography>
             )}
@@ -248,7 +264,7 @@ export default function PaymentModal({
 
           {/* Period End */}
           <div>
-            <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+            <Typography variant="small" className="font-medium text-text-primary mb-2">
               Período Final *
             </Typography>
             <Input
@@ -256,9 +272,11 @@ export default function PaymentModal({
               value={formData.period_end}
               onChange={(e) => handleInputChange('period_end', e.target.value)}
               error={!!errors.period_end}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
             />
             {errors.period_end && (
-              <Typography variant="tiny" className="text-red-500 mt-1">
+              <Typography variant="tiny" className="text-status-error mt-1">
                 {errors.period_end}
               </Typography>
             )}
@@ -267,7 +285,7 @@ export default function PaymentModal({
 
         {/* Notes */}
         <div>
-          <Typography variant="small" className="font-medium text-blue-gray-700 mb-2">
+          <Typography variant="small" className="font-medium text-text-primary mb-2">
             Observações
           </Typography>
           <Textarea
@@ -275,6 +293,8 @@ export default function PaymentModal({
             onChange={(e) => handleInputChange('notes', e.target.value)}
             placeholder="Observações sobre o pagamento (opcional)"
             rows={3}
+            className="bg-bg-primary border-bg-tertiary text-text-primary"
+            labelProps={{ className: "text-text-secondary" }}
           />
         </div>
 
@@ -282,21 +302,25 @@ export default function PaymentModal({
         <Alert 
           icon={<ExclamationTriangleIcon className="h-5 w-5" />}
           color="orange"
-          className="text-sm"
+          className="text-sm bg-status-warning/10 border-status-warning text-status-warning"
         >
           Este pagamento marcará as comissões selecionadas como "Pagas" e não poderá ser desfeito facilmente.
         </Alert>
       </DialogBody>
 
-      <DialogFooter className="space-x-2">
-        <Button variant="outlined" onClick={handleClose} disabled={isProcessing}>
+      <DialogFooter className="space-x-2 bg-bg-secondary">
+        <Button 
+          variant="outlined" 
+          onClick={handleClose} 
+          disabled={isProcessing}
+          className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
+        >
           Cancelar
         </Button>
         <Button 
-          color="green" 
           onClick={handleSubmit} 
           disabled={isProcessing || commissions.length === 0}
-          className="flex items-center gap-2"
+          className="bg-status-success hover:bg-status-success/90 flex items-center gap-2"
         >
           {isProcessing ? (
             <>

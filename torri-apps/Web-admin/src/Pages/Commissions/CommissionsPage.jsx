@@ -31,6 +31,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { commissionsApi } from '../../Services/commissionsApi';
+import { professionalsApi } from '../../Services/professionals';
 import CommissionKPICards from '../../Components/Commissions/CommissionKPICards';
 import CommissionTable from '../../Components/Commissions/CommissionTable';
 import CommissionFilters from '../../Components/Commissions/CommissionFilters';
@@ -132,8 +133,7 @@ export default function CommissionsPage() {
 
   const loadProfessionals = async () => {
     try {
-      // Assuming there's a professionals API endpoint
-      const data = await professionalApi.getAll();
+      const data = await professionalsApi.getAll();
       setProfessionals(data);
     } catch (error) {
       console.error('[CommissionsPage] Error loading professionals:', error);
@@ -184,7 +184,7 @@ export default function CommissionsPage() {
   const handlePaymentSubmit = async (paymentData) => {
     try {
       setIsProcessingPayment(true);
-      await commissionsApi.createPayment(paymentData);
+      const paymentResponse = await commissionsApi.createPayment(paymentData);
       
       // Reload data
       await loadCommissions();
@@ -192,7 +192,9 @@ export default function CommissionsPage() {
       
       setPaymentModal({ open: false, commissions: [] });
       setSelectedCommissions([]);
-      showAlert('Pagamento processado com sucesso!', 'success');
+      
+      // Show success message with receipt download option
+      showPaymentSuccessAlert(paymentResponse.id);
     } catch (error) {
       console.error('[CommissionsPage] Error processing payment:', error);
       showAlert('Erro ao processar pagamento', 'error');
@@ -201,7 +203,29 @@ export default function CommissionsPage() {
     }
   };
 
-  const handleExport = async () => {
+  const showPaymentSuccessAlert = (paymentId) => {
+    setAlert({ 
+      show: true, 
+      message: 'Pagamento processado com sucesso!', 
+      type: 'success',
+      paymentId: paymentId,
+      showReceiptButton: true
+    });
+    // Keep alert open longer for receipt download
+    setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 10000);
+  };
+
+  const handleDownloadReceipt = async (paymentId) => {
+    try {
+      await commissionsApi.downloadPaymentReceipt(paymentId);
+      showAlert('Recibo baixado com sucesso!', 'success');
+    } catch (error) {
+      console.error('[CommissionsPage] Error downloading receipt:', error);
+      showAlert('Erro ao baixar recibo', 'error');
+    }
+  };
+
+  const handleExport = async (format = 'csv') => {
     try {
       const queryParams = { ...filters };
       // Remove empty filters
@@ -211,8 +235,16 @@ export default function CommissionsPage() {
         }
       });
 
-      await commissionsApi.exportCSV(queryParams);
-      showAlert('Arquivo exportado com sucesso!', 'success');
+      if (format === 'pdf') {
+        await commissionsApi.exportPDF(queryParams);
+        showAlert('Relatório PDF exportado com sucesso!', 'success');
+      } else if (format === 'receipt') {
+        await commissionsApi.exportCommissionReceipt(queryParams);
+        showAlert('Recibo PDF exportado com sucesso!', 'success');
+      } else {
+        await commissionsApi.exportCSV(queryParams);
+        showAlert('Planilha CSV exportada com sucesso!', 'success');
+      }
     } catch (error) {
       console.error('[CommissionsPage] Error exporting:', error);
       showAlert('Erro ao exportar arquivo', 'error');
@@ -243,7 +275,22 @@ export default function CommissionsPage() {
             color={alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'amber' : 'green'}
             className="mb-4"
           >
-            {alert.message}
+            <div className="flex flex-col gap-2">
+              <Typography variant="small" className="font-medium">
+                {alert.message}
+              </Typography>
+              {alert.showReceiptButton && alert.paymentId && (
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  color="white"
+                  className="self-start"
+                  onClick={() => handleDownloadReceipt(alert.paymentId)}
+                >
+                  📄 Baixar Recibo
+                </Button>
+              )}
+            </div>
           </Alert>
         </div>
       )}

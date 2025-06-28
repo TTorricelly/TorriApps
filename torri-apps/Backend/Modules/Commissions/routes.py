@@ -15,7 +15,8 @@ from Core.Auth.constants import UserRole
 from .services import CommissionService
 from .schemas import (
     CommissionResponse, CommissionUpdate, CommissionFilters, CommissionKPIs,
-    CommissionPaymentCreate, CommissionPaymentResponse, CommissionExportRow
+    CommissionPaymentCreate, CommissionPaymentResponse, CommissionExportRow,
+    CommissionExportFilters
 )
 
 
@@ -162,13 +163,11 @@ async def export_commissions_csv(
     Returns a downloadable CSV with all commission details.
     """
     validate_commission_access(current_user)
-    filters = CommissionFilters(
+    filters = CommissionExportFilters(
         professional_id=professional_id,
         payment_status=payment_status,
         date_from=date_from,
-        date_to=date_to,
-        page=1,
-        page_size=10000  # Large limit for export
+        date_to=date_to
     )
     
     export_data = commission_service.get_commission_export_data(filters)
@@ -224,3 +223,117 @@ async def export_commissions_csv(
             'Content-Type': 'text/csv; charset=utf-8'
         }
     )
+
+
+@router.get("/export/pdf")
+async def export_commissions_pdf(
+    professional_id: UUID = Query(None, description="Filter by professional ID"),
+    payment_status: str = Query(None, description="Filter by payment status"),
+    date_from: date = Query(None, description="Filter from date (YYYY-MM-DD)"),
+    date_to: date = Query(None, description="Filter to date (YYYY-MM-DD)"),
+    commission_service: CommissionService = Depends(get_commission_service),
+    current_user: User = Depends(get_current_user_from_db)
+):
+    """
+    Export commission data as PDF file.
+    Returns a downloadable PDF with all commission details.
+    """
+    validate_commission_access(current_user)
+    filters = CommissionExportFilters(
+        professional_id=professional_id,
+        payment_status=payment_status,
+        date_from=date_from,
+        date_to=date_to
+    )
+    
+    try:
+        pdf_bytes = commission_service.generate_commission_pdf(filters)
+        
+        # Generate filename with current date
+        filename = f"relatorio_comissoes_{date.today().strftime('%Y%m%d')}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'application/pdf'
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {str(e)}")
+
+
+@router.get("/payments/{payment_id}/receipt")
+async def generate_payment_receipt(
+    payment_id: UUID,
+    commission_service: CommissionService = Depends(get_commission_service),
+    current_user: User = Depends(get_current_user_from_db)
+):
+    """
+    Generate a PDF receipt for a commission payment.
+    Returns a downloadable PDF receipt with payment details.
+    """
+    validate_commission_access(current_user)
+    
+    try:
+        pdf_bytes = commission_service.generate_payment_receipt_pdf(payment_id)
+        
+        # Generate filename with payment ID
+        filename = f"recibo_pagamento_{str(payment_id)[:8].upper()}_{date.today().strftime('%Y%m%d')}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'application/pdf'
+            }
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar recibo: {str(e)}")
+
+
+@router.get("/export/receipt")
+async def export_commission_receipt(
+    professional_id: UUID = Query(None, description="Filter by professional ID"),
+    date_from: date = Query(None, description="Filter from date (YYYY-MM-DD)"),
+    date_to: date = Query(None, description="Filter to date (YYYY-MM-DD)"),
+    commission_service: CommissionService = Depends(get_commission_service),
+    current_user: User = Depends(get_current_user_from_db)
+):
+    """
+    Generate a PDF receipt for paid commissions based on filters.
+    Returns a downloadable PDF receipt with payment details for the filtered commissions.
+    """
+    validate_commission_access(current_user)
+    
+    filters = CommissionExportFilters(
+        professional_id=professional_id,
+        payment_status='PAID',  # Force to only paid commissions
+        date_from=date_from,
+        date_to=date_to
+    )
+    
+    try:
+        pdf_bytes = commission_service.generate_commission_receipt_pdf(filters)
+        
+        # Generate filename
+        professional_suffix = f"_{str(professional_id)[:8]}" if professional_id else ""
+        date_suffix = f"_{date_from.strftime('%Y%m%d')}" if date_from else f"_{date.today().strftime('%Y%m%d')}"
+        filename = f"recibo_comissoes{professional_suffix}{date_suffix}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'application/pdf'
+            }
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar recibo: {str(e)}")

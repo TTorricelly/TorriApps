@@ -147,6 +147,52 @@ export const commissionsApi = {
   },
 
   /**
+   * Export commissions to PDF
+   * @param {Object} params - Filter parameters
+   * @returns {Promise<void>} - Triggers download
+   */
+  async exportPDF(params = {}) {
+    try {
+      const cleanParams = Object.keys(params).reduce((acc, key) => {
+        if (params[key] !== '' && params[key] != null) {
+          acc[key] = params[key];
+        }
+        return acc;
+      }, {});
+
+      const response = await api.get(`${API_BASE}/export/pdf`, {
+        params: cleanParams,
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or generate one
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'relatorio_comissoes.pdf';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('[commissionsApi] Error exporting PDF:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get commission payments history
    * @param {Object} params - Query parameters
    * @returns {Promise<Array>}
@@ -164,6 +210,90 @@ export const commissionsApi = {
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error fetching payments:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Download payment receipt PDF
+   * @param {string} paymentId - Payment ID
+   * @returns {Promise<void>} - Triggers download
+   */
+  async downloadPaymentReceipt(paymentId) {
+    try {
+      const response = await api.get(`${API_BASE}/payments/${paymentId}/receipt`, {
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or generate one
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `recibo_pagamento_${paymentId.substring(0, 8).toUpperCase()}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('[commissionsApi] Error downloading receipt:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Export commission receipt PDF based on filters
+   * @param {Object} params - Filter parameters
+   * @returns {Promise<void>} - Triggers download
+   */
+  async exportCommissionReceipt(params = {}) {
+    try {
+      const cleanParams = Object.keys(params).reduce((acc, key) => {
+        if (params[key] !== '' && params[key] != null) {
+          acc[key] = params[key];
+        }
+        return acc;
+      }, {});
+
+      const response = await api.get(`${API_BASE}/export/receipt`, {
+        params: cleanParams,
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or generate one
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'recibo_comissoes.pdf';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('[commissionsApi] Error exporting receipt:', error);
       throw error;
     }
   }

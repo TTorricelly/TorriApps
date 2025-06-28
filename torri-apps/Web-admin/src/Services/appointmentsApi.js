@@ -156,6 +156,40 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
 };
 
 /**
+ * Marks an appointment as completed (triggers commission creation).
+ * @param {string} appointmentId - The ID of the appointment to complete.
+ * @returns {Promise<object>} The updated appointment data.
+ * @throws {Error} If the API call fails.
+ */
+export const completeAppointment = async (appointmentId) => {
+  try {
+    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/complete`);
+    return response.data;
+  } catch (error) {
+    console.error("Error completing appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao concluir agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Marks an appointment as no-show.
+ * @param {string} appointmentId - The ID of the appointment to mark as no-show.
+ * @returns {Promise<object>} The updated appointment data.
+ * @throws {Error} If the API call fails.
+ */
+export const markAppointmentAsNoShow = async (appointmentId) => {
+  try {
+    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/no-show`);
+    return response.data;
+  } catch (error) {
+    console.error("Error marking appointment as no-show:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao marcar agendamento como falta. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
  * Gets appointment by ID.
  * @param {string} appointmentId - The ID of the appointment to fetch.
  * @returns {Promise<object>} The appointment data.

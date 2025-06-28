@@ -94,6 +94,14 @@ class CommissionFilters(BaseModel):
     page_size: int = Field(default=50, ge=1, le=100)
 
 
+class CommissionExportFilters(BaseModel):
+    """Schema for filtering commission export queries (no pagination limits)."""
+    professional_id: Optional[UUID] = None
+    payment_status: Optional[CommissionPaymentStatus] = None
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+
+
 class CommissionKPIs(BaseModel):
     """Schema for commission dashboard KPIs."""
     total_pending: Decimal = Field(default=Decimal('0.00'), description="Total pending commission amount")
