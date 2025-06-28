@@ -5,5 +5,6 @@ export { default as UsersRoutes } from './Users';
 export { ProfessionalsPage, ProfessionalForm } from './Professionals';
 export { StationTypesPage, StationsPage } from './Stations';
 export { SettingsPage, SalonProfilePage } from './Settings';
+export { NFSeSettingsPage, NFSeInvoicesPage, NFSeReportsPage } from './NFSe';
 export { default as Login } from './Login';
 export { default as NotFound } from './NotFound';

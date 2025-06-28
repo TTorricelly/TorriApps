@@ -14,6 +14,9 @@ import {
   StationsPage,
   SettingsPage,
   SalonProfilePage,
+  NFSeSettingsPage,
+  NFSeInvoicesPage,
+  NFSeReportsPage,
   Login
 } from './Pages';
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
@@ -64,6 +67,11 @@ function App() {
           
           {/* Commissions Routes */}
           <Route path="/commissions" element={<CommissionsPage />} />
+          
+          {/* NFS-e Routes */}
+          <Route path="/nfse/settings" element={<NFSeSettingsPage />} />
+          <Route path="/nfse/invoices" element={<NFSeInvoicesPage />} />
+          <Route path="/nfse/reports" element={<NFSeReportsPage />} />
           
           {/* Stations Routes */}
           <Route path="/stations/types" element={<StationTypesPage />} />

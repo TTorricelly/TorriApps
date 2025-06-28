@@ -79,7 +79,10 @@ const menuItems = [
     title: 'Financeiro',
     icon: BanknotesIcon,
     items: [
-      { title: 'Comissões', path: '/commissions' }
+      { title: 'Comissões', path: '/commissions' },
+      { title: 'NFS-e Configuração', path: '/nfse/settings' },
+      { title: 'NFS-e Notas', path: '/nfse/invoices' },
+      { title: 'Relatórios ISS', path: '/nfse/reports' }
     ]
   },
   {

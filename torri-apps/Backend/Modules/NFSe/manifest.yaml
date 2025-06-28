@@ -1,0 +1,27 @@
+name: "NFSe"
+version: "1.0.0"
+description: "Brazilian NFS-e (Nota Fiscal de Serviços) fiscal invoice management module"
+author: "TorriApps"
+dependencies:
+  - "Core.Auth"
+  - "Core.Database"
+  - "Core.Security"
+features:
+  - "Certificate Management"
+  - "SOAP Web Service Integration"
+  - "Invoice Issuance"
+  - "ISS Tax Reports"
+  - "Audit Trail"
+endpoints:
+  - "/api/v1/nfse/certificates"
+  - "/api/v1/nfse/settings"
+  - "/api/v1/nfse/invoices"
+  - "/api/v1/nfse/reports"
+permissions:
+  - "GESTOR" # Salon owners can manage certificates and settings
+  - "PROFISSIONAL" # Professionals can issue invoices
+models:
+  - "NFSeCertificate"
+  - "NFSeSettings"
+  - "NFSeInvoice"
+  - "NFSeAuditLog"

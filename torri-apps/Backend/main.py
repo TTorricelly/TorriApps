@@ -16,8 +16,10 @@ from Modules.Stations.routes import router as stations_router
 from Modules.Settings.routes import router as settings_router
 from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
+from Modules.NFSe.routes import router as nfse_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
+import Modules.NFSe.models  # Import NFSe models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:
@@ -77,6 +79,7 @@ app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Manage
 app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
 app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
 app.include_router(commissions_router, prefix=API_V1_PREFIX, tags=["Commissions Management"])
+app.include_router(nfse_router, prefix=API_V1_PREFIX, tags=["NFS-e (Brazilian Fiscal Invoices)"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---
