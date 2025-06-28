@@ -52,6 +52,7 @@ const DailySchedulePage = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [savingAppointment, setSavingAppointment] = useState(false);
+  const [modalError, setModalError] = useState(null);
 
   // Services state
   const [availableServices, setAvailableServices] = useState([]); // Changed initial state
@@ -125,6 +126,7 @@ const DailySchedulePage = () => {
       notes: ''
     });
     setFormErrors({});
+    setModalError(null);
     setSelectedClient(null);
     setIsNewClient(false);
     setClientSearchResults([]);
@@ -147,6 +149,7 @@ const DailySchedulePage = () => {
       notes: appointment.notes_by_client || ''
     });
     setFormErrors({});
+    setModalError(null);
     setShowAppointmentModal(true);
     // Fetch services if professionalId is available
     const profId = professionalId || appointment.professionalId;
@@ -192,6 +195,34 @@ const DailySchedulePage = () => {
     setShowAppointmentModal(false);
     setEditingAppointment(null);
     setFormErrors({});
+    setModalError(null);
+  };
+
+  const parseErrorMessage = (errorMessage) => {
+    // Make error messages more user-friendly and specific
+    if (errorMessage.includes('not available for the required service duration') || 
+        errorMessage.includes('new selected time slot is not available')) {
+      return 'O horário selecionado não está disponível. Pode haver outro agendamento neste horário ou o profissional pode estar indisponível. Tente outro horário.';
+    }
+    
+    if (errorMessage.includes('409') || errorMessage.includes('conflict')) {
+      return 'Conflito de horário detectado. O horário selecionado já está ocupado ou indisponível. Por favor, escolha outro horário.';
+    }
+    
+    if (errorMessage.includes('professional') && errorMessage.includes('not found')) {
+      return 'Profissional selecionado não encontrado. Por favor, selecione outro profissional.';
+    }
+    
+    if (errorMessage.includes('client') && errorMessage.includes('not found')) {
+      return 'Cliente não encontrado. Verifique os dados do cliente.';
+    }
+    
+    if (errorMessage.includes('service') && errorMessage.includes('not found')) {
+      return 'Serviço selecionado não encontrado. Por favor, selecione outro serviço.';
+    }
+    
+    // Return original message if no specific pattern found
+    return errorMessage || 'Erro ao salvar agendamento. Tente novamente.';
   };
 
   const validateForm = () => {
@@ -312,6 +343,7 @@ const DailySchedulePage = () => {
     if (!validateForm()) return;
     
     setSavingAppointment(true);
+    setModalError(null); // Clear any previous modal errors
     try {
       // Find selected services with their IDs - for now use first service
       const selectedServices = availableServices.filter(service => 
@@ -402,11 +434,12 @@ const DailySchedulePage = () => {
       await fetchSchedule();
       closeModal();
       
-      // Show success message
+      // Show success message - clear main page error since save was successful
       setError(null);
     } catch (error) {
       console.error('Error saving appointment:', error);
-      setError(error.message || 'Erro ao salvar agendamento. Tente novamente.');
+      const userFriendlyMessage = parseErrorMessage(error.message);
+      setModalError(userFriendlyMessage);
     } finally {
       setSavingAppointment(false);
     }
@@ -1138,6 +1171,19 @@ const DailySchedulePage = () => {
         </DialogHeader>
         
         <DialogBody className="p-6 max-h-[70vh] overflow-y-auto">
+          {/* Error Alert inside Modal */}
+          {modalError && (
+            <Alert
+              color="red"
+              icon={<ExclamationTriangleIcon className="h-5 w-5" />}
+              className="mb-4 bg-status-error/20 text-status-error border-status-error"
+            >
+              <Typography variant="small" className="font-medium text-status-error">
+                {modalError}
+              </Typography>
+            </Alert>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Client Information */}
             <div className="space-y-4">
