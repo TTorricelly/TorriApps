@@ -72,7 +72,7 @@ app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
 app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
-app.include_router(professionals_router, prefix=API_V1_PREFIX, tags=["Professionals Management"])
+app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/professionals", tags=["Professionals Management"])
 app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
 app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
 app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])

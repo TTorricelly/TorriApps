@@ -19,7 +19,7 @@ from .schemas import (
 )
 from . import services as professional_services
 
-router = APIRouter(prefix="/professionals", tags=["Professionals"])
+router = APIRouter(tags=["Professionals"])
 
 
 # Professional CRUD endpoints

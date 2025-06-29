@@ -6,6 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from Config.Database import Base # Base for tenant-specific models
 from Config.Settings import settings
@@ -61,10 +62,10 @@ class Appointment(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
 
-    # ForeignKeys point to users.id for both client and professional
-    client_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    professional_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    service_id = Column(UUID(as_uuid=True), ForeignKey("services.id"), nullable=False, index=True)
+    # ForeignKeys point to users.id for both client and professional - match database nullable=True
+    client_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    professional_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    service_id = Column(UUID(as_uuid=True), ForeignKey("services.id"), nullable=True, index=True)
     
     # Optional group for multi-service bookings
     group_id = Column(UUID(as_uuid=True), ForeignKey("appointment_groups.id"), nullable=True, index=True)
@@ -73,16 +74,20 @@ class Appointment(Base):
     start_time = Column(Time, nullable=False, index=True) # Indexed for quick lookups
     end_time = Column(Time, nullable=False)   # Calculated: start_time + service.duration_minutes
 
-    status = Column(Enum(AppointmentStatus), nullable=False, default=AppointmentStatus.SCHEDULED, index=True)
+    status = Column(Enum(AppointmentStatus), nullable=True, default=AppointmentStatus.SCHEDULED, index=True)  # Match database nullable=True
 
     # Financials at the time of booking
     price_at_booking = Column(Numeric(10, 2), nullable=False)
     # commission_at_booking = Column(Numeric(5, 2), nullable=True) # If commission can vary per appointment
 
-    paid_manually = Column(Boolean, default=False, nullable=False) # Indicates if payment was handled manually
+    paid_manually = Column(Boolean, default=False, nullable=True) # Match database nullable=True
 
-    notes_by_client = Column(String(500), nullable=True)
-    notes_by_professional = Column(String(500), nullable=True) # Notes by professional or salon staff
+    notes_by_client = Column(Text, nullable=True)  # Match database TEXT type
+    notes_by_professional = Column(Text, nullable=True) # Match database TEXT type
+    
+    # Timestamps to match database
+    created_at = Column(DateTime, nullable=True, server_default=func.now())
+    updated_at = Column(DateTime, nullable=True, server_default=func.now())
 
     # Relationships - temporarily disabled to avoid circular imports
     # client = relationship("Core.Auth.models.User", foreign_keys=[client_id], back_populates="client_appointments")

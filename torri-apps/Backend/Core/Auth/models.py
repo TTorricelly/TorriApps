@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date, DateTime
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship # Added for relationships
+from sqlalchemy.sql import func
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
 from Config.Settings import settings # Adjusted import path
@@ -16,11 +17,11 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     
-    email = Column(String(120), unique=True, index=True, nullable=False)  # Now globally unique
-    hashed_password = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)  # Match database VARCHAR(255)
+    hashed_password = Column(String(255), nullable=True)  # Match database nullable=True
     role = Column(SAEnum(UserRole), nullable=False)
-    full_name = Column(String(100), nullable=True)
-    phone_number = Column(String(20), nullable=True)
+    full_name = Column(String(255), nullable=True)  # Match database VARCHAR(255)
+    phone_number = Column(String(50), nullable=True)  # Match database VARCHAR(50)
     date_of_birth = Column(Date, nullable=True)
     hair_type = Column(SAEnum(HairType), nullable=True)
     gender = Column(SAEnum(Gender), nullable=True)
@@ -28,6 +29,13 @@ class User(Base):
     
     # Photo fields for professionals
     photo_path = Column(String(500), nullable=True)  # Path to uploaded photo file
+    
+    # Timestamps to match database
+    created_at = Column(DateTime, nullable=True, server_default=func.now())
+    updated_at = Column(DateTime, nullable=True, server_default=func.now())
+    
+    # Legacy tenant_id field (nullable for backward compatibility)
+    tenant_id = Column(UUID(as_uuid=True), nullable=True)
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model

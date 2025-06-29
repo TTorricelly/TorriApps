@@ -63,11 +63,12 @@ class ProfessionalBlockedTime(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     professional_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(String(36), nullable=True)  # Match database VARCHAR(36)
 
     blocked_date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False) # Nullable if block_type is DAY_OFF
     end_time = Column(Time, nullable=False)   # Nullable if block_type is DAY_OFF
-    block_type = Column(String(20), nullable=True, default="other")
+    block_type = Column(String(10), nullable=False)  # Match database VARCHAR(10) NOT NULL
     reason = Column(String(255), nullable=True) # Optional reason, e.g., "Doctor's appointment", "Public Holiday"
 
     # Relationship back to UserTenant (Professional)

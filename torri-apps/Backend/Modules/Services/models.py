@@ -29,7 +29,7 @@ class Category(Base):
     name = Column(String(100), nullable=False, unique=True)  # Now globally unique in single schema
     display_order = Column(Integer, nullable=False, default=0)
     icon_path = Column(String(255), nullable=True)
-    tenant_id = Column(UUID(as_uuid=True), nullable=True)  # Keep for database compatibility
+    tenant_id = Column(String(36), nullable=True)  # Match database VARCHAR(36)
 
     services = relationship("Service", back_populates="category", cascade="all, delete-orphan")
 
