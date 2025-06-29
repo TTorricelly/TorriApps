@@ -312,3 +312,65 @@ class MultiServiceBookingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- Kanban Board Schemas ---
+
+class AppointmentGroupStatusUpdate(BaseModel):
+    status: AppointmentGroupStatus
+
+    class Config:
+        from_attributes = True
+
+
+class WalkInClientData(BaseModel):
+    # For new clients
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    # For existing clients
+    id: Optional[UUID] = None
+
+
+class WalkInServiceData(BaseModel):
+    id: UUID
+    name: Optional[str] = None  # Optional for frontend convenience
+
+
+class WalkInAppointmentRequest(BaseModel):
+    client: WalkInClientData
+    services: List[WalkInServiceData]
+    professional_id: UUID
+
+
+class WalkInAppointmentResponse(BaseModel):
+    appointment_group: AppointmentGroupSchema
+    message: str = "Walk-in appointment created successfully"
+
+    class Config:
+        from_attributes = True
+
+
+class MergedCheckoutRequest(BaseModel):
+    group_ids: List[UUID]
+
+
+class CheckoutService(BaseModel):
+    id: str
+    name: str
+    price: float
+    appointment_id: str
+    group_id: str
+
+
+class MergedCheckoutResponse(BaseModel):
+    session_id: str
+    group_ids: List[str]
+    client_name: str
+    total_price: float
+    total_duration_minutes: int
+    services: List[CheckoutService]
+    created_at: str
+
+    class Config:
+        from_attributes = True

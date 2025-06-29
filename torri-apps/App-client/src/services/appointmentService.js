@@ -143,3 +143,112 @@ export const getClientAppointmentHistory = async (clientId) => {
     }
   );
 };
+
+/**
+ * Fetches appointment groups for kanban board display
+ * @param {Object} params - Optional filtering parameters
+ * @returns {Promise<Array>} Array of appointment groups with aggregated data
+ */
+export const getAppointmentGroups = async (params = {}) => {
+  const endpoint = buildApiEndpoint('appointments/groups');
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint, { params }),
+    {
+      defaultValue: [],
+      transformData: (data) => Array.isArray(data) ? data : [],
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Updates appointment group status (for kanban board drag & drop)
+ * @param {string} groupId - The ID of the appointment group
+ * @param {string} newStatus - The new status to set
+ * @returns {Promise<Object>} Updated appointment group
+ */
+export const updateAppointmentGroupStatus = async (groupId, newStatus) => {
+  const endpoint = buildApiEndpoint(`appointments/groups/${groupId}/status`);
+  
+  return withApiErrorHandling(
+    () => apiClient.patch(endpoint, { status: newStatus }),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Creates a walk-in appointment group
+ * @param {Object} walkInData - Walk-in appointment details
+ * @returns {Promise<Object>} Created appointment group
+ */
+export const createWalkInAppointment = async (walkInData) => {
+  const endpoint = buildApiEndpoint('appointments/walk-in');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, walkInData),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Gets appointment group details by ID
+ * @param {string} groupId - The ID of the appointment group
+ * @returns {Promise<Object>} Appointment group details
+ */
+export const getAppointmentGroupDetails = async (groupId) => {
+  const endpoint = buildApiEndpoint(`appointments/groups/${groupId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.get(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Merges multiple appointment groups for checkout
+ * @param {Array} groupIds - Array of group IDs to merge
+ * @returns {Promise<Object>} Merged checkout session
+ */
+export const createMergedCheckoutSession = async (groupIds) => {
+  const endpoint = buildApiEndpoint('appointments/checkout/merge');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, { group_ids: groupIds }),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
+ * Processes payment for appointment group(s)
+ * @param {Object} paymentData - Payment details including group IDs, amount, payment method
+ * @returns {Promise<Object>} Payment result
+ */
+export const processAppointmentPayment = async (paymentData) => {
+  const endpoint = buildApiEndpoint('appointments/checkout/payment');
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, paymentData),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};

@@ -12,6 +12,7 @@ import ProfessionalAgendaPage from './pages/ProfessionalAgendaPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientDetailPage from './pages/ClientDetailPage'
 import ClientFormPage from './pages/ClientFormPage'
+import KanbanBoardPage from './pages/KanbanBoardPage'
 import { useAuthStore } from './stores/authStore'
 import { useViewModeStore } from './stores/viewModeStore'
 
@@ -130,6 +131,11 @@ function App() {
         <Route path="/professional/agenda" element={
           <RoleBasedRoute professionalOnly={true}>
             <ProfessionalAgendaPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/kanban" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <KanbanBoardPage />
           </RoleBasedRoute>
         } />
         <Route path="/professional/clients" element={
