@@ -5,6 +5,7 @@ class UserRole(str, enum.Enum): # Herdando de str para fácil serialização/uso
     PROFISSIONAL = "PROFISSIONAL"
     ATENDENTE = "ATENDENTE"
     GESTOR = "GESTOR"
+    ADMIN = "ADMIN"  # For multi-tenant system administration
     # ADMIN_MASTER é um role do AdminMasterUser, não do UserTenant
 
 class HairType(str, enum.Enum):

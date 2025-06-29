@@ -1,0 +1,26 @@
+name: "Tenants"
+description: "Multi-tenant management module for the Torri Apps platform"
+version: "1.0.0"
+models:
+  - Tenant
+schemas:
+  - TenantBase
+  - TenantCreate
+  - TenantUpdate
+  - TenantSchema
+  - TenantListResponse
+  - TenantStatusUpdate
+services:
+  - TenantService
+routes:
+  - "/tenants" # Tenant management endpoints (admin only)
+dependencies:
+  - Core.Database
+  - Core.Auth
+  - Core.TenantMigration
+features:
+  - tenant_creation
+  - schema_per_tenant
+  - tenant_slug_validation
+  - database_schema_migration
+  - tenant_status_management

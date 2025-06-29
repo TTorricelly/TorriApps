@@ -27,12 +27,13 @@ services_router = APIRouter()
 
 # --- Category Endpoints ---
 @categories_router.post(
-    "", # Relative to prefix in main.py e.g. /api/v1/categories
+    "", # Relative to prefix in main.py e.g. /api/v1/{tenant_slug}/categories
     response_model=CategorySchema,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new service category for the current tenant."
 )
 async def create_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     name: Annotated[str, Form(min_length=1, max_length=100)],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],

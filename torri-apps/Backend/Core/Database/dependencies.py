@@ -1,32 +1,27 @@
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from Config.Database import SessionLocal
+"""
+Database dependencies for FastAPI.
 
-def get_db() -> Session:
-    """
-    SIMPLIFIED: Single schema database dependency.
-    No complex tenant switching logic needed anymore.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    except Exception as e:
-        print(f"Exception in database session: {e}")
-        try:
-            db.rollback()  # Rollback any pending changes
-        except Exception as rollback_error:
-            print(f"Error during rollback: {rollback_error}")
-        raise  # Re-raise the original exception
-    finally:
-        try:
-            db.close()
-        except Exception as close_error:
-            print(f"Error closing database session: {close_error}")
+This module provides the database session dependencies that are used
+throughout the FastAPI application. It imports from the session module
+which handles multi-tenant database session management.
+"""
 
-# Legacy alias for backward compatibility
-def get_public_db() -> Session:
-    """
-    Legacy function - now points to same single schema.
-    Kept for backward compatibility during migration.
-    """
-    return get_db()
+# Import all session management functions from the session module
+from .session import (
+    get_db,
+    get_public_db, 
+    get_tenant_db,
+    TenantContext,
+    tenant_session,
+    cleanup_tenant_engines
+)
+
+# Re-export for compatibility
+__all__ = [
+    'get_db',
+    'get_public_db', 
+    'get_tenant_db',
+    'TenantContext',
+    'tenant_session',
+    'cleanup_tenant_engines'
+]

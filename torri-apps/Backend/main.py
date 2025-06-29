@@ -7,6 +7,8 @@ from Config.Settings import settings
 
 # Using absolute imports for main.py
 from Core.Auth.Routes import router as auth_router
+from Core.Middleware.tenant import TenantMiddleware
+from Modules.Tenants.routes import router as tenants_router
 from Modules.Users.routes import router as users_router
 from Modules.Services.routes import categories_router, services_router
 from Modules.Availability.routes import router as availability_router
@@ -18,6 +20,7 @@ from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
+import Modules.Tenants.models  # Import Tenant models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:
@@ -47,7 +50,7 @@ app.add_middleware(
 
 # --- Custom Middlewares Registration ---
 # TenantMiddleware must be registered early, but typically after CORS.
-# app.add_middleware(TenantMiddleware) # TenantMiddleware removed
+app.add_middleware(TenantMiddleware)
 
 # --- Exception Handlers ---
 # Add custom exception handlers to the app.
@@ -66,17 +69,21 @@ configure_relationships()
 # This makes routes like /api/v1/auth/... and /api/v1/users/...
 API_V1_PREFIX = "/api/v1"
 
+# --- Public Routes (No tenant required) ---
 app.include_router(auth_router, prefix=API_V1_PREFIX, tags=["Authentication"])
-app.include_router(users_router, prefix=API_V1_PREFIX, tags=["Users Management (Tenant)"])
-app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags=["Service Categories (Tenant)"])
-app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
-app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
-app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
-app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/professionals", tags=["Professionals Management"])
-app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
-app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
-app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
-app.include_router(commissions_router, prefix=API_V1_PREFIX, tags=["Commissions Management"])
+app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenant Management (Admin Only)"])
+
+# --- Tenant-specific Routes (Require {tenant_slug} parameter) ---
+app.include_router(users_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Users Management (Tenant)"])
+app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/categories", tags=["Service Categories (Tenant)"])
+app.include_router(services_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/services", tags=["Services (Tenant)"])
+app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/availability", tags=["Professional Availability (Tenant)"])
+app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/appointments", tags=["Appointments (Tenant)"])
+app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/professionals", tags=["Professionals Management"])
+app.include_router(stations_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Stations Management"])
+app.include_router(settings_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Application Settings"])
+app.include_router(company_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Company Management"])
+app.include_router(commissions_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Commissions Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---
