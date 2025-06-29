@@ -485,8 +485,8 @@ def get_available_dates_for_calendar_endpoint(
 def get_appointment_groups_endpoint(
     date_filter: Optional[date] = Query(None, description="Filter by date (YYYY-MM-DD)"),
     status_filter: Optional[str] = Query(None, description="Filter by status"),
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Get appointment groups formatted for kanban board display.
@@ -524,8 +524,8 @@ def get_appointment_groups_endpoint(
 def update_appointment_group_status_endpoint(
     group_id: UUID = Path(..., description="The appointment group ID"),
     status_update: AppointmentGroupStatusUpdate = Body(...),
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Update the status of an appointment group and all its appointments.
@@ -564,8 +564,8 @@ def update_appointment_group_status_endpoint(
 )
 def create_walk_in_appointment_endpoint(
     walk_in_data: WalkInAppointmentRequest = Body(...),
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Create a walk-in appointment group with client and services.
@@ -612,8 +612,8 @@ def create_walk_in_appointment_endpoint(
 )
 def create_merged_checkout_endpoint(
     checkout_data: MergedCheckoutRequest = Body(...),
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
-    db: Annotated[Session, Depends(get_db)] = None
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Create a merged checkout session for multiple appointment groups.
