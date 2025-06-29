@@ -97,7 +97,8 @@ export const professionalsApi = {
   // Get professional availability slots
   getAvailability: async (professionalId) => {
     try {
-      const response = await api.get(`/api/v1/availability/professional/${professionalId}/slots`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+      const response = await api.get(endpoint);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar disponibilidade:', error);
@@ -108,7 +109,8 @@ export const professionalsApi = {
   // Create availability slot
   createAvailabilitySlot: async (professionalId, slotData) => {
     try {
-      const response = await api.post(`/api/v1/availability/professional/${professionalId}/slots`, slotData);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+      const response = await api.post(endpoint, slotData);
       return response.data;
     } catch (error) {
       console.error('Erro ao criar slot de disponibilidade:', error);
@@ -119,7 +121,8 @@ export const professionalsApi = {
   // Delete availability slot
   deleteAvailabilitySlot: async (professionalId, slotId) => {
     try {
-      await api.delete(`/api/v1/availability/professional/${professionalId}/slots/${slotId}`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots/${slotId}`);
+      await api.delete(endpoint);
       return true;
     } catch (error) {
       console.error('Erro ao excluir slot de disponibilidade:', error);
@@ -131,11 +134,13 @@ export const professionalsApi = {
   updateAvailability: async (professionalId, availabilityData) => {
     try {
       // Get current slots to delete them first
-      const currentSlots = await api.get(`/api/v1/availability/professional/${professionalId}/slots`);
+      const slotsEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+      const currentSlots = await api.get(slotsEndpoint);
       
       // Delete all existing slots
       for (const slot of currentSlots.data) {
-        await api.delete(`/api/v1/availability/professional/${professionalId}/slots/${slot.id}`);
+        const deleteEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots/${slot.id}`);
+        await api.delete(deleteEndpoint);
       }
       
       // Create new slots from availabilityData
@@ -147,7 +152,8 @@ export const professionalsApi = {
             start_time: period.start_time,
             end_time: period.end_time
           };
-          const response = await api.post(`/api/v1/availability/professional/${professionalId}/slots`, slotData);
+          const createEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+          const response = await api.post(createEndpoint, slotData);
           results.push(response.data);
         }
       }
@@ -162,7 +168,8 @@ export const professionalsApi = {
   // Get professional blocked periods
   getBlockedPeriods: async (professionalId) => {
     try {
-      const response = await api.get(`/api/v1/availability/professional/${professionalId}/blocked-times`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/blocked-times`);
+      const response = await api.get(endpoint);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar períodos bloqueados:', error);
@@ -173,7 +180,8 @@ export const professionalsApi = {
   // Create blocked period
   createBlockedPeriod: async (professionalId, blockData) => {
     try {
-      const response = await api.post(`/api/v1/availability/professional/${professionalId}/blocked-times`, blockData);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/blocked-times`);
+      const response = await api.post(endpoint, blockData);
       return response.data;
     } catch (error) {
       console.error('Erro ao criar período bloqueado:', error);
@@ -184,7 +192,8 @@ export const professionalsApi = {
   // Delete blocked period
   deleteBlockedPeriod: async (professionalId, blockId) => {
     try {
-      await api.delete(`/api/v1/availability/professional/${professionalId}/blocked-times/${blockId}`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/blocked-times/${blockId}`);
+      await api.delete(endpoint);
       return true;
     } catch (error) {
       console.error('Erro ao excluir período bloqueado:', error);
@@ -195,7 +204,8 @@ export const professionalsApi = {
   // Get professional breaks
   getBreaks: async (professionalId) => {
     try {
-      const response = await api.get(`/api/v1/availability/professional/${professionalId}/breaks`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/breaks`);
+      const response = await api.get(endpoint);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar pausas:', error);
@@ -206,7 +216,8 @@ export const professionalsApi = {
   // Create break
   createBreak: async (professionalId, breakData) => {
     try {
-      const response = await api.post(`/api/v1/availability/professional/${professionalId}/breaks`, breakData);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/breaks`);
+      const response = await api.post(endpoint, breakData);
       return response.data;
     } catch (error) {
       console.error('Erro ao criar pausa:', error);
@@ -217,7 +228,8 @@ export const professionalsApi = {
   // Delete break
   deleteBreak: async (professionalId, breakId) => {
     try {
-      await api.delete(`/api/v1/availability/professional/${professionalId}/breaks/${breakId}`);
+      const endpoint = buildApiEndpoint(`availability/professional/${professionalId}/breaks/${breakId}`);
+      await api.delete(endpoint);
       return true;
     } catch (error) {
       console.error('Erro ao excluir pausa:', error);
