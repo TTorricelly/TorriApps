@@ -343,9 +343,9 @@ def get_blocked_times_for_professional(
     ).order_by(ProfessionalBlockedTime.blocked_date, ProfessionalBlockedTime.start_time)
 
     if start_date_filter:
-        stmt = stmt.where(ProfessionalBlockedTime.block_date >= start_date_filter)
+        stmt = stmt.where(ProfessionalBlockedTime.blocked_date >= start_date_filter)
     if end_date_filter:
-        stmt = stmt.where(ProfessionalBlockedTime.block_date <= end_date_filter)
+        stmt = stmt.where(ProfessionalBlockedTime.blocked_date <= end_date_filter)
 
     return list(db.execute(stmt).scalars().all())
 
