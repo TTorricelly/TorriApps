@@ -11,8 +11,8 @@ export const professionalsApi = {
       params.services = filters.services.join(',');
     }
     
-    // Use direct path with trailing slash to match FastAPI route
-    const endpoint = '/api/v1/professionals/';
+    // Use buildApiEndpoint to respect base URL configuration
+    const endpoint = buildApiEndpoint('professionals');
     
     try {
       const response = await api.get(endpoint, { params });
@@ -81,7 +81,8 @@ export const professionalsApi = {
       const formData = new FormData();
       formData.append('photo', photoFile);
 
-      const response = await api.post(`/api/v1/professionals/${professionalId}/photo`, formData, {
+      const endpoint = buildApiEndpoint(`professionals/${professionalId}/photo`);
+      const response = await api.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -227,7 +228,8 @@ export const professionalsApi = {
   // Get services associated with professional
   getProfessionalServices: async (professionalId) => {
     try {
-      const response = await api.get(`/api/v1/professionals/${professionalId}/services`);
+      const endpoint = buildApiEndpoint(`professionals/${professionalId}/services`);
+      const response = await api.get(endpoint);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar serviços do profissional:', error);
@@ -238,7 +240,8 @@ export const professionalsApi = {
   // Update services associated with professional
   updateProfessionalServices: async (professionalId, serviceIds) => {
     try {
-      const response = await api.put(`/api/v1/professionals/${professionalId}/services`, {
+      const endpoint = buildApiEndpoint(`professionals/${professionalId}/services`);
+      const response = await api.put(endpoint, {
         service_ids: serviceIds
       });
       return response.data;
