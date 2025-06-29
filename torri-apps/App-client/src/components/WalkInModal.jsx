@@ -25,6 +25,7 @@ import {
 import { getCategories, getServicesByCategory } from '../services/categoryService';
 import { getProfessionalsForService } from '../services/professionalService';
 import { createWalkInAppointment } from '../services/appointmentService';
+import { getClients } from '../services/clientService';
 
 const WalkInModal = ({ 
   isOpen, 
@@ -34,11 +35,15 @@ const WalkInModal = ({
   // State management
   const [step, setStep] = useState(1); // 1: Client, 2: Services, 3: Professional, 4: Confirm
   const [clientData, setClientData] = useState({
+    id: null,
     name: '',
     phone: '',
     email: '',
     isNewClient: true
   });
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState([]);
+  const [searchingClients, setSearchingClients] = useState(false);
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProfessional, setProfessional] = useState(null);
   const [estimatedDuration, setEstimatedDuration] = useState(0);
@@ -53,6 +58,7 @@ const WalkInModal = ({
   
   // UI state
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+  const [showClientSearch, setShowClientSearch] = useState(false);
   
   // Refs
   const modalRef = useRef(null);
@@ -159,6 +165,56 @@ const WalkInModal = ({
       setIsLoading(false);
     }
   };
+
+  // Search for existing clients
+  const handleClientSearch = async (query) => {
+    setClientSearchQuery(query);
+    
+    if (query.length < 2) {
+      setClientSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearchingClients(true);
+      const response = await getClients({ search: query, limit: 10 });
+      setClientSearchResults(response.items || []);
+    } catch (err) {
+      console.error('Error searching clients:', err);
+      setClientSearchResults([]);
+    } finally {
+      setSearchingClients(false);
+    }
+  };
+
+  // Select existing client from search results
+  const selectExistingClient = (client) => {
+    setClientData({
+      id: client.id,
+      name: client.full_name || client.name,
+      phone: client.phone || '',
+      email: client.email || '',
+      isNewClient: false
+    });
+    setShowClientSearch(false);
+    setClientSearchQuery('');
+    setClientSearchResults([]);
+  };
+
+  // Toggle between new client and existing client modes
+  const toggleClientMode = () => {
+    if (showClientSearch) {
+      // Switch to new client mode
+      setShowClientSearch(false);
+      setClientData({ id: null, name: '', phone: '', email: '', isNewClient: true });
+      setClientSearchQuery('');
+      setClientSearchResults([]);
+    } else {
+      // Switch to existing client search mode
+      setShowClientSearch(true);
+      setClientData({ id: null, name: '', phone: '', email: '', isNewClient: false });
+    }
+  };
   
   // Handle form submission
   const handleSubmit = async () => {
@@ -167,12 +223,15 @@ const WalkInModal = ({
       setError(null);
       
       const walkInData = {
-        client_data: clientData,
-        services: selectedServices.map(s => ({ id: s.id, price: s.price })),
-        professional_id: selectedProfessional?.id,
-        estimated_duration: estimatedDuration,
-        estimated_price: estimatedPrice,
-        notes: `Walk-in appointment created for ${clientData.name}`
+        client: clientData.isNewClient ? {
+          name: clientData.name,
+          phone: clientData.phone || null,
+          email: clientData.email || null
+        } : {
+          id: clientData.id
+        },
+        services: selectedServices.map(s => ({ id: s.id })),
+        professional_id: selectedProfessional?.id
       };
       
       const result = await createWalkInAppointment(walkInData);
@@ -181,7 +240,7 @@ const WalkInModal = ({
       resetForm();
       
     } catch (err) {
-      setError('Failed to create walk-in appointment');
+      setError('Erro ao criar atendimento sem agendamento');
     } finally {
       setIsLoading(false);
     }
@@ -190,10 +249,13 @@ const WalkInModal = ({
   // Reset form
   const resetForm = () => {
     setStep(1);
-    setClientData({ name: '', phone: '', email: '', isNewClient: true });
+    setClientData({ id: null, name: '', phone: '', email: '', isNewClient: true });
     setSelectedServices([]);
     setProfessional(null);
     setServiceSearchQuery('');
+    setClientSearchQuery('');
+    setClientSearchResults([]);
+    setShowClientSearch(false);
     setError(null);
   };
   
@@ -218,55 +280,158 @@ const WalkInModal = ({
       case 1:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">Informações do Cliente</h3>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Nome do Cliente *
-              </label>
-              <input
-                ref={firstInputRef}
-                type="text"
-                value={clientData.name}
-                onChange={(e) => setClientData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                placeholder="Digite o nome do cliente"
-                required
-                autoComplete="name"
-              />
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Informações do Cliente</h3>
+              <button
+                onClick={toggleClientMode}
+                className="text-sm text-pink-600 hover:text-pink-700 font-medium touch-manipulation"
+              >
+                {showClientSearch ? 'Novo Cliente' : 'Cliente Existente'}
+              </button>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <Phone size={16} className="inline mr-2" />
-                Telefone
-              </label>
-              <input
-                type="tel"
-                value={clientData.phone}
-                onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                placeholder="(11) 99999-9999"
-                autoComplete="tel"
-                inputMode="tel"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <Mail size={16} className="inline mr-2" />
-                Email
-              </label>
-              <input
-                type="email"
-                value={clientData.email}
-                onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                placeholder="cliente@exemplo.com"
-                autoComplete="email"
-                inputMode="email"
-              />
-            </div>
+
+            {showClientSearch ? (
+              /* Existing client search mode */
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Search size={16} className="inline mr-2" />
+                    Buscar Cliente Existente
+                  </label>
+                  <input
+                    ref={firstInputRef}
+                    type="text"
+                    value={clientSearchQuery}
+                    onChange={(e) => handleClientSearch(e.target.value)}
+                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="Digite nome, telefone ou email..."
+                    inputMode="search"
+                  />
+                </div>
+
+                {/* Search results */}
+                {clientSearchQuery.length >= 2 && (
+                  <div className="max-h-64 overflow-y-auto">
+                    {searchingClients ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-pink-500 border-t-transparent mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-500">Buscando clientes...</p>
+                      </div>
+                    ) : clientSearchResults.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 mb-2">
+                          {clientSearchResults.length} cliente{clientSearchResults.length !== 1 ? 's' : ''} encontrado{clientSearchResults.length !== 1 ? 's' : ''}:
+                        </p>
+                        {clientSearchResults.map((client) => (
+                          <div
+                            key={client.id}
+                            onClick={() => selectExistingClient(client)}
+                            className="p-4 border border-gray-200 rounded-xl hover:border-pink-300 hover:bg-pink-50 active:bg-pink-100 cursor-pointer transition-colors touch-manipulation"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center">
+                                <User size={18} className="text-pink-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 truncate">
+                                  {client.full_name || client.name}
+                                </h4>
+                                <div className="text-sm text-gray-500 space-y-1">
+                                  {client.phone && <p>{client.phone}</p>}
+                                  {client.email && <p>{client.email}</p>}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <User size={32} className="mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">Nenhum cliente encontrado</p>
+                        <button
+                          onClick={toggleClientMode}
+                          className="text-pink-600 hover:text-pink-700 text-sm font-medium mt-2 touch-manipulation"
+                        >
+                          Criar novo cliente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Selected client display */}
+                {clientData.id && !clientData.isNewClient && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-green-800">Cliente Selecionado</h4>
+                        <p className="text-green-700">{clientData.name}</p>
+                        {clientData.phone && <p className="text-sm text-green-600">{clientData.phone}</p>}
+                        {clientData.email && <p className="text-sm text-green-600">{clientData.email}</p>}
+                      </div>
+                      <button
+                        onClick={() => setClientData({ id: null, name: '', phone: '', email: '', isNewClient: false })}
+                        className="text-green-600 hover:text-green-700 touch-manipulation"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* New client creation mode */
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Nome do Cliente *
+                  </label>
+                  <input
+                    ref={firstInputRef}
+                    type="text"
+                    value={clientData.name}
+                    onChange={(e) => setClientData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="Digite o nome do cliente"
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Phone size={16} className="inline mr-2" />
+                    Telefone
+                  </label>
+                  <input
+                    type="tel"
+                    value={clientData.phone}
+                    onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="(11) 99999-9999"
+                    autoComplete="tel"
+                    inputMode="tel"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Mail size={16} className="inline mr-2" />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={clientData.email}
+                    onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="cliente@exemplo.com"
+                    autoComplete="email"
+                    inputMode="email"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         );
         
@@ -477,16 +642,16 @@ const WalkInModal = ({
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
-      {/* Mobile: Full screen overlay, Desktop: Centered modal */}
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+      {/* Full screen modal */}
       <div 
         ref={modalRef}
-        className="bg-white h-full w-full sm:rounded-xl sm:max-w-md sm:w-full sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col"
+        className="bg-white h-full w-full overflow-hidden flex flex-col"
       >
-        {/* Header - Mobile optimized with larger touch targets */}
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
           <div className="flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Adicionar Walk-in</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Adicionar Sem Agendamento</h2>
             <p className="text-sm text-gray-500">Passo {step} de 4</p>
           </div>
           <button
@@ -498,7 +663,7 @@ const WalkInModal = ({
           </button>
         </div>
         
-        {/* Progress bar - More prominent for mobile */}
+        {/* Progress bar */}
         <div className="px-4 py-3 bg-gray-50">
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
@@ -514,7 +679,7 @@ const WalkInModal = ({
           </div>
         </div>
         
-        {/* Content - Scrollable area optimized for mobile */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 pb-safe">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -525,7 +690,7 @@ const WalkInModal = ({
           {renderStepContent()}
         </div>
         
-        {/* Footer - Fixed bottom with safe area */}
+        {/* Footer */}
         <div className="border-t border-gray-200 bg-white p-4 pb-safe">
           <div className="flex gap-3">
             <button
@@ -545,7 +710,7 @@ const WalkInModal = ({
               }}
               disabled={
                 isLoading ||
-                (step === 1 && !clientData.name) ||
+                (step === 1 && (showClientSearch ? !clientData.id : !clientData.name)) ||
                 (step === 2 && selectedServices.length === 0) ||
                 (step === 3 && !selectedProfessional)
               }
@@ -556,7 +721,7 @@ const WalkInModal = ({
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Carregando...
                 </div>
-              ) : step === 4 ? 'Criar Walk-in' : 'Próximo'}
+              ) : step === 4 ? 'Criar Sem Agendamento' : 'Próximo'}
             </button>
           </div>
         </div>

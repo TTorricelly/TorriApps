@@ -11,28 +11,21 @@
  * - Real-time status updates
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus,
   Clock,
-  User,
   DollarSign,
-  Calendar,
   Timer,
-  X,
-  Minimize2,
-  ChevronDown,
   RefreshCw,
   AlertCircle,
-  ArrowLeft,
-  Keyboard
+  ArrowLeft
 } from 'lucide-react';
 
 // Import services 
-import { getAppointmentGroups, updateAppointmentGroupStatus, createWalkInAppointment } from '../services/appointmentService';
+import { getAppointmentGroups, updateAppointmentGroupStatus } from '../services/appointmentService';
 import { useAuthStore } from '../stores/authStore';
-import { buildAssetUrl } from '../utils/urlHelpers';
 
 // Import components
 import CheckoutDrawer from '../components/CheckoutDrawer';
@@ -40,18 +33,18 @@ import WalkInModal from '../components/WalkInModal';
 
 // Kanban columns configuration following the required flow
 const KANBAN_COLUMNS = [
-  { id: 'SCHEDULED', title: 'Booked', status: 'SCHEDULED', color: 'bg-blue-50 border-blue-200' },
-  { id: 'CONFIRMED', title: 'Confirmed', status: 'CONFIRMED', color: 'bg-green-50 border-green-200' }, 
-  { id: 'WALK_IN', title: 'Walk-in', status: 'WALK_IN', color: 'bg-purple-50 border-purple-200' },
-  { id: 'ARRIVED', title: 'Arrived', status: 'ARRIVED', color: 'bg-yellow-50 border-yellow-200' },
-  { id: 'IN_SERVICE', title: 'In Service', status: 'IN_SERVICE', color: 'bg-orange-50 border-orange-200' },
-  { id: 'READY_TO_PAY', title: 'Ready to Pay', status: 'READY_TO_PAY', color: 'bg-pink-50 border-pink-200' },
-  { id: 'COMPLETED', title: 'Completed', status: 'COMPLETED', color: 'bg-gray-50 border-gray-200' }
+  { id: 'SCHEDULED', title: 'Agendado', status: 'SCHEDULED', color: 'bg-blue-50 border-blue-200' },
+  { id: 'CONFIRMED', title: 'Confirmado', status: 'CONFIRMED', color: 'bg-green-50 border-green-200' }, 
+  { id: 'WALK_IN', title: 'Sem Agendamento', status: 'WALK_IN', color: 'bg-purple-50 border-purple-200' },
+  { id: 'ARRIVED', title: 'Chegou', status: 'ARRIVED', color: 'bg-yellow-50 border-yellow-200' },
+  { id: 'IN_SERVICE', title: 'Em Atendimento', status: 'IN_SERVICE', color: 'bg-orange-50 border-orange-200' },
+  { id: 'READY_TO_PAY', title: 'Pronto p/ Pagar', status: 'READY_TO_PAY', color: 'bg-pink-50 border-pink-200' },
+  { id: 'COMPLETED', title: 'Finalizado', status: 'COMPLETED', color: 'bg-gray-50 border-gray-200' }
 ];
 
 const KanbanBoardPage = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   
   // State management
   const [appointmentGroups, setAppointmentGroups] = useState([]);
@@ -59,26 +52,25 @@ const KanbanBoardPage = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState(null);
+  // Touch drag state only
   const [dragOverColumn, setDragOverColumn] = useState(null);
+  
+  // Touch drag state
+  const [touchDraggedItem, setTouchDraggedItem] = useState(null);
+  const [touchStartPosition, setTouchStartPosition] = useState(null);
+  const [dragPreview, setDragPreview] = useState(null);
   
   // Checkout drawer state
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
   const [checkoutMinimized, setCheckoutMinimized] = useState(false);
-  const [selectedGroupForCheckout, setSelectedGroupForCheckout] = useState(null);
   const [checkoutGroups, setCheckoutGroups] = useState([]); // For merging multiple groups
   
   // Walk-in modal state
   const [walkInModalOpen, setWalkInModalOpen] = useState(false);
   
-  // Keyboard shortcut state
+  // Card selection state
   const [selectedCard, setSelectedCard] = useState(null);
-  const [keyboardHelpVisible, setKeyboardHelpVisible] = useState(false);
   
-  // Refs for focus management
-  const checkoutDrawerRef = useRef(null);
-  const kanbanBoardRef = useRef(null);
   
   // Load appointment groups on mount and auth changes
   useEffect(() => {
@@ -142,74 +134,24 @@ const KanbanBoardPage = () => {
     return appointmentGroups.filter(group => group.status === columnStatus);
   };
   
-  // Handle drag start
-  const handleDragStart = (e, group) => {
-    setDraggedItem(group);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target.outerHTML);
-    e.target.style.opacity = '0.5';
-  };
   
-  // Handle drag end
-  const handleDragEnd = (e) => {
-    e.target.style.opacity = '1';
-    setDraggedItem(null);
-    setDragOverColumn(null);
-  };
-  
-  // Handle drag over
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  
-  // Handle drag enter
-  const handleDragEnter = (e, columnId) => {
-    e.preventDefault();
-    setDragOverColumn(columnId);
-  };
-  
-  // Handle drag leave  
-  const handleDragLeave = (e) => {
-    // Only clear if leaving the column entirely
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setDragOverColumn(null);
-    }
-  };
-  
-  // Handle drop
-  const handleDrop = async (e, targetColumnId) => {
-    e.preventDefault();
-    setDragOverColumn(null);
-    
-    if (!draggedItem || draggedItem.status === targetColumnId) {
-      return; // No change needed
-    }
-    
+  // Move card to column (shared function for both drag and touch)
+  const moveCardToColumn = async (item, targetColumnId) => {
     try {
       // Special handling for Ready to Pay - open checkout drawer
       if (targetColumnId === 'READY_TO_PAY') {
-        setSelectedGroupForCheckout(draggedItem);
-        setCheckoutGroups([draggedItem]);
+        setCheckoutGroups([item]);
         setCheckoutDrawerOpen(true);
         setCheckoutMinimized(false);
-        
-        // Focus trap to drawer
-        setTimeout(() => {
-          if (checkoutDrawerRef.current) {
-            const firstFocusable = checkoutDrawerRef.current.querySelector('[tabindex="0"], button, input, select, textarea');
-            firstFocusable?.focus();
-          }
-        }, 100);
       }
       
       // Update the status
-      await updateAppointmentGroupStatus(draggedItem.id, targetColumnId);
+      await updateAppointmentGroupStatus(item.id, targetColumnId);
       
       // Update local state optimistically
       setAppointmentGroups(prev => 
         prev.map(group => 
-          group.id === draggedItem.id 
+          group.id === item.id 
             ? { ...group, status: targetColumnId }
             : group
         )
@@ -223,68 +165,120 @@ const KanbanBoardPage = () => {
     }
   };
   
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Only handle shortcuts when not in input fields
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-        return;
-      }
-      
-      switch (e.key.toLowerCase()) {
-        case 'a':
-          if (selectedCard) {
-            e.preventDefault();
-            handleStatusUpdate(selectedCard, 'ARRIVED');
-          }
-          break;
-        case 'c':
-          if (selectedCard && selectedCard.status === 'READY_TO_PAY') {
-            e.preventDefault();
-            openCheckoutForGroup(selectedCard);
-          }
-          break;
-        case 'escape':
-          e.preventDefault();
-          if (checkoutDrawerOpen) {
-            closeCheckoutDrawer();
-          } else if (walkInModalOpen) {
-            setWalkInModalOpen(false);
-          } else if (keyboardHelpVisible) {
-            setKeyboardHelpVisible(false);
-          }
-          break;
-        case '?':
-          e.preventDefault();
-          setKeyboardHelpVisible(!keyboardHelpVisible);
-          break;
-      }
-    };
+  // Touch event handlers for mobile drag and drop
+  const handleTouchStart = (e, group) => {
+    const touch = e.touches[0];
+    setTouchDraggedItem(group);
+    setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
+    setSelectedCard(group);
     
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCard, checkoutDrawerOpen, walkInModalOpen, keyboardHelpVisible]);
-  
-  // Handle status update via keyboard or other methods
-  const handleStatusUpdate = async (group, newStatus) => {
-    try {
-      await updateAppointmentGroupStatus(group.id, newStatus);
-      setAppointmentGroups(prev => 
-        prev.map(g => 
-          g.id === group.id 
-            ? { ...g, status: newStatus }
-            : g
-        )
-      );
-    } catch (error) {
-      console.error('[KanbanBoard] Error updating status:', error);
-      alert('Erro ao atualizar status. Tente novamente.');
+    // Add haptic feedback if available
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
     }
   };
   
+  const handleTouchMove = (e) => {
+    if (!touchDraggedItem || !touchStartPosition) return;
+    
+    e.preventDefault(); // Prevent scrolling
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartPosition.x;
+    const deltaY = touch.clientY - touchStartPosition.y;
+    
+    // Only start visual drag if moved enough (prevent accidental drags)
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      if (!dragPreview) {
+        createDragPreview(touch.clientX, touch.clientY);
+      } else {
+        updateDragPreview(touch.clientX, touch.clientY);
+      }
+      
+      // Find column under touch point
+      const columnElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      const columnContainer = columnElement?.closest('[data-column-id]');
+      if (columnContainer) {
+        const columnId = columnContainer.getAttribute('data-column-id');
+        setDragOverColumn(columnId);
+      } else {
+        setDragOverColumn(null);
+      }
+    }
+  };
+  
+  const handleTouchEnd = async (e) => {
+    if (!touchDraggedItem) return;
+    
+    const touch = e.changedTouches[0];
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const columnContainer = elementBelow?.closest('[data-column-id]');
+    
+    if (columnContainer) {
+      const targetColumnId = columnContainer.getAttribute('data-column-id');
+      if (targetColumnId && targetColumnId !== touchDraggedItem.status) {
+        await moveCardToColumn(touchDraggedItem, targetColumnId);
+        
+        // Success haptic feedback
+        if (navigator.vibrate) {
+          navigator.vibrate([30, 10, 30]);
+        }
+      }
+    }
+    
+    // Cleanup
+    setTouchDraggedItem(null);
+    setTouchStartPosition(null);
+    setDragOverColumn(null);
+    removeDragPreview();
+  };
+  
+  // Create visual drag preview for touch
+  const createDragPreview = (x, y) => {
+    if (!touchDraggedItem) return;
+    
+    const preview = document.createElement('div');
+    preview.id = 'touch-drag-preview';
+    preview.className = 'fixed z-50 pointer-events-none bg-white rounded-xl shadow-lg border p-4 transform -translate-x-1/2 -translate-y-1/2 opacity-90 scale-95';
+    preview.style.left = `${x}px`;
+    preview.style.top = `${y}px`;
+    preview.innerHTML = `
+      <div class="font-semibold text-sm text-gray-900">${touchDraggedItem.client_name || 'Cliente Walk-in'}</div>
+      <div class="text-xs text-gray-500 mt-1">${touchDraggedItem.service_names || 'Serviços'}</div>
+    `;
+    
+    document.body.appendChild(preview);
+    setDragPreview(preview);
+  };
+  
+  // Update drag preview position
+  const updateDragPreview = (x, y) => {
+    if (dragPreview) {
+      dragPreview.style.left = `${x}px`;
+      dragPreview.style.top = `${y}px`;
+    }
+  };
+  
+  // Remove drag preview
+  const removeDragPreview = () => {
+    if (dragPreview) {
+      document.body.removeChild(dragPreview);
+      setDragPreview(null);
+    }
+  };
+  
+  // Cleanup drag preview on unmount
+  useEffect(() => {
+    return () => {
+      if (dragPreview) {
+        document.body.removeChild(dragPreview);
+      }
+    };
+  }, [dragPreview]);
+  
+  
+  
   // Open checkout for group
   const openCheckoutForGroup = (group) => {
-    setSelectedGroupForCheckout(group);
     setCheckoutGroups([group]);
     setCheckoutDrawerOpen(true);
     setCheckoutMinimized(false);
@@ -294,13 +288,7 @@ const KanbanBoardPage = () => {
   const closeCheckoutDrawer = () => {
     setCheckoutDrawerOpen(false);
     setCheckoutMinimized(false);
-    setSelectedGroupForCheckout(null);
     setCheckoutGroups([]);
-    
-    // Return focus to main board
-    if (kanbanBoardRef.current) {
-      kanbanBoardRef.current.focus();
-    }
   };
   
   // Minimize checkout drawer
@@ -328,7 +316,7 @@ const KanbanBoardPage = () => {
   };
   
   // Handle payment completion
-  const handlePaymentComplete = (groups, paymentResult) => {
+  const handlePaymentComplete = (groups) => {
     // Mark all groups as completed
     const groupIds = groups.map(g => g.id);
     setAppointmentGroups(prev => 
@@ -345,67 +333,62 @@ const KanbanBoardPage = () => {
   
   // Render appointment card
   const renderAppointmentCard = (group) => {
-    const { date, time } = formatDateTime(group.start_time);
+    const { time } = formatDateTime(group.start_time);
     const isSelected = selectedCard?.id === group.id;
     
     return (
       <div
         key={group.id}
-        draggable
-        onDragStart={(e) => handleDragStart(e, group)}
-        onDragEnd={handleDragEnd}
+        onTouchStart={(e) => handleTouchStart(e, group)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onClick={() => setSelectedCard(group)}
         onDoubleClick={() => group.status === 'READY_TO_PAY' && openCheckoutForGroup(group)}
-        className={`bg-white rounded-xl shadow-sm border p-4 cursor-move hover:shadow-md active:shadow-lg transition-all touch-manipulation
+        className={`bg-white rounded-xl shadow-sm border p-4 active:shadow-lg transition-all touch-manipulation select-none
           ${isSelected ? 'ring-2 ring-pink-500 ring-opacity-50 shadow-md' : ''}
           ${group.status === 'READY_TO_PAY' ? 'border-pink-300 bg-gradient-to-br from-pink-25 to-pink-50' : 'border-gray-200'}
+          ${touchDraggedItem?.id === group.id ? 'opacity-50 scale-95' : ''}
         `}
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setSelectedCard(group);
-          }
-        }}
         role="button"
         aria-label={`Agendamento para ${group.client_name || 'Cliente'}, ${group.service_names || 'Serviços'}`}
       >
         {/* Client name and price */}
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1 mr-2">
-            {group.client_name || 'Cliente Walk-in'}
+          <h4 className="font-semibold text-gray-900 text-base truncate flex-1 mr-2">
+            {group.client_name || 'Cliente Sem Agendamento'}
           </h4>
           {group.status === 'READY_TO_PAY' && (
-            <span className="text-pink-600 font-bold text-sm sm:text-base bg-white px-2 py-1 rounded-lg shadow-sm">
+            <span className="text-pink-600 font-bold text-base bg-white px-3 py-1.5 rounded-lg shadow-sm">
               {formatPrice(group.total_price)}
             </span>
           )}
         </div>
         
-        {/* Services - Mobile optimized */}
+        {/* Services */}
         <div className="mb-3">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {group.service_names?.split(',').map((service, index) => (
               <span 
                 key={index}
-                className="inline-block bg-gray-100 text-gray-700 text-xs px-2.5 py-1.5 rounded-full font-medium"
+                className="inline-block bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-full font-medium"
               >
                 {service.trim()}
               </span>
             )) || (
-              <span className="text-gray-500 text-xs italic">Nenhum serviço</span>
+              <span className="text-gray-500 text-sm italic">Nenhum serviço</span>
             )}
           </div>
         </div>
         
-        {/* Time and duration - Mobile optimized */}
-        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500">
-          <div className="flex items-center space-x-1.5">
-            <Clock size={14} className="text-gray-400" />
+        {/* Time and duration */}
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center space-x-2">
+            <Clock size={16} className="text-gray-400" />
             <span className="font-medium">{time}</span>
           </div>
-          <div className="flex items-center space-x-1.5">
-            <Timer size={14} className="text-gray-400" />
+          <div className="flex items-center space-x-2">
+            <Timer size={16} className="text-gray-400" />
             <span className="font-medium">{formatDuration(group.total_duration_minutes)}</span>
           </div>
         </div>
@@ -413,17 +396,17 @@ const KanbanBoardPage = () => {
         {/* Price preview (grey until Ready to Pay) */}
         {group.status !== 'READY_TO_PAY' && group.total_price && (
           <div className="mt-3 pt-2 border-t border-gray-100">
-            <span className="text-xs text-gray-400 font-medium">
+            <span className="text-sm text-gray-400 font-medium">
               {formatPrice(group.total_price)}
             </span>
           </div>
         )}
         
-        {/* Mobile: Ready to pay indicator */}
+        {/* Ready to pay indicator */}
         {group.status === 'READY_TO_PAY' && (
           <div className="mt-3 pt-2 border-t border-pink-200">
-            <div className="flex items-center justify-center text-xs font-medium text-pink-600">
-              <DollarSign size={12} className="mr-1" />
+            <div className="flex items-center justify-center text-sm font-medium text-pink-600">
+              <DollarSign size={14} className="mr-1" />
               Toque duas vezes para checkout
             </div>
           </div>
@@ -440,42 +423,39 @@ const KanbanBoardPage = () => {
     return (
       <div 
         key={column.id}
-        className={`flex-shrink-0 w-72 sm:w-80 ${column.color} rounded-xl p-3 sm:p-4 transition-all
+        data-column-id={column.status}
+        className={`flex-shrink-0 w-80 ${column.color} rounded-xl p-4 transition-all
           ${isDragOver ? 'ring-2 ring-pink-500 ring-opacity-50 bg-opacity-75' : ''}
         `}
-        onDragOver={handleDragOver}
-        onDragEnter={(e) => handleDragEnter(e, column.id)}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, column.status)}
       >
-        {/* Column header - Mobile optimized */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <h3 className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+        {/* Column header */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-800 text-base truncate">
             {column.title}
           </h3>
           {groups.length > 0 && (
-            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[24px] h-6 flex items-center justify-center font-medium">
+            <span className="bg-red-500 text-white text-sm rounded-full px-3 py-1.5 min-w-[28px] h-7 flex items-center justify-center font-medium">
               {groups.length}
             </span>
           )}
         </div>
         
-        {/* Add Walk-in button for Walk-in column - Mobile optimized */}
+        {/* Add sem agendamento button */}
         {column.id === 'WALK_IN' && (
           <button
             onClick={handleAddWalkIn}
-            className="w-full mb-3 p-3 sm:p-2 border-2 border-dashed border-purple-300 rounded-xl text-purple-600 hover:border-purple-400 hover:bg-purple-25 active:bg-purple-50 transition-colors flex items-center justify-center space-x-2 touch-manipulation font-medium"
+            className="w-full mb-4 p-4 border-2 border-dashed border-purple-300 rounded-xl text-purple-600 hover:border-purple-400 hover:bg-purple-25 active:bg-purple-50 transition-colors flex items-center justify-center space-x-2 touch-manipulation font-medium"
           >
-            <Plus size={20} className="sm:w-4 sm:h-4" />
-            <span className="text-sm">Adicionar Walk-in</span>
+            <Plus size={20} />
+            <span className="text-base">Adicionar Sem Agendamento</span>
           </button>
         )}
         
-        {/* Cards container - Mobile optimized scrolling */}
-        <div className="space-y-2 sm:space-y-2 min-h-[120px] max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        {/* Cards container */}
+        <div className="space-y-3 min-h-[120px] max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           {groups.length === 0 ? (
-            <div className="text-gray-400 text-xs text-center py-8 sm:py-12 italic">
-              {column.id === 'WALK_IN' ? 'Toque em "A" para marcar como chegou' : 'Vazio'}
+            <div className="text-gray-400 text-sm text-center py-12 italic">
+              Vazio
             </div>
           ) : (
             groups.map(renderAppointmentCard)
@@ -517,99 +497,45 @@ const KanbanBoardPage = () => {
   }
   
   return (
-    <div className="h-screen flex flex-col bg-gray-50" ref={kanbanBoardRef} tabIndex={-1}>
-      {/* Header - Mobile optimized */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header - Mobile only */}
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+              className="p-3 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
               aria-label="Voltar ao dashboard"
             >
-              <ArrowLeft size={24} className="text-gray-600 sm:w-5 sm:h-5" />
+              <ArrowLeft size={24} className="text-gray-600" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Kanban Front-Desk</h1>
-              <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Fluxo de atendimento em tempo real</p>
+              <h1 className="text-xl font-bold text-gray-900 truncate">Atendimentos</h1>
             </div>
           </div>
           
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            <button
-              onClick={() => setKeyboardHelpVisible(!keyboardHelpVisible)}
-              className="p-2 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation hidden sm:block"
-              title="Atalhos do teclado"
-              aria-label="Mostrar atalhos do teclado"
-            >
-              <Keyboard size={20} className="text-gray-600" />
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-              title="Atualizar"
-              aria-label="Atualizar dados"
-            >
-              <RefreshCw 
-                size={24} 
-                className={`text-gray-600 sm:w-5 sm:h-5 ${refreshing ? 'animate-spin' : ''}`} 
-              />
-            </button>
-          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-3 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+            title="Atualizar"
+            aria-label="Atualizar dados"
+          >
+            <RefreshCw 
+              size={24} 
+              className={`text-gray-600 ${refreshing ? 'animate-spin' : ''}`} 
+            />
+          </button>
         </div>
       </div>
       
-      {/* Kanban board - Mobile optimized scrolling */}
+      {/* Kanban board - Mobile only */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex h-full gap-2 sm:gap-4 p-3 sm:p-6 min-w-max">
+        <div className="flex h-full gap-3 p-4 min-w-max">
           {KANBAN_COLUMNS.map(renderColumn)}
         </div>
       </div>
       
-      {/* Keyboard help overlay - Mobile optimized */}
-      {keyboardHelpVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="bg-white h-full w-full sm:rounded-xl sm:max-w-md sm:h-auto sm:mx-4 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-              <h3 className="text-lg sm:text-xl font-semibold">Atalhos do Teclado</h3>
-              <button
-                onClick={() => setKeyboardHelpVisible(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg touch-manipulation"
-                aria-label="Fechar ajuda"
-              >
-                <X size={24} className="sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            <div className="flex-1 p-4 sm:p-6 space-y-4">
-              <div className="flex items-center justify-between py-2">
-                <span className="font-mono bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold">A</span>
-                <span className="text-sm ml-4 flex-1">Mover selecionado para "Chegou"</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="font-mono bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold">C</span>
-                <span className="text-sm ml-4 flex-1">Abrir checkout (Pronto para Pagar)</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="font-mono bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold">ESC</span>
-                <span className="text-sm ml-4 flex-1">Fechar modal/gaveta</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="font-mono bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold">?</span>
-                <span className="text-sm ml-4 flex-1">Mostrar/ocultar esta ajuda</span>
-              </div>
-            </div>
-            <div className="p-4 sm:p-6 border-t border-gray-200">
-              <button
-                onClick={() => setKeyboardHelpVisible(false)}
-                className="w-full py-3 bg-pink-500 hover:bg-pink-600 text-white font-medium rounded-xl transition-colors touch-manipulation"
-              >
-                Entendi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Checkout drawer */}
       <CheckoutDrawer
@@ -622,18 +548,18 @@ const KanbanBoardPage = () => {
         onPaymentComplete={handlePaymentComplete}
       />
       
-      {/* Minimized checkout pill - Mobile optimized */}
+      {/* Minimized checkout pill */}
       {checkoutDrawerOpen && checkoutMinimized && (
-        <div className="fixed bottom-4 left-4 sm:left-4 z-50">
+        <div className="fixed bottom-4 left-4 z-50">
           <button
             onClick={() => setCheckoutMinimized(false)}
-            className="bg-pink-500 text-white px-4 sm:px-4 py-3 sm:py-2 rounded-full shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center space-x-2 touch-manipulation"
+            className="bg-pink-500 text-white px-5 py-4 rounded-full shadow-lg hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center space-x-3 touch-manipulation"
             aria-label="Abrir checkout"
           >
-            <DollarSign size={20} className="sm:w-4 sm:h-4" />
-            <span className="font-medium">Checkout</span>
+            <DollarSign size={20} />
+            <span className="font-medium text-base">Checkout</span>
             {checkoutGroups.length > 0 && (
-              <span className="bg-pink-600 text-xs px-2 py-1 rounded-full min-w-[20px] text-center font-semibold">
+              <span className="bg-pink-600 text-sm px-2.5 py-1 rounded-full min-w-[24px] text-center font-semibold">
                 {checkoutGroups.length}
               </span>
             )}

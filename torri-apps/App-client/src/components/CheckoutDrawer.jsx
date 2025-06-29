@@ -400,37 +400,37 @@ const CheckoutDrawer = ({
   
   return (
     <div 
-      className={`fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-96 bg-white shadow-xl border-l-0 sm:border-l border-gray-200 z-40 transform transition-transform ${
-        isMinimized ? 'translate-y-full sm:translate-y-0 sm:translate-x-full' : 'translate-y-0 sm:translate-x-0'
+      className={`fixed inset-0 bg-white shadow-xl z-40 transform transition-transform ${
+        isMinimized ? 'translate-y-full' : 'translate-y-0'
       } ${className}`}
       ref={drawerRef}
     >
       <div className="h-full flex flex-col">
-        {/* Header - Mobile optimized */}
-        <div className="flex items-center justify-between p-4 sm:p-4 border-b border-gray-200 bg-white shadow-sm">
-          <h3 className="text-lg sm:text-lg font-semibold">Checkout</h3>
-          <div className="flex space-x-1 sm:space-x-2">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
+          <h3 className="text-lg font-semibold">Checkout</h3>
+          <div className="flex space-x-2">
             <button 
               onClick={onMinimize}
-              className="p-2 sm:p-1 hover:bg-gray-100 rounded-lg sm:rounded touch-manipulation"
+              className="p-3 hover:bg-gray-100 rounded-lg touch-manipulation"
               title="Minimizar"
               aria-label="Minimizar checkout"
             >
-              <Minimize2 size={20} className="sm:w-4 sm:h-4" />
+              <Minimize2 size={20} />
             </button>
             <button 
               onClick={onClose}
-              className="p-2 sm:p-1 hover:bg-gray-100 rounded-lg sm:rounded touch-manipulation"
+              className="p-3 hover:bg-gray-100 rounded-lg touch-manipulation"
               title="Fechar"
               aria-label="Fechar checkout"
             >
-              <X size={20} className="sm:w-4 sm:h-4" />
+              <X size={20} />
             </button>
           </div>
         </div>
         
-        {/* Tabs - Mobile optimized */}
-        <div className="flex border-b border-gray-200 bg-gray-50 sm:bg-white">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 bg-gray-50">
           {[
             { id: 'items', label: 'Itens', icon: ShoppingCart },
             { id: 'products', label: 'Produtos', icon: Package },
@@ -442,22 +442,21 @@ const CheckoutDrawer = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1 py-3 sm:py-3 text-xs sm:text-sm font-medium transition-colors touch-manipulation ${
+                className={`flex-1 flex flex-col items-center justify-center space-y-1 py-3 text-xs font-medium transition-colors touch-manipulation ${
                   activeTab === tab.id
-                    ? 'text-pink-600 border-b-2 border-pink-600 bg-white sm:bg-transparent'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 sm:hover:bg-transparent'
+                    ? 'text-pink-600 border-b-2 border-pink-600 bg-white'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Icon size={16} className="sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden text-xs">{tab.label.slice(0, 4)}</span>
+                <Icon size={16} />
+                <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
         
-        {/* Tab content - Mobile optimized scrolling */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-4 pb-safe">
+        {/* Tab content */}
+        <div className="flex-1 overflow-y-auto p-4 pb-safe">
           {renderTabContent()}
         </div>
         
@@ -468,8 +467,8 @@ const CheckoutDrawer = ({
           </div>
         )}
         
-        {/* Footer with totals and pay button - Mobile optimized */}
-        <div className="border-t border-gray-200 p-4 sm:p-4 pb-safe space-y-4 bg-white">
+        {/* Footer with totals and pay button */}
+        <div className="border-t border-gray-200 p-4 pb-safe space-y-4 bg-white">
           {/* Totals breakdown */}
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center">
@@ -488,17 +487,17 @@ const CheckoutDrawer = ({
                 <span className="font-medium">{formatPrice(totals.tipAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between items-center font-semibold text-base sm:text-lg border-t border-gray-200 pt-3">
+            <div className="flex justify-between items-center font-semibold text-lg border-t border-gray-200 pt-3">
               <span>Total:</span>
-              <span className="text-green-600 text-lg sm:text-xl">{formatPrice(totals.total)}</span>
+              <span className="text-green-600 text-xl">{formatPrice(totals.total)}</span>
             </div>
           </div>
           
-          {/* Pay button - Mobile optimized */}
+          {/* Pay button */}
           <button
             onClick={handlePayment}
             disabled={isProcessingPayment || groups.length === 0}
-            className="w-full bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-4 sm:py-3 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2 touch-manipulation shadow-lg"
+            className="w-full bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-4 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2 touch-manipulation shadow-lg"
           >
             {isProcessingPayment ? (
               <>
@@ -507,7 +506,7 @@ const CheckoutDrawer = ({
               </>
             ) : (
               <>
-                <CheckCircle size={20} className="sm:w-4 sm:h-4" />
+                <CheckCircle size={20} />
                 <span>Pagar {formatPrice(totals.total)}</span>
               </>
             )}

@@ -324,9 +324,12 @@ class AppointmentGroupStatusUpdate(BaseModel):
 
 
 class WalkInClientData(BaseModel):
-    name: str
+    # For new clients
+    name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    # For existing clients
+    id: Optional[UUID] = None
 
 
 class WalkInServiceData(BaseModel):

@@ -4,7 +4,7 @@ Handles appointment group operations for the front-desk kanban board.
 """
 
 from typing import List, Optional, Dict, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
@@ -14,6 +14,7 @@ from .models import AppointmentGroup, Appointment
 from .constants import AppointmentGroupStatus, AppointmentStatus
 from Core.Auth.models import User
 from Modules.Services.models import Service
+from Core.Auth.constants import UserRole
 
 
 def get_appointment_groups_for_kanban(
@@ -200,20 +201,37 @@ def create_walk_in_appointment_group(
     """
     # Create or get client
     client = None
-    if client_data.get('email'):
-        client = db.query(User).filter(User.email == client_data['email']).first()
     
-    if not client:
-        # Create new client
-        client = User(
-            full_name=client_data.get('name', 'Walk-in Client'),
-            email=client_data.get('email', ''),
-            phone=client_data.get('phone', ''),
-            role='CLIENTE',
-            is_active=True
-        )
-        db.add(client)
-        db.flush()  # Get the ID without committing
+    # If client ID is provided, get existing client
+    if client_data.get('id'):
+        client = db.query(User).filter(User.id == client_data['id']).first()
+        if not client:
+            raise ValueError(f"Client with ID {client_data['id']} not found")
+    else:
+        # For new clients, check if exists by email first
+        if client_data.get('email'):
+            client = db.query(User).filter(User.email == client_data['email']).first()
+        
+        if not client:
+            # Create new client
+            if not client_data.get('name'):
+                raise ValueError("Client name is required for new clients")
+            
+            # For clients without email, generate a unique placeholder
+            email = client_data.get('email', '')
+            if not email:
+                email = f"walkin_{uuid4()}@temp.local"
+            
+            client = User(
+                id=str(uuid4()),
+                full_name=client_data.get('name', 'Walk-in Client'),
+                email=email,
+                phone_number=client_data.get('phone', ''),
+                role=UserRole.CLIENTE,
+                is_active=True
+            )
+            db.add(client)
+            db.flush()  # Get the ID without committing
     
     # Calculate totals from services
     total_duration = 0

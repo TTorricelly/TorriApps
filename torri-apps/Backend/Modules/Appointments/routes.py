@@ -299,9 +299,12 @@ def create_walk_in_appointment_endpoint(
             detail=str(e)
         )
     except Exception as e:
+        import traceback
+        print(f"[WalkIn] Unexpected error: {str(e)}")
+        print(f"[WalkIn] Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create walk-in appointment"
+            detail=f"Failed to create walk-in appointment: {str(e)}"
         )
 
 
