@@ -400,112 +400,115 @@ const CheckoutDrawer = ({
   
   return (
     <div 
-      className={`fixed inset-y-0 right-0 w-96 bg-white shadow-xl border-l border-gray-200 z-40 transform transition-transform ${
-        isMinimized ? 'translate-x-full' : 'translate-x-0'
+      className={`fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-96 bg-white shadow-xl border-l-0 sm:border-l border-gray-200 z-40 transform transition-transform ${
+        isMinimized ? 'translate-y-full sm:translate-y-0 sm:translate-x-full' : 'translate-y-0 sm:translate-x-0'
       } ${className}`}
       ref={drawerRef}
     >
       <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Checkout</h3>
-          <div className="flex space-x-2">
+        {/* Header - Mobile optimized */}
+        <div className="flex items-center justify-between p-4 sm:p-4 border-b border-gray-200 bg-white shadow-sm">
+          <h3 className="text-lg sm:text-lg font-semibold">Checkout</h3>
+          <div className="flex space-x-1 sm:space-x-2">
             <button 
               onClick={onMinimize}
-              className="p-1 hover:bg-gray-100 rounded"
-              title="Minimize"
+              className="p-2 sm:p-1 hover:bg-gray-100 rounded-lg sm:rounded touch-manipulation"
+              title="Minimizar"
+              aria-label="Minimizar checkout"
             >
-              <Minimize2 size={16} />
+              <Minimize2 size={20} className="sm:w-4 sm:h-4" />
             </button>
             <button 
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
-              title="Close"
+              className="p-2 sm:p-1 hover:bg-gray-100 rounded-lg sm:rounded touch-manipulation"
+              title="Fechar"
+              aria-label="Fechar checkout"
             >
-              <X size={16} />
+              <X size={20} className="sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
         
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+        {/* Tabs - Mobile optimized */}
+        <div className="flex border-b border-gray-200 bg-gray-50 sm:bg-white">
           {[
-            { id: 'items', label: 'Items', icon: ShoppingCart },
-            { id: 'products', label: 'Products', icon: Package },
-            { id: 'discounts', label: 'Discounts', icon: Percent },
-            { id: 'payments', label: 'Payment', icon: CreditCard }
+            { id: 'items', label: 'Itens', icon: ShoppingCart },
+            { id: 'products', label: 'Produtos', icon: Package },
+            { id: 'discounts', label: 'Desconto', icon: Percent },
+            { id: 'payments', label: 'Pagamento', icon: CreditCard }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-1 py-3 text-sm font-medium transition-colors ${
+                className={`flex-1 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1 py-3 sm:py-3 text-xs sm:text-sm font-medium transition-colors touch-manipulation ${
                   activeTab === tab.id
-                    ? 'text-pink-600 border-b-2 border-pink-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-pink-600 border-b-2 border-pink-600 bg-white sm:bg-transparent'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 sm:hover:bg-transparent'
                 }`}
               >
-                <Icon size={14} />
-                <span>{tab.label}</span>
+                <Icon size={16} className="sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden text-xs">{tab.label.slice(0, 4)}</span>
               </button>
             );
           })}
         </div>
         
-        {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* Tab content - Mobile optimized scrolling */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-4 pb-safe">
           {renderTabContent()}
         </div>
         
         {/* Payment error */}
         {paymentError && (
           <div className="p-4 bg-red-50 border-t border-red-200">
-            <p className="text-red-600 text-sm">{paymentError}</p>
+            <p className="text-red-600 text-sm font-medium">{paymentError}</p>
           </div>
         )}
         
-        {/* Footer with totals and pay button */}
-        <div className="border-t border-gray-200 p-4 space-y-3">
+        {/* Footer with totals and pay button - Mobile optimized */}
+        <div className="border-t border-gray-200 p-4 sm:p-4 pb-safe space-y-4 bg-white">
           {/* Totals breakdown */}
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatPrice(totals.subtotal)}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium">{formatPrice(totals.subtotal)}</span>
             </div>
             {totals.discountAmount > 0 && (
-              <div className="flex justify-between text-red-600">
-                <span>Discount:</span>
-                <span>-{formatPrice(totals.discountAmount)}</span>
+              <div className="flex justify-between items-center text-red-600">
+                <span>Desconto:</span>
+                <span className="font-medium">-{formatPrice(totals.discountAmount)}</span>
               </div>
             )}
             {totals.tipAmount > 0 && (
-              <div className="flex justify-between text-gray-600">
-                <span>Tip ({selectedTipPercentage > 0 ? `${selectedTipPercentage}%` : 'Custom'}):</span>
-                <span>{formatPrice(totals.tipAmount)}</span>
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Gorjeta ({selectedTipPercentage > 0 ? `${selectedTipPercentage}%` : 'Custom'}):</span>
+                <span className="font-medium">{formatPrice(totals.tipAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-semibold text-lg border-t border-gray-200 pt-2">
+            <div className="flex justify-between items-center font-semibold text-base sm:text-lg border-t border-gray-200 pt-3">
               <span>Total:</span>
-              <span className="text-green-600">{formatPrice(totals.total)}</span>
+              <span className="text-green-600 text-lg sm:text-xl">{formatPrice(totals.total)}</span>
             </div>
           </div>
           
-          {/* Pay button */}
+          {/* Pay button - Mobile optimized */}
           <button
             onClick={handlePayment}
             disabled={isProcessingPayment || groups.length === 0}
-            className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            className="w-full bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-4 sm:py-3 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2 touch-manipulation shadow-lg"
           >
             {isProcessingPayment ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span>Processing...</span>
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                <span>Processando...</span>
               </>
             ) : (
               <>
-                <CheckCircle size={16} />
-                <span>Pay {formatPrice(totals.total)}</span>
+                <CheckCircle size={20} className="sm:w-4 sm:h-4" />
+                <span>Pagar {formatPrice(totals.total)}</span>
               </>
             )}
           </button>
