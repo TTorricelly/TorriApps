@@ -217,47 +217,54 @@ const WalkInModal = ({
     switch (step) {
       case 1:
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">Client Information</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Informações do Cliente</h3>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Client Name *
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Nome do Cliente *
               </label>
               <input
                 ref={firstInputRef}
                 type="text"
                 value={clientData.name}
                 onChange={(e) => setClientData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                placeholder="Enter client name"
+                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                placeholder="Digite o nome do cliente"
                 required
+                autoComplete="name"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <Phone size={16} className="inline mr-2" />
+                Telefone
               </label>
               <input
                 type="tel"
                 value={clientData.phone}
                 onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
                 placeholder="(11) 99999-9999"
+                autoComplete="tel"
+                inputMode="tel"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <Mail size={16} className="inline mr-2" />
                 Email
               </label>
               <input
                 type="email"
                 value={clientData.email}
                 onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                placeholder="client@example.com"
+                className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                placeholder="cliente@exemplo.com"
+                autoComplete="email"
+                inputMode="email"
               />
             </div>
           </div>
@@ -266,72 +273,91 @@ const WalkInModal = ({
       case 2:
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">Select Services</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Selecionar Serviços</h3>
             
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 ref={firstInputRef}
                 type="text"
                 value={serviceSearchQuery}
                 onChange={(e) => setServiceSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                placeholder="Search services..."
+                className="w-full pl-12 pr-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                placeholder="Buscar serviços..."
+                inputMode="search"
               />
             </div>
             
             {/* Selected services summary */}
             {selectedServices.length > 0 && (
-              <div className="p-3 bg-pink-50 rounded-lg">
-                <p className="text-sm text-pink-800 mb-2">
-                  {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
+              <div className="p-4 bg-pink-50 rounded-xl border border-pink-200">
+                <p className="text-sm text-pink-800 mb-3 font-medium">
+                  {selectedServices.length} serviço{selectedServices.length !== 1 ? 's' : ''} selecionado{selectedServices.length !== 1 ? 's' : ''}
                 </p>
                 <div className="flex justify-between text-sm">
-                  <span>Duration: {formatDuration(estimatedDuration)}</span>
-                  <span>Price: {formatPrice(estimatedPrice)}</span>
+                  <span className="flex items-center text-gray-700">
+                    <Clock size={14} className="mr-1" />
+                    {formatDuration(estimatedDuration)}
+                  </span>
+                  <span className="flex items-center font-semibold text-pink-700">
+                    <DollarSign size={14} className="mr-1" />
+                    {formatPrice(estimatedPrice)}
+                  </span>
                 </div>
               </div>
             )}
             
             {/* Services list */}
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
               {filteredServices.map((service) => {
                 const isSelected = selectedServices.some(s => s.id === service.id);
                 return (
                   <div
                     key={service.id}
                     onClick={() => toggleService(service)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-4 rounded-xl border cursor-pointer transition-all touch-manipulation ${
                       isSelected
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-pink-500 bg-pink-50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{service.name}</h4>
-                        <p className="text-xs text-gray-500">{service.category_name}</p>
-                        <div className="flex items-center space-x-3 mt-1">
-                          <span className="text-xs text-gray-600 flex items-center">
-                            <Clock size={12} className="mr-1" />
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 leading-snug">{service.name}</h4>
+                        <p className="text-sm text-gray-500 mb-2">{service.category_name}</p>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-gray-600 flex items-center">
+                            <Clock size={14} className="mr-1.5" />
                             {formatDuration(service.duration_minutes)}
                           </span>
-                          <span className="text-xs text-green-600 font-medium flex items-center">
-                            <DollarSign size={12} className="mr-1" />
+                          <span className="text-sm text-green-600 font-semibold flex items-center">
+                            <DollarSign size={14} className="mr-1" />
                             {formatPrice(service.price)}
                           </span>
                         </div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 ${
+                      <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 mt-1 ${
                         isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
                       }`}>
-                        {isSelected && <div className="w-full h-full rounded-full bg-white scale-50"></div>}
+                        {isSelected && (
+                          <div className="w-full h-full rounded-full bg-white scale-50 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 );
               })}
+              
+              {filteredServices.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Scissors size={32} className="mx-auto mb-3 text-gray-300" />
+                  <p>Nenhum serviço encontrado</p>
+                  <p className="text-sm">Tente uma busca diferente</p>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -339,12 +365,13 @@ const WalkInModal = ({
       case 3:
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">Select Professional</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Selecionar Profissional</h3>
             
             {professionals.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <User size={32} className="mx-auto mb-2 text-gray-300" />
-                <p>No professionals available for selected services</p>
+              <div className="text-center py-12 text-gray-500">
+                <User size={48} className="mx-auto mb-4 text-gray-300" />
+                <p className="font-medium mb-2">Nenhum profissional disponível</p>
+                <p className="text-sm">Os serviços selecionados não possuem profissionais compatíveis</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -352,26 +379,28 @@ const WalkInModal = ({
                   <div
                     key={professional.id}
                     onClick={() => setProfessional(professional)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-4 rounded-xl border cursor-pointer transition-all touch-manipulation ${
                       selectedProfessional?.id === professional.id
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-pink-500 bg-pink-50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User size={20} className="text-gray-500" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User size={24} className="text-pink-600" />
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{professional.full_name}</h4>
-                        <p className="text-sm text-gray-500">{professional.role || 'Professional'}</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1">{professional.full_name}</h4>
+                        <p className="text-sm text-gray-500">{professional.role || 'Profissional'}</p>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 ${
+                      <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
                         selectedProfessional?.id === professional.id ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
                       }`}>
-                        {selectedProfessional?.id === professional.id && 
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                        }
+                        {selectedProfessional?.id === professional.id && (
+                          <div className="w-full h-full rounded-full bg-white scale-50 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -383,38 +412,56 @@ const WalkInModal = ({
         
       case 4:
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">Confirm Walk-in</h3>
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Confirmar Walk-in</h3>
             
             {/* Summary */}
-            <div className="space-y-3">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-2">Client</h4>
-                <p className="text-sm">{clientData.name}</p>
-                {clientData.phone && <p className="text-xs text-gray-600">{clientData.phone}</p>}
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+                  <User size={16} className="mr-2" />
+                  Cliente
+                </h4>
+                <p className="font-medium">{clientData.name}</p>
+                {clientData.phone && <p className="text-sm text-gray-600 mt-1">{clientData.phone}</p>}
+                {clientData.email && <p className="text-sm text-gray-600">{clientData.email}</p>}
               </div>
               
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-2">Services</h4>
-                {selectedServices.map((service, index) => (
-                  <div key={service.id} className="flex justify-between text-sm">
-                    <span>{service.name}</span>
-                    <span>{formatPrice(service.price)}</span>
-                  </div>
-                ))}
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+                  <Scissors size={16} className="mr-2" />
+                  Serviços
+                </h4>
+                <div className="space-y-2">
+                  {selectedServices.map((service) => (
+                    <div key={service.id} className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{service.name}</p>
+                        <p className="text-xs text-gray-500">{formatDuration(service.duration_minutes)}</p>
+                      </div>
+                      <span className="font-semibold text-green-600">{formatPrice(service.price)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-2">Professional</h4>
-                <p className="text-sm">{selectedProfessional?.full_name}</p>
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
+                  <User size={16} className="mr-2" />
+                  Profissional
+                </h4>
+                <p className="font-medium">{selectedProfessional?.full_name}</p>
+                <p className="text-sm text-gray-600">{selectedProfessional?.role || 'Profissional'}</p>
               </div>
               
-              <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+              <div className="p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl border border-pink-200">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-pink-800">Total</span>
+                  <div>
+                    <span className="font-semibold text-pink-800">Total</span>
+                    <p className="text-sm text-pink-600">{formatDuration(estimatedDuration)}</p>
+                  </div>
                   <div className="text-right">
-                    <div className="font-bold text-pink-800">{formatPrice(estimatedPrice)}</div>
-                    <div className="text-xs text-pink-600">{formatDuration(estimatedDuration)}</div>
+                    <div className="text-2xl font-bold text-pink-800">{formatPrice(estimatedPrice)}</div>
                   </div>
                 </div>
               </div>
@@ -430,73 +477,88 @@ const WalkInModal = ({
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
+      {/* Mobile: Full screen overlay, Desktop: Centered modal */}
       <div 
         ref={modalRef}
-        className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden"
+        className="bg-white h-full w-full sm:rounded-xl sm:max-w-md sm:w-full sm:max-h-[90vh] sm:h-auto overflow-hidden flex flex-col"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-semibold">Add Walk-in</h2>
-            <p className="text-sm text-gray-500">Step {step} of 4</p>
+        {/* Header - Mobile optimized with larger touch targets */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
+          <div className="flex-1">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Adicionar Walk-in</h2>
+            <p className="text-sm text-gray-500">Passo {step} de 4</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-3 hover:bg-gray-100 rounded-full transition-colors touch-manipulation"
+            aria-label="Fechar modal"
           >
-            <X size={20} />
+            <X size={24} className="text-gray-500" />
           </button>
         </div>
         
-        {/* Progress bar */}
-        <div className="px-4 py-2">
-          <div className="w-full bg-gray-200 rounded-full h-2">
+        {/* Progress bar - More prominent for mobile */}
+        <div className="px-4 py-3 bg-gray-50">
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
-              className="bg-pink-500 h-2 rounded-full transition-all duration-300"
+              className="bg-pink-500 h-3 rounded-full transition-all duration-300 shadow-sm"
               style={{ width: `${(step / 4) * 100}%` }}
             />
           </div>
+          <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <span className={step >= 1 ? 'text-pink-600 font-medium' : ''}>Cliente</span>
+            <span className={step >= 2 ? 'text-pink-600 font-medium' : ''}>Serviços</span>
+            <span className={step >= 3 ? 'text-pink-600 font-medium' : ''}>Profissional</span>
+            <span className={step >= 4 ? 'text-pink-600 font-medium' : ''}>Confirmar</span>
+          </div>
         </div>
         
-        {/* Content */}
-        <div className="p-4 max-h-96 overflow-y-auto">
+        {/* Content - Scrollable area optimized for mobile */}
+        <div className="flex-1 overflow-y-auto p-4 pb-safe">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm font-medium">{error}</p>
             </div>
           )}
           
           {renderStepContent()}
         </div>
         
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200">
-          <button
-            onClick={step === 1 ? onClose : () => setStep(step - 1)}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            {step === 1 ? 'Cancel' : 'Back'}
-          </button>
-          
-          <button
-            onClick={() => {
-              if (step === 4) {
-                handleSubmit();
-              } else {
-                setStep(step + 1);
+        {/* Footer - Fixed bottom with safe area */}
+        <div className="border-t border-gray-200 bg-white p-4 pb-safe">
+          <div className="flex gap-3">
+            <button
+              onClick={step === 1 ? onClose : () => setStep(step - 1)}
+              className="flex-1 py-3 px-4 text-gray-600 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-manipulation"
+            >
+              {step === 1 ? 'Cancelar' : 'Voltar'}
+            </button>
+            
+            <button
+              onClick={() => {
+                if (step === 4) {
+                  handleSubmit();
+                } else {
+                  setStep(step + 1);
+                }
+              }}
+              disabled={
+                isLoading ||
+                (step === 1 && !clientData.name) ||
+                (step === 2 && selectedServices.length === 0) ||
+                (step === 3 && !selectedProfessional)
               }
-            }}
-            disabled={
-              isLoading ||
-              (step === 1 && !clientData.name) ||
-              (step === 2 && selectedServices.length === 0) ||
-              (step === 3 && !selectedProfessional)
-            }
-            className="px-6 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-          >
-            {isLoading ? 'Loading...' : step === 4 ? 'Create Walk-in' : 'Next'}
-          </button>
+              className="flex-2 py-3 px-6 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors touch-manipulation shadow-sm"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Carregando...
+                </div>
+              ) : step === 4 ? 'Criar Walk-in' : 'Próximo'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
