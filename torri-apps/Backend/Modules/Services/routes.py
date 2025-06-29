@@ -33,6 +33,7 @@ services_router = APIRouter()
     summary="Create a new service category for the current tenant."
 )
 async def create_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     name: Annotated[str, Form(min_length=1, max_length=100)],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
@@ -63,6 +64,7 @@ async def create_category_endpoint(
     summary="List all service categories for the current tenant."
 )
 def list_categories_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.CLIENTE]))],
     skip: int = Query(0, ge=0, description="Number of items to skip."),
@@ -79,6 +81,7 @@ def list_categories_endpoint(
     summary="Get a specific service category by ID for the current tenant."
 )
 def get_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
@@ -94,6 +97,7 @@ def get_category_endpoint(
     summary="Update a service category by ID for the current tenant."
 )
 async def update_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
@@ -135,6 +139,7 @@ async def update_category_endpoint(
     summary="Delete a service category by ID for the current tenant."
 )
 def delete_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     category_id: UUID = Path(..., description="ID of the category to delete.")
@@ -156,6 +161,7 @@ def delete_category_endpoint(
     summary="Create a new service for the current tenant."
 )
 def create_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_data: ServiceCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
@@ -169,6 +175,7 @@ def create_service_endpoint(
     summary="List services for the current tenant, optionally filtered by category."
 )
 def list_services_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.CLIENTE]))], # Allow more roles to view services
     category_id: Optional[UUID] = Query(None, description="Filter services by category ID."),
@@ -189,6 +196,7 @@ def list_services_endpoint(
     summary="Get a specific service by ID for the current tenant."
 )
 def get_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
     service_id: UUID = Path(..., description="ID of the service to retrieve.")
@@ -204,6 +212,7 @@ def get_service_endpoint(
     summary="Update a service by ID for the current tenant."
 )
 def update_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to update."),
@@ -225,6 +234,7 @@ def update_service_endpoint(
     summary="Delete a service by ID for the current tenant."
 )
 def delete_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to delete.")
@@ -240,6 +250,7 @@ def delete_service_endpoint(
     summary="Upload general image for a service."
 )
 async def upload_service_image_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
@@ -273,6 +284,7 @@ async def upload_service_image_endpoint(
     summary="Upload images for a service (by hair type)."
 )
 async def upload_service_images_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
