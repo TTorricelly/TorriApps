@@ -47,6 +47,14 @@ from .wizard_service import (
     get_available_dates_for_services
 )
 
+# Import kanban functions
+from .kanban_service import (
+    get_appointment_groups_for_kanban,
+    update_appointment_group_status,
+    create_walk_in_appointment_group,
+    create_merged_checkout_session
+)
+
 # Re-export all functions for backward compatibility
 __all__ = [
     # Utility functions (private)
@@ -74,5 +82,11 @@ __all__ = [
     'get_available_professionals_for_wizard',
     'get_multi_service_availability',
     'create_multi_service_booking',
-    'get_available_dates_for_services'
+    'get_available_dates_for_services',
+    
+    # Kanban functions
+    'get_appointment_groups_for_kanban',
+    'update_appointment_group_status',
+    'create_walk_in_appointment_group',
+    'create_merged_checkout_session'
 ]

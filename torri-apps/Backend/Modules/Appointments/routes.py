@@ -22,7 +22,10 @@ from .schemas import (
     # Multi-service wizard schemas
     MultiServiceAvailabilityRequest, MultiServiceAvailabilityResponse,
     AvailableProfessionalsRequest, AvailableProfessionalsResponse,
-    MultiServiceBookingRequest, MultiServiceBookingResponse
+    MultiServiceBookingRequest, MultiServiceBookingResponse,
+    # Kanban board schemas
+    AppointmentGroupStatusUpdate, WalkInAppointmentRequest, WalkInAppointmentResponse,
+    MergedCheckoutRequest, MergedCheckoutResponse
 )
 from .constants import AppointmentStatus
 
@@ -471,3 +474,176 @@ def get_available_dates_for_calendar_endpoint(
 
 
 # Delete endpoint is intentionally omitted as per subtask notes (cancellation is logical deletion).
+
+# --- Kanban Board Endpoints ---
+
+@router.get(
+    "/groups",
+    response_model=List[dict],
+    summary="Get appointment groups for kanban board display"
+)
+def get_appointment_groups_endpoint(
+    date_filter: Optional[date] = Query(None, description="Filter by date (YYYY-MM-DD)"),
+    status_filter: Optional[str] = Query(None, description="Filter by status"),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Get appointment groups formatted for kanban board display.
+    
+    - **date_filter**: Optional date to filter groups (defaults to today)
+    - **status_filter**: Optional status to filter groups
+    - Returns list of appointment groups with aggregated client and service data
+    """
+    from .constants import AppointmentGroupStatus
+    
+    # Convert string status to enum if provided
+    status_enum = None
+    if status_filter:
+        try:
+            status_enum = AppointmentGroupStatus(status_filter)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status: {status_filter}"
+            )
+    
+    return appointments_services.get_appointment_groups_for_kanban(
+        db=db,
+        tenant_id="default",  # TODO: Get from auth context
+        date_filter=date_filter,
+        status_filter=status_enum
+    )
+
+
+@router.patch(
+    "/groups/{group_id}/status",
+    response_model=dict,
+    summary="Update appointment group status for kanban board"
+)
+def update_appointment_group_status_endpoint(
+    group_id: UUID = Path(..., description="The appointment group ID"),
+    status_update: AppointmentGroupStatusUpdate = Body(...),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Update the status of an appointment group and all its appointments.
+    
+    - **group_id**: ID of the appointment group to update
+    - **status**: New status to set
+    - Updates both group and individual appointment statuses
+    """
+    # Check permissions - only ATENDENTE and GESTOR can update statuses
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can update appointment statuses."
+        )
+    
+    result = appointments_services.update_appointment_group_status(
+        db=db,
+        group_id=group_id,
+        new_status=status_update.status,
+        tenant_id="default"  # TODO: Get from auth context
+    )
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment group not found"
+        )
+    
+    return result
+
+
+@router.post(
+    "/walk-in",
+    response_model=dict,
+    summary="Create a walk-in appointment group"
+)
+def create_walk_in_appointment_endpoint(
+    walk_in_data: WalkInAppointmentRequest = Body(...),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Create a walk-in appointment group with client and services.
+    
+    - **client**: Client information (name, phone, email)
+    - **services**: List of services with IDs
+    - **professional_id**: ID of the professional providing services
+    - Creates or finds client and creates appointment group with WALK_IN status
+    """
+    # Check permissions - only ATENDENTE and GESTOR can create walk-ins
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can create walk-in appointments."
+        )
+    
+    try:
+        result = appointments_services.create_walk_in_appointment_group(
+            db=db,
+            client_data=walk_in_data.client.dict(),
+            services_data=[service.dict() for service in walk_in_data.services],
+            professional_id=walk_in_data.professional_id,
+            tenant_id="default"  # TODO: Get from auth context
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create walk-in appointment"
+        )
+
+
+@router.post(
+    "/checkout/merge",
+    response_model=MergedCheckoutResponse,
+    summary="Create merged checkout session for multiple appointment groups"
+)
+def create_merged_checkout_endpoint(
+    checkout_data: MergedCheckoutRequest = Body(...),
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Create a merged checkout session for multiple appointment groups.
+    
+    - **group_ids**: List of appointment group IDs to merge for payment
+    - Returns merged checkout session with combined totals and service details
+    """
+    # Check permissions - only ATENDENTE and GESTOR can process checkouts
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can process checkouts."
+        )
+    
+    try:
+        result = appointments_services.create_merged_checkout_session(
+            db=db,
+            group_ids=checkout_data.group_ids,
+            tenant_id="default"  # TODO: Get from auth context
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create checkout session"
+        )
