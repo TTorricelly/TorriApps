@@ -15,7 +15,7 @@ const PROFESSIONAL_IMAGE_FIELDS = ['photo_url', 'avatar_url'];
  * @returns {Promise<Array>} Array of professionals.
  */
 export const getProfessionalsForService = async (serviceId) => {
-  const endpoint = buildApiEndpoint('professionals/');
+  const endpoint = buildApiEndpoint('professionals');
   
   return withApiErrorHandling(
     () => apiClient.get(endpoint, {
@@ -36,7 +36,7 @@ export const getProfessionalsForService = async (serviceId) => {
  * @returns {Promise<Array>} Array of all professionals.
  */
 export const getAllProfessionals = async () => {
-  const endpoint = buildApiEndpoint('professionals/');
+  const endpoint = buildApiEndpoint('professionals');
   
   return withApiErrorHandling(
     () => apiClient.get(endpoint),
