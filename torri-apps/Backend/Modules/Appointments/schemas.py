@@ -15,7 +15,7 @@ except ImportError:
 class UserBasicInfo(BaseModel): # Renamed from UserTenantBasicInfo
     id: UUID
     full_name: Optional[str] = None
-    email: str
+    email: Optional[str] = None
 
     class Config:
         from_attributes = True
