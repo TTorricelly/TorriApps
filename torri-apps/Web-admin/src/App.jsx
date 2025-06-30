@@ -19,6 +19,7 @@ import {
 import ClientsPage from './Pages/Clients/ClientsPage.jsx'; // Import ClientsPage (default import)
 import ClientForm from './Pages/Clients/ClientForm.jsx'; // Import ClientForm
 import DailySchedulePage from './Pages/Appointments/DailySchedulePage.jsx'; // Import DailySchedulePage
+import KanbanPage from './Pages/Appointments/KanbanPage.jsx'; // Import KanbanPage
 import CommissionsPage from './Pages/Commissions/CommissionsPage.jsx'; // Import CommissionsPage
 import UsersPage from './Pages/Users/UsersPage.jsx'; // Import UsersPage
 import UserForm from './Pages/Users/UserForm.jsx'; // Import UserForm
@@ -46,6 +47,7 @@ function App() {
           <Route path="/appointments/calendar" element={<AppointmentCalendar />} />
           <Route path="/appointments/history" element={<AppointmentHistory />} />
           <Route path="/appointments/daily-schedule" element={<DailySchedulePage />} />
+          <Route path="/appointments/kanban" element={<KanbanPage />} />
           <Route path="appointments/*" element={<AppointmentsRoutes />} />
           
           {/* Services Routes */}

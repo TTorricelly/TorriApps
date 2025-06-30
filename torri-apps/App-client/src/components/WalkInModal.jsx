@@ -117,7 +117,7 @@ const WalkInModal = ({
       } else {
         // Reset for new appointment
         setStep(1);
-        setClientData({ id: null, name: '', email: '', phone: '', isNewClient: false });
+        setClientData({ id: null, name: '', email: '', phone: '', isNewClient: true });
         setSelectedServices([]);
         setServiceAssignments({});
       }
@@ -311,10 +311,16 @@ const WalkInModal = ({
         resetForm();
         return;
       } else {
+        // Validate client data before submission
+        if (clientData.isNewClient && !clientData.name?.trim()) {
+          setError('Nome do cliente é obrigatório');
+          return;
+        }
+        
         // Create new appointment group (original behavior)
         const walkInData = {
           client: clientData.isNewClient ? {
-            name: clientData.name,
+            name: clientData.name.trim(),
             phone: clientData.phone || null,
             email: clientData.email || null
           } : {

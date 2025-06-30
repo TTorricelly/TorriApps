@@ -22,21 +22,12 @@ import { useTenantStore } from '../../../stores/tenant';
 
 const menuItems = [
   {
-    id: 'dashboard',
-    title: 'Dashboard',
-    icon: HomeIcon,
-    items: [
-      { title: 'Visão Geral', path: '/dashboard' }
-    ]
-  },
-  {
     id: 'appointments',
     title: 'Agendamentos',
     icon: CalendarDaysIcon,
     items: [
-      { title: 'Agenda', path: '/appointments/calendar' },
       { title: 'Agenda Diária', path: '/appointments/daily-schedule' },
-      { title: 'Histórico', path: '/appointments/history' }
+      { title: 'Kanban Board', path: '/appointments/kanban' }
     ]
   },
   {
@@ -53,8 +44,7 @@ const menuItems = [
     title: 'Profissionais',
     icon: UserGroupIcon,
     items: [
-      { title: 'Equipe', path: '/professionals/team' },
-      { title: 'Disponibilidades', path: '/professionals/availability' }
+      { title: 'Equipe', path: '/professionals/team' }
     ]
   },
   {
@@ -71,7 +61,7 @@ const menuItems = [
     title: 'Clientes',
     icon: UsersIcon,
     items: [
-      { title: 'Lista', path: '/clients' } // Changed path here
+      { title: 'Cadastros', path: '/clients' } // Changed path here
     ]
   },
   {
@@ -89,8 +79,7 @@ const menuItems = [
     items: [
       { title: 'Configurações do App', path: '/settings' },
       { title: 'Perfil do Salão', path: '/settings/salon-profile' },
-      { title: 'Usuários', path: '/settings/users' },
-      { title: 'Plano & Pagamento', path: '/settings/billing' }
+      { title: 'Usuários', path: '/settings/users' }
     ]
   }
 ];

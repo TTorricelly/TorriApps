@@ -17,7 +17,7 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     
-    email = Column(String(255), unique=True, index=True, nullable=False)  # Match database VARCHAR(255)
+    email = Column(String(255), unique=True, index=True, nullable=True)  # Allow clients without email
     hashed_password = Column(String(255), nullable=True)  # Match database nullable=True
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(255), nullable=True)  # Match database VARCHAR(255)

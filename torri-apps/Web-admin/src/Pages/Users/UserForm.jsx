@@ -61,6 +61,9 @@ const UserDataForm = ({
           onChange={(e) => handleInputChange('full_name', e.target.value)}
           error={!!errors.full_name}
           icon={<UserIcon className="h-5 w-5" />}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
         />
         
         <Input
@@ -70,6 +73,10 @@ const UserDataForm = ({
           value={formData.email}
           onChange={(e) => handleInputChange('email', e.target.value)}
           error={!!errors.email}
+          autoComplete="new-email"
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
         />
 
         {!isEditMode && (
@@ -80,6 +87,10 @@ const UserDataForm = ({
             value={formData.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
             error={!!errors.password}
+            autoComplete="new-password"
+            className="bg-bg-primary border-bg-tertiary text-text-primary"
+            labelProps={{ className: "text-text-secondary" }}
+            containerProps={{ className: "text-text-primary" }}
           />
         )}
 
@@ -89,6 +100,9 @@ const UserDataForm = ({
           value={formData.phone_number}
           onChange={(e) => handleInputChange('phone_number', e.target.value)}
           error={!!errors.phone_number}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
         />
 
         <Select
@@ -96,9 +110,15 @@ const UserDataForm = ({
           value={formData.role}
           onChange={(value) => handleInputChange('role', value)}
           error={!!errors.role}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
+          menuProps={{
+            className: "bg-bg-secondary border-bg-tertiary z-50"
+          }}
         >
           {roleOptions.map((role) => (
-            <Option key={role.value} value={role.value}>
+            <Option key={role.value} value={role.value} className="text-white hover:bg-bg-tertiary">
               {role.label}
             </Option>
           ))}
@@ -110,16 +130,25 @@ const UserDataForm = ({
           value={formData.date_of_birth || ''}
           onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
           error={!!errors.date_of_birth}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
         />
 
         <Select
           label="Tipo de Cabelo"
           value={formData.hair_type || ''}
           onChange={(value) => handleInputChange('hair_type', value)}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
+          menuProps={{
+            className: "bg-bg-secondary border-bg-tertiary z-50"
+          }}
         >
-          <Option value="">Selecione...</Option>
+          <Option value="" className="text-white hover:bg-bg-tertiary">Selecione...</Option>
           {hairTypeOptions.map((hairType) => (
-            <Option key={hairType.value} value={hairType.value}>
+            <Option key={hairType.value} value={hairType.value} className="text-white hover:bg-bg-tertiary">
               {hairType.label}
             </Option>
           ))}
@@ -129,10 +158,16 @@ const UserDataForm = ({
           label="Gênero"
           value={formData.gender || ''}
           onChange={(value) => handleInputChange('gender', value)}
+          className="bg-bg-primary border-bg-tertiary text-text-primary"
+          labelProps={{ className: "text-text-secondary" }}
+          containerProps={{ className: "text-text-primary" }}
+          menuProps={{
+            className: "bg-bg-secondary border-bg-tertiary z-50"
+          }}
         >
-          <Option value="">Selecione...</Option>
+          <Option value="" className="text-white hover:bg-bg-tertiary">Selecione...</Option>
           {genderOptions.map((gender) => (
-            <Option key={gender.value} value={gender.value}>
+            <Option key={gender.value} value={gender.value} className="text-white hover:bg-bg-tertiary">
               {gender.label}
             </Option>
           ))}
@@ -363,49 +398,40 @@ function UserForm() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 bg-bg-primary min-h-screen">
+      {/* Alert Component */}
       {alert.show && (
-        <Alert
-          color={alert.type === 'error' ? 'red' : 'green'}
-          className="mb-6 fixed top-4 right-4 z-50 max-w-md"
-          onClose={() => setAlert({ show: false, message: '', type: 'success' })}
-          dismissible
-        >
-          {alert.message}
-        </Alert>
+        <div className="fixed top-4 right-4 z-50 w-96">
+          <Alert
+            open={alert.show}
+            onClose={() => setAlert({ ...alert, show: false })}
+            color={alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'amber' : 'green'}
+            className="mb-4"
+          >
+            {alert.message}
+          </Alert>
+        </div>
       )}
-
-      <div className="mb-6">
-        <Button
-          variant="text"
-          size="sm"
-          className="flex items-center gap-2 text-accent-primary hover:bg-accent-primary/10 mb-4"
-          onClick={handleCancel}
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Voltar para Usuários
-        </Button>
-
-        <Typography variant="h4" color="blue-gray" className="text-text-primary">
-          {isEditMode ? 'Editar Usuário' : 'Novo Usuário'}
-        </Typography>
-        <Typography color="gray" className="mt-1 font-normal text-text-secondary">
-          {isEditMode 
-            ? 'Atualize as informações do usuário'
-            : 'Preencha as informações para criar um novo usuário'
-          }
-        </Typography>
-      </div>
-
-      <Card className="bg-bg-secondary">
-        <CardHeader
-          variant="gradient"
-          color="gray"
-          className="mb-4 grid h-20 place-items-center bg-bg-primary"
-        >
-          <Typography variant="h5" color="white" className="text-text-primary">
-            Informações do Usuário
-          </Typography>
+      
+      <Card className="bg-bg-secondary border-bg-tertiary max-w-4xl mx-auto">
+        <CardHeader floated={false} shadow={false} className="bg-bg-secondary">
+          {/* Header with back button */}
+          <div className="flex items-center gap-4 mb-6">
+            <Button
+              variant="text"
+              className="flex items-center gap-2 text-accent-primary hover:bg-accent-primary/10"
+              onClick={handleCancel}
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Voltar para Usuários
+            </Button>
+          </div>
+          
+          <div className="mb-4">
+            <Typography variant="h4" className="text-text-primary">
+              {isEditMode ? 'Editar Usuário' : 'Criar Novo Usuário'}
+            </Typography>
+          </div>
         </CardHeader>
 
         <CardBody className="bg-bg-secondary">
@@ -416,23 +442,24 @@ function UserForm() {
             isEditMode={isEditMode}
           />
 
-          <div className="flex gap-4 justify-end mt-8 pt-6 border-t border-blue-gray-100">
+          <div className="flex gap-4 justify-end mt-8 pt-6 border-t border-bg-tertiary">
             <Button
-              variant="text"
-              size="lg"
+              variant="outlined"
               onClick={handleCancel}
               disabled={isSaving}
+              className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
             >
               Cancelar
             </Button>
+            
             <Button
-              variant="gradient"
-              size="lg"
+              type="submit"
+              disabled={isSaving}
+              className="bg-accent-primary hover:bg-accent-primary/90 flex items-center justify-center gap-2"
               onClick={handleSave}
-              loading={isSaving}
-              className="bg-accent-primary hover:bg-accent-primary/90"
             >
-              {isEditMode ? 'Atualizar Usuário' : 'Criar Usuário'}
+              {isSaving && <Spinner className="h-4 w-4" />}
+              {isSaving ? 'Salvando...' : (isEditMode ? 'Salvar Usuário' : 'Criar Usuário')}
             </Button>
           </div>
         </CardBody>

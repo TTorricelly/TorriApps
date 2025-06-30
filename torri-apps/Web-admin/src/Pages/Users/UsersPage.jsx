@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -16,7 +16,6 @@ import {
   DialogBody,
   DialogFooter,
   Alert,
-  Avatar,
 } from '@material-tailwind/react';
 import {
   PlusIcon,
@@ -111,14 +110,6 @@ function UsersPage() {
     return roleNames[role] || role;
   };
 
-  const getInitials = (name) => {
-    if (!name) return '?';
-    return name.split(' ')
-      .filter(word => word.length > 0)
-      .slice(0, 2)
-      .map(word => word[0].toUpperCase())
-      .join('');
-  };
 
   return (
     <div className="p-6">
@@ -134,7 +125,7 @@ function UsersPage() {
       )}
 
       <Card className="bg-bg-secondary">
-        <CardHeader floated={false} shadow={false} className="bg-bg-secondary">
+        <CardHeader floated={false} shadow={false} className="bg-bg-secondary overflow-visible">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <Typography variant="h5" color="blue-gray" className="text-text-primary">
@@ -154,40 +145,64 @@ function UsersPage() {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center overflow-visible">
             <div className="flex-1">
               <Input
                 label="Buscar usuários..."
                 icon={<MagnifyingGlassIcon className="h-5 w-5" />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-bg-primary"
+                className="bg-bg-primary border-bg-tertiary text-text-primary"
+                labelProps={{ className: "text-text-secondary" }}
+                containerProps={{ className: "text-text-primary" }}
               />
             </div>
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-48 relative z-10">
               <Select 
                 label="Filtrar por função"
                 value={roleFilter}
                 onChange={(value) => setRoleFilter(value)}
                 className="bg-bg-primary"
+                menuProps={{ 
+                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
+                  style: { 
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    zIndex: 9999
+                  }
+                }}
               >
-                <Option value="">Todas as funções</Option>
-                <Option value="GESTOR">Gestor</Option>
-                <Option value="ATENDENTE">Atendente</Option>
-                <Option value="PROFISSIONAL">Profissional</Option>
-                <Option value="CLIENTE">Cliente</Option>
+                <Option value="" className="text-white hover:bg-bg-tertiary">Todas as funções</Option>
+                <Option value="GESTOR" className="text-white hover:bg-bg-tertiary">Gestor</Option>
+                <Option value="ATENDENTE" className="text-white hover:bg-bg-tertiary">Atendente</Option>
+                <Option value="PROFISSIONAL" className="text-white hover:bg-bg-tertiary">Profissional</Option>
+                <Option value="CLIENTE" className="text-white hover:bg-bg-tertiary">Cliente</Option>
               </Select>
             </div>
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-48 relative z-10">
               <Select 
                 label="Filtrar por status"
                 value={statusFilter}
                 onChange={(value) => setStatusFilter(value)}
                 className="bg-bg-primary"
+                menuProps={{ 
+                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
+                  style: { 
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    zIndex: 9999
+                  }
+                }}
               >
-                <Option value="">Todos os status</Option>
-                <Option value="active">Ativo</Option>
-                <Option value="inactive">Inativo</Option>
+                <Option value="" className="text-white hover:bg-bg-tertiary">Todos os status</Option>
+                <Option value="active" className="text-white hover:bg-bg-tertiary">Ativo</Option>
+                <Option value="inactive" className="text-white hover:bg-bg-tertiary">Inativo</Option>
               </Select>
             </div>
           </div>
@@ -202,28 +217,28 @@ function UsersPage() {
             <table className="w-full min-w-max table-auto text-left">
               <thead>
                 <tr>
-                  <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                    <Typography variant="small" color="blue-gray" className="font-normal leading-none opacity-70">
+                  <th className="border-y border-border-primary bg-bg-tertiary p-4">
+                    <Typography variant="small" color="white" className="font-normal leading-none">
                       Usuário
                     </Typography>
                   </th>
-                  <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                    <Typography variant="small" color="blue-gray" className="font-normal leading-none opacity-70">
+                  <th className="border-y border-border-primary bg-bg-tertiary p-4">
+                    <Typography variant="small" color="white" className="font-normal leading-none">
                       Email
                     </Typography>
                   </th>
-                  <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                    <Typography variant="small" color="blue-gray" className="font-normal leading-none opacity-70">
+                  <th className="border-y border-border-primary bg-bg-tertiary p-4">
+                    <Typography variant="small" color="white" className="font-normal leading-none">
                       Função
                     </Typography>
                   </th>
-                  <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                    <Typography variant="small" color="blue-gray" className="font-normal leading-none opacity-70">
+                  <th className="border-y border-border-primary bg-bg-tertiary p-4">
+                    <Typography variant="small" color="white" className="font-normal leading-none">
                       Status
                     </Typography>
                   </th>
-                  <th className="border-y border-blue-gray-100 bg-blue-gray-50/50 p-4">
-                    <Typography variant="small" color="blue-gray" className="font-normal leading-none opacity-70">
+                  <th className="border-y border-border-primary bg-bg-tertiary p-4">
+                    <Typography variant="small" color="white" className="font-normal leading-none">
                       Ações
                     </Typography>
                   </th>
@@ -238,17 +253,9 @@ function UsersPage() {
                     <tr key={user.id} className="hover:bg-bg-primary/50">
                       <td className={classes}>
                         <div className="flex items-center gap-3">
-                          <Avatar
-                            src={user.photo_path}
-                            alt={user.full_name}
-                            size="sm"
-                            variant="circular"
-                            className="border border-blue-gray-50 bg-blue-gray-50/50 object-cover"
-                          >
-                            {!user.photo_path && (
-                              <UserIcon className="h-6 w-6 text-blue-gray-500" />
-                            )}
-                          </Avatar>
+                          <div className="w-8 h-8 bg-blue-gray-50 rounded-full flex items-center justify-center border border-blue-gray-50">
+                            <UserIcon className="h-5 w-5 text-blue-gray-500" />
+                          </div>
                           <div>
                             <Typography variant="small" color="blue-gray" className="font-normal text-text-primary">
                               {user.full_name || 'Nome não informado'}

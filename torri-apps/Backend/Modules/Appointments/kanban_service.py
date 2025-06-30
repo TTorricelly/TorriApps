@@ -220,10 +220,8 @@ def create_walk_in_appointment_group_with_assignments(
             if not client_data.get('name'):
                 raise ValueError("Client name is required for new clients")
             
-            # For clients without email, generate a unique placeholder
-            email = client_data.get('email', '')
-            if not email:
-                email = f"walkin_{uuid4()}@temp.local"
+            # Use the provided email or None if not provided
+            email = client_data.get('email') or None
             
             client = User(
                 id=str(uuid4()),
@@ -365,10 +363,8 @@ def create_walk_in_appointment_group(
             if not client_data.get('name'):
                 raise ValueError("Client name is required for new clients")
             
-            # For clients without email, generate a unique placeholder
-            email = client_data.get('email', '')
-            if not email:
-                email = f"walkin_{uuid4()}@temp.local"
+            # Use the provided email or None if not provided
+            email = client_data.get('email') or None
             
             client = User(
                 id=str(uuid4()),

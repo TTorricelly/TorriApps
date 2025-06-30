@@ -190,20 +190,91 @@ export const markAppointmentAsNoShow = async (appointmentId) => {
 };
 
 /**
- * Gets appointment by ID.
- * @param {string} appointmentId - The ID of the appointment to fetch.
- * @returns {Promise<object>} The appointment data.
+ * Fetches appointment groups for kanban board display
+ * @param {Object} params - Optional filtering parameters (e.g., date_filter)
+ * @returns {Promise<Array>} Array of appointment groups with aggregated data
  * @throws {Error} If the API call fails.
- *//* this function iis not being called anywhere in the codebase
-export const getAppointmentById = async (appointmentId) => {
+ */
+export const getAppointmentGroups = async (params = {}) => {
   try {
-    const response = await apiClient.get(`/api/v1/appointments/${appointmentId}`);
-
-    return response.data;
+    const response = await apiClient.get('/api/v1/appointments/groups', { params });
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error("Error fetching appointment:", error.response?.data || error.message);
-    const errorMessage = error.response?.data?.detail || "Falha ao buscar agendamento. Tente novamente.";
+    console.error("Error fetching appointment groups:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao buscar grupos de agendamentos. Tente novamente.";
     throw new Error(errorMessage);
   }
 };
-*/
+
+/**
+ * Updates appointment group status (for kanban board drag & drop)
+ * @param {string} groupId - The ID of the appointment group
+ * @param {string} newStatus - The new status to set
+ * @returns {Promise<object>} Updated appointment group
+ * @throws {Error} If the API call fails.
+ */
+export const updateAppointmentGroupStatus = async (groupId, newStatus) => {
+  try {
+    const response = await apiClient.patch(`/api/v1/appointments/groups/${groupId}/status`, { 
+      status: newStatus 
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating appointment group status:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao atualizar status do agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Creates a walk-in appointment group
+ * @param {Object} walkInData - Walk-in appointment details
+ * @returns {Promise<object>} Created appointment group
+ * @throws {Error} If the API call fails.
+ */
+export const createWalkInAppointment = async (walkInData) => {
+  try {
+    const response = await apiClient.post('/api/v1/appointments/walk-in', walkInData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating walk-in appointment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao criar agendamento sem hora marcada. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Adds services to an existing appointment group
+ * @param {string} groupId - ID of the appointment group
+ * @param {Array} services - Array of services to add
+ * @returns {Promise<object>} Updated appointment group response
+ * @throws {Error} If the API call fails.
+ */
+export const addServicesToAppointmentGroup = async (groupId, services) => {
+  try {
+    const requestData = { services: services };
+    const response = await apiClient.post(`/api/v1/appointments/add-services/${groupId}`, requestData);
+    return response.data;
+  } catch (error) {
+    console.error("Error adding services to appointment group:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao adicionar serviços ao agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Gets appointment group details by ID
+ * @param {string} groupId - The ID of the appointment group
+ * @returns {Promise<object>} Appointment group details
+ * @throws {Error} If the API call fails.
+ */
+export const getAppointmentGroupDetails = async (groupId) => {
+  try {
+    const response = await apiClient.get(`/api/v1/appointments/groups/${groupId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching appointment group details:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao buscar detalhes do agendamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};

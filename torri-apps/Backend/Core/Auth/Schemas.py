@@ -6,7 +6,7 @@ from typing import Optional
 import re
 
 class UserBase(BaseModel): # Renamed from UserTenantBase
-    email: EmailStr
+    email: EmailStr | None = None
     full_name: str | None = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
@@ -37,6 +37,7 @@ class User(UserBase): # Renamed from UserTenant
     id: UUID
     role: UserRole
     is_active: bool
+    email: EmailStr | None = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
@@ -62,7 +63,7 @@ class Token(BaseModel):
 
 class UserInfo(BaseModel): # This schema might still be useful elsewhere
     id: UUID
-    email: str
+    email: str | None = None
     full_name: str | None = None
     role: str
     phone_number: Optional[str] = None # Added field
