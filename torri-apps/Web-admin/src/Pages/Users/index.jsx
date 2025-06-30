@@ -1,6 +1,9 @@
-import React from 'react';
+import UsersPage from './UsersPage';
+import UserForm from './UserForm';
 
-// This will later contain nested routes for Users
+export { UsersPage, UserForm };
+
+// Legacy component for backward compatibility
 export default function UsersRoutes() {
   return <div>Users Page/Section</div>;
 }
