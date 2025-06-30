@@ -19,11 +19,8 @@ export const useAuthStore = create(
           // Decode JWT token using proper library
           const decodedToken = jwtDecode(tokenData.access_token);
           
-          // Check token expiry
-          if (decodedToken.exp * 1000 <= Date.now()) {
-            set({ isLoading: false })
-            throw new Error('Token has expired')
-          }
+          // Skip token expiry check for persistent login
+          // Token will only be invalidated on manual logout
           
           // Map backend roles to frontend roles for consistency
           const roleMapping = {
@@ -117,12 +114,8 @@ export const useAuthStore = create(
         try {
           const decodedToken = jwtDecode(token);
           
-          // Check if token is expired
-          if (decodedToken.exp * 1000 <= Date.now()) {
-            console.log('[AuthStore] Token expired, logging out');
-            state.logout();
-            return false;
-          }
+          // Skip token expiry check for persistent login
+          // Users will only be logged out manually
           
           // If token is valid but not in state, restore it
           if (!state.token) {

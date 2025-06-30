@@ -73,21 +73,9 @@ apiClient.interceptors.response.use(
     const { response } = error;
     
     if (response?.status === 401) {
-      // Special handling for auth endpoints - don't auto-logout
-      const isAuthEndpoint = response.config?.url?.includes('/auth/');
-      
-      if (!isAuthEndpoint) {
-        console.log('🔐 Unauthorized request, clearing auth data');
-        
-        // Clear both storage formats
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem('torri-auth-storage');
-        
-        // Redirect to login if not already there
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
-      }
+      // Log 401 errors but don't auto-logout for persistent login
+      // Users will only be logged out when they manually logout
+      console.warn('🔐 Unauthorized request received:', response.config?.url);
     }
     
     return Promise.reject(error);

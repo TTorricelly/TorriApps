@@ -53,14 +53,8 @@ def decode_access_token(token: str) -> TokenPayload | None:
         # Validate the payload structure using Pydantic model
         token_data = TokenPayload(**payload)
 
-        # Check if the token is expired (though jwt.decode should handle 'exp' claim)
-        # Pydantic model for 'exp' will also validate it's a datetime
-        if token_data.exp < datetime.now(timezone.utc):
-            # This check is somewhat redundant if jwt.decode already validated 'exp',
-            # but can be kept for explicitness or if not using jwt.decode's built-in exp check.
-            # Consider removing if jwt.decode's 'ExpiredSignatureError' is handled.
-            warnings.warn("Token has expired (checked after decoding).", UserWarning) # Or raise HTTPException
-            return None # Or raise specific exception for expired token
+        # Skip expiration check for persistent login
+        # Tokens will remain valid indefinitely
 
         return token_data
     except JWTError as e: # Covers various issues like invalid signature, malformed token

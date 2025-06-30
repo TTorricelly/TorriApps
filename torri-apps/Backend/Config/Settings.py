@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     testing: bool = False
     
     # Authentication settings
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 52560000  # 100 years in minutes (effectively never expires)
     jwt_algorithm: str = "HS256"
     
     # API configuration

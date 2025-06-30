@@ -547,8 +547,7 @@ const KanbanBoardPage = () => {
           user && ['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(user.role) ? 'pb-4' : 'pb-2'
         }`}>
           {groups.length === 0 ? (
-            <div className="text-gray-400 text-sm text-center py-12 italic">
-              Vazio
+            <div className="py-12">
             </div>
           ) : (
             groups.map(renderAppointmentCard)
