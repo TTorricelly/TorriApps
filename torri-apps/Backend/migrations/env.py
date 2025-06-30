@@ -13,6 +13,7 @@ from Core.Auth.models import User # Changed from UserTenant
 from Modules.Services.models import Service, Category
 from Modules.Appointments.models import Appointment
 from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
+# from Modules.Payments.models import Payment, PaymentItem  # Import payment models - temporarily disabled
 # from Modules.AdminMaster.models import AdminMasterUser # Commented out due to ModuleNotFoundError
 # from Modules.Tenants.models import Tenant # Tenant model removed
 

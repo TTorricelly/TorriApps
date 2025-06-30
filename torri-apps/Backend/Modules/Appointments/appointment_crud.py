@@ -7,13 +7,13 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 
 # Models
-from .models import Appointment
+from .models import Appointment, AppointmentGroup
 from Modules.Services.models import Service
 from Core.Auth.models import User # Updated import
 
 # Schemas
 from .schemas import AppointmentCreate
-from .constants import AppointmentStatus
+from .constants import AppointmentStatus, AppointmentGroupStatus
 
 # Auth & Config
 from Core.Auth.constants import UserRole
@@ -118,12 +118,29 @@ def create_appointment(
     if not required_slots_available:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The selected time slot is not available for the required service duration.")
 
-    # 4. Create and save the appointment
+    # 4. Create appointment group first (even for single appointments)
+    start_datetime = datetime.combine(appointment_data.appointment_date, appointment_data.start_time)
+    end_datetime = datetime.combine(appointment_data.appointment_date, calculated_end_time)
+    
+    db_appointment_group = AppointmentGroup(
+        client_id=str(client.id),
+        total_duration_minutes=service.duration_minutes,
+        total_price=price_at_booking,
+        start_time=start_datetime,
+        end_time=end_datetime,
+        status=AppointmentGroupStatus.SCHEDULED,
+        notes_by_client=appointment_data.notes_by_client,
+    )
+    
+    db.add(db_appointment_group)
+    db.flush()  # Flush to get the group ID
+    
+    # 5. Create and save the appointment linked to the group
     db_appointment = Appointment(
         client_id=str(client.id),
         professional_id=str(professional.id),
         service_id=str(service.id),
-        # tenant_id=str(tenant_id), # tenant_id field removed from Appointment model
+        group_id=str(db_appointment_group.id),  # Link to the appointment group
         appointment_date=appointment_data.appointment_date,
         start_time=appointment_data.start_time,
         end_time=calculated_end_time,

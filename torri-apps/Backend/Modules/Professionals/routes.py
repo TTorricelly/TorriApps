@@ -28,10 +28,14 @@ def list_professionals(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.CLIENTE]))],
     skip: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(100, ge=1, le=200, description="Number of items to return")
+    limit: int = Query(100, ge=1, le=200, description="Number of items to return"),
+    service_id: str = Query(None, description="Filter professionals by service ID")
 ):
-    """List all professionals in the system."""
-    professionals = professional_services.get_professionals(db, skip=skip, limit=limit)
+    """List all professionals in the system, optionally filtered by service."""
+    if service_id:
+        professionals = professional_services.get_professionals_for_service(db, service_id, skip=skip, limit=limit)
+    else:
+        professionals = professional_services.get_professionals(db, skip=skip, limit=limit)
     return professionals
 
 @router.post("", response_model=Professional, status_code=status.HTTP_201_CREATED)

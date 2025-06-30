@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
-import ViewModeSwitcher from '../components/ViewModeSwitcher';
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { getUserProfile } from '../services/userService';
@@ -121,8 +120,6 @@ const ProfilePage = () => {
                 </div>
               </div>
 
-              {/* View Mode Switcher - Only for professional users */}
-              <ViewModeSwitcher />
 
               {/* Menu Options */}
               <div className="space-y-3 mb-8 mt-6">

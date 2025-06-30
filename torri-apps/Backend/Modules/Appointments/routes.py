@@ -25,7 +25,10 @@ from .schemas import (
     MultiServiceBookingRequest, MultiServiceBookingResponse,
     # Kanban board schemas
     AppointmentGroupStatusUpdate, WalkInAppointmentRequest, WalkInAppointmentResponse,
-    MergedCheckoutRequest, MergedCheckoutResponse
+    WalkInServiceData, AddServicesRequest, AddServicesResponse,
+    MergedCheckoutRequest, MergedCheckoutResponse,
+    # Payment schemas
+    AppointmentPaymentRequest, AppointmentPaymentResponse
 )
 from .constants import AppointmentStatus
 
@@ -283,11 +286,19 @@ def create_walk_in_appointment_endpoint(
         )
     
     try:
-        result = appointments_services.create_walk_in_appointment_group(
+        # Handle both old format (single professional_id) and new format (individual assignments)
+        services_data = []
+        for service in walk_in_data.services:
+            service_dict = service.dict()
+            # If service has individual professional_id, use it; otherwise use the global one
+            if not service_dict.get('professional_id'):
+                service_dict['professional_id'] = walk_in_data.professional_id
+            services_data.append(service_dict)
+        
+        result = appointments_services.create_walk_in_appointment_group_with_assignments(
             db=db,
             client_data=walk_in_data.client.dict(),
-            services_data=[service.dict() for service in walk_in_data.services],
-            professional_id=walk_in_data.professional_id,
+            services_data=services_data,
             tenant_id="default"  # TODO: Get from auth context
         )
         
@@ -305,6 +316,65 @@ def create_walk_in_appointment_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create walk-in appointment: {str(e)}"
+        )
+
+
+@router.post(
+    "/add-services/{group_id}",
+    response_model=AddServicesResponse,
+    summary="Add services to existing appointment group"
+)
+def add_services_to_group_endpoint(
+    group_id: UUID,
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)],
+    request_data: AddServicesRequest = Body(...)
+):
+    """
+    Add additional services to an existing appointment group.
+    
+    - **group_id**: ID of the existing appointment group
+    - **services**: List of services to add with professional assignments
+    - Returns updated appointment group information
+    """
+    # Check permissions - only ATENDENTE and GESTOR can modify appointments
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can add services."
+        )
+    
+    try:
+        # Extract services from request
+        services_data = request_data.services
+        
+        # Add services to appointment group
+        updated_group_data = appointments_services.add_services_to_appointment_group(
+            db=db,
+            group_id=group_id,
+            services_data=services_data,
+            tenant_id="default"  # TODO: Get from auth context
+        )
+        
+        # Return properly formatted response
+        return AddServicesResponse(
+            appointment_group=updated_group_data,
+            added_services_count=len(services_data),
+            message=f"Successfully added {len(services_data)} service(s) to appointment group"
+        )
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        import traceback
+        print(f"[AddServices] Unexpected error: {str(e)}")
+        print(f"[AddServices] Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add services to appointment group: {str(e)}"
         )
 
 
@@ -350,6 +420,59 @@ def create_merged_checkout_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create checkout session"
         )
+
+
+@router.post(
+    "/checkout/payment",
+    response_model=AppointmentPaymentResponse,
+    summary="Process payment for appointment groups"
+)
+def process_appointment_payment_endpoint(
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)],
+    payment_data: AppointmentPaymentRequest = Body(...)
+):
+    """
+    Process payment for multiple appointment groups.
+    
+    - **group_ids**: List of appointment group IDs to process payment for
+    - **subtotal**: Subtotal amount before discounts and tips
+    - **discount_amount**: Discount amount applied
+    - **tip_amount**: Tip amount added
+    - **total_amount**: Final total amount to be paid
+    - **payment_method**: Payment method used (cash, debit, credit, pix)
+    - **additional_products**: Optional additional products purchased
+    """
+    # Check permissions - only ATENDENTE and GESTOR can process payments
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can process payments."
+        )
+    
+    try:
+        result = appointments_services.process_appointment_payment(
+            db=db,
+            payment_data=payment_data,
+            tenant_id="default"  # TODO: Get from auth context
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        import traceback
+        print(f"[Payment] Unexpected error: {str(e)}")
+        print(f"[Payment] Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process payment"
+        )
+
 
 @router.get(
     "/{appointment_id}",

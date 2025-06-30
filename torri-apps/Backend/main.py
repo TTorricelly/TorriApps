@@ -18,6 +18,7 @@ from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
+import Modules.Payments.models  # Import Payment models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:

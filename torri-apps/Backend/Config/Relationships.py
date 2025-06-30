@@ -18,6 +18,7 @@ def configure_relationships():
     from Modules.Professionals.models import ProfessionalAvailability, ProfessionalBlockedTime, ProfessionalBreak
     from Modules.Availability.models import ProfessionalAvailability as AvailabilityModel, ProfessionalBreak as BreakModel, ProfessionalBlockedTime as BlockedTimeModel
     from Modules.Stations.models import StationType, Station, ServiceStationRequirement
+    # from Modules.Payments.models import Payment, PaymentItem  # Temporarily disabled
     
     # Configure User relationships
     if not hasattr(User, 'services_offered'):
@@ -170,6 +171,30 @@ def configure_relationships():
             )
     except ImportError:
         pass  # Module not available
+    
+    # Configure Payment relationships - temporarily disabled
+    # if not hasattr(User, 'payments'):
+    #     User.payments = relationship(
+    #         "Payment",
+    #         foreign_keys="Payment.client_id",
+    #         back_populates="client",
+    #         cascade="all, delete-orphan"
+    #     )
+    # 
+    # if not hasattr(Payment, 'client'):
+    #     Payment.client = relationship(
+    #         "User",
+    #         foreign_keys="Payment.client_id",
+    #         back_populates="payments"
+    #     )
+    # 
+    # if not hasattr(PaymentItem, 'appointment_group'):
+    #     PaymentItem.appointment_group = relationship(
+    #         "AppointmentGroup",
+    #         foreign_keys="PaymentItem.reference_id",
+    #         primaryjoin="and_(PaymentItem.reference_id == AppointmentGroup.id, PaymentItem.item_type == 'appointment_group')",
+    #         viewonly=True
+    #     )
 
 def get_relationship_status():
     """
@@ -179,6 +204,7 @@ def get_relationship_status():
     from Core.Auth.models import User
     from Modules.Services.models import Service
     from Modules.Appointments.models import Appointment, AppointmentGroup
+    # from Modules.Payments.models import Payment, PaymentItem  # Temporarily disabled
     
     status = {
         'User': {
@@ -189,6 +215,7 @@ def get_relationship_status():
             'availability_schedule': hasattr(User, 'availability_schedule'),
             'blocked_times': hasattr(User, 'blocked_times'),
             'recurring_breaks': hasattr(User, 'recurring_breaks'),
+            'payments': hasattr(User, 'payments'),
         },
         'Service': {
             'professionals': hasattr(Service, 'professionals'),
@@ -201,6 +228,12 @@ def get_relationship_status():
         },
         'AppointmentGroup': {
             'client': hasattr(AppointmentGroup, 'client'),
+        },
+        'Payment': {
+            'client': hasattr(Payment, 'client'),
+        },
+        'PaymentItem': {
+            'appointment_group': hasattr(PaymentItem, 'appointment_group'),
         }
     }
     

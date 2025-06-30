@@ -73,6 +73,14 @@ class User(Base):
     #     cascade="all, delete-orphan"
     # )
 
+    # Relationship to Payments - temporarily disabled to avoid circular imports
+    # payments = relationship(
+    #     "Modules.Payments.models.Payment",
+    #     foreign_keys="[Modules.Payments.models.Payment.client_id]",
+    #     back_populates="client",
+    #     cascade="all, delete-orphan"
+    # )
+
     # Professional-specific relationships - temporarily disabled to avoid circular imports
     # availability_schedule = relationship(
     #     "Modules.Professionals.models.ProfessionalAvailability",

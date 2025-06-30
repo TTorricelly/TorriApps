@@ -75,6 +75,21 @@ def get_professionals(db: Session, skip: int = 0, limit: int = 100) -> List[Prof
     ).offset(skip).limit(limit).all()
     return [_add_photo_url_to_professional(prof, db) for prof in professionals]
 
+def get_professionals_for_service(db: Session, service_id: str, skip: int = 0, limit: int = 100) -> List[Professional]:
+    """Get professionals who can perform a specific service."""
+    from Modules.Services.models import service_professionals_association
+    
+    # Query professionals who are associated with the specific service
+    professionals = db.query(User).join(
+        service_professionals_association,
+        User.id == service_professionals_association.c.professional_user_id
+    ).filter(
+        User.role == UserRole.PROFISSIONAL,
+        service_professionals_association.c.service_id == service_id
+    ).offset(skip).limit(limit).all()
+    
+    return [_add_photo_url_to_professional(prof, db) for prof in professionals]
+
 def create_professional(db: Session, professional_data: ProfessionalCreate) -> Professional: # Removed tenant_id parameter
     # Check if email already exists
     existing_user = db.query(User).filter(User.email == professional_data.email).first() # Changed UserTenant to User

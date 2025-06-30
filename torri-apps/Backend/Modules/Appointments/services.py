@@ -52,7 +52,10 @@ from .kanban_service import (
     get_appointment_groups_for_kanban,
     update_appointment_group_status,
     create_walk_in_appointment_group,
-    create_merged_checkout_session
+    create_walk_in_appointment_group_with_assignments,
+    add_services_to_appointment_group,
+    create_merged_checkout_session,
+    process_appointment_payment
 )
 
 # Re-export all functions for backward compatibility
@@ -88,5 +91,8 @@ __all__ = [
     'get_appointment_groups_for_kanban',
     'update_appointment_group_status',
     'create_walk_in_appointment_group',
-    'create_merged_checkout_session'
+    'create_walk_in_appointment_group_with_assignments',
+    'add_services_to_appointment_group',
+    'create_merged_checkout_session',
+    'process_appointment_payment'
 ]

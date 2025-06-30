@@ -200,6 +200,30 @@ export const createWalkInAppointment = async (walkInData) => {
 };
 
 /**
+ * Adds services to an existing appointment group
+ * @param {string} groupId - ID of the appointment group
+ * @param {Array} services - Array of services to add
+ * @returns {Promise<Object>} Updated appointment group response
+ */
+export const addServicesToAppointmentGroup = async (groupId, services) => {
+  const endpoint = buildApiEndpoint(`appointments/add-services/${groupId}`);
+  
+  // Format request according to AddServicesRequest schema
+  const requestData = {
+    services: services
+  };
+  
+  return withApiErrorHandling(
+    () => apiClient.post(endpoint, requestData),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};
+
+/**
  * Gets appointment group details by ID
  * @param {string} groupId - The ID of the appointment group
  * @returns {Promise<Object>} Appointment group details

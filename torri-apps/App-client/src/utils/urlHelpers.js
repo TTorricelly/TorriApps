@@ -91,13 +91,6 @@ export const processImageUrls = (data, imageFields = ['icon_url', 'image_url', '
   if (typeof data === 'object') {
     const processedData = { ...data };
     
-    // Debug: Log original data for first few items
-    if (import.meta.env.DEV && processedData.name) {
-      console.log(`[urlHelpers] Processing "${processedData.name}":`, {
-        original: processedData,
-        imageFields: imageFields
-      });
-    }
     
     imageFields.forEach(field => {
       if (processedData[field]) {

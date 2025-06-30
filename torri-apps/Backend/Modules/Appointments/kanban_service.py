@@ -5,8 +5,9 @@ Handles appointment group operations for the front-desk kanban board.
 
 from typing import List, Optional, Dict, Any
 from uuid import UUID, uuid4
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from decimal import Decimal
+import pytz
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, or_
 
@@ -15,6 +16,7 @@ from .constants import AppointmentGroupStatus, AppointmentStatus
 from Core.Auth.models import User
 from Modules.Services.models import Service
 from Core.Auth.constants import UserRole
+from Config.Settings import settings
 
 
 def get_appointment_groups_for_kanban(
@@ -36,7 +38,10 @@ def get_appointment_groups_for_kanban(
         List of appointment groups with aggregated data for kanban display
     """
     if date_filter is None:
-        date_filter = date.today()
+        # Use Brazil timezone for correct local date
+        brazil_tz = pytz.timezone('America/Sao_Paulo')
+        brazil_now = datetime.now(brazil_tz)
+        date_filter = brazil_now.date()
     
     # Base query with joins for client and service data
     query = db.query(
@@ -179,6 +184,149 @@ def update_appointment_group_status(
     }
 
 
+def create_walk_in_appointment_group_with_assignments(
+    db: Session,
+    client_data: Dict[str, Any],
+    services_data: List[Dict[str, Any]],  # Now includes professional_id per service
+    tenant_id: str
+) -> Dict[str, Any]:
+    """
+    Create a walk-in appointment group with individual service-professional assignments.
+    
+    Args:
+        db: Database session
+        client_data: Client information (name, phone, email)
+        services_data: List of services with IDs and individual professional_ids
+        tenant_id: Tenant identifier
+        
+    Returns:
+        Created appointment group data
+    """
+    # Create or get client
+    client = None
+    
+    # If client ID is provided, get existing client
+    if client_data.get('id'):
+        client = db.query(User).filter(User.id == client_data['id']).first()
+        if not client:
+            raise ValueError(f"Client with ID {client_data['id']} not found")
+    else:
+        # For new clients, check if exists by email first
+        if client_data.get('email'):
+            client = db.query(User).filter(User.email == client_data['email']).first()
+        
+        if not client:
+            # Create new client
+            if not client_data.get('name'):
+                raise ValueError("Client name is required for new clients")
+            
+            # For clients without email, generate a unique placeholder
+            email = client_data.get('email', '')
+            if not email:
+                email = f"walkin_{uuid4()}@temp.local"
+            
+            client = User(
+                id=str(uuid4()),
+                full_name=client_data.get('name', 'Walk-in Client'),
+                email=email,
+                phone_number=client_data.get('phone', ''),
+                role=UserRole.CLIENTE,
+                is_active=True
+            )
+            db.add(client)
+            db.flush()  # Get the ID without committing
+    
+    # Calculate totals from services
+    total_duration = 0
+    total_price = Decimal('0.00')
+    
+    services = []
+    for service_data in services_data:
+        service = db.query(Service).filter(Service.id == service_data['id']).first()
+        if service:
+            services.append({
+                'service': service,
+                'professional_id': service_data['professional_id']
+            })
+            total_duration += service.duration_minutes
+            total_price += service.price
+    
+    if not services:
+        raise ValueError("No valid services provided")
+    
+    # Create appointment group using Brazil timezone
+    brazil_tz = pytz.timezone('America/Sao_Paulo')
+    now = datetime.now(brazil_tz).replace(tzinfo=None)  # Remove timezone info for database
+    start_time = now.replace(second=0, microsecond=0)
+    end_time = start_time.replace(
+        hour=(start_time.hour + total_duration // 60) % 24,
+        minute=(start_time.minute + total_duration % 60) % 60
+    )
+    
+    appointment_group = AppointmentGroup(
+        client_id=client.id,
+        total_duration_minutes=total_duration,
+        total_price=total_price,
+        start_time=start_time,
+        end_time=end_time,
+        status=AppointmentGroupStatus.WALK_IN,
+        created_at=now,
+        updated_at=now
+    )
+    
+    db.add(appointment_group)
+    db.flush()  # Get the group ID
+    
+    # Create individual appointments with assigned professionals
+    current_time = start_time
+    for service_info in services:
+        service = service_info['service']
+        professional_id = service_info['professional_id']
+        
+        appointment_end = current_time.replace(
+            hour=(current_time.hour + service.duration_minutes // 60) % 24,
+            minute=(current_time.minute + service.duration_minutes % 60) % 60
+        )
+        
+        appointment = Appointment(
+            client_id=client.id,
+            professional_id=professional_id,
+            service_id=service.id,
+            group_id=appointment_group.id,
+            appointment_date=current_time.date(),
+            start_time=current_time.time(),
+            end_time=appointment_end.time(),
+            status=AppointmentStatus.WALK_IN,
+            price_at_booking=service.price,
+            created_at=now,
+            updated_at=now
+        )
+        
+        db.add(appointment)
+        current_time = appointment_end
+    
+    db.commit()
+    db.refresh(appointment_group)
+    
+    # Return formatted group data
+    service_names = ', '.join([service_info['service'].name for service_info in services])
+    
+    return {
+        'id': str(appointment_group.id),
+        'client_id': str(client.id),
+        'client_name': client.full_name,
+        'service_names': service_names,
+        'total_duration_minutes': appointment_group.total_duration_minutes,
+        'total_price': float(appointment_group.total_price),
+        'start_time': appointment_group.start_time.isoformat(),
+        'end_time': appointment_group.end_time.isoformat(),
+        'status': appointment_group.status.value,
+        'notes_by_client': appointment_group.notes_by_client,
+        'created_at': appointment_group.created_at.isoformat(),
+        'updated_at': appointment_group.updated_at.isoformat()
+    }
+
+
 def create_walk_in_appointment_group(
     db: Session,
     client_data: Dict[str, Any],
@@ -248,8 +396,9 @@ def create_walk_in_appointment_group(
     if not services:
         raise ValueError("No valid services provided")
     
-    # Create appointment group
-    now = datetime.now()
+    # Create appointment group using Brazil timezone
+    brazil_tz = pytz.timezone('America/Sao_Paulo')
+    now = datetime.now(brazil_tz).replace(tzinfo=None)  # Remove timezone info for database
     start_time = now.replace(second=0, microsecond=0)
     end_time = start_time.replace(
         hour=(start_time.hour + total_duration // 60) % 24,
@@ -356,14 +505,21 @@ def create_merged_checkout_session(
             service = db.query(Service).filter(
                 Service.id == appointment.service_id
             ).first()
+            professional = db.query(User).filter(
+                User.id == appointment.professional_id
+            ).first()
+            
             if service:
-                all_services.append({
+                service_data = {
                     'id': str(service.id),
                     'name': service.name,
                     'price': float(appointment.price_at_booking),
+                    'duration_minutes': service.duration_minutes,
+                    'professional_name': professional.full_name if professional else "N/A",
                     'appointment_id': str(appointment.id),
                     'group_id': str(group.id)
-                })
+                }
+                all_services.append(service_data)
     
     # Get client info (assuming all groups are for same client)
     client = db.query(User).filter(User.id == groups[0].client_id).first()
@@ -377,3 +533,184 @@ def create_merged_checkout_session(
         'services': all_services,
         'created_at': datetime.now().isoformat()
     }
+
+
+def process_appointment_payment(
+    db: Session,
+    payment_data: Any,  # AppointmentPaymentRequest
+    tenant_id: str
+) -> Dict[str, Any]:
+    """
+    Process payment for multiple appointment groups.
+    
+    Args:
+        db: Database session
+        payment_data: Payment details including group IDs, amounts, and payment method
+        tenant_id: Tenant identifier
+        
+    Returns:
+        Payment processing result
+    """
+    # Get all appointment groups to be paid
+    groups = db.query(AppointmentGroup).filter(
+        AppointmentGroup.id.in_(payment_data.group_ids)
+    ).all()
+    
+    if not groups:
+        raise ValueError("No valid appointment groups found for payment")
+    
+    # Validate payment amount matches groups total
+    expected_subtotal = sum([group.total_price for group in groups])
+    if abs(float(payment_data.subtotal) - float(expected_subtotal)) > 0.01:
+        raise ValueError(f"Payment subtotal {payment_data.subtotal} does not match expected {expected_subtotal}")
+    
+    # Generate payment ID
+    payment_id = f"pay_{int(datetime.now().timestamp())}_{len(payment_data.group_ids)}"
+    
+    # Update all groups to COMPLETED status
+    for group in groups:
+        group.status = AppointmentGroupStatus.COMPLETED
+        group.updated_at = datetime.utcnow()
+        
+        # Update all appointments in the group
+        appointments_in_group = db.query(Appointment).filter(
+            Appointment.group_id == group.id
+        ).all()
+        
+        for appointment in appointments_in_group:
+            appointment.status = AppointmentStatus.COMPLETED
+            appointment.paid_manually = True
+            appointment.updated_at = datetime.utcnow()
+            
+            # Create commission for each completed appointment
+            try:
+                from Modules.Commissions.services import CommissionService
+                commission_service = CommissionService(db)
+                commission_service.create_commission_for_appointment(appointment.id)
+            except Exception as e:
+                # Log the error but don't fail the payment process
+                print(f"Warning: Failed to create commission for appointment {appointment.id}: {str(e)}")
+    
+    # TODO: Here you would integrate with a real payment processor
+    # For now, we just mark as completed for cash/manual payments
+    
+    db.commit()
+    
+    return {
+        'payment_id': payment_id,
+        'group_ids': [str(group_id) for group_id in payment_data.group_ids],
+        'total_amount': float(payment_data.total_amount),
+        'payment_method': payment_data.payment_method,
+        'status': 'completed',
+        'processed_at': datetime.now().isoformat(),
+        'message': 'Pagamento processado com sucesso'
+    }
+
+
+def add_services_to_appointment_group(
+    db: Session,
+    group_id: UUID,
+    services_data: List[Any],  # Can be either Dict or Pydantic objects
+    tenant_id: str = "default"
+):
+    """
+    Add additional services to an existing appointment group.
+    
+    Args:
+        db: Database session
+        group_id: ID of the existing appointment group
+        services_data: List of services with professional assignments
+        tenant_id: Tenant identifier
+    
+    Returns:
+        Updated appointment group information
+    """
+    # Get existing appointment group
+    appointment_group = db.query(AppointmentGroup).filter(
+        AppointmentGroup.id == group_id
+    ).first()
+    
+    if not appointment_group:
+        raise ValueError(f"Appointment group with ID {group_id} not found")
+    
+    # Get client for the group
+    client = db.query(User).filter(User.id == appointment_group.client_id).first()
+    if not client:
+        raise ValueError(f"Client for appointment group not found")
+    
+    # Calculate additional totals from new services
+    additional_duration = 0
+    additional_price = Decimal('0.00')
+    
+    new_appointments = []
+    for service_data in services_data:
+        # Handle both dict and Pydantic object formats
+        service_id = service_data.id if hasattr(service_data, 'id') else service_data['id']
+        professional_id = service_data.professional_id if hasattr(service_data, 'professional_id') else service_data['professional_id']
+        
+        service = db.query(Service).filter(Service.id == service_id).first()
+        if not service:
+            continue
+            
+        additional_duration += service.duration_minutes
+        additional_price += service.price
+        
+        # Get the appointment with the latest end time to schedule new services consecutively
+        last_appointment = db.query(Appointment).filter(
+            Appointment.group_id == group_id
+        ).order_by(Appointment.end_time.desc()).first()
+        
+        if last_appointment:
+            # Convert last appointment end to datetime for calculation
+            last_end_datetime = datetime.combine(
+                last_appointment.appointment_date,
+                last_appointment.end_time
+            )
+            current_start_time = last_end_datetime
+        else:
+            # Fallback to group start time
+            current_start_time = appointment_group.start_time
+        
+        # Calculate new appointment end time
+        appointment_end = current_start_time + timedelta(minutes=service.duration_minutes)
+        
+        # Create new appointment
+        appointment = Appointment(
+            client_id=client.id,
+            professional_id=professional_id,
+            service_id=service.id,
+            group_id=appointment_group.id,
+            appointment_date=current_start_time.date(),
+            start_time=current_start_time.time(),
+            end_time=appointment_end.time(),
+            status=appointment_group.status,  # Match group status
+            price_at_booking=service.price,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        db.add(appointment)
+        new_appointments.append(appointment)
+    
+    if not new_appointments:
+        raise ValueError("No valid services provided")
+    
+    # Update appointment group totals
+    appointment_group.total_duration_minutes += additional_duration
+    appointment_group.total_price += additional_price
+    appointment_group.updated_at = datetime.now()
+    
+    # If there are new appointments, update group end time
+    if new_appointments:
+        last_new_appointment = max(new_appointments, key=lambda a: a.end_time)
+        # Update group end time to the last new appointment's end time
+        appointment_group.end_time = datetime.combine(
+            last_new_appointment.appointment_date,
+            last_new_appointment.end_time
+        )
+    
+    db.commit()
+    db.refresh(appointment_group)
+    
+    # Return the SQLAlchemy object directly (will be converted to schema by FastAPI)
+    return appointment_group

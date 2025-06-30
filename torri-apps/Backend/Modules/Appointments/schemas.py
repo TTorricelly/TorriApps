@@ -335,17 +335,36 @@ class WalkInClientData(BaseModel):
 class WalkInServiceData(BaseModel):
     id: UUID
     name: Optional[str] = None  # Optional for frontend convenience
+    professional_id: Optional[UUID] = None  # For individual professional assignment
 
 
 class WalkInAppointmentRequest(BaseModel):
     client: WalkInClientData
     services: List[WalkInServiceData]
-    professional_id: UUID
+    professional_id: Optional[UUID] = None  # Optional for backward compatibility
 
 
 class WalkInAppointmentResponse(BaseModel):
     appointment_group: AppointmentGroupSchema
     message: str = "Walk-in appointment created successfully"
+
+    class Config:
+        from_attributes = True
+
+
+class AddServicesRequest(BaseModel):
+    """Request schema for adding services to existing appointment group"""
+    services: List[WalkInServiceData]
+
+    class Config:
+        from_attributes = True
+
+
+class AddServicesResponse(BaseModel):
+    """Response schema for adding services to existing appointment group"""
+    appointment_group: AppointmentGroupSchema
+    added_services_count: int
+    message: str = "Services added successfully"
 
     class Config:
         from_attributes = True
@@ -359,6 +378,8 @@ class CheckoutService(BaseModel):
     id: str
     name: str
     price: float
+    duration_minutes: int
+    professional_name: str
     appointment_id: str
     group_id: str
 
@@ -371,6 +392,43 @@ class MergedCheckoutResponse(BaseModel):
     total_duration_minutes: int
     services: List[CheckoutService]
     created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+# --- Payment Processing Schemas ---
+
+class AdditionalProduct(BaseModel):
+    name: str
+    price: Decimal
+    quantity: int = 1
+
+    class Config:
+        from_attributes = True
+
+
+class AppointmentPaymentRequest(BaseModel):
+    group_ids: List[UUID]
+    subtotal: Decimal
+    discount_amount: Decimal = 0
+    tip_amount: Decimal = 0
+    total_amount: Decimal
+    payment_method: str  # 'cash', 'debit', 'credit', 'pix'
+    additional_products: List[AdditionalProduct] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AppointmentPaymentResponse(BaseModel):
+    payment_id: str
+    group_ids: List[str]
+    total_amount: float
+    payment_method: str
+    status: str = "completed"
+    processed_at: str
+    message: str = "Pagamento processado com sucesso"
 
     class Config:
         from_attributes = True

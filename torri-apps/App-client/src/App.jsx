@@ -9,10 +9,12 @@ import EditProfilePage from './pages/EditProfilePage'
 import SchedulingWizardPage from './pages/SchedulingWizardPage'
 import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage'
 import ProfessionalAgendaPage from './pages/ProfessionalAgendaPage'
+import ProfessionalMenuPage from './pages/ProfessionalMenuPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientDetailPage from './pages/ClientDetailPage'
 import ClientFormPage from './pages/ClientFormPage'
 import KanbanBoardPage from './pages/KanbanBoardPage'
+import ComingSoonPage from './pages/ComingSoonPage'
 import { useAuthStore } from './stores/authStore'
 import { useViewModeStore } from './stores/viewModeStore'
 
@@ -121,6 +123,11 @@ function App() {
             <SchedulingWizardPage />
           </ProtectedRoute>
         } />
+        <Route path="/kanban" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <KanbanBoardPage />
+          </RoleBasedRoute>
+        } />
         
         {/* Professional Routes - Only accessible by salon staff in professional mode */}
         <Route path="/professional/dashboard" element={
@@ -131,6 +138,11 @@ function App() {
         <Route path="/professional/agenda" element={
           <RoleBasedRoute professionalOnly={true}>
             <ProfessionalAgendaPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/menu" element={
+          <RoleBasedRoute professionalOnly={true}>
+            <ProfessionalMenuPage />
           </RoleBasedRoute>
         } />
         <Route path="/professional/kanban" element={
@@ -168,6 +180,13 @@ function App() {
         <Route path="/profile/edit" element={
           <ProtectedRoute>
             <EditProfilePage />
+          </ProtectedRoute>
+        } />
+        
+        {/* Coming Soon Page for unimplemented features */}
+        <Route path="/coming-soon" element={
+          <ProtectedRoute>
+            <ComingSoonPage />
           </ProtectedRoute>
         } />
         

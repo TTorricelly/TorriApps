@@ -19,18 +19,23 @@ import {
   Mail,
   Scissors,
   Clock,
-  DollarSign
+  DollarSign,
+  Minus,
+  ShoppingCart,
+  Check
 } from 'lucide-react';
 
 import { getCategories, getServicesByCategory } from '../services/categoryService';
 import { getProfessionalsForService } from '../services/professionalService';
-import { createWalkInAppointment } from '../services/appointmentService';
+import { createWalkInAppointment, addServicesToAppointmentGroup } from '../services/appointmentService';
 import { getClients } from '../services/clientService';
 
 const WalkInModal = ({ 
   isOpen, 
   onClose, 
-  onWalkInCreated 
+  onWalkInCreated,
+  preloadedServices,
+  modalContext 
 }) => {
   // State management
   const [step, setStep] = useState(1); // 1: Client, 2: Services, 3: Professional, 4: Confirm
@@ -46,6 +51,7 @@ const WalkInModal = ({
   const [searchingClients, setSearchingClients] = useState(false);
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProfessional, setProfessional] = useState(null);
+  const [serviceAssignments, setServiceAssignments] = useState({}); // { serviceId: professionalId }
   const [estimatedDuration, setEstimatedDuration] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(0);
   
@@ -53,7 +59,10 @@ const WalkInModal = ({
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [professionalsByService, setProfessionalsByService] = useState({}); // { serviceId: [professionals] }
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [loadingProfessionals, setLoadingProfessionals] = useState(false);
   const [error, setError] = useState(null);
   
   // UI state
@@ -83,16 +92,53 @@ const WalkInModal = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
   
-  // Load initial data
+  // Load initial data when modal opens (step 1) so services are ready when user reaches step 2
   useEffect(() => {
-    if (isOpen && step === 2) {
+    if (isOpen && step === 1) {
       loadCategories();
     }
   }, [isOpen, step]);
+
+  // Handle modal context (auto-select client for checkout context)
+  useEffect(() => {
+    if (isOpen) {
+      if (modalContext?.mode === 'add-to-existing' && modalContext.existingClient) {
+        // Auto-select existing client
+        setClientData({
+          id: modalContext.existingClient.id,
+          name: modalContext.existingClient.name || 'Cliente Existente',
+          email: '', // We'll load this if needed
+          phone: '',  // We'll load this if needed
+          isNewClient: false
+        });
+        
+        // Skip to step 2 (services) since client is already selected
+        setStep(2);
+      } else {
+        // Reset for new appointment
+        setStep(1);
+        setClientData({ id: null, name: '', email: '', phone: '', isNewClient: false });
+        setSelectedServices([]);
+        setServiceAssignments({});
+      }
+    }
+  }, [isOpen, modalContext]);
   
   const loadCategories = async () => {
     try {
-      setIsLoading(true);
+      setLoadingServices(true);
+      
+      // Use preloaded services if available
+      if (preloadedServices) {
+        setCategories(preloadedServices.categories);
+        setServices(preloadedServices.services);
+        // No loading delay since data is already available
+        setLoadingServices(false);
+        return;
+      }
+      
+      
+      // Fallback to API call if preloaded services not available
       const data = await getCategories();
       setCategories(data);
       
@@ -106,7 +152,7 @@ const WalkInModal = ({
     } catch (err) {
       setError('Failed to load services');
     } finally {
-      setIsLoading(false);
+      setLoadingServices(false);
     }
   };
   
@@ -145,24 +191,48 @@ const WalkInModal = ({
   
   const loadProfessionalsForServices = async () => {
     try {
-      setIsLoading(true);
-      // Get professionals who can perform all selected services
+      setLoadingProfessionals(true);
+      // Get all professionals for each service (for individual assignment)
       const professionalSets = await Promise.all(
-        selectedServices.map(service => getProfessionalsForService(service.id))
+        selectedServices.map(async (service) => {
+          const serviceProfessionals = await getProfessionalsForService(service.id);
+          return {
+            serviceId: service.id,
+            serviceName: service.name,
+            professionals: serviceProfessionals
+          };
+        })
       );
       
-      // Find intersection of all professional sets
-      const commonProfessionals = professionalSets.reduce((common, current) => {
-        if (common.length === 0) return current;
-        return common.filter(prof => current.some(p => p.id === prof.id));
-      }, []);
+      // Create a map of serviceId -> available professionals
+      const servicesProfessionalsMap = {};
+      professionalSets.forEach(({ serviceId, professionals }) => {
+        servicesProfessionalsMap[serviceId] = professionals;
+      });
       
-      setProfessionals(commonProfessionals);
+      // For backward compatibility, also set a unified list of all unique professionals
+      const allProfessionals = [];
+      const professionalIds = new Set();
+      professionalSets.forEach(({ professionals }) => {
+        professionals.forEach(prof => {
+          if (!professionalIds.has(prof.id)) {
+            professionalIds.add(prof.id);
+            allProfessionals.push(prof);
+          }
+        });
+      });
+      
+      setProfessionals(allProfessionals);
+      
+      // Store the service-specific professionals mapping
+      setProfessionalsByService(servicesProfessionalsMap);
+      
     } catch (err) {
       setError('Failed to load professionals');
       setProfessionals([]);
+      setProfessionalsByService({});
     } finally {
-      setIsLoading(false);
+      setLoadingProfessionals(false);
     }
   };
 
@@ -222,25 +292,48 @@ const WalkInModal = ({
       setIsLoading(true);
       setError(null);
       
-      const walkInData = {
-        client: clientData.isNewClient ? {
-          name: clientData.name,
-          phone: clientData.phone || null,
-          email: clientData.email || null
-        } : {
-          id: clientData.id
-        },
-        services: selectedServices.map(s => ({ id: s.id })),
-        professional_id: selectedProfessional?.id
-      };
-      
-      const result = await createWalkInAppointment(walkInData);
-      onWalkInCreated(result);
-      onClose();
-      resetForm();
+      // Check if we're adding to existing appointment group
+      if (modalContext?.mode === 'add-to-existing') {
+        // Add services to existing group
+        const servicesToAdd = selectedServices.map(s => ({ 
+          id: s.id,
+          professional_id: serviceAssignments[s.id]
+        }));
+        
+        const response = await addServicesToAppointmentGroup(
+          modalContext.existingGroupId, 
+          servicesToAdd
+        );
+        
+        // Extract appointment group from response
+        onWalkInCreated(response.appointment_group); // Notify parent to refresh data
+        onClose();
+        resetForm();
+        return;
+      } else {
+        // Create new appointment group (original behavior)
+        const walkInData = {
+          client: clientData.isNewClient ? {
+            name: clientData.name,
+            phone: clientData.phone || null,
+            email: clientData.email || null
+          } : {
+            id: clientData.id
+          },
+          services: selectedServices.map(s => ({ 
+            id: s.id,
+            professional_id: serviceAssignments[s.id]
+          }))
+        };
+        
+        const result = await createWalkInAppointment(walkInData);
+        onWalkInCreated(result);
+        onClose();
+        resetForm();
+      }
       
     } catch (err) {
-      setError('Erro ao criar atendimento sem agendamento');
+      setError('Erro ao criar serviços');
     } finally {
       setIsLoading(false);
     }
@@ -252,6 +345,8 @@ const WalkInModal = ({
     setClientData({ id: null, name: '', phone: '', email: '', isNewClient: true });
     setSelectedServices([]);
     setProfessional(null);
+    setServiceAssignments({});
+    setProfessionalsByService({});
     setServiceSearchQuery('');
     setClientSearchQuery('');
     setClientSearchResults([]);
@@ -272,6 +367,11 @@ const WalkInModal = ({
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'min' : ''}`.trim() || '0min';
+  };
+  
+  // Check if all services have been assigned to professionals
+  const areAllServicesAssigned = () => {
+    return selectedServices.every(service => serviceAssignments[service.id]);
   };
   
   // Render step content
@@ -454,28 +554,39 @@ const WalkInModal = ({
               />
             </div>
             
-            {/* Selected services summary */}
+            {/* Shopping Cart Summary - Compact */}
             {selectedServices.length > 0 && (
-              <div className="p-4 bg-pink-50 rounded-xl border border-pink-200">
-                <p className="text-sm text-pink-800 mb-3 font-medium">
-                  {selectedServices.length} serviço{selectedServices.length !== 1 ? 's' : ''} selecionado{selectedServices.length !== 1 ? 's' : ''}
-                </p>
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center text-gray-700">
-                    <Clock size={14} className="mr-1" />
-                    {formatDuration(estimatedDuration)}
-                  </span>
-                  <span className="flex items-center font-semibold text-pink-700">
-                    <DollarSign size={14} className="mr-1" />
-                    {formatPrice(estimatedPrice)}
-                  </span>
+              <div className="sticky top-0 z-10 mb-4 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <ShoppingCart size={16} className="text-pink-600" />
+                    <span className="text-sm text-pink-800 font-medium">
+                      {selectedServices.length} serviço{selectedServices.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-bold text-pink-700">
+                      {formatPrice(estimatedPrice)}
+                    </span>
+                    <button
+                      onClick={() => setSelectedServices([])}
+                      className="text-xs text-pink-600 hover:text-pink-700 font-medium bg-white px-2 py-1 rounded-md transition-colors touch-manipulation"
+                    >
+                      Limpar
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
             
             {/* Services list */}
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {filteredServices.map((service) => {
+              {loadingServices ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-pink-500 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-gray-600">Carregando serviços...</p>
+                </div>
+              ) : filteredServices.map((service) => {
                 const isSelected = selectedServices.some(s => s.id === service.id);
                 return (
                   <div
@@ -483,8 +594,8 @@ const WalkInModal = ({
                     onClick={() => toggleService(service)}
                     className={`p-4 rounded-xl border cursor-pointer transition-all touch-manipulation ${
                       isSelected
-                        ? 'border-pink-500 bg-pink-50 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
+                        ? 'border-pink-500 bg-pink-50 shadow-md scale-[0.98]'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100 active:scale-[0.98]'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -502,13 +613,13 @@ const WalkInModal = ({
                           </span>
                         </div>
                       </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 mt-1 ${
-                        isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+                      <div className={`w-7 h-7 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all ${
+                        isSelected ? 'bg-pink-500 border-pink-500 scale-110' : 'border-gray-300'
                       }`}>
-                        {isSelected && (
-                          <div className="w-full h-full rounded-full bg-white scale-50 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                          </div>
+                        {isSelected ? (
+                          <Check size={16} className="text-white font-bold" />
+                        ) : (
+                          <Plus size={16} className="text-gray-400" />
                         )}
                       </div>
                     </div>
@@ -516,7 +627,7 @@ const WalkInModal = ({
                 );
               })}
               
-              {filteredServices.length === 0 && (
+              {!loadingServices && filteredServices.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   <Scissors size={32} className="mx-auto mb-3 text-gray-300" />
                   <p>Nenhum serviço encontrado</p>
@@ -529,47 +640,115 @@ const WalkInModal = ({
         
       case 3:
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Selecionar Profissional</h3>
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Atribuir Profissionais</h3>
+              <p className="text-sm text-gray-600">Selecione um profissional para cada serviço</p>
+            </div>
             
-            {professionals.length === 0 ? (
+            {selectedServices.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <User size={48} className="mx-auto mb-4 text-gray-300" />
-                <p className="font-medium mb-2">Nenhum profissional disponível</p>
-                <p className="text-sm">Os serviços selecionados não possuem profissionais compatíveis</p>
+                <p className="font-medium mb-2">Nenhum serviço selecionado</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {professionals.map((professional) => (
-                  <div
-                    key={professional.id}
-                    onClick={() => setProfessional(professional)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all touch-manipulation ${
-                      selectedProfessional?.id === professional.id
-                        ? 'border-pink-500 bg-pink-50 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User size={24} className="text-pink-600" />
+              <div className="space-y-4">
+                {selectedServices.map((service) => {
+                  const availableProfessionals = professionalsByService[service.id] || [];
+                  const assignedProfessionalId = serviceAssignments[service.id];
+                  const assignedProfessional = availableProfessionals.find(p => p.id === assignedProfessionalId);
+                  
+                  return (
+                    <div key={service.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      {/* Service Header */}
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 border-b border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
+                              <Scissors size={18} className="text-purple-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{service.name}</h4>
+                              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                <span className="flex items-center">
+                                  <Clock size={14} className="mr-1" />
+                                  {formatDuration(service.duration_minutes)}
+                                </span>
+                                <span className="flex items-center">
+                                  <DollarSign size={14} className="mr-1" />
+                                  {formatPrice(service.price)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {assignedProfessional && (
+                            <div className="flex items-center space-x-2 bg-green-100 px-3 py-1 rounded-full">
+                              <Check size={14} className="text-green-600" />
+                              <span className="text-sm font-medium text-green-800">Atribuído</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 mb-1">{professional.full_name}</h4>
-                        <p className="text-sm text-gray-500">{professional.role || 'Profissional'}</p>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
-                        selectedProfessional?.id === professional.id ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
-                      }`}>
-                        {selectedProfessional?.id === professional.id && (
-                          <div className="w-full h-full rounded-full bg-white scale-50 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                      
+                      {/* Professionals List */}
+                      <div className="p-4">
+                        {availableProfessionals.length === 0 ? (
+                          <div className="text-center py-6 text-gray-500">
+                            <User size={32} className="mx-auto mb-2 text-gray-300" />
+                            <p className="text-sm">Nenhum profissional disponível para este serviço</p>
+                            <p className="text-xs text-gray-400 mt-1">Serviço: {service.name}</p>
+                          </div>
+                        ) : (
+                          <div className="mb-2">
+                            <p className="text-xs text-gray-500">
+                              {availableProfessionals.length} profissional{availableProfessionals.length !== 1 ? 'is' : ''} disponível{availableProfessionals.length !== 1 ? 'is' : ''} para {service.name}
+                            </p>
+                          </div>
+                        )}
+                        {availableProfessionals.length > 0 && (
+                          <div className="space-y-2">
+                            {availableProfessionals.map((professional) => {
+                              const isSelected = serviceAssignments[service.id] === professional.id;
+                              
+                              return (
+                                <div
+                                  key={professional.id}
+                                  onClick={() => {
+                                    setServiceAssignments(prev => ({
+                                      ...prev,
+                                      [service.id]: isSelected ? null : professional.id
+                                    }));
+                                  }}
+                                  className={`p-3 rounded-lg border cursor-pointer transition-all touch-manipulation ${
+                                    isSelected
+                                      ? 'border-pink-500 bg-pink-50 shadow-sm'
+                                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <User size={18} className="text-pink-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-medium text-gray-900 text-sm">{professional.full_name}</h5>
+                                    </div>
+                                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                                      isSelected ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+                                    }`}>
+                                      {isSelected && (
+                                        <Check size={12} className="text-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -595,29 +774,36 @@ const WalkInModal = ({
               <div className="p-4 bg-gray-50 rounded-xl">
                 <h4 className="font-medium text-gray-800 mb-3 flex items-center">
                   <Scissors size={16} className="mr-2" />
-                  Serviços
+                  Serviços e Profissionais
                 </h4>
-                <div className="space-y-2">
-                  {selectedServices.map((service) => (
-                    <div key={service.id} className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{service.name}</p>
-                        <p className="text-xs text-gray-500">{formatDuration(service.duration_minutes)}</p>
+                <div className="space-y-3">
+                  {selectedServices.map((service) => {
+                    const assignedProfessionalId = serviceAssignments[service.id];
+                    const assignedProfessional = professionals.find(p => p.id === assignedProfessionalId);
+                    
+                    return (
+                      <div key={service.id} className="bg-white rounded-lg p-3 border">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{service.name}</p>
+                            <p className="text-xs text-gray-500">{formatDuration(service.duration_minutes)}</p>
+                          </div>
+                          <span className="font-semibold text-green-600">{formatPrice(service.price)}</span>
+                        </div>
+                        {assignedProfessional && (
+                          <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
+                            <div className="w-6 h-6 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center">
+                              <User size={12} className="text-pink-600" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-700">{assignedProfessional.full_name}</span>
+                          </div>
+                        )}
                       </div>
-                      <span className="font-semibold text-green-600">{formatPrice(service.price)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
-                  <User size={16} className="mr-2" />
-                  Profissional
-                </h4>
-                <p className="font-medium">{selectedProfessional?.full_name}</p>
-                <p className="text-sm text-gray-600">{selectedProfessional?.role || 'Profissional'}</p>
-              </div>
               
               <div className="p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl border border-pink-200">
                 <div className="flex justify-between items-center">
@@ -651,7 +837,7 @@ const WalkInModal = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">Adicionar Sem Agendamento</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Adicionar Serviços</h2>
             <p className="text-sm text-gray-500">Passo {step} de 4</p>
           </div>
           <button
@@ -695,7 +881,7 @@ const WalkInModal = ({
           <div className="flex gap-3">
             <button
               onClick={step === 1 ? onClose : () => setStep(step - 1)}
-              className="flex-1 py-3 px-4 text-gray-600 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-manipulation"
+              className="w-24 py-3 px-4 text-gray-600 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors touch-manipulation flex-shrink-0"
             >
               {step === 1 ? 'Cancelar' : 'Voltar'}
             </button>
@@ -709,21 +895,45 @@ const WalkInModal = ({
                 }
               }}
               disabled={
-                isLoading ||
                 (step === 1 && (showClientSearch ? !clientData.id : !clientData.name)) ||
                 (step === 2 && selectedServices.length === 0) ||
-                (step === 3 && !selectedProfessional)
+                (step === 3 && !areAllServicesAssigned())
               }
-              className="flex-2 py-3 px-6 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors touch-manipulation shadow-sm"
+              className="flex-1 py-3 px-6 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors touch-manipulation shadow-sm"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Carregando...
                 </div>
-              ) : step === 4 ? 'Criar Sem Agendamento' : 'Próximo'}
+              ) : step === 4 ? 'Adicionar Serviços' : (
+                step === 2 && selectedServices.length > 0 ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <ShoppingCart size={16} />
+                    <span>Continuar ({selectedServices.length})</span>
+                  </div>
+                ) : 'Próximo'
+              )}
             </button>
           </div>
+          
+          {/* Cart total preview in footer for step 2 */}
+          {step === 2 && selectedServices.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Total do carrinho:</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-600 flex items-center">
+                    <Clock size={14} className="mr-1" />
+                    {formatDuration(estimatedDuration)}
+                  </span>
+                  <span className="font-bold text-pink-600 text-base">
+                    {formatPrice(estimatedPrice)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

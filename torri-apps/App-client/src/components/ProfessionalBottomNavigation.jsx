@@ -11,7 +11,8 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  User
+  Menu,
+  Kanban
 } from 'lucide-react';
 
 const ProfessionalBottomNavigation = () => {
@@ -28,6 +29,13 @@ const ProfessionalBottomNavigation = () => {
       isActive: location.pathname === '/professional/dashboard'
     },
     {
+      id: 'kanban',
+      label: 'Atendimentos',
+      icon: Kanban,
+      path: '/kanban',
+      isActive: location.pathname === '/kanban' || location.pathname === '/professional/kanban'
+    },
+    {
       id: 'agenda',
       label: 'Agenda',
       icon: Calendar,
@@ -42,11 +50,11 @@ const ProfessionalBottomNavigation = () => {
       isActive: location.pathname.startsWith('/professional/clients')
     },
     {
-      id: 'profile',
-      label: 'Perfil',
-      icon: User,
-      path: '/profile',
-      isActive: location.pathname === '/profile'
+      id: 'menu',
+      label: 'Menu',
+      icon: Menu,
+      path: '/professional/menu',
+      isActive: location.pathname === '/professional/menu'
     }
     // Future expansion items (commented for now):
     // {
@@ -84,7 +92,7 @@ const ProfessionalBottomNavigation = () => {
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 px-4 py-2 safe-area-bottom">
+    <div className="bg-white border-t border-gray-200 px-2 py-1 safe-area-bottom">
       <div className="flex justify-around items-center">
         {navigationItems.map((item) => {
           const IconComponent = item.icon;
@@ -93,20 +101,20 @@ const ProfessionalBottomNavigation = () => {
             <button
               key={item.id}
               onClick={() => handleNavigation(item.path)}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-smooth ${
+              className={`flex flex-col items-center py-1 px-1 rounded-lg transition-smooth min-w-0 ${
                 item.isActive
                   ? 'text-pink-600 bg-pink-50'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <IconComponent 
-                size={24} 
-                className={`mb-1 ${
+                size={20} 
+                className={`mb-0.5 ${
                   item.isActive ? 'text-pink-600' : 'text-gray-500'
                 }`}
               />
               <span 
-                className={`text-xs font-medium ${
+                className={`text-[10px] font-medium leading-tight truncate max-w-[60px] ${
                   item.isActive ? 'text-pink-600' : 'text-gray-500'
                 }`}
               >
