@@ -4,6 +4,7 @@ from .constants import UserRole, HairType, Gender # Import Gender
 from datetime import date # Import date
 from typing import Optional
 import re
+from Core.Utils.brazilian_validators import cpf_validator, cep_validator, state_validator
 
 class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr | None = None
@@ -12,14 +13,35 @@ class UserBase(BaseModel): # Renamed from UserTenantBase
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
+    
+    # CPF field for Brazilian clients
+    cpf: Optional[str] = None
+    
+    # Address fields for clients
+    address_street: Optional[str] = None
+    address_number: Optional[str] = None
+    address_complement: Optional[str] = None
+    address_neighborhood: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_cep: Optional[str] = None
+    
+    # Validators for Brazilian fields
+    @field_validator('cpf')
+    def validate_cpf(cls, v):
+        return cpf_validator(v)
+    
+    @field_validator('address_cep')
+    def validate_cep(cls, v):
+        return cep_validator(v)
+    
+    @field_validator('address_state')
+    def validate_state(cls, v):
+        return state_validator(v)
 
 class UserCreate(UserBase): # Renamed from UserTenantCreate
     password: str
     role: UserRole
-    phone_number: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
-    gender: Optional[Gender] = None
 
 class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     email: EmailStr | None = None
@@ -32,16 +54,36 @@ class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
+    
+    # CPF field for Brazilian clients
+    cpf: Optional[str] = None
+    
+    # Address fields for clients
+    address_street: Optional[str] = None
+    address_number: Optional[str] = None
+    address_complement: Optional[str] = None
+    address_neighborhood: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_cep: Optional[str] = None
+    
+    # Validators for Brazilian fields
+    @field_validator('cpf')
+    def validate_cpf(cls, v):
+        return cpf_validator(v)
+    
+    @field_validator('address_cep')
+    def validate_cep(cls, v):
+        return cep_validator(v)
+    
+    @field_validator('address_state')
+    def validate_state(cls, v):
+        return state_validator(v)
 
 class User(UserBase): # Renamed from UserTenant
     id: UUID
     role: UserRole
     is_active: bool
-    email: EmailStr | None = None
-    phone_number: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
-    gender: Optional[Gender] = None
     photo_path: Optional[str] = None # Added field
 
     class Config:
@@ -110,8 +152,33 @@ class PublicRegistrationRequest(BaseModel):
     hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     
+    # CPF field for Brazilian clients
+    cpf: Optional[str] = None
+    
+    # Address fields for clients
+    address_street: Optional[str] = None
+    address_number: Optional[str] = None
+    address_complement: Optional[str] = None
+    address_neighborhood: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_cep: Optional[str] = None
+    
     @field_validator('password')
     def validate_password(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
+    
+    # Validators for Brazilian fields
+    @field_validator('cpf')
+    def validate_cpf(cls, v):
+        return cpf_validator(v)
+    
+    @field_validator('address_cep')
+    def validate_cep(cls, v):
+        return cep_validator(v)
+    
+    @field_validator('address_state')
+    def validate_state(cls, v):
+        return state_validator(v)

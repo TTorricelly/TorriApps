@@ -5,7 +5,8 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { getUserProfile } from '../services/userService';
-import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar } from 'lucide-react';
+import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar, MapPin, CreditCard } from 'lucide-react';
+import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -115,6 +116,34 @@ const ProfilePage = () => {
                     <div className="flex-1">
                       <p className="text-sm text-gray-500">Data de Nascimento</p>
                       <p className="text-gray-800">{user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não informado'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CPF Section */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4">
+                  <div className="flex items-center space-x-3">
+                    <CreditCard size={20} className="text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">CPF</p>
+                      <p className="text-gray-800">{user?.cpf ? formatCpf(user.cpf) : 'Não informado'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Section */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <MapPin size={20} className="text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500 mb-1">Endereço</p>
+                      {user?.address_street || user?.address_city || user?.address_cep ? (
+                        <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-line">
+                          {formatAddressForDisplay(user)}
+                        </div>
+                      ) : (
+                        <p className="text-gray-800">Não informado</p>
+                      )}
                     </div>
                   </div>
                 </div>

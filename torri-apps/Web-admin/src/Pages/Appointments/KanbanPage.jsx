@@ -21,17 +21,21 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   EllipsisHorizontalIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ChevronDownIcon
 } from "@heroicons/react/24/outline";
 import {
   DndContext,
   closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragOverlay,
   useDroppable,
+  getFirstCollision,
+  pointerWithin,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -58,6 +62,7 @@ const KanbanPage = () => {
   const [toast, setToast] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [overId, setOverId] = useState(null);
+  const [movingCard, setMovingCard] = useState(null); // Visual feedback for moving cards
 
   // Brazil timezone support - always use today's date for kanban (operational view)
   // Use useMemo to recalculate date when component updates (handles midnight transitions)
@@ -137,47 +142,23 @@ const KanbanPage = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Load appointment groups on mount and date changes
-  useEffect(() => {
-    loadAppointmentGroups();
-    preloadServices();
-  }, [loadAppointmentGroups, preloadServices]);
-
-  // Keyboard shortcuts (A, C, ESC)
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      // Only handle shortcuts if no modal is open and not typing in input
-      if (showAddServicesModal || showCheckoutModal || 
-          event.target.tagName === 'INPUT' || 
-          event.target.tagName === 'TEXTAREA') {
-        return;
-      }
-
-      switch (event.key.toLowerCase()) {
-        case 'a':
-          event.preventDefault();
-          handleAddServices();
-          break;
-        case 'c':
-          event.preventDefault();
-          if (selectedCard && selectedCard.status !== 'COMPLETED') {
-            handleMoveToColumn('COMPLETED');
-          }
-          break;
-        case 'escape':
-          event.preventDefault();
-          if (showActionMenu) {
-            handleBackgroundTap();
-          }
-          break;
-        default:
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showAddServicesModal, showCheckoutModal, showActionMenu, selectedCard]);
+  // Custom collision detection that prioritizes columns over cards
+  const customCollisionDetection = (args) => {
+    // First, check for collisions with droppable columns using pointerWithin
+    const pointerCollisions = pointerWithin(args);
+    
+    // Filter to only include column IDs (not card IDs)
+    const columnCollisions = pointerCollisions.filter(collision => {
+      return columns.some(col => col.id === collision.id);
+    });
+    
+    if (columnCollisions.length > 0) {
+      return columnCollisions;
+    }
+    
+    // Fallback to closest corners for any remaining collisions
+    return closestCorners(args);
+  };
 
   // Load appointment groups function
   const loadAppointmentGroups = useCallback(async () => {
@@ -232,6 +213,48 @@ const KanbanPage = () => {
     }
   }, []);
 
+  // Load appointment groups on mount and date changes
+  useEffect(() => {
+    loadAppointmentGroups();
+    preloadServices();
+  }, [loadAppointmentGroups, preloadServices]);
+
+  // Keyboard shortcuts (A, C, ESC)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Only handle shortcuts if no modal is open and not typing in input
+      if (showAddServicesModal || showCheckoutModal || 
+          event.target.tagName === 'INPUT' || 
+          event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      switch (event.key.toLowerCase()) {
+        case 'a':
+          event.preventDefault();
+          handleAddServices();
+          break;
+        case 'c':
+          event.preventDefault();
+          if (selectedCard && selectedCard.status !== 'COMPLETED') {
+            handleMoveToColumn('COMPLETED');
+          }
+          break;
+        case 'escape':
+          event.preventDefault();
+          if (showActionMenu) {
+            handleBackgroundTap();
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showAddServicesModal, showCheckoutModal, showActionMenu, selectedCard]);
+
   // Refresh data
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -285,11 +308,15 @@ const KanbanPage = () => {
     const group = appointmentGroups.find(g => g.id === groupId);
     if (!group || group.status === newStatus) return;
 
+    // Show immediate visual feedback
+    setMovingCard({ cardId: groupId, targetColumn: newStatus });
+
     try {
       // Special handling for Ready to Pay - open checkout modal
       if (newStatus === 'READY_TO_PAY') {
         setCheckoutGroup(group);
         setShowCheckoutModal(true);
+        setMovingCard(null); // Clear moving state since we're opening modal
         return; // Don't update status yet, wait for payment completion
       }
       
@@ -311,6 +338,9 @@ const KanbanPage = () => {
       showToast('Erro ao atualizar status do agendamento. Tente novamente.', 'error');
       // Reload data to sync with server
       loadAppointmentGroups();
+    } finally {
+      // Clear moving state
+      setMovingCard(null);
     }
   };
 
@@ -364,6 +394,18 @@ const KanbanPage = () => {
 
     const groupId = active.id;
     const newStatus = over.id;
+    
+    // Debug logging
+    console.log('Drag end - groupId:', groupId, 'newStatus:', newStatus);
+    
+    // Validate that newStatus is a valid column ID
+    const validColumn = columns.find(c => c.id === newStatus);
+    if (!validColumn) {
+      console.error('Invalid drop target. Expected column ID, got:', newStatus);
+      setActiveId(null);
+      setOverId(null);
+      return;
+    }
     
     try {
       await moveCardToColumn(groupId, newStatus);
@@ -475,20 +517,29 @@ const KanbanPage = () => {
       <div
         ref={setNodeRef}
         className={`
-          flex-1 min-h-[200px] p-s rounded-card border-2 border-dashed transition-colors
+          flex-1 min-h-[400px] p-s rounded-card border-2 border-dashed transition-colors relative
           ${isOver 
             ? 'border-accent-primary bg-accent-primary/5' 
             : 'border-bg-tertiary'
           }
         `}
       >
-        {children}
+        {/* Invisible drop zone overlay that covers the entire column */}
+        <div 
+          className="absolute inset-0 z-0" 
+          style={{ minHeight: '400px' }}
+        />
+        
+        {/* Content with higher z-index */}
+        <div className="relative z-10">
+          {children}
+        </div>
       </div>
     );
   };
 
-  // Sortable card component
-  const SortableCard = ({ group }) => {
+  // Draggable card component (no sorting within columns)
+  const DraggableCard = ({ group }) => {
     const {
       attributes,
       listeners,
@@ -496,7 +547,10 @@ const KanbanPage = () => {
       transform,
       transition,
       isDragging,
-    } = useSortable({ id: group.id });
+    } = useSortable({ 
+      id: group.id,
+      disabled: false // Keep dragging enabled
+    });
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -520,6 +574,7 @@ const KanbanPage = () => {
   const renderAppointmentCard = (group, isDragging = false) => {
     const { time } = formatDateTime(group.start_time);
     const isSelected = selectedCard?.id === group.id;
+    const isMoving = movingCard?.cardId === group.id;
     
     // Parse service names to create chips
     const services = group.service_names ? group.service_names.split(', ') : [];
@@ -530,13 +585,24 @@ const KanbanPage = () => {
           bg-bg-secondary border border-bg-tertiary rounded-card p-m mb-s shadow-card
           ${isSelected ? 'ring-2 ring-accent-primary shadow-card-hover' : ''}
           ${isDragging ? 'shadow-card-hover rotate-1' : ''}
+          ${isMoving ? 'opacity-50 scale-95 pointer-events-none' : ''}
           transition-all duration-normal cursor-pointer hover:shadow-card-hover
           touch-manipulation select-none
           active:scale-98 hover:scale-101
           md:hover:shadow-card-hover
         `}
-        onClick={() => handleCardTap(group)}
+        onClick={() => !isMoving && handleCardTap(group)}
       >
+        {/* Moving overlay */}
+        {isMoving && (
+          <div className="absolute inset-0 bg-white bg-opacity-50 rounded-card flex items-center justify-center z-10">
+            <div className="flex items-center space-x-2 bg-accent-primary text-white px-3 py-2 rounded-full shadow-lg">
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Movendo...</span>
+            </div>
+          </div>
+        )}
+        
         {/* Card Header */}
         <div className="flex items-center justify-between mb-s">
           <Typography variant="small" className="font-semibold text-text-primary truncate">
@@ -553,8 +619,15 @@ const KanbanPage = () => {
             >
               <UserPlusIcon className="h-4 w-4" />
             </button>
-            <button className="text-text-secondary hover:text-text-primary transition-colors p-xs rounded-button hover:bg-bg-tertiary">
-              <EllipsisHorizontalIcon className="h-4 w-4" />
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardTap(group);
+              }}
+              className="text-text-secondary hover:text-text-primary transition-colors p-xs rounded-button hover:bg-bg-tertiary"
+              title="Mover para outra coluna"
+            >
+              <ChevronDownIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -740,7 +813,7 @@ const KanbanPage = () => {
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -793,7 +866,7 @@ const KanbanPage = () => {
                     strategy={verticalListSortingStrategy}
                   >
                     {groupedAppointments[column.id].map((group) => (
-                      <SortableCard key={group.id} group={group} />
+                      <DraggableCard key={group.id} group={group} />
                     ))}
                     
                     {/* Empty State */}

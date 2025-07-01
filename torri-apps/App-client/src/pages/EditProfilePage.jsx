@@ -2,7 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { updateUserProfile } from '../services/userService';
-import { ArrowLeft, User, Mail, Phone, Save, Calendar } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Save, Calendar, CreditCard, MapPin } from 'lucide-react';
+import { 
+  handleCpfInput, 
+  handleCepInput, 
+  validateCpfChecksum, 
+  validateCepFormat, 
+  validateBrazilianState,
+  lookupCep,
+  BRAZILIAN_STATES,
+  cleanFormData,
+  validateBrazilianFields
+} from '../utils/brazilianUtils';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -16,6 +27,15 @@ const EditProfilePage = () => {
     hair_type: user?.hair_type || '',
     gender: user?.gender || '',
     date_of_birth: user?.date_of_birth || '',
+    // CPF and Address fields
+    cpf: user?.cpf || '',
+    address_street: user?.address_street || '',
+    address_number: user?.address_number || '',
+    address_complement: user?.address_complement || '',
+    address_neighborhood: user?.address_neighborhood || '',
+    address_city: user?.address_city || '',
+    address_state: user?.address_state || '',
+    address_cep: user?.address_cep || '',
   });
 
   const handleInputChange = (e) => {
@@ -25,8 +45,20 @@ const EditProfilePage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    // Validate Brazilian fields
+    const brazilianErrors = validateBrazilianFields(formData);
+    if (Object.keys(brazilianErrors).length > 0) {
+      alert(`Erro de validação: ${Object.values(brazilianErrors).join(', ')}`);
+      return;
+    }
+    
     setIsSaving(true);
-    const updatedProfile = await updateUserProfile(formData);
+    
+    // Clean and format Brazilian data before submission
+    const cleanedData = cleanFormData(formData);
+    
+    const updatedProfile = await updateUserProfile(cleanedData);
     setIsSaving(false);
 
     if (updatedProfile) {
@@ -168,6 +200,174 @@ const EditProfilePage = () => {
                 onChange={handleInputChange}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
               />
+            </div>
+          </div>
+
+          {/* CPF */}
+          <div>
+            <label htmlFor="cpf" className="block text-sm font-medium text-gray-700 mb-1">
+              CPF
+            </label>
+            <div className="relative">
+              <CreditCard size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                id="cpf"
+                name="cpf"
+                value={formData.cpf}
+                onChange={(e) => {
+                  const formatted = handleCpfInput(e.target.value);
+                  setFormData(prev => ({ ...prev, cpf: formatted }));
+                }}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <MapPin size={20} className="text-pink-500" />
+              Endereço
+            </h3>
+
+            {/* CEP */}
+            <div className="mb-4">
+              <label htmlFor="address_cep" className="block text-sm font-medium text-gray-700 mb-1">
+                CEP
+              </label>
+              <input
+                type="text"
+                id="address_cep"
+                name="address_cep"
+                value={formData.address_cep}
+                onChange={(e) => {
+                  const formatted = handleCepInput(e.target.value);
+                  setFormData(prev => ({ ...prev, address_cep: formatted }));
+                }}
+                onBlur={async (e) => {
+                  const cep = e.target.value;
+                  if (cep && validateCepFormat(cep)) {
+                    const addressData = await lookupCep(cep);
+                    if (addressData) {
+                      setFormData(prev => ({
+                        ...prev,
+                        address_street: addressData.address_street || prev.address_street,
+                        address_complement: addressData.address_complement || prev.address_complement,
+                        address_neighborhood: addressData.address_neighborhood || prev.address_neighborhood,
+                        address_city: addressData.address_city || prev.address_city,
+                        address_state: addressData.address_state || prev.address_state,
+                      }));
+                    }
+                  }
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                placeholder="00000-000"
+                maxLength={9}
+              />
+            </div>
+
+            {/* Street and Number */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="md:col-span-2">
+                <label htmlFor="address_street" className="block text-sm font-medium text-gray-700 mb-1">
+                  Rua/Logradouro
+                </label>
+                <input
+                  type="text"
+                  id="address_street"
+                  name="address_street"
+                  value={formData.address_street}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="Nome da rua"
+                />
+              </div>
+              <div>
+                <label htmlFor="address_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  Número
+                </label>
+                <input
+                  type="text"
+                  id="address_number"
+                  name="address_number"
+                  value={formData.address_number}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="123"
+                />
+              </div>
+            </div>
+
+            {/* Complement and Neighborhood */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="address_complement" className="block text-sm font-medium text-gray-700 mb-1">
+                  Complemento
+                </label>
+                <input
+                  type="text"
+                  id="address_complement"
+                  name="address_complement"
+                  value={formData.address_complement}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="Apto, Bloco, etc."
+                />
+              </div>
+              <div>
+                <label htmlFor="address_neighborhood" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bairro
+                </label>
+                <input
+                  type="text"
+                  id="address_neighborhood"
+                  name="address_neighborhood"
+                  value={formData.address_neighborhood}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="Nome do bairro"
+                />
+              </div>
+            </div>
+
+            {/* City and State */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="address_city" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cidade
+                </label>
+                <input
+                  type="text"
+                  id="address_city"
+                  name="address_city"
+                  value={formData.address_city}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="Nome da cidade"
+                />
+              </div>
+              <div>
+                <label htmlFor="address_state" className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  id="address_state"
+                  name="address_state"
+                  value={formData.address_state}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                >
+                  <option value="">Selecione...</option>
+                  {BRAZILIAN_STATES.map(state => (
+                    <option key={state.code} value={state.code}>
+                      {state.code} - {state.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

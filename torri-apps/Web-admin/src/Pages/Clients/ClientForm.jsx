@@ -29,6 +29,17 @@ import {
 
 import { clientsApi } from '../../Services/clients'; // Changed from professionalsApi
 import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber, preparePhoneDataForSubmission } from '../../utils/phoneUtils';
+import { 
+  handleCpfInput, 
+  handleCepInput, 
+  validateCpfChecksum, 
+  validateCepFormat, 
+  validateBrazilianState,
+  lookupCep,
+  BRAZILIAN_STATES,
+  cleanFormData,
+  validateBrazilianFields
+} from '../../Utils/brazilianFormatters';
 // import { servicesApi } from '../../Services/services'; // Removed servicesApi
 
 // Removed ServiceTagSelector component as it's not needed for clients
@@ -38,7 +49,8 @@ const ClientDataForm = ({
   formData,
   handleInputChange,
   errors,
-  isEditMode // Renamed from isEdit for clarity
+  isEditMode, // Renamed from isEdit for clarity
+  onCepLookup // Added for CEP lookup functionality
   // Removed photo props: handlePhotoChange, photoPreview, handlePhotoRemove
   // Removed service props: allServices, selectedServices, setSelectedServices, showAlert (if only for services)
 }) => {
@@ -213,6 +225,202 @@ const ClientDataForm = ({
             )}
           </div>
 
+          {/* CPF */}
+          <div>
+            <Input
+              name="cpf"
+              label="CPF"
+              placeholder="000.000.000-00"
+              value={formData.cpf || ''}
+              onChange={(e) => {
+                const formatted = handleCpfInput(e.target.value);
+                handleInputChange('cpf', formatted);
+              }}
+              error={!!errors.cpf}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+              maxLength={14}
+            />
+            {errors.cpf && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.cpf}
+              </Typography>
+            )}
+          </div>
+
+          {/* Address Section */}
+          <div className="border-t border-bg-tertiary pt-6 mt-6">
+            <Typography variant="h6" className="text-text-primary mb-4">
+              Endereço
+            </Typography>
+
+            {/* CEP */}
+            <div className="mb-4">
+              <Input
+                name="address_cep"
+                label="CEP"
+                placeholder="00000-000"
+                value={formData.address_cep || ''}
+                onChange={(e) => {
+                  const formatted = handleCepInput(e.target.value);
+                  handleInputChange('address_cep', formatted);
+                }}
+                onBlur={async (e) => {
+                  const cep = e.target.value;
+                  if (cep && validateCepFormat(cep)) {
+                    const addressData = await lookupCep(cep);
+                    if (addressData && onCepLookup) {
+                      onCepLookup(addressData);
+                    }
+                  }
+                }}
+                error={!!errors.address_cep}
+                className="bg-bg-primary border-bg-tertiary text-text-primary"
+                labelProps={{ className: "text-text-secondary" }}
+                containerProps={{ className: "text-text-primary" }}
+                maxLength={9}
+              />
+              {errors.address_cep && (
+                <Typography className="text-status-error text-sm mt-1">
+                  {errors.address_cep}
+                </Typography>
+              )}
+            </div>
+
+            {/* Street and Number */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="md:col-span-2">
+                <Input
+                  name="address_street"
+                  label="Rua/Logradouro"
+                  placeholder="Nome da rua"
+                  value={formData.address_street || ''}
+                  onChange={(e) => handleInputChange('address_street', e.target.value)}
+                  error={!!errors.address_street}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  containerProps={{ className: "text-text-primary" }}
+                />
+                {errors.address_street && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_street}
+                  </Typography>
+                )}
+              </div>
+              <div>
+                <Input
+                  name="address_number"
+                  label="Número"
+                  placeholder="123"
+                  value={formData.address_number || ''}
+                  onChange={(e) => handleInputChange('address_number', e.target.value)}
+                  error={!!errors.address_number}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  containerProps={{ className: "text-text-primary" }}
+                />
+                {errors.address_number && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_number}
+                  </Typography>
+                )}
+              </div>
+            </div>
+
+            {/* Complement and Neighborhood */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <Input
+                  name="address_complement"
+                  label="Complemento"
+                  placeholder="Apto, Bloco, etc."
+                  value={formData.address_complement || ''}
+                  onChange={(e) => handleInputChange('address_complement', e.target.value)}
+                  error={!!errors.address_complement}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  containerProps={{ className: "text-text-primary" }}
+                />
+                {errors.address_complement && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_complement}
+                  </Typography>
+                )}
+              </div>
+              <div>
+                <Input
+                  name="address_neighborhood"
+                  label="Bairro"
+                  placeholder="Nome do bairro"
+                  value={formData.address_neighborhood || ''}
+                  onChange={(e) => handleInputChange('address_neighborhood', e.target.value)}
+                  error={!!errors.address_neighborhood}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  containerProps={{ className: "text-text-primary" }}
+                />
+                {errors.address_neighborhood && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_neighborhood}
+                  </Typography>
+                )}
+              </div>
+            </div>
+
+            {/* City and State */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Input
+                  name="address_city"
+                  label="Cidade"
+                  placeholder="Nome da cidade"
+                  value={formData.address_city || ''}
+                  onChange={(e) => handleInputChange('address_city', e.target.value)}
+                  error={!!errors.address_city}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  containerProps={{ className: "text-text-primary" }}
+                />
+                {errors.address_city && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_city}
+                  </Typography>
+                )}
+              </div>
+              <div>
+                <Select
+                  name="address_state"
+                  label="Estado"
+                  value={formData.address_state || ''}
+                  onChange={(value) => handleInputChange('address_state', value)}
+                  error={!!errors.address_state}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary"
+                  labelProps={{ className: "text-text-secondary" }}
+                  selected={(element) => {
+                    if (element && formData.address_state) {
+                      const selectedState = BRAZILIAN_STATES.find(state => state.code === formData.address_state);
+                      return selectedState ? `${selectedState.code} - ${selectedState.name}` : '';
+                    }
+                    return '';
+                  }}
+                >
+                  <Option value="">Selecione...</Option>
+                  {BRAZILIAN_STATES.map(state => (
+                    <Option key={state.code} value={state.code}>
+                      {state.code} - {state.name}
+                    </Option>
+                  ))}
+                </Select>
+                {errors.address_state && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.address_state}
+                  </Typography>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Password (only for create mode) */}
           {!isEditMode && (
             <div>
@@ -291,6 +499,15 @@ export default function ClientForm() { // Renamed component
     gender: '', // Added gender
     password: '', // Kept for creation
     is_active: true,
+    // CPF and Address fields
+    cpf: '',
+    address_street: '',
+    address_number: '',
+    address_complement: '',
+    address_neighborhood: '',
+    address_city: '',
+    address_state: '',
+    address_cep: '',
     // Removed services_ids, bio, etc.
   });
 
@@ -356,6 +573,15 @@ export default function ClientForm() { // Renamed component
         gender: data.gender || '',
         password: '', // Never load password
         is_active: data.is_active ?? true,
+        // CPF and Address fields
+        cpf: data.cpf || '',
+        address_street: data.address_street || '',
+        address_number: data.address_number || '',
+        address_complement: data.address_complement || '',
+        address_neighborhood: data.address_neighborhood || '',
+        address_city: data.address_city || '',
+        address_state: data.address_state || '',
+        address_cep: data.address_cep || '',
       };
 
       setFormData(loadedFormData);
@@ -420,6 +646,10 @@ export default function ClientForm() { // Renamed component
     //   newErrors.phone_number = 'Formato de telefone inválido. Use (XX) XXXXX-XXXX';
     // }
 
+    // Brazilian fields validation
+    const brazilianErrors = validateBrazilianFields(formData);
+    Object.assign(newErrors, brazilianErrors);
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -430,6 +660,18 @@ export default function ClientForm() { // Renamed component
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  // CEP lookup handler
+  const handleCepLookup = (addressData) => {
+    setFormData(prev => ({
+      ...prev,
+      address_street: addressData.address_street || prev.address_street,
+      address_complement: addressData.address_complement || prev.address_complement,
+      address_neighborhood: addressData.address_neighborhood || prev.address_neighborhood,
+      address_city: addressData.address_city || prev.address_city,
+      address_state: addressData.address_state || prev.address_state,
+    }));
   };
 
   // Removed handlePhotoChange and handlePhotoRemove
@@ -444,15 +686,27 @@ export default function ClientForm() { // Renamed component
     try {
       setIsSaving(true);
 
+      // Clean and format Brazilian data
+      const cleanedData = cleanFormData(formData);
+
       // Prepare data with normalized phone number
       const dataToSave = preparePhoneDataForSubmission({
-        full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
-        phone_number: formData.phone_number?.trim() || null, // Will be normalized by preparePhoneDataForSubmission
-        date_of_birth: formData.date_of_birth || null, // Send null if empty
-        hair_type: formData.hair_type || null, // Send null if empty
-        gender: formData.gender || null, // Send null if empty
-        is_active: formData.is_active,
+        full_name: cleanedData.full_name.trim(),
+        email: cleanedData.email.trim(),
+        phone_number: cleanedData.phone_number?.trim() || null, // Will be normalized by preparePhoneDataForSubmission
+        date_of_birth: cleanedData.date_of_birth || null, // Send null if empty
+        hair_type: cleanedData.hair_type || null, // Send null if empty
+        gender: cleanedData.gender || null, // Send null if empty
+        is_active: cleanedData.is_active,
+        // CPF and Address fields
+        cpf: cleanedData.cpf || null,
+        address_street: cleanedData.address_street?.trim() || null,
+        address_number: cleanedData.address_number?.trim() || null,
+        address_complement: cleanedData.address_complement?.trim() || null,
+        address_neighborhood: cleanedData.address_neighborhood?.trim() || null,
+        address_city: cleanedData.address_city?.trim() || null,
+        address_state: cleanedData.address_state || null,
+        address_cep: cleanedData.address_cep || null,
       });
 
       if (!isEditMode) {
@@ -566,6 +820,7 @@ export default function ClientForm() { // Renamed component
               handleInputChange={handleInputChange}
               errors={errors}
               isEditMode={isEditMode} // Pass isEditMode
+              onCepLookup={handleCepLookup} // Add CEP lookup handler
               // Removed photo and service props
               // showAlert={showAlert} // showAlert is available in the main component scope
             />

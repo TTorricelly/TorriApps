@@ -30,6 +30,18 @@ class User(Base):
     # Photo fields for professionals
     photo_path = Column(String(500), nullable=True)  # Path to uploaded photo file
     
+    # CPF field for Brazilian clients
+    cpf = Column(String(14), nullable=True, index=True)  # Format: 123.456.789-10
+    
+    # Address fields for clients
+    address_street = Column(String(255), nullable=True)  # Street name
+    address_number = Column(String(20), nullable=True)   # Street number
+    address_complement = Column(String(100), nullable=True)  # Apartment, block, etc.
+    address_neighborhood = Column(String(100), nullable=True)  # Neighborhood/district
+    address_city = Column(String(100), nullable=True)    # City name
+    address_state = Column(String(2), nullable=True)     # Brazilian state code (SP, RJ, etc.)
+    address_cep = Column(String(9), nullable=True)       # ZIP code format: 12345-678
+    
     # Timestamps to match database
     created_at = Column(DateTime, nullable=True, server_default=func.now())
     updated_at = Column(DateTime, nullable=True, server_default=func.now())

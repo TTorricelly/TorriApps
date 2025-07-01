@@ -26,6 +26,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { clientsApi } from '../../Services/clients.js';
+import { formatCpf, formatAddressCompact } from '../../Utils/brazilianFormatters';
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
 
 function ClientsPage() { // Renamed component and removed default export from here
@@ -97,11 +98,12 @@ function ClientsPage() { // Renamed component and removed default export from he
   const filteredClients = useMemo(() => {
     let filtered = clients;
 
-    // Filter by search query (name or email)
+    // Filter by search query (name, email, or CPF)
     if (searchQuery.trim()) {
       filtered = filtered.filter(client => // Changed variable name
         client.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchQuery.toLowerCase())
+        client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.cpf?.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''))
       );
     }
 
@@ -216,7 +218,7 @@ function ClientsPage() { // Renamed component and removed default export from he
             <div className="flex-1 max-w-md">
               <Input
                 type="text"
-                placeholder="Pesquisar por nome ou email..."
+                placeholder="Pesquisar por nome, email ou CPF..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-bg-primary border-bg-tertiary text-text-primary"
@@ -272,7 +274,14 @@ function ClientsPage() { // Renamed component and removed default export from he
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bg-tertiary">
-                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th><th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th><th className="text-left p-4 text-text-primary font-semibold">E-mail</th><th className="text-left p-4 text-text-primary font-semibold">Telefone</th>{/* Added Telefone */}<th className="text-left p-4 text-text-primary font-semibold">Status</th><th className="text-left p-4 text-text-primary font-semibold">Ações</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">E-mail</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Telefone</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">CPF</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Endereço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Status</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -311,14 +320,26 @@ function ClientsPage() { // Renamed component and removed default export from he
                           {client.email} {/* Use client */}
                         </Typography>
                       </td>
-                      <td className="p-4"> {/* Added Telefone cell */}
+                      <td className="p-4">
                         <Typography className="text-text-primary">
-                          {client.phone_number || 'Não informado'} {/* Use client and phone_number */}
+                          {client.phone_number || 'Não informado'}
+                        </Typography>
+                      </td>
+                      <td className="p-4">
+                        <Typography className="text-text-primary">
+                          {client.cpf ? formatCpf(client.cpf) : 'Não informado'}
+                        </Typography>
+                      </td>
+                      <td className="p-4">
+                        <Typography className="text-text-primary text-sm">
+                          {client.address_street || client.address_city || client.address_cep ? 
+                            formatAddressCompact(client) : 'Não informado'
+                          }
                         </Typography>
                       </td>
                       <td className="p-4">
                         <Badge
-                          color={client.is_active ? "green" : "orange"} // Use client
+                          color={client.is_active ? "green" : "orange"}
                           className="text-xs"
                         >
                           {client.is_active ? "Ativo" : "Inativo"}

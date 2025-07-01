@@ -1,0 +1,52 @@
+2025-06-30 15:53:33,867 - INFO - 🚀 Starting multi-schema migration: current
+2025-06-30 15:53:33,868 - INFO - Target schemas: dev
+2025-06-30 15:53:33,868 - INFO - 
+📋 Processing schema: dev
+2025-06-30 15:53:37,404 - INFO - Schema 'dev': EXISTS
+2025-06-30 15:53:43,876 - INFO - Schema 'dev' current migration: INFO:
+2025-06-30 15:53:43,877 - INFO - 
+============================================================
+2025-06-30 15:53:43,877 - INFO - MIGRATION SUMMARY
+2025-06-30 15:53:43,877 - INFO - ============================================================
+2025-06-30 15:53:43,878 - INFO - ✅ SUCCESS - Schema: dev
+2025-06-30 15:53:43,879 - INFO -   Before: INFO:
+2025-06-30 15:53:43,880 - INFO - 
+📊 TOTAL: 1 successful, 0 failed
+2025-06-30 15:53:43,880 - INFO - 🎉 All migrations completed successfully!
+2025-06-30 15:54:54,191 - INFO - 🚀 Starting multi-schema migration: current
+2025-06-30 15:54:54,192 - INFO - Target schemas: prod
+2025-06-30 15:54:54,192 - INFO - 
+📋 Processing schema: prod
+2025-06-30 15:54:57,738 - INFO - Schema 'prod': EXISTS
+2025-06-30 15:55:04,029 - INFO - Schema 'prod' current migration: INFO:
+2025-06-30 15:55:04,030 - INFO - 
+============================================================
+2025-06-30 15:55:04,030 - INFO - MIGRATION SUMMARY
+2025-06-30 15:55:04,030 - INFO - ============================================================
+2025-06-30 15:55:04,030 - INFO - ✅ SUCCESS - Schema: prod
+2025-06-30 15:55:04,030 - INFO -   Before: INFO:
+2025-06-30 15:55:04,030 - INFO - 
+📊 TOTAL: 1 successful, 0 failed
+2025-06-30 15:55:04,030 - INFO - 🎉 All migrations completed successfully!
+2025-06-30 16:12:20,561 - INFO - 🚀 Starting multi-schema migration: upgrade
+2025-06-30 16:12:20,561 - INFO - Target schemas: prod
+2025-06-30 16:12:20,562 - INFO - Target revision: add_cpf_and_address
+2025-06-30 16:12:20,562 - INFO - 
+📋 Processing schema: prod
+2025-06-30 16:12:24,148 - INFO - Schema 'prod': EXISTS
+2025-06-30 16:12:30,418 - INFO - Schema 'prod' current migration: INFO:
+2025-06-30 16:12:30,421 - INFO - 🔄 Applying upgrade to schema 'prod'...
+2025-06-30 16:12:36,113 - INFO - ✅ Successfully applied upgrade to schema 'prod'
+2025-06-30 16:12:36,114 - INFO - Output: INFO: Using main Base.metadata for Alembic operations.
+INFO: Running migrations in ONLINE mode.
+2025-06-30 16:12:41,880 - INFO - Schema 'prod' current migration: INFO:
+2025-06-30 16:12:41,883 - INFO - 
+============================================================
+2025-06-30 16:12:41,883 - INFO - MIGRATION SUMMARY
+2025-06-30 16:12:41,883 - INFO - ============================================================
+2025-06-30 16:12:41,883 - INFO - ✅ SUCCESS - Schema: prod
+2025-06-30 16:12:41,884 - INFO -   Before: INFO:
+2025-06-30 16:12:41,884 - INFO -   After:  INFO:
+2025-06-30 16:12:41,884 - INFO - 
+📊 TOTAL: 1 successful, 0 failed
+2025-06-30 16:12:41,884 - INFO - 🎉 All migrations completed successfully!
