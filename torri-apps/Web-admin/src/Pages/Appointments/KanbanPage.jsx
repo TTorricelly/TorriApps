@@ -11,7 +11,7 @@ import {
 import { servicesApi } from '../../Services/services';
 import { categoriesApi } from '../../Services/categories';
 import { professionalsApi } from '../../Services/professionals';
-import { getClientDisplayName } from '../../utils/clientUtils';
+import { getClientDisplayName } from '../../Utils/clientUtils';
 import {
   CalendarDaysIcon, 
   ExclamationTriangleIcon,

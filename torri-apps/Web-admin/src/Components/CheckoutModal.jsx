@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createMergedCheckoutSession, processAppointmentPayment } from '../Services/appointmentsApi';
-import { getClientDisplayName } from '../utils/clientUtils';
+import { getClientDisplayName } from '../Utils/clientUtils';
 import { 
   Dialog, 
   DialogHeader, 

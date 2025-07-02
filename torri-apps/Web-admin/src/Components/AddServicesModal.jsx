@@ -15,7 +15,7 @@ import {
   CardBody,
   Badge
 } from "@material-tailwind/react";
-import { getClientDisplayName, clientNameMatchesSearch } from '../utils/clientUtils';
+import { getClientDisplayName, clientNameMatchesSearch } from '../Utils/clientUtils';
 import {
   ExclamationTriangleIcon,
   UserIcon,

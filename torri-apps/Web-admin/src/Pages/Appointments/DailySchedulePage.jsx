@@ -9,7 +9,7 @@ import { servicesApi } from '../../Services/services';
 import { professionalsApi } from '../../Services/professionals'; // Added import
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
 import SearchableServiceSelect from '../../Components/SearchableServiceSelect';
-import { getClientDisplayName, clientNameMatchesSearch } from '../../utils/clientUtils';
+import { getClientDisplayName, clientNameMatchesSearch } from '../../Utils/clientUtils';
 
 // Helper function to format date as YYYY-MM-DD in local time
 const formatDateToYYYYMMDD = (date) => {
