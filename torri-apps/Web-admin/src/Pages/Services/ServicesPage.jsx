@@ -342,17 +342,23 @@ export default function ServicesPage() {
                       <td className="p-4">
                         <div className="w-16 h-16 bg-bg-tertiary rounded-lg flex items-center justify-center">
                           {(() => {
-                            // Prioritize general image, then fall back to hair type images
-                            const displayImage = service.image || 
-                                                 service.image_liso || 
-                                                 service.image_ondulado || 
-                                                 service.image_cacheado || 
-                                                 service.image_crespo;
+                            // First check for primary image from new images array
+                            const primaryImage = service.images?.find(img => img.is_primary);
+                            // Fall back to first image if no primary is set
+                            const firstImage = service.images?.[0];
+                            // Final fallback to old static images
+                            const displayImage = primaryImage?.file_path || 
+                                                firstImage?.file_path ||
+                                                service.image || 
+                                                service.image_liso || 
+                                                service.image_ondulado || 
+                                                service.image_cacheado || 
+                                                service.image_crespo;
                             
                             return displayImage ? (
                               <img
                                 src={displayImage}
-                                alt={service.name}
+                                alt={primaryImage?.alt_text || firstImage?.alt_text || service.name}
                                 className="w-full h-full object-cover rounded-lg"
                               />
                             ) : (

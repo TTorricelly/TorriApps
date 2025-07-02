@@ -9,6 +9,7 @@ from Config.Settings import settings
 from Core.Auth.Routes import router as auth_router
 from Modules.Users.routes import router as users_router
 from Modules.Services.routes import categories_router, services_router
+from Modules.Services.image_routes import router as service_images_router
 from Modules.Availability.routes import router as availability_router
 from Modules.Appointments.routes import router as appointments_router
 from Modules.Professionals.routes import router as professionals_router
@@ -16,9 +17,12 @@ from Modules.Stations.routes import router as stations_router
 from Modules.Settings.routes import router as settings_router
 from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
+from Modules.Labels.routes import router as labels_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
 import Modules.Payments.models  # Import Payment models to register them
+import Modules.Labels.models  # Import Labels models to register them
+import Modules.Services.models  # Import Services and ServiceImage models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
 # Placeholder for other routers:
@@ -71,6 +75,7 @@ app.include_router(auth_router, prefix=API_V1_PREFIX, tags=["Authentication"])
 app.include_router(users_router, prefix=API_V1_PREFIX, tags=["Users Management (Tenant)"])
 app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags=["Service Categories (Tenant)"])
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
+app.include_router(service_images_router, prefix=API_V1_PREFIX, tags=["Service Images Management"])
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
 app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
 app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/professionals", tags=["Professionals Management"])
@@ -78,6 +83,7 @@ app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Manage
 app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
 app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
 app.include_router(commissions_router, prefix=API_V1_PREFIX, tags=["Commissions Management"])
+app.include_router(labels_router, prefix=f"{API_V1_PREFIX}/labels", tags=["Labels Management"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

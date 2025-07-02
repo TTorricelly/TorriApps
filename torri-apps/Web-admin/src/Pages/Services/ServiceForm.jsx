@@ -33,6 +33,7 @@ import { categoriesApi } from '../../Services/categories';
 import { servicesApi } from '../../Services/services';
 import { stationTypesApi, serviceStationRequirementsApi } from '../../Services/stations';
 import { getAssetUrl } from '../../Utils/config';
+import ServiceImageUpload from '../../Components/ServiceImageUpload';
 
 // Rich Text Editor (simple implementation)
 const RichTextEditor = ({ value, onChange, placeholder, error }) => {
@@ -270,93 +271,6 @@ const RichTextEditor = ({ value, onChange, placeholder, error }) => {
   );
 };
 
-// Simplified Image Upload Component (following working category pattern)
-const ImageUpload = ({ label, value, onChange, error, showAlert }) => {
-  const fileInputRef = React.useRef(null);
-  
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Validate file size
-    if (file.size > 2 * 1024 * 1024) {
-      showAlert('Arquivo muito grande. Máximo 2MB permitido.', 'error');
-      e.target.value = ''; // Reset input
-      return;
-    }
-    
-    // Validate file type
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      showAlert('Apenas arquivos JPEG, JPG e PNG são permitidos.', 'error');
-      e.target.value = ''; // Reset input
-      return;
-    }
-    
-    // Call onChange with the file
-    onChange(file);
-  };
-  
-  const handleRemove = () => {
-    onChange(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-  
-  // Check if value is a URL string (existing image) or File object (new upload)
-  const hasImage = value && (typeof value === 'string' || value instanceof File);
-  const imageUrl = typeof value === 'string' ? value : (value instanceof File ? URL.createObjectURL(value) : null);
-  
-  return (
-    <div className="flex flex-col">
-      <Typography className="text-text-primary font-medium mb-2">
-        {label}
-      </Typography>
-      
-      {/* Show current image if exists */}
-      {hasImage && imageUrl && (
-        <div className="mb-2">
-          <Typography className="text-text-secondary text-sm mb-2">
-            {typeof value === 'string' ? 'Imagem atual:' : 'Nova imagem:'}
-          </Typography>
-          <div className="relative inline-block">
-            <img
-              src={imageUrl}
-              alt={label}
-              className="w-20 h-20 object-cover rounded-lg border border-bg-tertiary"
-            />
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="absolute -top-2 -right-2 bg-status-error text-white rounded-full p-1 hover:bg-status-error/80"
-            >
-              <XMarkIcon className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* File input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/jpg,image/png"
-        onChange={handleFileChange}
-        className="w-full px-3 py-2 rounded-lg border border-bg-tertiary bg-bg-primary text-text-primary file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-medium file:bg-accent-primary/10 file:text-accent-primary hover:file:bg-accent-primary/20 transition-colors"
-      />
-      
-      <Typography className="text-text-tertiary text-sm mt-1">
-        {hasImage ? 'Selecione um novo arquivo para substituir a imagem atual.' : 'JPG, PNG (máx. 2MB)'}
-      </Typography>
-      
-      {error && (
-        <Typography className="text-status-error text-sm mt-1">
-          {error}
-        </Typography>
-      )}
-    </div>
-  );
-};
 
 export default function ServiceForm() {
   const navigate = useNavigate();
@@ -382,14 +296,6 @@ export default function ServiceForm() {
     category_id: categoryIdFromUrl || '',
   });
   
-  // Image state
-  const [generalImage, setGeneralImage] = useState(null);
-  const [images, setImages] = useState({
-    liso: null,
-    ondulado: null,
-    cacheado: null,
-    crespo: null,
-  });
   
   // UI state
   const [category, setCategory] = useState(null);
@@ -400,7 +306,6 @@ export default function ServiceForm() {
   const [cancelDialog, setCancelDialog] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [activeTab, setActiveTab] = useState('basic');
-  const [showHairTypeImages, setShowHairTypeImages] = useState(false);
   
   // Station requirements state
   const [stationTypes, setStationTypes] = useState([]);
@@ -421,80 +326,24 @@ export default function ServiceForm() {
   
   // Track initial state for comparison
   const [initialFormData, setInitialFormData] = useState(null);
-  const [initialGeneralImage, setInitialGeneralImage] = useState(null);
-  const [initialImages, setInitialImages] = useState(null);
   
   // Helper function to compare states properly
   const hasStateChanged = () => {
-    if (!initialFormData || !initialImages || initialGeneralImage === null) return false;
+    if (!initialFormData) return false;
     
     // Compare form data
     const formDataChanged = JSON.stringify(formData) !== JSON.stringify(initialFormData);
     
-    // Compare general image
-    const generalImageChanged = (() => {
-      const current = generalImage;
-      const initial = initialGeneralImage;
-      
-      // If both are null/undefined, no change
-      if (!current && !initial) return false;
-      
-      // If one is null and other isn't, it's a change
-      if (!current || !initial) return true;
-      
-      // If current is a File object (new upload), it's a change
-      if (current instanceof File) return true;
-      
-      // If both are strings (URLs), compare them
-      if (typeof current === 'string' && typeof initial === 'string') {
-        return current !== initial;
-      }
-      
-      // Any other case, consider it a change
-      return true;
-    })();
-    
-    // Compare images more carefully (File objects vs URLs)
-    const imageKeys = ['liso', 'ondulado', 'cacheado', 'crespo'];
-    const imagesChanged = imageKeys.some(key => {
-      const current = images[key];
-      const initial = initialImages[key];
-      
-      // If both are null/undefined, no change
-      if (!current && !initial) return false;
-      
-      // If one is null and other isn't, it's a change
-      if (!current || !initial) return true;
-      
-      // If current is a File object (new upload), it's a change
-      if (current instanceof File) return true;
-      
-      // If both are strings (URLs), compare them
-      if (typeof current === 'string' && typeof initial === 'string') {
-        return current !== initial;
-      }
-      
-      // Any other case, consider it a change
-      return true;
-    });
-    
-    return formDataChanged || generalImageChanged || imagesChanged;
+    return formDataChanged;
   };
 
   // Track changes by comparing with initial state
   useEffect(() => {
-    if (initialFormData && initialImages && initialGeneralImage !== null) {
+    if (initialFormData) {
       setHasUnsavedChanges(hasStateChanged());
     }
-  }, [formData, generalImage, images, initialFormData, initialGeneralImage, initialImages]);
+  }, [formData, initialFormData]);
 
-  // Auto-expand hair type images if any are already uploaded
-  useEffect(() => {
-    const hasHairTypeImages = Object.values(images).some(image => image !== null);
-    if (hasHairTypeImages && !showHairTypeImages) {
-      setShowHairTypeImages(true);
-    }
-  }, [images]);
   
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
@@ -543,26 +392,10 @@ export default function ServiceForm() {
         category_id: serviceData.category_id || '',
       };
       
-      // Use centralized asset URL helper
-      const getFullImageUrl = getAssetUrl;
-
-      const loadedGeneralImage = getFullImageUrl(serviceData.image);
-      const loadedImages = {
-        liso: getFullImageUrl(serviceData.image_liso),
-        ondulado: getFullImageUrl(serviceData.image_ondulado),
-        cacheado: getFullImageUrl(serviceData.image_cacheado),
-        crespo: getFullImageUrl(serviceData.image_crespo),
-      };
-      
-      
       setFormData(loadedFormData);
-      setGeneralImage(loadedGeneralImage);
-      setImages(loadedImages);
       
       // Save initial state for comparison
       setInitialFormData(loadedFormData);
-      setInitialGeneralImage(loadedGeneralImage);
-      setInitialImages(loadedImages);
       
       // Load category info
       if (serviceData.category) {
@@ -592,8 +425,6 @@ export default function ServiceForm() {
       // For new services, save the initial empty state for comparison
       if (!isEdit) {
         setInitialFormData(formData);
-        setInitialGeneralImage(null);
-        setInitialImages(images);
         setHasUnsavedChanges(false);
       }
     } catch (error) {
@@ -661,9 +492,6 @@ export default function ServiceForm() {
     }
   };
   
-  const handleImageChange = (type, file) => {
-    setImages(prev => ({ ...prev, [type]: file }));
-  };
 
   const handleStationRequirementAdd = (stationTypeId) => {
     const existingRequirement = (Array.isArray(stationRequirements) ? stationRequirements : []).find(req => req.station_type_id === stationTypeId);
@@ -755,8 +583,6 @@ export default function ServiceForm() {
         targetTab = 'basic';
       } else if (['parallelable', 'max_parallel_pros'].includes(firstErrorField)) {
         targetTab = 'config';
-      } else if (['generalImage', 'image_liso', 'image_ondulado', 'image_cacheado', 'image_crespo'].includes(firstErrorField)) {
-        targetTab = 'images';
       } else if (['description'].includes(firstErrorField)) {
         targetTab = 'description';
       } else if (firstErrorField.startsWith('station_')) {
@@ -807,32 +633,6 @@ export default function ServiceForm() {
         throw new Error('Serviço salvo mas ID não encontrado');
       }
       
-      // Handle general image upload if a file was selected
-      if (generalImage && typeof generalImage === 'object' && generalImage.name) {
-        try {
-          await servicesApi.uploadImage(result.id, generalImage);
-        } catch (error) {
-          console.warn('Erro ao fazer upload da imagem:', error);
-          showAlert('Serviço salvo, mas houve erro no upload da imagem', 'warning');
-        }
-      }
-      
-      // Handle hair type image uploads if any files were selected
-      const imageFiles = {};
-      Object.keys(images).forEach(type => {
-        if (images[type] && typeof images[type] === 'object' && images[type].name) {
-          imageFiles[type] = images[type];
-        }
-      });
-      
-      if (Object.keys(imageFiles).length > 0) {
-        try {
-          await servicesApi.uploadImages(result.id, imageFiles);
-        } catch (error) {
-          console.warn('Erro ao fazer upload das imagens:', error);
-          showAlert('Serviço salvo, mas houve erro no upload das imagens', 'warning');
-        }
-      }
 
       // Handle station requirements
       try {
@@ -951,10 +751,6 @@ export default function ServiceForm() {
                   className={`${activeTab === 'images' ? 'text-white' : 'text-text-secondary'} font-medium relative`}
                 >
                   Imagens
-                  {/* Error indicator for images tab */}
-                  {Object.keys(errors).some(field => ['generalImage', 'image_liso', 'image_ondulado', 'image_cacheado', 'image_crespo'].includes(field)) && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
-                  )}
                 </Tab>
                 <Tab
                   value="description"
@@ -1186,110 +982,35 @@ export default function ServiceForm() {
 
                 {/* Tab 3: Images */}
                 <TabPanel value="images" className="p-0">
-                  <div className="space-y-6 mt-4 px-1">
-                    {/* Main Image Section - Primary Focus */}
-                    <div className="bg-bg-primary p-6 rounded-lg border border-bg-tertiary">
-                      <div className="flex items-center gap-2 mb-3">
-                        <PhotoIcon className="h-5 w-5 text-accent-primary" />
-                        <Typography variant="h6" className="text-text-primary">
-                          Imagem Principal
+                  <div className="mt-4 px-1">
+                    {serviceId ? (
+                      <ServiceImageUpload 
+                        serviceId={serviceId}
+                        onImagesChange={(images) => {
+                          // Handle images change if needed
+                          console.log('Service images updated:', images);
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-bg-tertiary mb-4">
+                          <PhotoIcon className="w-8 h-8 text-text-secondary" />
+                        </div>
+                        <Typography variant="h6" className="text-text-primary mb-2">
+                          Salve o serviço primeiro
                         </Typography>
+                        <Typography variant="small" className="text-text-secondary mb-4">
+                          Para fazer upload de imagens, você precisa salvar o serviço primeiro preenchendo as informações básicas.
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          onClick={() => setActiveTab('basic')}
+                          className="border-accent-primary text-accent-primary hover:bg-accent-primary/10"
+                        >
+                          Ir para Informações Básicas
+                        </Button>
                       </div>
-                      <Typography className="text-text-secondary text-sm mb-4">
-                        A imagem que representa este serviço nos listagens e detalhes.
-                      </Typography>
-                      
-                      <div className="max-w-xs">
-                        <ImageUpload
-                          label="Imagem do Serviço"
-                          value={generalImage}
-                          onChange={setGeneralImage}
-                          error={errors.generalImage}
-                          showAlert={showAlert}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Hair Type Images Section - Collapsible Advanced Option */}
-                    <div className="border border-bg-tertiary rounded-lg">
-                      {/* Header with toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setShowHairTypeImages(!showHairTypeImages)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-bg-primary/50 transition-colors rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          <InformationCircleIcon className="h-5 w-5 text-text-secondary" />
-                          <Typography variant="h6" className="text-text-primary">
-                            Imagens por Tipo de Cabelo
-                          </Typography>
-                          <span className="px-2 py-1 bg-accent-primary/20 text-accent-primary text-xs rounded-full font-medium">
-                            Opcional
-                          </span>
-                          {Object.values(images).filter(image => image !== null).length > 0 && (
-                            <span className="px-2 py-1 bg-status-success/20 text-status-success text-xs rounded-full font-medium">
-                              {Object.values(images).filter(image => image !== null).length} de 4
-                            </span>
-                          )}
-                        </div>
-                        {showHairTypeImages ? (
-                          <ChevronUpIcon className="h-5 w-5 text-text-secondary" />
-                        ) : (
-                          <ChevronDownIcon className="h-5 w-5 text-text-secondary" />
-                        )}
-                      </button>
-                      
-                      {/* Collapsible Content */}
-                      {showHairTypeImages && (
-                        <div className="p-4 pt-0">
-                          <div className="bg-accent-primary/10 p-3 rounded-lg mb-4">
-                            <Typography className="text-text-secondary text-sm">
-                              💡 <strong>Para serviços de cabelo:</strong> Faça upload de imagens específicas para cada tipo de cabelo 
-                              para mostrar resultados personalizados aos clientes.
-                            </Typography>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <ImageUpload
-                              label="Liso"
-                              value={images.liso}
-                              onChange={(file) => handleImageChange('liso', file)}
-                              error={errors.image_liso}
-                              showAlert={showAlert}
-                            />
-                            <ImageUpload
-                              label="Ondulado"
-                              value={images.ondulado}
-                              onChange={(file) => handleImageChange('ondulado', file)}
-                              error={errors.image_ondulado}
-                              showAlert={showAlert}
-                            />
-                            <ImageUpload
-                              label="Cacheado"
-                              value={images.cacheado}
-                              onChange={(file) => handleImageChange('cacheado', file)}
-                              error={errors.image_cacheado}
-                              showAlert={showAlert}
-                            />
-                            <ImageUpload
-                              label="Crespo"
-                              value={images.crespo}
-                              onChange={(file) => handleImageChange('crespo', file)}
-                              error={errors.image_crespo}
-                              showAlert={showAlert}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Quick Tips */}
-                    <div className="bg-bg-primary/50 p-4 rounded-lg">
-                      <Typography className="text-text-secondary text-sm">
-                        <strong>Dicas:</strong> JPG/PNG • Máx. 2MB • Recomendado: 800×800px • 
-                        Use imagens claras que mostrem bem o resultado do serviço
-                      </Typography>
-                    </div>
+                    )}
                   </div>
                 </TabPanel>
 

@@ -102,8 +102,8 @@ jobs:
           --set-env-vars TIMEZONE=America/Sao_Paulo \
           --set-cloudsql-instances ${{ secrets.GCP_PROJECT_ID }}:us-central1:torri-apps-db \
           --port 8080 \
-          --memory 1Gi \
-          --cpu 1 \
-          --min-instances 0 \
+          --memory 512Mi \
+          --cpu 0.25 \
+          --min-instances 1 \
           --max-instances 10 \
           --timeout 900

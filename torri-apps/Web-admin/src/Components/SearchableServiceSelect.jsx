@@ -28,7 +28,8 @@ const SearchableServiceSelect = ({
   const filteredGroupedServices = React.useMemo(() => {
     const filtered = services.filter(service => 
       service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.category_name && service.category_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (service.category_name && service.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.service_sku && service.service_sku.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     
     return filtered.reduce((groups, service) => {

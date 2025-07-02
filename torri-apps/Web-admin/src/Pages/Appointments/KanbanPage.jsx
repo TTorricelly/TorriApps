@@ -560,7 +560,7 @@ const KanbanPage = () => {
       <div
         ref={setNodeRef}
         className={`
-          flex-1 min-h-[400px] p-s rounded-card border-2 border-dashed transition-colors relative
+          flex-1 min-h-0 p-s rounded-card border-2 border-dashed transition-colors relative overflow-y-auto
           ${isOver 
             ? 'border-accent-primary bg-accent-primary/5' 
             : 'border-bg-tertiary'
@@ -570,11 +570,10 @@ const KanbanPage = () => {
         {/* Invisible drop zone overlay that covers the entire column */}
         <div 
           className="absolute inset-0 z-0" 
-          style={{ minHeight: '400px' }}
         />
         
         {/* Content with higher z-index */}
-        <div className="relative z-10">
+        <div className="relative z-10 space-y-s">
           {children}
         </div>
       </div>
@@ -785,62 +784,6 @@ const KanbanPage = () => {
       className="bg-bg-primary min-h-screen p-xs sm:p-s md:p-m text-text-primary"
       onClick={handleBackgroundTap}
     >
-      {/* Header Section */}
-      <div className="mb-l p-s sm:p-m bg-bg-secondary shadow-card rounded-card">
-        <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-s md:gap-m">
-          {/* Title */}
-          <Typography variant="h1" className="text-h2 sm:text-h1 text-text-primary mb-s lg:mb-0">
-            Kanban Board
-          </Typography>
-
-          {/* Controls */}
-          <div className="flex flex-col md:flex-row items-center gap-s">
-            {/* Date Selector */}
-            <div className="flex items-center gap-s">
-              <CalendarDaysIcon className="h-6 w-6 text-text-secondary" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="p-s border border-bg-tertiary rounded-input text-text-primary bg-bg-primary hover:border-accent-primary focus:ring-1 focus:ring-accent-primary focus:border-accent-primary outline-none"
-              />
-            </div>
-
-            {/* Refresh Button */}
-            <Button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              variant="outlined"
-              className="border-bg-tertiary text-text-secondary hover:bg-bg-tertiary flex items-center gap-2 px-m py-s rounded-button"
-            >
-              <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Atualizar</span>
-            </Button>
-
-            {/* Add Services Button */}
-            <Button
-              onClick={handleAddServices}
-              className="bg-accent-primary hover:bg-accent-primary/90 text-white flex items-center gap-2 px-m py-s rounded-button"
-              title="Atalho: A"
-            >
-              <UserPlusIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Adicionar Serviços</span>
-              <span className="sm:hidden">Adicionar</span>
-            </Button>
-
-            {/* Keyboard Shortcuts Help */}
-            <div className="hidden lg:flex items-center gap-xs text-text-tertiary text-small">
-              <span>Atalhos:</span>
-              <kbd className="px-xs py-xs bg-bg-tertiary rounded text-xs">A</kbd>
-              <span>Adicionar</span>
-              <kbd className="px-xs py-xs bg-bg-tertiary rounded text-xs">C</kbd>
-              <span>Concluir</span>
-              <kbd className="px-xs py-xs bg-bg-tertiary rounded text-xs">ESC</kbd>
-              <span>Fechar</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Error Alert */}
       {error && (
@@ -866,9 +809,9 @@ const KanbanPage = () => {
             <Spinner className="h-12 w-12 text-accent-primary" />
           </div>
         ) : (
-          <div className="flex gap-m overflow-x-auto pb-s">
+          <div className="flex gap-m overflow-x-auto pb-s h-[calc(100vh-2rem)]">
             {columns.map((column) => (
-              <div key={column.id} className="flex flex-col min-w-[280px] w-[280px] flex-shrink-0">
+              <div key={column.id} className="flex flex-col min-w-[280px] w-[280px] flex-shrink-0 h-full">
                 {/* Column Header */}
                 <div className="bg-bg-secondary rounded-card p-m mb-s shadow-card border-l-4 border-accent-primary">
                   <div className="flex items-center justify-between">
@@ -879,25 +822,9 @@ const KanbanPage = () => {
                       </Typography>
                     </div>
                     
-                    {/* Add Services Icon for Walk-in Column */}
-                    {column.id === 'WALK_IN' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddServices();
-                        }}
-                        className="p-s text-accent-primary hover:bg-accent-primary/10 rounded-button transition-colors"
-                        title="Adicionar Serviços"
-                      >
-                        <UserPlusIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Group Count */}
-                  <div className="mt-s">
+                    {/* Group Count */}
                     <span className="bg-accent-primary/20 text-accent-primary px-s py-xs rounded-full text-xs font-medium">
-                      {groupedAppointments[column.id].length} agendamentos
+                      {groupedAppointments[column.id].length}
                     </span>
                   </div>
                 </div>
@@ -916,9 +843,6 @@ const KanbanPage = () => {
                     {groupedAppointments[column.id].length === 0 && (
                       <div className="flex flex-col items-center justify-center h-32 text-text-tertiary">
                         <column.icon className="h-8 w-8 mb-s opacity-50" />
-                        <Typography variant="small" className="text-center">
-                          Nenhum agendamento
-                        </Typography>
                       </div>
                     )}
                   </SortableContext>
@@ -1062,6 +986,15 @@ const KanbanPage = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Action Button - Add Services */}
+      <button
+        onClick={handleAddServices}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 active:scale-95"
+        title="Adicionar Serviços (Atalho: A)"
+      >
+        <UserPlusIcon className="h-6 w-6" />
+      </button>
     </div>
   );
 };

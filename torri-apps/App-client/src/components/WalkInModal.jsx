@@ -125,7 +125,7 @@ const WalkInModal = ({
     address_neighborhood: '',
     address_city: '',
     address_state: '',
-    isNewClient: true
+    isNewClient: false
   });
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [clientSearchResults, setClientSearchResults] = useState([]);
@@ -148,7 +148,7 @@ const WalkInModal = ({
   
   // UI state
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
-  const [showClientSearch, setShowClientSearch] = useState(false);
+  const [showClientSearch, setShowClientSearch] = useState(true);
   const [showMoreFields, setShowMoreFields] = useState(false);
   
   // Refs
@@ -199,9 +199,10 @@ const WalkInModal = ({
       } else {
         // Reset for new appointment
         setStep(1);
-        setClientData({ id: null, name: '', email: '', phone: '', isNewClient: true });
+        setClientData({ id: null, name: '', email: '', phone: '', isNewClient: false });
         setSelectedServices([]);
         setServiceAssignments({});
+        setShowClientSearch(true);
       }
     }
   }, [isOpen, modalContext]);
@@ -241,7 +242,8 @@ const WalkInModal = ({
   // Filter services based on search
   const filteredServices = services.filter(service =>
     service.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
-    service.category_name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+    service.category_name.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+    service.service_sku?.toLowerCase().includes(serviceSearchQuery.toLowerCase())
   );
   
   // Handle service selection
@@ -504,7 +506,7 @@ const WalkInModal = ({
       address_neighborhood: '',
       address_city: '',
       address_state: '',
-      isNewClient: true 
+      isNewClient: false 
     });
     setSelectedServices([]);
     setProfessional(null);
@@ -513,7 +515,7 @@ const WalkInModal = ({
     setServiceSearchQuery('');
     setClientSearchQuery('');
     setClientSearchResults([]);
-    setShowClientSearch(false);
+    setShowClientSearch(true);
     setShowMoreFields(false);
     setError(null);
   };

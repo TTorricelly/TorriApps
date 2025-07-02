@@ -12,6 +12,7 @@ import {
   ProfessionalForm,
   StationTypesPage,
   StationsPage,
+  LabelsPage,
   SettingsPage,
   SalonProfilePage,
   Login
@@ -52,6 +53,9 @@ function App() {
           
           {/* Services Routes */}
           <Route path="services/*" element={<ServicesRoutes />} />
+          
+          {/* Labels Routes */}
+          <Route path="/labels" element={<LabelsPage />} />
           
           {/* Professionals Routes */}
           <Route path="/professionals" element={<ProfessionalsPage />} />

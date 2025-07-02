@@ -35,6 +35,7 @@ def _add_image_urls_to_service(service: Service, base_url: str = None) -> dict:
         'commission_percentage': service.commission_percentage,
         'is_active': service.is_active,
         'category_id': service.category_id,
+        'service_sku': service.service_sku,
         # 'tenant_id': service.tenant_id, # Removed tenant_id
         'image': file_handler.get_public_url(service.image, base_url) if service.image else None,
         'image_liso': file_handler.get_public_url(service.image_liso, base_url) if service.image_liso else None,
@@ -223,7 +224,8 @@ def get_all_services(
     category_id: Optional[UUID] = None
 ) -> List[Service]:
     stmt = select(Service).options(
-        joinedload(Service.category)
+        joinedload(Service.category),
+        selectinload(Service.images)
     )
     if category_id:
         stmt = stmt.where(Service.category_id == category_id) # PostgreSQL UUID comparison

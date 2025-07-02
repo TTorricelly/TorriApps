@@ -261,5 +261,22 @@ export const professionalsApi = {
       console.error('Erro ao atualizar serviços do profissional:', error);
       throw error;
     }
+  },
+
+  // Get professionals available for a specific service
+  getProfessionalsForService: async (serviceId) => {
+    const endpoint = buildApiEndpoint('professionals');
+    
+    try {
+      const response = await api.get(endpoint, {
+        params: {
+          service_id: serviceId
+        }
+      });
+      return ensureArray(response.data, 'professionals');
+    } catch (error) {
+      console.error('Error fetching professionals for service:', serviceId, error);
+      return [];
+    }
   }
 };

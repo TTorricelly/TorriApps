@@ -33,6 +33,7 @@ import {
   CheckCircleIcon
 } from "@heroicons/react/24/outline";
 import { searchClients } from '../Services/clientsApi';
+import { professionalsApi } from '../Services/professionals';
 import { 
   handleCpfInput, 
   handleCepInput, 
@@ -85,6 +86,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   
   // Service assignment state (for per-service professional assignment)
   const [serviceAssignments, setServiceAssignments] = useState({});
+  const [professionalsByService, setProfessionalsByService] = useState({});
 
   // Load categories and professionals on mount, handle context
   useEffect(() => {
@@ -199,11 +201,46 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setClientSearchResults([]);
       setSelectedClient(null);
       setServiceAssignments({});
+      setProfessionalsByService({});
       // Reset service view state
       setShowAllServices(false);
       setAllServices([]);
     }
   }, [open]);
+
+  // Load professionals for services when cart changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      loadProfessionalsForServices();
+    }
+  }, [cart]);
+
+  const loadProfessionalsForServices = async () => {
+    try {
+      // Get all professionals for each service (for individual assignment)
+      const professionalSets = await Promise.all(
+        cart.map(async (item) => {
+          const serviceProfessionals = await getProfessionalsForService(item.service.id);
+          return {
+            serviceId: item.service.id,
+            professionals: serviceProfessionals
+          };
+        })
+      );
+      
+      // Create a map of serviceId -> available professionals
+      const servicesProfessionalsMap = {};
+      professionalSets.forEach(({ serviceId, professionals }) => {
+        servicesProfessionalsMap[serviceId] = professionals;
+      });
+      
+      setProfessionalsByService(servicesProfessionalsMap);
+      
+    } catch (err) {
+      console.error('Failed to load professionals for services:', err);
+      setProfessionalsByService({});
+    }
+  };
 
   // Format price helper
   const formatPrice = (price) => {
@@ -388,7 +425,8 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     // Text search filter (always applied if searchTerm exists)
     const matchesSearch = !searchTerm.trim() || 
       service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      service.category_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.service_sku?.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Category filter (applied if category is selected)
     const matchesCategory = !selectedCategory || service.category_id === selectedCategory.id;
@@ -1074,20 +1112,29 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   );
 
   // Get professionals available for a specific service
-  const getProfessionalsForService = (service) => {
-    const allProfessionals = preloadedServices?.professionals || [];
-    
-    // Filter professionals based on service category/specialty
-    const serviceCategory = service.category_name || 
-      categories.find(cat => cat.services?.some(s => s.id === service.id))?.name;
-    
-    if (!serviceCategory) return allProfessionals;
-    
-    return allProfessionals.filter(prof =>
-      !prof.specialties || 
-      prof.specialties.length === 0 || 
-      prof.specialties.includes(serviceCategory)
-    );
+  const getProfessionalsForService = async (serviceId) => {
+    try {
+      const serviceProfessionals = await professionalsApi.getProfessionalsForService(serviceId);
+      
+      // If no specific professionals are associated with this service, 
+      // fall back to showing all professionals (better UX than showing none)
+      if (!serviceProfessionals || serviceProfessionals.length === 0) {
+        const allProfessionals = await professionalsApi.getAll();
+        return allProfessionals || [];
+      }
+      
+      return serviceProfessionals;
+    } catch (error) {
+      console.error('Error fetching professionals for service:', serviceId, error);
+      // Fallback to all professionals if API call fails
+      try {
+        const allProfessionals = await professionalsApi.getAll();
+        return allProfessionals || [];
+      } catch (fallbackError) {
+        console.error('Error fetching all professionals as fallback:', fallbackError);
+        return [];
+      }
+    }
   };
 
   // Assign professional to a specific service
@@ -1125,7 +1172,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto">
           {cart.map((item) => {
-            const availableProfessionals = getProfessionalsForService(item.service);
+            const availableProfessionals = professionalsByService[item.service.id] || [];
             const assignedProfessionalId = serviceAssignments[item.service.id];
 
             return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { 
@@ -15,7 +15,9 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   BuildingStorefrontIcon,
-  BanknotesIcon
+  BanknotesIcon,
+  Bars3Icon,
+  ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
@@ -36,7 +38,8 @@ const menuItems = [
     icon: WrenchScrewdriverIcon,
     items: [
       { title: 'Categorias', path: '/services/catalog' },
-      { title: 'Catálogo de Serviços', path: '/services/list' }
+      { title: 'Catálogo de Serviços', path: '/services/list' },
+      { title: 'Rótulos', path: '/labels' }
     ]
   },
   {
@@ -88,9 +91,116 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState(['dashboard']); // Dashboard expanded by default
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Load collapsed state from localStorage
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+  });
+  const [hoveredGroup, setHoveredGroup] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [buttonBounds, setButtonBounds] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const tooltipRef = useRef(null);
   const { userEmail, clearAuth, tenantData, userData } = useAuthStore();
 
+  // Update tooltip dimensions when it mounts
+  const updateTooltipBounds = useCallback(() => {
+    if (tooltipRef.current) {
+      const rect = tooltipRef.current.getBoundingClientRect();
+      setTooltipPosition(prev => ({
+        ...prev,
+        width: rect.width,
+        height: rect.height
+      }));
+    }
+  }, []);
+
+  // Save collapsed state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', isCollapsed.toString());
+  }, [isCollapsed]);
+
+  // Auto-collapse on smaller screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) { // lg breakpoint
+        setIsCollapsed(true);
+      }
+    };
+    
+    handleResize(); // Check on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Update tooltip bounds when it appears
+  useEffect(() => {
+    if (hoveredGroup && tooltipRef.current) {
+      // Small delay to ensure tooltip is rendered
+      setTimeout(updateTooltipBounds, 0);
+    }
+  }, [hoveredGroup, updateTooltipBounds]);
+
+  // Mouse tracking for tooltip stability
+  useEffect(() => {
+    if (!isCollapsed || !hoveredGroup) return;
+
+    const handleMouseMove = (e) => {
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+
+      // Check if mouse is over button (with padding for better UX)
+      const isOverButton = mouseX >= buttonBounds.left && 
+                          mouseX <= buttonBounds.left + buttonBounds.width &&
+                          mouseY >= buttonBounds.top && 
+                          mouseY <= buttonBounds.top + buttonBounds.height;
+
+      // Check if mouse is over tooltip (with some tolerance)
+      const isOverTooltip = tooltipPosition.width > 0 && tooltipPosition.height > 0 &&
+                           mouseX >= tooltipPosition.left - 4 && 
+                           mouseX <= tooltipPosition.left + tooltipPosition.width + 4 &&
+                           mouseY >= tooltipPosition.top - 4 && 
+                           mouseY <= tooltipPosition.top + tooltipPosition.height + 4;
+
+      // Check if mouse is in the bridge area between button and tooltip
+      const isInBridge = mouseX >= Math.min(buttonBounds.left + buttonBounds.width, tooltipPosition.left) &&
+                        mouseX <= Math.max(buttonBounds.left + buttonBounds.width, tooltipPosition.left) &&
+                        mouseY >= Math.min(buttonBounds.top, tooltipPosition.top) &&
+                        mouseY <= Math.max(buttonBounds.top + buttonBounds.height, tooltipPosition.top + tooltipPosition.height);
+
+      // Hide tooltip if mouse is not over any of these areas
+      if (!isOverButton && !isOverTooltip && !isInBridge) {
+        setHoveredGroup(null);
+      }
+    };
+
+    // Add small delay before starting to track mouse movements
+    const timeout = setTimeout(() => {
+      document.addEventListener('mousemove', handleMouseMove);
+    }, 50);
+
+    return () => {
+      clearTimeout(timeout);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isCollapsed, hoveredGroup, buttonBounds, tooltipPosition]);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+    // Collapse all groups when sidebar is collapsed
+    if (!isCollapsed) {
+      setExpandedGroups([]);
+    }
+  };
+
   const toggleGroup = (groupId) => {
+    // When collapsed, navigate to first item in group
+    if (isCollapsed) {
+      const group = menuItems.find(item => item.id === groupId);
+      if (group?.items?.length > 0) {
+        handleItemClick(group.items[0].path);
+      }
+      return;
+    }
+    
     setExpandedGroups(prev => 
       prev.includes(groupId) 
         ? prev.filter(id => id !== groupId)
@@ -123,6 +233,30 @@ export default function Sidebar() {
     console.log('Navigate to profile');
   };
 
+  const handleMouseEnter = (groupId, event) => {
+    if (!isCollapsed) return;
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    
+    // Store button bounds for mouse tracking with some padding for better UX
+    setButtonBounds({
+      top: rect.top - 2,
+      left: rect.left - 2,
+      width: rect.width + 4,
+      height: rect.height + 4
+    });
+    
+    // Set initial tooltip position (will be updated when tooltip mounts)
+    setTooltipPosition({
+      top: rect.top,
+      left: rect.right + 8, // Add some spacing from sidebar
+      width: 192, // min-w-48 = 192px
+      height: 120 // Estimated height
+    });
+    
+    setHoveredGroup(groupId);
+  };
+
   const displayTenantName = () => {
     if (tenantData?.name) return tenantData.name;
     return "Demo Salon"; // Fallback
@@ -134,23 +268,44 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="bg-bg-secondary w-64 h-screen shadow-card border-r border-bg-tertiary flex flex-col">
+    <div className={`bg-bg-secondary h-screen shadow-card border-r border-bg-tertiary flex flex-col transition-all duration-300 ${
+      isCollapsed ? 'w-16 overflow-visible' : 'w-64'
+    }`}>
       {/* Sidebar Header */}
-      <div className="p-l border-b border-bg-tertiary flex-shrink-0">
-        <div className="flex justify-center mb-s">
-          <img 
-            src="/Reilo1.png" 
-            alt="Reilo" 
-            className="h-28 w-auto"
-          />
+      <div className={`border-b border-bg-tertiary flex-shrink-0 ${isCollapsed ? 'p-s' : 'p-l'}`}>
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div className="flex justify-center flex-1 mb-s">
+              <img 
+                src="/Reilo1.png" 
+                alt="Reilo" 
+                className="h-28 w-auto"
+              />
+            </div>
+          )}
+          
+          {/* Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className={`p-2 rounded-button hover:bg-bg-tertiary transition-colors text-text-secondary hover:text-text-primary ${
+              isCollapsed ? 'mx-auto' : ''
+            }`}
+            title={isCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+          >
+            {isCollapsed ? (
+              <Bars3Icon className="h-5 w-5" />
+            ) : (
+              <ChevronLeftIcon className="h-5 w-5" />
+            )}
+          </button>
         </div>
        
       </div>
 
       {/* Navigation Menu */}
-      <nav className="mt-l flex-1 overflow-y-auto overflow-x-hidden pb-l">
+      <nav className={`mt-l flex-1 overflow-y-auto pb-l ${isCollapsed ? 'px-s overflow-x-visible' : 'overflow-x-hidden'}`}>
         {menuItems.map((group) => {
-          const isExpanded = expandedGroups.includes(group.id);
+          const isExpanded = expandedGroups.includes(group.id) && !isCollapsed;
           const isActive = isGroupActive(group.items);
           
           return (
@@ -158,25 +313,34 @@ export default function Sidebar() {
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup(group.id)}
-                className={`w-full flex items-center justify-between px-l py-s text-left hover:bg-bg-tertiary transition-colors duration-fast ${
-                  isActive ? 'bg-bg-tertiary border-r-2 border-accent-primary' : ''
-                }`}
+                onMouseEnter={(e) => handleMouseEnter(group.id, e)}
+                className={`w-full flex items-center hover:bg-bg-tertiary transition-colors duration-fast relative ${
+                  isCollapsed ? 'justify-center px-s py-s' : 'justify-between px-l py-s'
+                } ${isActive ? 'bg-bg-tertiary border-r-2 border-accent-primary' : ''}`}
               >
-                <div className="flex items-center">
-                  <group.icon className={`h-5 w-5 mr-s ${isActive ? 'text-accent-primary' : 'text-text-secondary'}`} />
-                  <span className={`font-medium text-small ${isActive ? 'text-accent-primary' : 'text-text-primary'}`}>
-                    {group.title}
-                  </span>
+                <div className={`flex items-center ${isCollapsed ? '' : 'text-left'}`}>
+                  <group.icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-s'} ${isActive ? 'text-accent-primary' : 'text-text-secondary'}`} />
+                  {!isCollapsed && (
+                    <span className={`font-medium text-small ${isActive ? 'text-accent-primary' : 'text-text-primary'}`}>
+                      {group.title}
+                    </span>
+                  )}
                 </div>
-                {isExpanded ? (
-                  <ChevronDownIcon className="h-4 w-4 text-text-secondary" />
-                ) : (
-                  <ChevronRightIcon className="h-4 w-4 text-text-secondary" />
+                
+                {!isCollapsed && (
+                  <>
+                    {isExpanded ? (
+                      <ChevronDownIcon className="h-4 w-4 text-text-secondary" />
+                    ) : (
+                      <ChevronRightIcon className="h-4 w-4 text-text-secondary" />
+                    )}
+                  </>
                 )}
+
               </button>
 
               {/* Group Items */}
-              {isExpanded && (
+              {isExpanded && !isCollapsed && (
                 <div className="ml-s border-l border-bg-tertiary pl-m">
                   {group.items.map((item) => {
                     const itemActive = isItemActive(item.path);
@@ -204,19 +368,34 @@ export default function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="border-t border-bg-tertiary p-m flex-shrink-0">
+      <div className={`border-t border-bg-tertiary flex-shrink-0 ${isCollapsed ? 'p-s' : 'p-m'}`}>
         <Menu as="div" className="relative">
-          <Menu.Button className="w-full flex items-center space-x-s text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary rounded-button p-s transition-colors duration-fast">
+          <Menu.Button className={`w-full flex items-center text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary rounded-button p-s transition-colors duration-fast group ${
+            isCollapsed ? 'justify-center' : 'space-x-s'
+          }`}
+          title={isCollapsed ? displayUserName() : ''}
+          >
             <UserCircleIcon className="h-8 w-8" />
-            <div className="flex-1 text-left">
-              <div className="text-small font-medium text-text-primary truncate">
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 text-left">
+                  <div className="text-small font-medium text-text-primary truncate">
+                    {displayUserName()}
+                  </div>
+                  <div className="text-xs text-text-secondary truncate">
+                    {userData?.role || 'GESTOR'}
+                  </div>
+                </div>
+                <ChevronDownIcon className="h-4 w-4" />
+              </>
+            )}
+            
+            {/* Tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999]">
                 {displayUserName()}
               </div>
-              <div className="text-xs text-text-secondary truncate">
-                {userData?.role || 'GESTOR'}
-              </div>
-            </div>
-            <ChevronDownIcon className="h-4 w-4" />
+            )}
           </Menu.Button>
 
           <Transition
@@ -263,6 +442,56 @@ export default function Sidebar() {
           </Transition>
         </Menu>
       </div>
+      
+      {/* Fixed position tooltip for collapsed sidebar */}
+      {isCollapsed && hoveredGroup && (
+        <div 
+          ref={tooltipRef}
+          className="fixed bg-bg-secondary border border-bg-tertiary rounded-card shadow-card-hover min-w-48 z-[9999]"
+          style={{
+            top: tooltipPosition.top,
+            left: tooltipPosition.left,
+          }}
+        >
+          {(() => {
+            const group = menuItems.find(item => item.id === hoveredGroup);
+            if (!group) return null;
+            
+            return (
+              <>
+                {/* Header */}
+                <div className="px-3 py-2 border-b border-bg-tertiary">
+                  <div className="flex items-center gap-2">
+                    <group.icon className="h-4 w-4 text-accent-primary" />
+                    <span className="font-medium text-small text-text-primary">{group.title}</span>
+                  </div>
+                </div>
+                
+                {/* Sub-menu items */}
+                <div className="py-1">
+                  {group.items.map((item) => {
+                    const itemActive = isItemActive(item.path);
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => {
+                          handleItemClick(item.path);
+                          setHoveredGroup(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-small hover:bg-bg-tertiary transition-colors duration-fast ${
+                          itemActive ? 'text-accent-primary bg-bg-tertiary font-medium' : 'text-text-secondary'
+                        }`}
+                      >
+                        {item.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

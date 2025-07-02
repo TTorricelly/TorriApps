@@ -1,19 +1,10 @@
 import { api } from '../api/client';
 import { createCrudApi, withApiErrorHandling, buildApiEndpoint, transformEntityWithImages } from '../Utils/apiHelpers';
 
-// Define service image fields for consistent processing
-const SERVICE_IMAGE_FIELDS = [
-  'image_url', 
-  'liso_image_url', 
-  'ondulado_image_url', 
-  'cacheado_image_url', 
-  'crespo_image_url'
-];
-
 // Create base CRUD operations
 const baseCrudApi = createCrudApi({
   endpoint: 'services',
-  imageFields: SERVICE_IMAGE_FIELDS,
+  imageFields: [], // No legacy image fields - using ServiceImage system
   entityName: 'services'
 });
 
@@ -31,7 +22,7 @@ export const servicesApi = {
         defaultValue: [],
         transformData: (data) => {
           const services = Array.isArray(data) ? data : [];
-          return transformEntityWithImages(services, SERVICE_IMAGE_FIELDS);
+          return transformEntityWithImages(services, []); // No legacy image fields
         }
       }
     );
@@ -42,49 +33,4 @@ export const servicesApi = {
     return servicesApi.getAll();
   },
 
-  // Upload general service image
-  uploadImage: async (serviceId, imageFile) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/image`);
-    
-    return withApiErrorHandling(
-      () => {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        
-        return api.post(endpoint, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      },
-      {
-        defaultValue: null,
-        transformData: (data) => transformEntityWithImages(data, ['image_url'])
-      }
-    );
-  },
-
-  // Upload service images for different hair types
-  uploadImages: async (serviceId, imageFiles) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images`);
-    
-    return withApiErrorHandling(
-      () => {
-        const formData = new FormData();
-        
-        // Add images for each hair type
-        Object.entries(imageFiles).forEach(([hairType, file]) => {
-          if (file && ['liso', 'ondulado', 'cacheado', 'crespo'].includes(hairType)) {
-            formData.append(hairType, file);
-          }
-        });
-        
-        return api.post(endpoint, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      },
-      {
-        defaultValue: null,
-        transformData: (data) => transformEntityWithImages(data, SERVICE_IMAGE_FIELDS)
-      }
-    );
-  },
 };

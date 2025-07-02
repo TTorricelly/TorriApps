@@ -1,0 +1,21 @@
+name: Labels
+description: Label management system for categorizing and organizing entities
+version: 1.0.0
+entities:
+  - Label
+features:
+  - Label CRUD operations
+  - Color-based organization
+  - Active/inactive status management
+  - Search and filtering
+  - Pagination support
+dependencies:
+  - Core.Auth
+  - Core.Database
+endpoints:
+  - GET /labels - List all labels with pagination and filtering
+  - POST /labels - Create a new label
+  - GET /labels/{id} - Get a specific label
+  - PUT /labels/{id} - Update a label
+  - DELETE /labels/{id} - Delete a label
+  - PATCH /labels/{id}/toggle - Toggle label active status

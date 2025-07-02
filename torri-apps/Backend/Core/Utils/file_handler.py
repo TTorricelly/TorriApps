@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Allowed image extensions and MIME types
 ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.svg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg', 'image/svg+xml'}
-MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 class FileHandler:
     def __init__(self, base_upload_dir: str = "public/uploads", bucket_name: str = "torri-apps-uploads"):
@@ -33,12 +33,18 @@ class FileHandler:
             self.base_upload_dir.mkdir(parents=True, exist_ok=True)
     
     def validate_image_file(self, file: UploadFile) -> None:
-        """Validate uploaded image file."""
+        """Validate uploaded image file with enhanced security checks."""
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
         
+        # Sanitize filename
+        import re
+        safe_filename = re.sub(r'[^a-zA-Z0-9\._-]', '', file.filename)
+        if not safe_filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+        
         # Check file extension
-        file_ext = Path(file.filename).suffix.lower()
+        file_ext = Path(safe_filename).suffix.lower()
         if file_ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=400, 
@@ -51,6 +57,13 @@ class FileHandler:
                 status_code=400,
                 detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}"
             )
+            
+        # Additional security: Check for malicious patterns in filename
+        malicious_patterns = ['../', '.\\', '<script', 'javascript:', 'vbscript:', 'onload=']
+        filename_lower = safe_filename.lower()
+        for pattern in malicious_patterns:
+            if pattern in filename_lower:
+                raise HTTPException(status_code=400, detail="Filename contains unsafe content")
     
     def generate_unique_filename(self, original_filename: str) -> str:
         """Generate a unique filename while preserving the extension."""

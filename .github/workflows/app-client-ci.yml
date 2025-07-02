@@ -85,8 +85,8 @@ jobs:
           --allow-unauthenticated \
           --port 8080 \
           --memory 512Mi \
-          --cpu 1 \
+          --cpu 0.25 \
           --min-instances 0 \
           --max-instances 5 \
-          --timeout 300 \
+          --timeout 900 \
           --set-env-vars VITE_API_BASE_URL=https://torri-backend-419996576894.us-central1.run.app
