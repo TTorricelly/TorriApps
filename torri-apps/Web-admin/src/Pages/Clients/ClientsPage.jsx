@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClientDisplayName, clientNameMatchesSearch } from '../../utils/clientUtils';
+import { getClientDisplayName, clientNameMatchesSearch } from '../../Utils/clientUtils';
 import {
   Card,
   CardHeader,
