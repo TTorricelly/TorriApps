@@ -321,6 +321,7 @@ export default function ServicesPage() {
                   <tr className="border-b border-bg-tertiary">
                     <th className="text-left p-4 text-text-primary font-semibold">Imagem</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Nome do Serviço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">SKU</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Duração (min)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Comissão (%)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Preço</th>
@@ -371,6 +372,11 @@ export default function ServicesPage() {
                             {htmlToPreviewText(service.description, 60)}
                           </Typography>
                         )}
+                      </td>
+                      <td className="p-4">
+                        <Typography className="text-text-primary">
+                          {service.service_sku}
+                        </Typography>
                       </td>
                       <td className="p-4">
                         <Typography className="text-text-primary">

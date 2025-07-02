@@ -41,6 +41,7 @@ class CategorySchema(CategoryBase): # Renamed from Category to CategorySchema
 # --- Service Schemas ---
 class ServiceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=150, example="Men's Classic Haircut")
+    service_sku: Optional[str] = Field(None, max_length=10, example="SVC-HAIR-001")
     description: Optional[str] = Field(None, max_length=5000, example="Classic haircut including wash and style.")
     duration_minutes: int = Field(..., gt=0, example=30) # Duration greater than 0
     price: condecimal(gt=0, max_digits=10, decimal_places=2) = Field(..., example=Decimal("25.00"))
@@ -58,6 +59,7 @@ class ServiceCreate(ServiceBase):
 
 class ServiceUpdate(BaseModel): # All fields optional for update
     name: Optional[str] = Field(None, min_length=1, max_length=150)
+    service_sku: Optional[str] = Field(None, max_length=10, example="SVC-HAIR-001")
     description: Optional[str] = Field(None, max_length=5000)
     duration_minutes: Optional[int] = Field(None, gt=0)
     price: Optional[condecimal(gt=0, max_digits=10, decimal_places=2)] = Field(None)

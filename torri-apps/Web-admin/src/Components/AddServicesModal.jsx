@@ -15,6 +15,7 @@ import {
   CardBody,
   Badge
 } from "@material-tailwind/react";
+import { getClientDisplayName, clientNameMatchesSearch } from '../utils/clientUtils';
 import {
   ExclamationTriangleIcon,
   UserIcon,
@@ -32,6 +33,14 @@ import {
   CheckCircleIcon
 } from "@heroicons/react/24/outline";
 import { searchClients } from '../Services/clientsApi';
+import { 
+  handleCpfInput, 
+  handleCepInput, 
+  validateCpfChecksum, 
+  validateCepFormat, 
+  lookupCep,
+  BRAZILIAN_STATES
+} from '../Utils/brazilianFormatters';
 
 
 const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloadedServices }) => {
@@ -40,8 +49,8 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Client search state
-  const [showClientSearch, setShowClientSearch] = useState(false);
+  // Client search state - default to existing client search for better UX
+  const [showClientSearch, setShowClientSearch] = useState(true);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientSearchResults, setClientSearchResults] = useState([]);
   const [clientSearchLoading, setClientSearchLoading] = useState(false);
@@ -50,8 +59,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   // Form data
   const [formData, setFormData] = useState({
     clientName: '',
+    clientNickname: '',
     clientPhone: '',
     clientEmail: '',
+    clientCpf: '',
+    clientAddressCep: '',
+    clientAddressStreet: '',
+    clientAddressNumber: '',
+    clientAddressComplement: '',
+    clientAddressNeighborhood: '',
+    clientAddressCity: '',
+    clientAddressState: '',
     services: [],
     professionalId: '',
     notes: ''
@@ -87,50 +105,67 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       if (modalContext?.mode === 'add-to-existing' && modalContext?.targetGroup) {
         const group = modalContext.targetGroup;
         
+        // Skip to step 2 (services) since client info is already known
+        setCurrentStep(2);
+        
         // Auto-select existing client mode and populate client data
         setShowClientSearch(true);
         const clientData = {
           id: group.client_id || null,
-          name: group.client_name,
+          name: getClientDisplayName(group, 'selection'),
           phone_number: group.client_phone || '',
           email: group.client_email || ''
         };
         setSelectedClient(clientData);
         setFormData(prev => ({
           ...prev,
-          clientName: group.client_name,
+          clientName: getClientDisplayName(group, 'selection'),
           clientPhone: group.client_phone || '',
           clientEmail: group.client_email || ''
         }));
-        
-        // Show context notification
-        setError(`Adicionando serviços para ${group.client_name}. As informações do cliente foram preenchidas automaticamente.`);
-        setTimeout(() => setError(null), 3000);
       }
     }
   }, [open, preloadedServices, modalContext]);
 
-  // Debounced client search effect
+  // Optimized client search effect - no debounce, 3 char minimum
   useEffect(() => {
-    if (!showClientSearch || !clientSearchTerm.trim()) {
+    if (!showClientSearch) {
+      setClientSearchResults([]);
+      return;
+    }
+    
+    // Only search if 3+ characters
+    if (!clientSearchTerm.trim() || clientSearchTerm.trim().length < 3) {
       setClientSearchResults([]);
       return;
     }
 
-    const timeoutId = setTimeout(async () => {
+    const performSearch = async () => {
       setClientSearchLoading(true);
       try {
         const results = await searchClients(clientSearchTerm);
-        setClientSearchResults(results || []);
+        
+        // Apply client-side filtering as backup if backend doesn't filter properly
+        const filteredResults = (results || []).filter(client => {
+          const searchLower = clientSearchTerm.toLowerCase();
+          const phone = (client.phone_number || client.phone || '').toLowerCase();
+          const email = (client.email || '').toLowerCase();
+          
+          return clientNameMatchesSearch(client, clientSearchTerm) || 
+                 phone.includes(searchLower) || 
+                 email.includes(searchLower);
+        });
+        
+        setClientSearchResults(filteredResults);
       } catch (error) {
         console.error('Error searching clients:', error);
         setClientSearchResults([]);
       } finally {
         setClientSearchLoading(false);
       }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
+    };
+    
+    performSearch();
   }, [clientSearchTerm, showClientSearch]);
 
   // Reset form when modal closes
@@ -139,8 +174,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setCurrentStep(1);
       setFormData({
         clientName: '',
+        clientNickname: '',
         clientPhone: '',
         clientEmail: '',
+        clientCpf: '',
+        clientAddressCep: '',
+        clientAddressStreet: '',
+        clientAddressNumber: '',
+        clientAddressComplement: '',
+        clientAddressNeighborhood: '',
+        clientAddressCity: '',
+        clientAddressState: '',
         services: [],
         professionalId: '',
         notes: ''
@@ -149,8 +193,8 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setSelectedCategory(null);
       setSearchTerm('');
       setError(null);
-      // Reset client search state
-      setShowClientSearch(false);
+      // Reset client search state - default to search mode for better UX
+      setShowClientSearch(true);
       setClientSearchTerm('');
       setClientSearchResults([]);
       setSelectedClient(null);
@@ -177,8 +221,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setFormData({
         ...formData,
         clientName: '',
+        clientNickname: '',
         clientPhone: '',
-        clientEmail: ''
+        clientEmail: '',
+        clientCpf: '',
+        clientAddressCep: '',
+        clientAddressStreet: '',
+        clientAddressNumber: '',
+        clientAddressComplement: '',
+        clientAddressNeighborhood: '',
+        clientAddressCity: '',
+        clientAddressState: ''
       });
       setSelectedClient(null);
       setClientSearchTerm('');
@@ -189,8 +242,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setFormData({
         ...formData,
         clientName: '',
+        clientNickname: '',
         clientPhone: '',
-        clientEmail: ''
+        clientEmail: '',
+        clientCpf: '',
+        clientAddressCep: '',
+        clientAddressStreet: '',
+        clientAddressNumber: '',
+        clientAddressComplement: '',
+        clientAddressNeighborhood: '',
+        clientAddressCity: '',
+        clientAddressState: ''
       });
     }
   };
@@ -200,7 +262,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     setSelectedClient(client);
     setFormData({
       ...formData,
-      clientName: client.name || client.full_name || '',
+      clientName: getClientDisplayName(client, 'selection'),
       clientPhone: client.phone_number || client.phone || '',
       clientEmail: client.email || ''
     });
@@ -250,6 +312,26 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     }
   };
 
+  // Handle CEP lookup
+  const handleCepLookup = async (cep) => {
+    if (cep && validateCepFormat(cep)) {
+      try {
+        const addressData = await lookupCep(cep);
+        if (addressData) {
+          setFormData(prev => ({
+            ...prev,
+            clientAddressStreet: addressData.address_street || prev.clientAddressStreet,
+            clientAddressNeighborhood: addressData.address_neighborhood || prev.clientAddressNeighborhood,
+            clientAddressCity: addressData.address_city || prev.clientAddressCity,
+            clientAddressState: addressData.address_state || prev.clientAddressState,
+          }));
+        }
+      } catch (error) {
+        console.warn('CEP lookup failed:', error);
+      }
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async () => {
     setLoading(true);
@@ -259,17 +341,30 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       const { totalDuration, totalPrice } = calculateTotals();
       
       // Create services array with individual professional assignments
-      const servicesWithProfessionals = cart.map(item => ({
-        service_id: item.service.id,
-        quantity: item.quantity,
-        professional_id: serviceAssignments[item.service.id] // Per-service professional assignment
-      }));
+      // For quantity > 1, repeat the service object (backend doesn't support quantity field)
+      const servicesWithProfessionals = cart.flatMap(item => 
+        Array.from({ length: item.quantity }, () => ({
+          id: item.service.id,
+          professional_id: serviceAssignments[item.service.id] // Per-service professional assignment
+        }))
+      );
 
       const appointmentData = {
-        client_name: formData.clientName,
-        client_phone: formData.clientPhone,
-        client_email: formData.clientEmail,
-        client_id: selectedClient?.id || null, // Include client ID if existing client selected
+        client: {
+          name: formData.clientName,
+          nickname: formData.clientNickname || null,
+          phone: formData.clientPhone,
+          email: formData.clientEmail,
+          cpf: formData.clientCpf || null,
+          address_cep: formData.clientAddressCep || null,
+          address_street: formData.clientAddressStreet || null,
+          address_number: formData.clientAddressNumber || null,
+          address_complement: formData.clientAddressComplement || null,
+          address_neighborhood: formData.clientAddressNeighborhood || null,
+          address_city: formData.clientAddressCity || null,
+          address_state: formData.clientAddressState || null,
+          id: selectedClient?.id || null
+        },
         services: servicesWithProfessionals,
         total_duration_minutes: totalDuration,
         total_price: totalPrice,
@@ -343,20 +438,6 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           /* Client Mode Toggle for new appointments */
           <div className="flex items-center gap-2">
             <Button
-              variant={!showClientSearch ? "filled" : "outlined"}
-              size="sm"
-              onClick={toggleClientMode}
-              className={`flex items-center gap-2 px-4 py-2 ${
-                !showClientSearch 
-                  ? "bg-accent-primary text-white" 
-                  : "border-accent-primary text-accent-primary hover:bg-accent-primary/10"
-              }`}
-            >
-              <UserPlusIcon className="h-4 w-4" />
-              Novo Cliente
-            </Button>
-            
-            <Button
               variant={showClientSearch ? "filled" : "outlined"}
               size="sm"
               onClick={toggleClientMode}
@@ -368,6 +449,20 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
             >
               <UsersIcon className="h-4 w-4" />
               Cliente Existente
+            </Button>
+            
+            <Button
+              variant={!showClientSearch ? "filled" : "outlined"}
+              size="sm"
+              onClick={toggleClientMode}
+              className={`flex items-center gap-2 px-4 py-2 ${
+                !showClientSearch 
+                  ? "bg-accent-primary text-white" 
+                  : "border-accent-primary text-accent-primary hover:bg-accent-primary/10"
+              }`}
+            >
+              <UserPlusIcon className="h-4 w-4" />
+              Novo Cliente
             </Button>
           </div>
         )}
@@ -384,7 +479,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                 </div>
                 <div className="flex-1">
                   <Typography variant="h6" className="text-blue-700 font-semibold">
-                    {modalContext.targetGroup?.client_name}
+                    {getClientDisplayName(modalContext.targetGroup, 'selection')}
                   </Typography>
                   <div className="flex items-center space-x-4 mt-1">
                     {modalContext.targetGroup?.client_phone && (
@@ -441,16 +536,93 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
             )}
           </div>
 
-          {/* Client Search Results */}
+          {/* Selected Client Display - Right below search box for better UX */}
+          {selectedClient && (
+            <Card className="border-accent-primary bg-accent-primary/5 bg-bg-secondary">
+              <CardBody className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-accent-primary p-2 rounded-full">
+                      <UserIcon className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <Typography variant="small" className="text-text-primary font-medium">
+                        Cliente Selecionado
+                      </Typography>
+                      <Typography variant="small" className="text-accent-primary font-medium">
+                        {selectedClient.name || selectedClient.full_name}
+                      </Typography>
+                    </div>
+                  </div>
+                  <Button
+                    variant="text"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedClient(null);
+                      setFormData({
+                        ...formData,
+                        clientName: '',
+                        clientNickname: '',
+                        clientPhone: '',
+                        clientEmail: '',
+                        clientCpf: '',
+                        clientAddressCep: '',
+                        clientAddressStreet: '',
+                        clientAddressNumber: '',
+                        clientAddressComplement: '',
+                        clientAddressNeighborhood: '',
+                        clientAddressCity: '',
+                        clientAddressState: ''
+                      });
+                    }}
+                    className="text-text-secondary hover:text-accent-primary"
+                  >
+                    Alterar
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* Search Guidance - Prominent for default state */}
+          {(!clientSearchTerm.trim() || clientSearchTerm.trim().length < 3) && !selectedClient && (
+            <div className="text-center py-8 bg-accent-primary/5 rounded-card border border-accent-primary/20">
+              <div className="bg-accent-primary/10 p-3 rounded-full w-fit mx-auto mb-3">
+                <MagnifyingGlassIcon className="h-6 w-6 text-accent-primary" />
+              </div>
+              <Typography variant="h6" className="text-text-primary font-semibold mb-2">
+                Buscar Cliente Existente
+              </Typography>
+              <Typography variant="small" className="text-text-secondary">
+                Digite pelo menos 3 caracteres para buscar
+              </Typography>
+              <Typography variant="small" className="text-text-tertiary mt-2">
+                Não encontrou? Use o botão "Novo Cliente" para criar
+              </Typography>
+            </div>
+          )}
+
+          {/* No Results Found */}
+          {clientSearchTerm.trim() && clientSearchTerm.trim().length >= 3 && !clientSearchLoading && clientSearchResults.length === 0 && (
+            <div className="text-center py-4 bg-bg-tertiary/20 rounded-card border border-bg-tertiary">
+              <Typography variant="small" className="text-text-secondary">
+                Nenhum cliente encontrado para "{clientSearchTerm}"
+              </Typography>
+              <Typography variant="small" className="text-text-tertiary mt-1">
+                Tente buscar pelo nome ou telefone
+              </Typography>
+            </div>
+          )}
+
           {clientSearchResults.length > 0 && (
             <div className="space-y-2 max-h-60 overflow-y-auto">
               <Typography variant="small" className="text-text-secondary font-medium">
-                Resultados da busca:
+                {clientSearchResults.length} cliente{clientSearchResults.length !== 1 ? 's' : ''} encontrado{clientSearchResults.length !== 1 ? 's' : ''}:
               </Typography>
               {clientSearchResults.map((client) => (
                 <Card
                   key={client.id}
-                  className={`cursor-pointer transition-all hover:shadow-md border ${
+                  className={`cursor-pointer transition-all hover:shadow-md border bg-bg-secondary ${
                     selectedClient?.id === client.id 
                       ? 'border-accent-primary bg-accent-primary/5' 
                       : 'border-bg-tertiary hover:border-accent-primary/50'
@@ -464,7 +636,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                       </div>
                       <div className="flex-1">
                         <Typography variant="h6" className="text-text-primary text-sm font-medium">
-                          {client.name || client.full_name}
+                          {getClientDisplayName(client, 'selection')}
                         </Typography>
                         <div className="flex items-center space-x-4 mt-1">
                           {client.phone_number && (
@@ -492,72 +664,177 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
             </div>
           )}
 
-          {/* Selected Client Display */}
-          {selectedClient && (
-            <Card className="border-accent-primary bg-accent-primary/5">
-              <CardBody className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-accent-primary p-2 rounded-full">
-                      <UserIcon className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <Typography variant="h6" className="text-text-primary font-medium">
-                        Cliente Selecionado
-                      </Typography>
-                      <Typography variant="small" className="text-accent-primary font-medium">
-                        {selectedClient.name || selectedClient.full_name}
-                      </Typography>
-                    </div>
-                  </div>
-                  <Button
-                    variant="text"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedClient(null);
-                      setFormData({
-                        ...formData,
-                        clientName: '',
-                        clientPhone: '',
-                        clientEmail: ''
-                      });
-                    }}
-                    className="text-text-secondary hover:text-accent-primary"
-                  >
-                    Alterar
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
-          )}
         </div>
       ) : (
-        // New Client Form Mode
+        // New Client Form Mode - Enhanced with better UX
         <div className="space-y-m">
-          <Input
-            label="Nome do Cliente"
-            value={formData.clientName}
-            onChange={(e) => setFormData({...formData, clientName: e.target.value})}
-            className="text-text-primary"
-            labelProps={{ className: "text-text-secondary" }}
-            required
-          />
-          
-          <Input
-            label="Telefone (opcional)"
-            value={formData.clientPhone}
-            onChange={(e) => setFormData({...formData, clientPhone: e.target.value})}
-            className="text-text-primary"
-            labelProps={{ className: "text-text-secondary" }}
-          />
-          
-          <Input
-            label="Email (opcional)"
-            value={formData.clientEmail}
-            onChange={(e) => setFormData({...formData, clientEmail: e.target.value})}
-            className="text-text-primary"
-            labelProps={{ className: "text-text-secondary" }}
-          />
+
+          {/* Basic Information Section */}
+          <Card className="bg-bg-primary border border-bg-tertiary">
+            <CardBody className="p-s">
+              <Typography variant="small" className="text-text-primary font-semibold mb-s text-xs">
+                📋 Informações Básicas
+              </Typography>
+              
+              {/* Name and Nickname Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-s mb-s">
+                <Input
+                  label="Nome Completo *"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  required
+                />
+                <Input
+                  label="Apelido"
+                  value={formData.clientNickname}
+                  onChange={(e) => setFormData({...formData, clientNickname: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="Como prefere ser chamado"
+                />
+              </div>
+              
+              {/* Contact Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-s mb-s">
+                <Input
+                  label="Telefone"
+                  value={formData.clientPhone}
+                  onChange={(e) => setFormData({...formData, clientPhone: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="(11) 99999-9999"
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  value={formData.clientEmail}
+                  onChange={(e) => setFormData({...formData, clientEmail: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="cliente@exemplo.com"
+                />
+              </div>
+              
+              {/* CPF Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-s">
+                <Input
+                  label="CPF"
+                  value={formData.clientCpf}
+                  onChange={(e) => setFormData({...formData, clientCpf: handleCpfInput(e.target.value)})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                />
+                <div></div> {/* Empty space for alignment */}
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Address Information Section */}
+          <Card className="bg-bg-primary border border-bg-tertiary">
+            <CardBody className="p-s">
+              <Typography variant="small" className="text-text-primary font-semibold mb-s text-xs">
+                📍 Endereço (Opcional)
+              </Typography>
+              
+              {/* CEP Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-s mb-s">
+                <Input
+                  label="CEP"
+                  value={formData.clientAddressCep}
+                  onChange={(e) => setFormData({...formData, clientAddressCep: handleCepInput(e.target.value)})}
+                  onBlur={(e) => handleCepLookup(e.target.value)}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+                <div className="md:col-span-2"></div> {/* Empty space */}
+              </div>
+              
+              {/* Street and Number Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-s mb-s">
+                <div className="md:col-span-2">
+                  <Input
+                    label="Rua/Logradouro"
+                    value={formData.clientAddressStreet}
+                    onChange={(e) => setFormData({...formData, clientAddressStreet: e.target.value})}
+                    className="text-text-primary text-sm"
+                    labelProps={{ className: "text-text-secondary text-xs" }}
+                    size="sm"
+                    placeholder="Nome da rua"
+                  />
+                </div>
+                <Input
+                  label="Número"
+                  value={formData.clientAddressNumber}
+                  onChange={(e) => setFormData({...formData, clientAddressNumber: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="123"
+                />
+              </div>
+              
+              {/* Complement and Neighborhood Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-s mb-s">
+                <Input
+                  label="Complemento"
+                  value={formData.clientAddressComplement}
+                  onChange={(e) => setFormData({...formData, clientAddressComplement: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="Apto, Bloco, etc."
+                />
+                <Input
+                  label="Bairro"
+                  value={formData.clientAddressNeighborhood}
+                  onChange={(e) => setFormData({...formData, clientAddressNeighborhood: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="Nome do bairro"
+                />
+              </div>
+              
+              {/* City and State Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-s">
+                <Input
+                  label="Cidade"
+                  value={formData.clientAddressCity}
+                  onChange={(e) => setFormData({...formData, clientAddressCity: e.target.value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                  placeholder="Nome da cidade"
+                />
+                <Select
+                  label="Estado"
+                  value={formData.clientAddressState}
+                  onChange={(value) => setFormData({...formData, clientAddressState: value})}
+                  className="text-text-primary text-sm"
+                  labelProps={{ className: "text-text-secondary text-xs" }}
+                  size="sm"
+                >
+                  {BRAZILIAN_STATES.map(state => (
+                    <Option key={state.code} value={state.code} className="text-sm">
+                      {state.code} - {state.name}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            </CardBody>
+          </Card>
         </div>
       )}
     </div>
@@ -846,102 +1123,66 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           </Typography>
         </div>
       ) : (
-        <div className="space-y-3 max-h-80 overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto">
           {cart.map((item) => {
             const availableProfessionals = getProfessionalsForService(item.service);
             const assignedProfessionalId = serviceAssignments[item.service.id];
-            const assignedProfessional = availableProfessionals.find(p => p.id.toString() === assignedProfessionalId);
 
             return (
-              <Card key={item.service.id} className="bg-bg-secondary border border-bg-tertiary">
+              <Card key={item.service.id} className="bg-bg-secondary border border-bg-tertiary h-fit">
                 <CardBody className="p-3">
-                  {/* Service Header */}
-                  <div className="bg-accent-primary/5 px-3 py-2 rounded border border-accent-primary/20 mb-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Typography variant="small" className="text-accent-primary font-semibold">
-                          {item.service.name}
-                        </Typography>
-                        <Typography variant="small" className="text-text-secondary text-xs">
-                          {item.service.duration || item.service.duration_minutes || 0}min • {formatPrice(item.service.price)}
-                          {item.quantity > 1 && ` • ${item.quantity}x`}
-                        </Typography>
-                      </div>
-                      {assignedProfessional && (
-                        <div className="flex items-center gap-1 bg-white/70 px-2 py-1 rounded">
-                          <UserIcon className="h-3 w-3 text-accent-primary" />
-                          <Typography variant="small" className="text-accent-primary font-medium text-xs">
-                            {assignedProfessional.full_name}
-                          </Typography>
-                        </div>
-                      )}
+                  {/* Compact Service Header */}
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-bg-tertiary">
+                    <div className="flex-1">
+                      <Typography variant="small" className="text-accent-primary font-semibold text-sm">
+                        {item.service.name}
+                      </Typography>
+                      <Typography variant="small" className="text-text-secondary text-xs">
+                        {item.service.duration || item.service.duration_minutes || 0}min • {formatPrice(item.service.price)}
+                        {item.quantity > 1 && ` • ${item.quantity}x`}
+                      </Typography>
                     </div>
                   </div>
 
-                  {/* Professional Selection */}
-                  <div className="space-y-2">
-                    <Typography variant="small" className="text-text-secondary font-medium text-xs">
-                      Selecionar Profissional:
+                  {/* Compact Professional Selection */}
+                  <div>
+                    <Typography variant="small" className="text-text-secondary font-medium text-xs mb-2">
+                      Profissional:
                     </Typography>
                     
                     {availableProfessionals.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 gap-1">
                         {availableProfessionals.map((professional) => {
                           const isSelected = assignedProfessionalId === professional.id.toString();
                           
                           return (
-                            <div
+                            <button
                               key={professional.id}
-                              className={`cursor-pointer transition-all duration-200 rounded-xl border-2 backdrop-blur-sm ${
+                              className={`cursor-pointer transition-all duration-200 rounded border px-2 py-1.5 text-left text-xs ${
                                 isSelected
-                                  ? 'border-pink-500 bg-gradient-to-r from-pink-500/20 to-purple-600/20 shadow-lg shadow-pink-500/25'
-                                  : 'border-white/10 bg-white/5 hover:border-pink-400/50 hover:bg-white/10 hover:shadow-md'
+                                  ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                                  : 'border-bg-tertiary bg-bg-primary text-text-secondary hover:border-accent-primary/50 hover:bg-accent-primary/5'
                               }`}
                               onClick={() => assignProfessionalToService(item.service.id, professional.id.toString())}
                             >
-                              <div className="p-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`relative p-2.5 rounded-xl ${
-                                    isSelected 
-                                      ? 'bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg' 
-                                      : 'bg-white/10 backdrop-blur-sm'
-                                  }`}>
-                                    <UserIcon className={`h-4 w-4 ${
-                                      isSelected ? 'text-white' : 'text-white/80'
-                                    }`} />
-                                    {isSelected && (
-                                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className={`font-semibold text-sm truncate ${
-                                      isSelected ? 'text-white' : 'text-white/90'
-                                    }`}>
-                                      {professional.full_name}
-                                    </div>
-                                    {professional.specialties && professional.specialties.length > 0 && (
-                                      <div className={`text-xs truncate mt-0.5 ${
-                                        isSelected ? 'text-white/70' : 'text-white/60'
-                                      }`}>
-                                        {professional.specialties.slice(0, 2).join(', ')}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {isSelected && (
-                                    <div className="text-green-400 flex-shrink-0 animate-pulse">
-                                      <CheckCircleIcon className="h-5 w-5" />
-                                    </div>
-                                  )}
-                                </div>
+                              <div className="flex items-center justify-between">
+                                <span className={`font-medium truncate ${
+                                  isSelected ? 'text-accent-primary' : 'text-text-primary'
+                                }`}>
+                                  {professional.full_name}
+                                </span>
+                                {isSelected && (
+                                  <CheckCircleIcon className="h-3 w-3 text-accent-primary flex-shrink-0 ml-1" />
+                                )}
                               </div>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="text-center py-4">
-                        <Typography className="text-text-secondary text-sm">
-                          Nenhum profissional disponível para este serviço.
+                      <div className="text-center py-2">
+                        <Typography className="text-text-secondary text-xs">
+                          Nenhum profissional disponível
                         </Typography>
                       </div>
                     )}
@@ -954,17 +1195,6 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       )}
 
 
-      {/* Notes Section */}
-      <div className="pt-m border-t border-bg-tertiary">
-        <Input
-          label="Observações (opcional)"
-          value={formData.notes}
-          onChange={(e) => setFormData({...formData, notes: e.target.value})}
-          className="text-text-primary"
-          labelProps={{ className: "text-text-secondary" }}
-          placeholder="Adicione observações sobre o atendimento..."
-        />
-      </div>
     </div>
   );
 
@@ -1123,7 +1353,6 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       case 1: return renderClientStep();
       case 2: return renderServicesStep();
       case 3: return renderProfessionalStep();
-      case 4: return renderConfirmationStep();
       default: return null;
     }
   };
@@ -1139,7 +1368,6 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           : formData.clientName?.trim();
       case 2: return cart.length > 0;
       case 3: return areAllServicesAssigned(); // All services must have professionals assigned
-      case 4: return true; // Confirmation step is always valid if we reached it
       default: return false;
     }
   };
@@ -1150,6 +1378,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       handler={onClose}
       size="xl"
       className="bg-bg-secondary border border-bg-tertiary max-h-[85vh] overflow-hidden flex flex-col"
+      style={{ 
+        zIndex: 99999,
+        position: 'fixed !important'
+      }}
+      BackdropProps={{
+        style: { 
+          zIndex: 99998
+        }
+      }}
+      container={document.body}
+      disablePortal={false}
     >
       <DialogHeader className="text-text-primary border-b border-bg-tertiary pb-0">
         <div className="w-full">
@@ -1157,7 +1396,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           <div className="mb-4">
             <Typography variant="h4" className="text-text-primary">
               {modalContext?.mode === 'add-to-existing' 
-                ? `Adicionar Serviços para ${modalContext.targetGroup?.client_name}`
+                ? `Adicionar Serviços para ${getClientDisplayName(modalContext.targetGroup, 'selection')}`
                 : 'Adicionar Serviços'
               }
             </Typography>
@@ -1167,12 +1406,14 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           <div className="w-full">
             {/* Step Labels */}
             <div className="flex justify-between mb-2">
-              {[
+              {(modalContext?.mode === 'add-to-existing' ? [
+                { step: 2, label: 'Serviços' },
+                { step: 3, label: 'Confirmação' }
+              ] : [
                 { step: 1, label: 'Cliente' },
                 { step: 2, label: 'Serviços' },
-                { step: 3, label: 'Profissionais' },
-                { step: 4, label: 'Confirmação' }
-              ].map(({ step, label }) => (
+                { step: 3, label: 'Confirmação' }
+              ]).map(({ step, label }) => (
                 <div key={step} className="flex items-center">
                   <div className={`
                     flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all
@@ -1203,16 +1444,20 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
               <div className="w-full h-2 bg-bg-tertiary rounded-full">
                 <div 
                   className="h-2 bg-gradient-to-r from-accent-primary to-purple-500 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
+                  style={{ 
+                    width: modalContext?.mode === 'add-to-existing' 
+                      ? `${((currentStep - 2) / 1) * 100}%` 
+                      : `${((currentStep - 1) / 2) * 100}%` 
+                  }}
                 />
               </div>
               
               {/* Step Dots */}
               <div className="absolute top-0 left-0 w-full h-2 flex justify-between items-center">
-                {[1, 2, 3, 4].map((step) => (
+                {(modalContext?.mode === 'add-to-existing' ? [2, 3] : [1, 2, 3]).map((step) => (
                   <div
                     key={step}
-                    className={`w-4 h-4 rounded-full border-2 bg-white transition-all ${
+                    className={`w-4 h-4 rounded-full border-2 bg-bg-primary transition-all ${
                       currentStep >= step 
                         ? 'border-accent-primary' 
                         : 'border-bg-tertiary'
@@ -1246,7 +1491,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       
       <DialogFooter className="border-t border-bg-tertiary flex justify-between items-center">
         <div className="flex gap-s">
-          {currentStep > 1 && (
+          {(modalContext?.mode === 'add-to-existing' ? currentStep > 2 : currentStep > 1) && (
             <Button
               variant="outlined"
               onClick={() => setCurrentStep(currentStep - 1)}
@@ -1324,38 +1569,24 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
           
           {/* Assignment Status in Footer (Step 3) */}
           {currentStep === 3 && cart.length > 0 && (
-            <div className={`mb-2 p-3 rounded-lg border-2 ${
+            <div className={`mb-2 px-4 py-2 rounded-card transition-all ${
               areAllServicesAssigned() 
-                ? 'bg-gray-800 border-green-500' 
-                : 'bg-gray-800 border-yellow-500'
+                ? 'bg-status-success/10 border border-status-success/20' 
+                : 'bg-status-warning/10 border border-status-warning/20'
             }`}>
-              <div className="flex items-center justify-center gap-3">
-                <div className={`p-2 rounded-full ${
-                  areAllServicesAssigned() ? 'bg-green-500' : 'bg-yellow-500'
-                }`}>
-                  {areAllServicesAssigned() ? (
-                    <CheckCircleIcon className="h-4 w-4 text-white" />
-                  ) : (
-                    <ExclamationTriangleIcon className="h-4 w-4 text-white" />
-                  )}
-                </div>
-                
-                <div className="text-center">
-                  <Typography variant="small" className={`font-semibold ${
-                    areAllServicesAssigned() ? 'text-green-400' : 'text-yellow-400'
-                  }`}>
-                    Status da Atribuição
-                  </Typography>
-                  <Typography variant="small" className="text-gray-300 text-xs">
-                    {Object.keys(serviceAssignments).length} de {cart.length} serviços atribuídos
-                  </Typography>
-                </div>
-                
-                {!areAllServicesAssigned() && (
-                  <Typography variant="small" className="text-yellow-400 font-medium text-xs">
-                    Atribua todos para continuar
-                  </Typography>
+              <div className="flex items-center justify-center gap-2">
+                {areAllServicesAssigned() ? (
+                  <CheckCircleIcon className="h-4 w-4 text-status-success" />
+                ) : (
+                  <ExclamationTriangleIcon className="h-4 w-4 text-status-warning" />
                 )}
+                
+                <Typography variant="small" className={`font-medium ${
+                  areAllServicesAssigned() ? 'text-status-success' : 'text-status-warning'
+                }`}>
+                  {Object.keys(serviceAssignments).length} de {cart.length} serviços atribuídos
+                  {!areAllServicesAssigned() && ' - Atribua todos para continuar'}
+                </Typography>
               </div>
             </div>
           )}
@@ -1371,7 +1602,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
         </div>
         
         <div className="flex gap-s">
-          {currentStep < 4 ? (
+          {currentStep < 3 ? (
             <Button
               onClick={() => setCurrentStep(currentStep + 1)}
               disabled={!isStepValid() || loading}
@@ -1383,7 +1614,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                 }
               `}
             >
-              {currentStep === 3 ? 'Revisar →' : 'Próximo →'}
+              Próximo →
               {currentStep === 1 && isStepValid() && (
                 <span className="ml-1 text-xs opacity-75">
                   {showClientSearch ? 'Cliente selecionado' : 'Dados preenchidos'}
@@ -1392,11 +1623,6 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
               {currentStep === 2 && isStepValid() && (
                 <span className="ml-1 text-xs opacity-75">
                   {cart.length} item{cart.length !== 1 ? 's' : ''}
-                </span>
-              )}
-              {currentStep === 3 && isStepValid() && (
-                <span className="ml-1 text-xs opacity-75">
-                  Pronto para revisar
                 </span>
               )}
             </Button>

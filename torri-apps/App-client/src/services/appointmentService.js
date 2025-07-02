@@ -276,3 +276,22 @@ export const processAppointmentPayment = async (paymentData) => {
     }
   );
 };
+
+/**
+ * Removes a service from an appointment group
+ * @param {string} groupId - Appointment group ID
+ * @param {string} serviceId - Service ID to remove
+ * @returns {Promise<Object>} Updated appointment group
+ */
+export const removeServiceFromAppointmentGroup = async (groupId, serviceId) => {
+  const endpoint = buildApiEndpoint(`appointments/groups/${groupId}/services/${serviceId}`);
+  
+  return withApiErrorHandling(
+    () => apiClient.delete(endpoint),
+    {
+      defaultValue: null,
+      transformData: (data) => data,
+      logErrors: true
+    }
+  );
+};

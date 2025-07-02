@@ -30,7 +30,8 @@ import {
 
 import { 
   createMergedCheckoutSession, 
-  processAppointmentPayment 
+  processAppointmentPayment,
+  removeServiceFromAppointmentGroup
 } from '../services/appointmentService';
 
 const CheckoutDrawer = ({
@@ -154,6 +155,128 @@ const CheckoutDrawer = ({
     }).format(price);
   };
   
+  // Handle service removal
+  const handleRemoveService = async (serviceId) => {
+    try {
+      // Use the first group ID from checkout session (since services belong to appointment groups)
+      const groupId = checkoutSession.group_ids?.[0] || groups[0]?.id;
+      if (!groupId) {
+        throw new Error('No group ID found for service removal');
+      }
+      
+      await removeServiceFromAppointmentGroup(groupId, serviceId);
+      
+      // Refresh checkout session to reflect the removal
+      const groupIds = groups.map(g => g.id);
+      const session = await createMergedCheckoutSession(groupIds);
+      setCheckoutSession(session);
+      
+      // If no services left, close checkout
+      if (!session.services || session.services.length === 0) {
+        onClose();
+      }
+      
+    } catch (error) {
+      console.error('Failed to remove service:', error);
+      setPaymentError('Erro ao remover serviço. Tente novamente.');
+    }
+  };
+  
+  // SwipeableServiceCard component
+  const SwipeableServiceCard = ({ service, index, onRemove }) => {
+    const [isRemoving, setIsRemoving] = useState(false);
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const cardRef = useRef(null);
+    const startX = useRef(0);
+    const currentX = useRef(0);
+    
+    // Touch/Mouse handlers for swipe gesture
+    const handleStart = (clientX) => {
+      startX.current = clientX;
+      currentX.current = clientX;
+    };
+
+    const handleMove = (clientX) => {
+      if (startX.current === 0) return;
+      
+      currentX.current = clientX;
+      const diff = clientX - startX.current;
+      
+      // Only allow left swipe (negative values)
+      if (diff < 0) {
+        setSwipeOffset(Math.max(diff, -120));
+      }
+    };
+
+    const handleEnd = () => {
+      const diff = currentX.current - startX.current;
+      
+      if (diff < -80) {
+        // Trigger removal
+        setIsRemoving(true);
+        setTimeout(() => {
+          onRemove(service.id);
+        }, 200);
+      } else {
+        // Snap back
+        setSwipeOffset(0);
+      }
+      
+      startX.current = 0;
+      currentX.current = 0;
+    };
+    
+    return (
+      <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white">
+        {/* Red background for swipe-to-delete */}
+        <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6">
+          <div className="flex items-center space-x-2 text-white">
+            <Trash2 size={16} />
+            <span className="font-semibold text-sm">Remover</span>
+          </div>
+        </div>
+
+        {/* Main card content */}
+        <div 
+          ref={cardRef}
+          className={`relative bg-white transition-transform duration-200 ${isRemoving ? 'opacity-0 -translate-x-full' : ''}`}
+          style={{ transform: `translateX(${swipeOffset}px)` }}
+          onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+          onTouchEnd={handleEnd}
+          onMouseDown={(e) => handleStart(e.clientX)}
+          onMouseMove={(e) => e.buttons === 1 && handleMove(e.clientX)}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+        >
+          <div className="flex items-center justify-between p-3">
+            <div className="flex-1">
+              <div className="font-medium text-sm text-gray-900 mb-1">
+                {service.name}
+              </div>
+              <div className="text-xs text-gray-600 mb-1">
+                Profissional: {service.professional_name || 'Não atribuído'}
+              </div>
+              {service.duration_minutes && (
+                <div className="flex items-center space-x-1">
+                  <Clock size={12} className="text-gray-400" />
+                  <span className="text-xs text-gray-500">
+                    {Math.floor(service.duration_minutes / 60)}h {service.duration_minutes % 60}min
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="font-semibold text-green-600">
+                {formatPrice(service.price)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   // Handle tip selection
   const handleTipSelect = (percentage) => {
     setSelectedTipPercentage(percentage);
@@ -257,32 +380,26 @@ const CheckoutDrawer = ({
                     <span className="font-medium text-blue-800">{checkoutSession.client_name}</span>
                   </div>
                   
-                  {/* Individual services */}
-                  {checkoutSession.services?.map((service, index) => (
-                    <div key={`${service.id}-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-900 mb-1">
-                          {service.name}
-                        </div>
-                        <div className="text-xs text-gray-600 mb-1">
-                          Profissional: {service.professional_name || 'Não atribuído'}
-                        </div>
-                        {service.duration_minutes && (
-                          <div className="flex items-center space-x-1">
-                            <Clock size={12} className="text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              {Math.floor(service.duration_minutes / 60)}h {service.duration_minutes % 60}min
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold text-green-600">
-                          {formatPrice(service.price)}
-                        </span>
-                      </div>
+                  {/* Individual services with swipe-to-delete */}
+                  <div className="space-y-2">
+                    {checkoutSession.services?.map((service, index) => (
+                      <SwipeableServiceCard
+                        key={`${service.id}-${index}`}
+                        service={service}
+                        index={index}
+                        onRemove={handleRemoveService}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Helper text for swipe gesture */}
+                  {checkoutSession.services && checkoutSession.services.length > 0 && (
+                    <div className="text-center py-2">
+                      <p className="text-xs text-gray-500">
+                        ← Deslize para a esquerda para remover
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </>
               ) : (
                 <div className="text-center py-4 text-gray-500">

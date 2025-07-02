@@ -278,3 +278,38 @@ export const getAppointmentGroupDetails = async (groupId) => {
     throw new Error(errorMessage);
   }
 };
+
+/**
+ * Creates a merged checkout session for multiple appointment groups
+ * @param {Array} groupIds - Array of appointment group IDs to merge
+ * @returns {Promise<object>} Merged checkout session with detailed service information
+ * @throws {Error} If the API call fails.
+ */
+export const createMergedCheckoutSession = async (groupIds) => {
+  try {
+    const requestData = { group_ids: groupIds };
+    const response = await apiClient.post('/api/v1/appointments/checkout/merge', requestData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating merged checkout session:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao criar sessão de checkout. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Processes payment for appointment group(s)
+ * @param {object} paymentData - Payment details including group IDs, amounts, payment method
+ * @returns {Promise<object>} Payment processing result
+ * @throws {Error} If the API call fails.
+ */
+export const processAppointmentPayment = async (paymentData) => {
+  try {
+    const response = await apiClient.post('/api/v1/appointments/checkout/payment', paymentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error processing appointment payment:", error.response?.data || error.message);
+    const errorMessage = error.response?.data?.detail || "Falha ao processar pagamento. Tente novamente.";
+    throw new Error(errorMessage);
+  }
+};

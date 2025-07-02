@@ -50,3 +50,27 @@ INFO: Running migrations in ONLINE mode.
 2025-06-30 16:12:41,884 - INFO - 
 📊 TOTAL: 1 successful, 0 failed
 2025-06-30 16:12:41,884 - INFO - 🎉 All migrations completed successfully!
+2025-07-01 00:45:57,203 - INFO - 🚀 Starting multi-schema migration: current
+2025-07-01 00:45:57,205 - INFO - Target schemas: dev, prod
+2025-07-01 00:45:57,206 - INFO - 
+📋 Processing schema: dev
+2025-07-01 00:46:00,875 - INFO - Schema 'dev': EXISTS
+2025-07-01 00:46:07,561 - INFO - Schema 'dev' current migration: INFO:
+2025-07-01 00:46:07,565 - INFO - 
+📋 Processing schema: prod
+2025-07-01 00:46:08,040 - INFO - Schema 'prod': EXISTS
+2025-07-01 00:46:14,106 - INFO - Schema 'prod' current migration: INFO:
+2025-07-01 00:46:14,107 - INFO - 
+============================================================
+2025-07-01 00:46:14,108 - INFO - MIGRATION SUMMARY
+2025-07-01 00:46:14,108 - INFO - ============================================================
+2025-07-01 00:46:14,108 - INFO - ✅ SUCCESS - Schema: dev
+2025-07-01 00:46:14,108 - INFO -   Before: INFO:
+2025-07-01 00:46:14,108 - INFO - ✅ SUCCESS - Schema: prod
+2025-07-01 00:46:14,109 - INFO -   Before: INFO:
+2025-07-01 00:46:14,109 - INFO - 
+📊 TOTAL: 2 successful, 0 failed
+2025-07-01 00:46:14,109 - INFO - 🎉 All migrations completed successfully!
+2025-07-01 00:47:00,686 - INFO - 🔍 DRY RUN MODE - No changes will be made
+2025-07-01 00:47:00,691 - INFO - Would apply 'upgrade' to schemas: prod
+2025-07-01 00:47:00,692 - INFO - Target: head

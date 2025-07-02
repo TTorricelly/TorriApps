@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, create_engine
@@ -59,7 +60,6 @@ def include_object(object, name, type_, reflected, compare_to):
     # If issues arise, one might need to check `object.table.name in target_metadata.tables`.
     return True # Default to include other types like indexes, constraints
 
-
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -105,36 +105,34 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config( # Use engine_from_config to read from alembic.ini
+    connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-    # connectable = create_engine(SQLALCHEMY_URL) # Hardcoded URL removed
 
     with connectable.connect() as connection:
-        # version_table_schema can be passed via -x version_table_schema=my_schema
-        # or set in alembic.ini. If None, Alembic uses its default behavior.
-        vts = config.get_main_option("version_table_schema")
+        # Get schema from environment variable, default to 'public'
+        schema_name = os.environ.get('DEFAULT_SCHEMA_NAME', 'public')
 
-        # print(f"DEBUG: run_migrations_online(): metadata_choice={which_metadata}") # metadata_choice removed
-        # print(f"DEBUG: run_migrations_online(): version_table_schema={vts}")
-        # print(f"DEBUG: run_migrations_online(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+        # Set search path for the connection
+        connection.exec_driver_sql(f"SET search_path TO {schema_name}")
+        
+        print(f"INFO: Migrating on schema: {schema_name}")
 
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_schemas=False,  # Set to False to avoid cross-schema issues
-            version_table_schema=vts,
+            version_table_schema=schema_name,
+            include_schemas=False,
             compare_type=True,
             compare_server_default=True,
-            include_object=include_object  # Add the filter
+            include_object=include_object
         )
 
         with context.begin_transaction():
             context.run_migrations()
 
-    # Dispose of the engine after use
     if connectable:
         connectable.dispose()
 

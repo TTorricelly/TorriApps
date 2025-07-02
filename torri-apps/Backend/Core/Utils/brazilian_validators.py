@@ -98,8 +98,16 @@ def validate_and_format_cpf(cpf: Optional[str]) -> Optional[str]:
     if not cpf:
         return None
     
+    # Handle whitespace-only strings
+    if isinstance(cpf, str) and not cpf.strip():
+        return None
+    
     # Clean the CPF
     clean = clean_cpf(cpf)
+    
+    # If cleaning results in empty string, return None
+    if not clean:
+        return None
     
     # Validate length
     if len(clean) != 11:
@@ -149,8 +157,16 @@ def validate_and_format_cep(cep: Optional[str]) -> Optional[str]:
     if not cep:
         return None
     
+    # Handle whitespace-only strings
+    if isinstance(cep, str) and not cep.strip():
+        return None
+    
     # Clean the CEP
     clean = clean_cep(cep)
+    
+    # If cleaning results in empty string, return None
+    if not clean:
+        return None
     
     # Validate length and format
     if len(clean) != 8 or not clean.isdigit():
@@ -165,7 +181,15 @@ def validate_brazilian_state(state: Optional[str]) -> Optional[str]:
     if not state:
         return None
     
+    # Handle whitespace-only strings
+    if isinstance(state, str) and not state.strip():
+        return None
+    
     state_upper = state.upper().strip()
+    
+    # If after stripping it's empty, return None
+    if not state_upper:
+        return None
     
     if state_upper not in BRAZILIAN_STATES:
         raise ValueError(f"Estado inválido: {state}. Use códigos como SP, RJ, MG, etc.")

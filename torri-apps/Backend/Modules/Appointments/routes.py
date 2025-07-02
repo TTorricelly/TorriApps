@@ -378,6 +378,54 @@ def add_services_to_group_endpoint(
         )
 
 
+@router.delete(
+    "/groups/{group_id}/services/{service_id}",
+    response_model=dict,
+    summary="Remove a service from an appointment group"
+)
+def remove_service_from_group_endpoint(
+    group_id: UUID,
+    service_id: UUID,
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Remove a specific service from an appointment group.
+    
+    - **group_id**: ID of the appointment group
+    - **service_id**: ID of the service to remove
+    - Returns success message and updated group information
+    """
+    # Check permissions - only ATENDENTE and GESTOR can modify appointments
+    if requesting_user.role not in ['ATENDENTE', 'GESTOR']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only reception staff and managers can remove services."
+        )
+    
+    try:
+        # Remove service from appointment group
+        result = appointments_services.remove_service_from_appointment_group(
+            db=db,
+            group_id=group_id,
+            service_id=service_id,
+            tenant_id="default"  # TODO: Get from auth context
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove service from appointment group: {str(e)}"
+        )
+
+
 @router.post(
     "/checkout/merge",
     response_model=MergedCheckoutResponse,

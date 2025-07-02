@@ -56,6 +56,7 @@ def get_appointment_groups_for_kanban(
         AppointmentGroup.created_at,
         AppointmentGroup.updated_at,
         User.full_name.label('client_name'),
+        User.nickname.label('client_nickname'),
         func.string_agg(Service.name, ', ').label('service_names')
     ).select_from(AppointmentGroup)\
      .join(User, AppointmentGroup.client_id == User.id)\
@@ -79,7 +80,8 @@ def get_appointment_groups_for_kanban(
         AppointmentGroup.notes_by_client,
         AppointmentGroup.created_at,
         AppointmentGroup.updated_at,
-        User.full_name
+        User.full_name,
+        User.nickname
     ).order_by(AppointmentGroup.start_time)
     
     results = query.all()
@@ -91,6 +93,7 @@ def get_appointment_groups_for_kanban(
             'id': str(row.id),
             'client_id': str(row.client_id),
             'client_name': row.client_name,
+            'client_nickname': row.client_nickname,
             'service_names': row.service_names,
             'total_duration_minutes': row.total_duration_minutes,
             'total_price': float(row.total_price),
@@ -172,6 +175,7 @@ def update_appointment_group_status(
         'id': str(group.id),
         'client_id': str(group.client_id),
         'client_name': client.full_name if client else "Unknown Client",
+        'client_nickname': client.nickname if client else None,
         'service_names': service_names,
         'total_duration_minutes': group.total_duration_minutes,
         'total_price': float(group.total_price),
@@ -226,8 +230,17 @@ def create_walk_in_appointment_group_with_assignments(
             client = User(
                 id=str(uuid4()),
                 full_name=client_data.get('name', 'Walk-in Client'),
+                nickname=client_data.get('nickname'),
                 email=email,
                 phone_number=client_data.get('phone', ''),
+                cpf=client_data.get('cpf'),
+                address_street=client_data.get('address_street'),
+                address_number=client_data.get('address_number'),
+                address_complement=client_data.get('address_complement'),
+                address_neighborhood=client_data.get('address_neighborhood'),
+                address_city=client_data.get('address_city'),
+                address_state=client_data.get('address_state'),
+                address_cep=client_data.get('address_cep'),
                 role=UserRole.CLIENTE,
                 is_active=True
             )
@@ -313,6 +326,7 @@ def create_walk_in_appointment_group_with_assignments(
         'id': str(appointment_group.id),
         'client_id': str(client.id),
         'client_name': client.full_name,
+        'client_nickname': client.nickname,
         'service_names': service_names,
         'total_duration_minutes': appointment_group.total_duration_minutes,
         'total_price': float(appointment_group.total_price),
@@ -369,8 +383,17 @@ def create_walk_in_appointment_group(
             client = User(
                 id=str(uuid4()),
                 full_name=client_data.get('name', 'Walk-in Client'),
+                nickname=client_data.get('nickname'),
                 email=email,
                 phone_number=client_data.get('phone', ''),
+                cpf=client_data.get('cpf'),
+                address_street=client_data.get('address_street'),
+                address_number=client_data.get('address_number'),
+                address_complement=client_data.get('address_complement'),
+                address_neighborhood=client_data.get('address_neighborhood'),
+                address_city=client_data.get('address_city'),
+                address_state=client_data.get('address_state'),
+                address_cep=client_data.get('address_cep'),
                 role=UserRole.CLIENTE,
                 is_active=True
             )
@@ -450,6 +473,7 @@ def create_walk_in_appointment_group(
         'id': str(appointment_group.id),
         'client_id': str(client.id),
         'client_name': client.full_name,
+        'client_nickname': client.nickname,
         'service_names': service_names,
         'total_duration_minutes': appointment_group.total_duration_minutes,
         'total_price': float(appointment_group.total_price),
@@ -710,3 +734,91 @@ def add_services_to_appointment_group(
     
     # Return the SQLAlchemy object directly (will be converted to schema by FastAPI)
     return appointment_group
+
+
+def remove_service_from_appointment_group(
+    db: Session,
+    group_id: UUID,
+    service_id: UUID,
+    tenant_id: str = "default"
+):
+    """
+    Remove a service from an existing appointment group.
+    
+    Args:
+        db: Database session
+        group_id: ID of the appointment group
+        service_id: ID of the service to remove
+        tenant_id: Tenant identifier
+    
+    Returns:
+        Success message and updated group information
+    """
+    # Get existing appointment group
+    appointment_group = db.query(AppointmentGroup).filter(
+        AppointmentGroup.id == group_id
+    ).first()
+    
+    if not appointment_group:
+        raise ValueError(f"Appointment group with ID {group_id} not found")
+    
+    # Find appointments in this group with the specified service
+    appointments_to_remove = db.query(Appointment).filter(
+        and_(
+            Appointment.group_id == group_id,
+            Appointment.service_id == service_id
+        )
+    ).all()
+    
+    if not appointments_to_remove:
+        raise ValueError(f"No appointments found with service ID {service_id} in group {group_id}")
+    
+    # Calculate totals to subtract
+    duration_to_subtract = 0
+    price_to_subtract = Decimal('0.00')
+    
+    for appointment in appointments_to_remove:
+        # Get the service details for calculations
+        service = db.query(Service).filter(Service.id == appointment.service_id).first()
+        if service:
+            duration_to_subtract += service.duration_minutes
+            price_to_subtract += appointment.price_at_booking or service.price
+        
+        # Delete the appointment
+        db.delete(appointment)
+    
+    # Update appointment group totals
+    appointment_group.total_duration_minutes = max(0, appointment_group.total_duration_minutes - duration_to_subtract)
+    appointment_group.total_price = max(Decimal('0.00'), appointment_group.total_price - price_to_subtract)
+    appointment_group.updated_at = datetime.now()
+    
+    # Check if there are any appointments left in the group
+    remaining_appointments = db.query(Appointment).filter(
+        Appointment.group_id == group_id
+    ).all()
+    
+    if not remaining_appointments:
+        # If no appointments left, we could either delete the group or mark it as cancelled
+        # For now, let's just set totals to zero and keep the group for audit purposes
+        appointment_group.total_duration_minutes = 0
+        appointment_group.total_price = Decimal('0.00')
+    else:
+        # Recalculate group end time based on remaining appointments
+        last_appointment = max(remaining_appointments, key=lambda a: datetime.combine(a.appointment_date, a.end_time))
+        appointment_group.end_time = datetime.combine(
+            last_appointment.appointment_date,
+            last_appointment.end_time
+        )
+    
+    db.commit()
+    db.refresh(appointment_group)
+    
+    return {
+        'success': True,
+        'message': f'Successfully removed {len(appointments_to_remove)} appointment(s) with service ID {service_id}',
+        'removed_appointments_count': len(appointments_to_remove),
+        'remaining_appointments_count': len(remaining_appointments),
+        'group_id': str(appointment_group.id),
+        'total_duration_minutes': appointment_group.total_duration_minutes,
+        'total_price': float(appointment_group.total_price)
+    }

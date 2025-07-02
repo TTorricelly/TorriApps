@@ -11,6 +11,7 @@ import {
 import { servicesApi } from '../../Services/services';
 import { categoriesApi } from '../../Services/categories';
 import { professionalsApi } from '../../Services/professionals';
+import { getClientDisplayName } from '../../utils/clientUtils';
 import {
   CalendarDaysIcon, 
   ExclamationTriangleIcon,
@@ -57,6 +58,8 @@ const KanbanPage = () => {
   const [modalContext, setModalContext] = useState(null); // Context for modal (new vs add-to-existing)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutGroup, setCheckoutGroup] = useState(null);
+  const [checkoutMinimized, setCheckoutMinimized] = useState(false);
+  const [checkoutRefreshTrigger, setCheckoutRefreshTrigger] = useState(0);
   const [selectedCard, setSelectedCard] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [toast, setToast] = useState(null);
@@ -331,7 +334,7 @@ const KanbanPage = () => {
       );
 
       setAppointmentGroups(updatedGroups);
-      showToast(`${group.client_name} movido para ${columns.find(c => c.id === newStatus)?.title}`);
+      showToast(`${getClientDisplayName(group, 'card')} movido para ${columns.find(c => c.id === newStatus)?.title}`);
       
     } catch (error) {
       console.error('[KanbanBoard] Error updating appointment status:', error);
@@ -423,22 +426,36 @@ const KanbanPage = () => {
 
   // Handle add services to existing appointment
   const handleAddServicesToExisting = (group) => {
+    // Temporarily hide checkout modal to avoid z-index conflicts
+    const wasCheckoutOpen = showCheckoutModal;
+    if (wasCheckoutOpen) {
+      setShowCheckoutModal(false);
+    }
+    
     setModalContext({
       mode: 'add-to-existing',
-      targetGroup: group
+      targetGroup: group,
+      wasCheckoutOpen: wasCheckoutOpen, // Remember if checkout was open
+      checkoutGroup: checkoutGroup // Remember the checkout group
     });
     setShowAddServicesModal(true);
   };
 
   // Handle add services submission
   const handleAddServicesSubmit = async (appointmentData) => {
+    let updatedGroup = null; // Declare at function scope
+    
     try {
       if (modalContext?.mode === 'add-to-existing') {
         // Add services to existing appointment group
-        console.log('Adding services to existing group:', appointmentData);
-        
         const { targetGroup } = modalContext;
-        const updatedGroup = await addServicesToAppointmentGroup(targetGroup.id, appointmentData.services);
+        
+        const groupId = targetGroup?.existingGroupId || targetGroup?.id;
+        if (!groupId) {
+          throw new Error('Target group ID is missing. Cannot add services to undefined group.');
+        }
+        
+        updatedGroup = await addServicesToAppointmentGroup(groupId, appointmentData.services);
         
         // Update existing group in local state (optimistic update)
         setAppointmentGroups(prev => 
@@ -462,10 +479,19 @@ const KanbanPage = () => {
         
         // Add to local state
         setAppointmentGroups([...appointmentGroups, newGroup]);
-        showToast(`Serviços adicionados para ${appointmentData.client_name}`);
+        showToast(`Serviços adicionados para ${appointmentData.client?.name || appointmentData.client_name || 'Cliente'}`);
         
         // Refresh data to ensure consistency
         await loadAppointmentGroups();
+      }
+      
+      // Reopen checkout modal if it was previously open
+      if (modalContext?.wasCheckoutOpen && modalContext?.checkoutGroup) {
+        // Use the updated group instead of the old cached reference
+        const updatedGroupForCheckout = modalContext.mode === 'add-to-existing' ? updatedGroup : modalContext.checkoutGroup;
+        setCheckoutGroup(updatedGroupForCheckout);
+        setCheckoutRefreshTrigger(prev => prev + 1); // Force refresh
+        setShowCheckoutModal(true);
       }
       
       // Clear modal context
@@ -496,7 +522,7 @@ const KanbanPage = () => {
       );
       
       setAppointmentGroups(updatedGroups);
-      showToast(`Pagamento processado para ${checkoutGroup.client_name}!`);
+      showToast(`Pagamento processado para ${getClientDisplayName(checkoutGroup, 'card')}!`);
       
       // Refresh data to ensure consistency
       await loadAppointmentGroups();
@@ -504,6 +530,23 @@ const KanbanPage = () => {
     } catch (error) {
       console.error('Error processing payment:', error);
       showToast(error.message || 'Erro ao processar pagamento', 'error');
+    }
+  };
+
+  // Handle checkout minimization
+  const handleMinimizeCheckout = () => {
+    setCheckoutMinimized(true);
+  };
+
+  // Handle adding groups to checkout (drag & drop)
+  const handleGroupAddToCheckout = (group) => {
+    try {
+      console.log('Adding group to checkout:', group);
+      // TODO: Implement group merging logic
+      showToast(`Agendamento de ${getClientDisplayName(group, 'card')} adicionado ao checkout!`);
+    } catch (error) {
+      console.error('Error adding group to checkout:', error);
+      showToast('Erro ao adicionar agendamento ao checkout', 'error');
     }
   };
 
@@ -606,7 +649,7 @@ const KanbanPage = () => {
         {/* Card Header */}
         <div className="flex items-center justify-between mb-s">
           <Typography variant="small" className="font-semibold text-text-primary truncate">
-            {group.client_name}
+            {getClientDisplayName(group, 'card')}
           </Typography>
           <div className="flex items-center gap-xs">
             <button 
@@ -902,6 +945,15 @@ const KanbanPage = () => {
       <AddServicesModal
         open={showAddServicesModal}
         onClose={() => {
+          // Reopen checkout modal if it was previously open
+          if (modalContext?.wasCheckoutOpen && modalContext?.checkoutGroup) {
+            // Find the most up-to-date group from current state
+            const currentGroup = appointmentGroups.find(g => g.id === modalContext.checkoutGroup.id);
+            setCheckoutGroup(currentGroup || modalContext.checkoutGroup);
+            setCheckoutRefreshTrigger(prev => prev + 1); // Force refresh
+            setShowCheckoutModal(true);
+          }
+          
           setShowAddServicesModal(false);
           setModalContext(null);
         }}
@@ -916,9 +968,15 @@ const KanbanPage = () => {
         onClose={() => {
           setShowCheckoutModal(false);
           setCheckoutGroup(null);
+          setCheckoutMinimized(false);
         }}
         appointmentGroup={checkoutGroup}
         onPaymentComplete={handlePaymentComplete}
+        isMinimized={checkoutMinimized}
+        onMinimize={handleMinimizeCheckout}
+        onGroupAdd={handleGroupAddToCheckout}
+        onAddMoreServices={handleAddServicesToExisting}
+        refreshTrigger={checkoutRefreshTrigger}
       />
 
       {/* Floating Action Menu - Mobile Touch Optimized */}
@@ -929,7 +987,7 @@ const KanbanPage = () => {
             <div className="p-m pb-s flex-shrink-0">
               <div className="text-center">
                 <Typography variant="h6" className="text-text-primary mb-xs truncate">
-                  {selectedCard.client_name || 'Cliente Sem Agendamento'}
+                  {getClientDisplayName(selectedCard, 'card') || 'Cliente Sem Agendamento'}
                 </Typography>
                 <Typography variant="small" className="text-text-secondary">
                   Mover para:

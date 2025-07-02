@@ -5,13 +5,13 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { getUserProfile } from '../services/userService';
-import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar, MapPin, CreditCard } from 'lucide-react';
+import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar, MapPin, CreditCard, ToggleLeft, ToggleRight, ChevronRight } from 'lucide-react';
 import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, logout, setProfile, isProfessional } = useAuthStore();
-  const { isProfessionalMode } = useViewModeStore();
+  const { currentMode, toggleMode } = useViewModeStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,6 +30,16 @@ const ProfilePage = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleModeToggle = () => {
+    if (currentMode === 'professional') {
+      toggleMode(); // This switches to client mode
+      navigate('/dashboard'); // Go to client dashboard
+    } else {
+      toggleMode(); // This switches to professional mode  
+      navigate('/professional/dashboard'); // Go to professional dashboard
+    }
   };
 
   return (
@@ -149,6 +159,34 @@ const ProfilePage = () => {
                 </div>
               </div>
 
+              {/* Mode Toggle for Professional Users */}
+              {isProfessional() && (
+                <div className="space-y-3 mb-8 mt-6">
+                  <div className="bg-white border border-gray-200 rounded-2xl">
+                    <button
+                      onClick={handleModeToggle}
+                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        {currentMode === 'professional' ? (
+                          <ToggleRight size={20} className="text-pink-500" />
+                        ) : (
+                          <ToggleLeft size={20} className="text-gray-500" />
+                        )}
+                        <div className="text-left">
+                          <span className="text-gray-900 font-medium block">
+                            {currentMode === 'professional' ? 'Modo Profissional' : 'Modo Cliente'}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Toque para alternar para {currentMode === 'professional' ? 'modo cliente' : 'modo profissional'}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight size={20} className="text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Menu Options */}
               <div className="space-y-3 mb-8 mt-6">
@@ -182,7 +220,7 @@ const ProfilePage = () => {
         </div>
       </div>
       {/* Show appropriate navigation based on user type and current mode */}
-      {isProfessional() && isProfessionalMode() ? (
+      {isProfessional() && currentMode === 'professional' ? (
         <ProfessionalBottomNavigation />
       ) : (
         <BottomNavigation />

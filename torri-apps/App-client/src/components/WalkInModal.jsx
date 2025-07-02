@@ -30,6 +30,78 @@ import { getProfessionalsForService } from '../services/professionalService';
 import { createWalkInAppointment, addServicesToAppointmentGroup } from '../services/appointmentService';
 import { getClients } from '../services/clientService';
 
+// Brazilian formatting utilities
+const BRAZILIAN_STATES = [
+  { code: 'AC', name: 'Acre' },
+  { code: 'AL', name: 'Alagoas' },
+  { code: 'AP', name: 'Amapá' },
+  { code: 'AM', name: 'Amazonas' },
+  { code: 'BA', name: 'Bahia' },
+  { code: 'CE', name: 'Ceará' },
+  { code: 'DF', name: 'Distrito Federal' },
+  { code: 'ES', name: 'Espírito Santo' },
+  { code: 'GO', name: 'Goiás' },
+  { code: 'MA', name: 'Maranhão' },
+  { code: 'MT', name: 'Mato Grosso' },
+  { code: 'MS', name: 'Mato Grosso do Sul' },
+  { code: 'MG', name: 'Minas Gerais' },
+  { code: 'PA', name: 'Pará' },
+  { code: 'PB', name: 'Paraíba' },
+  { code: 'PR', name: 'Paraná' },
+  { code: 'PE', name: 'Pernambuco' },
+  { code: 'PI', name: 'Piauí' },
+  { code: 'RJ', name: 'Rio de Janeiro' },
+  { code: 'RN', name: 'Rio Grande do Norte' },
+  { code: 'RS', name: 'Rio Grande do Sul' },
+  { code: 'RO', name: 'Rondônia' },
+  { code: 'RR', name: 'Roraima' },
+  { code: 'SC', name: 'Santa Catarina' },
+  { code: 'SP', name: 'São Paulo' },
+  { code: 'SE', name: 'Sergipe' },
+  { code: 'TO', name: 'Tocantins' }
+];
+
+const formatCpf = (cpf) => {
+  if (!cpf) return '';
+  const numbers = cpf.replace(/\D/g, '');
+  if (numbers.length <= 11) {
+    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+  return numbers.slice(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
+const formatCep = (cep) => {
+  if (!cep) return '';
+  const numbers = cep.replace(/\D/g, '');
+  if (numbers.length <= 8) {
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  }
+  return numbers.slice(0, 8).replace(/(\d{5})(\d{3})/, '$1-$2');
+};
+
+const lookupCep = async (cep) => {
+  const cleanCep = cep.replace(/\D/g, '');
+  if (cleanCep.length !== 8) return null;
+  
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+    const data = await response.json();
+    
+    if (data.erro) return null;
+    
+    return {
+      address_street: data.logradouro || '',
+      address_neighborhood: data.bairro || '',
+      address_city: data.localidade || '',
+      address_state: data.uf || '',
+      address_complement: data.complemento || ''
+    };
+  } catch (error) {
+    console.error('CEP lookup error:', error);
+    return null;
+  }
+};
+
 const WalkInModal = ({ 
   isOpen, 
   onClose, 
@@ -38,12 +110,21 @@ const WalkInModal = ({
   modalContext 
 }) => {
   // State management
-  const [step, setStep] = useState(1); // 1: Client, 2: Services, 3: Professional, 4: Confirm
+  const [step, setStep] = useState(1); // 1: Client, 2: Services, 3: Professional
   const [clientData, setClientData] = useState({
     id: null,
     name: '',
+    nickname: '',
     phone: '',
     email: '',
+    cpf: '',
+    address_cep: '',
+    address_street: '',
+    address_number: '',
+    address_complement: '',
+    address_neighborhood: '',
+    address_city: '',
+    address_state: '',
     isNewClient: true
   });
   const [clientSearchQuery, setClientSearchQuery] = useState('');
@@ -68,6 +149,7 @@ const WalkInModal = ({
   // UI state
   const [serviceSearchQuery, setServiceSearchQuery] = useState('');
   const [showClientSearch, setShowClientSearch] = useState(false);
+  const [showMoreFields, setShowMoreFields] = useState(false);
   
   // Refs
   const modalRef = useRef(null);
@@ -236,19 +318,40 @@ const WalkInModal = ({
     }
   };
 
-  // Search for existing clients
+  // Search for existing clients - optimized with 3 char minimum
   const handleClientSearch = async (query) => {
     setClientSearchQuery(query);
     
-    if (query.length < 2) {
+    if (query.length < 3) {
       setClientSearchResults([]);
       return;
     }
 
     try {
       setSearchingClients(true);
-      const response = await getClients({ search: query, limit: 10 });
-      setClientSearchResults(response.items || []);
+      const response = await getClients({ search: query, limit: 10000 });
+      const allClients = response.items || [];
+      
+      // WORKAROUND: Backend search is not working, filter client-side
+      if (allClients.length > 0) {
+        const searchLower = query.toLowerCase();
+        const filtered = allClients.filter(client => {
+          const name = (client.full_name || client.name || '').toLowerCase();
+          const nickname = (client.nickname || '').toLowerCase();
+          const email = (client.email || '').toLowerCase();
+          const phone = (client.phone_number || client.phone || '').replace(/\D/g, '');
+          const searchDigits = query.replace(/\D/g, '');
+          
+          return name.includes(searchLower) || 
+                 nickname.includes(searchLower) ||
+                 email.includes(searchLower) ||
+                 (searchDigits && phone.includes(searchDigits));
+        });
+        
+        setClientSearchResults(filtered.slice(0, 20)); // Show top 20 matches
+      } else {
+        setClientSearchResults([]);
+      }
     } catch (err) {
       console.error('Error searching clients:', err);
       setClientSearchResults([]);
@@ -276,13 +379,43 @@ const WalkInModal = ({
     if (showClientSearch) {
       // Switch to new client mode
       setShowClientSearch(false);
-      setClientData({ id: null, name: '', phone: '', email: '', isNewClient: true });
+      setClientData({ 
+        id: null, 
+        name: '', 
+        nickname: '',
+        phone: '', 
+        email: '', 
+        cpf: '',
+        address_cep: '',
+        address_street: '',
+        address_number: '',
+        address_complement: '',
+        address_neighborhood: '',
+        address_city: '',
+        address_state: '',
+        isNewClient: true 
+      });
       setClientSearchQuery('');
       setClientSearchResults([]);
     } else {
       // Switch to existing client search mode
       setShowClientSearch(true);
-      setClientData({ id: null, name: '', phone: '', email: '', isNewClient: false });
+      setClientData({ 
+        id: null, 
+        name: '', 
+        nickname: '',
+        phone: '', 
+        email: '', 
+        cpf: '',
+        address_cep: '',
+        address_street: '',
+        address_number: '',
+        address_complement: '',
+        address_neighborhood: '',
+        address_city: '',
+        address_state: '',
+        isNewClient: false 
+      });
     }
   };
   
@@ -321,8 +454,17 @@ const WalkInModal = ({
         const walkInData = {
           client: clientData.isNewClient ? {
             name: clientData.name.trim(),
+            nickname: clientData.nickname?.trim() || null,
             phone: clientData.phone || null,
-            email: clientData.email || null
+            email: clientData.email || null,
+            cpf: clientData.cpf || null,
+            address_cep: clientData.address_cep || null,
+            address_street: clientData.address_street?.trim() || null,
+            address_number: clientData.address_number?.trim() || null,
+            address_complement: clientData.address_complement?.trim() || null,
+            address_neighborhood: clientData.address_neighborhood?.trim() || null,
+            address_city: clientData.address_city?.trim() || null,
+            address_state: clientData.address_state || null
           } : {
             id: clientData.id
           },
@@ -348,7 +490,22 @@ const WalkInModal = ({
   // Reset form
   const resetForm = () => {
     setStep(1);
-    setClientData({ id: null, name: '', phone: '', email: '', isNewClient: true });
+    setClientData({ 
+      id: null, 
+      name: '', 
+      nickname: '',
+      phone: '', 
+      email: '', 
+      cpf: '',
+      address_cep: '',
+      address_street: '',
+      address_number: '',
+      address_complement: '',
+      address_neighborhood: '',
+      address_city: '',
+      address_state: '',
+      isNewClient: true 
+    });
     setSelectedServices([]);
     setProfessional(null);
     setServiceAssignments({});
@@ -357,6 +514,7 @@ const WalkInModal = ({
     setClientSearchQuery('');
     setClientSearchResults([]);
     setShowClientSearch(false);
+    setShowMoreFields(false);
     setError(null);
   };
   
@@ -378,6 +536,21 @@ const WalkInModal = ({
   // Check if all services have been assigned to professionals
   const areAllServicesAssigned = () => {
     return selectedServices.every(service => serviceAssignments[service.id]);
+  };
+
+  // Handle CEP lookup
+  const handleCepLookup = async (cep) => {
+    const addressData = await lookupCep(cep);
+    if (addressData) {
+      setClientData(prev => ({
+        ...prev,
+        address_street: addressData.address_street || prev.address_street,
+        address_neighborhood: addressData.address_neighborhood || prev.address_neighborhood,
+        address_city: addressData.address_city || prev.address_city,
+        address_state: addressData.address_state || prev.address_state,
+        address_complement: addressData.address_complement || prev.address_complement
+      }));
+    }
   };
   
   // Render step content
@@ -410,13 +583,13 @@ const WalkInModal = ({
                     value={clientSearchQuery}
                     onChange={(e) => handleClientSearch(e.target.value)}
                     className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                    placeholder="Digite nome, telefone ou email..."
+                    placeholder="Digite pelo menos 3 caracteres..."
                     inputMode="search"
                   />
                 </div>
 
                 {/* Search results */}
-                {clientSearchQuery.length >= 2 && (
+                {clientSearchQuery.length >= 3 && (
                   <div className="max-h-64 overflow-y-auto">
                     {searchingClients ? (
                       <div className="text-center py-4">
@@ -489,53 +662,231 @@ const WalkInModal = ({
             ) : (
               /* New client creation mode */
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Nome do Cliente *
-                  </label>
-                  <input
-                    ref={firstInputRef}
-                    type="text"
-                    value={clientData.name}
-                    onChange={(e) => setClientData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                    placeholder="Digite o nome do cliente"
-                    required
-                    autoComplete="name"
-                  />
+                {/* Essential Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome do Cliente *
+                    </label>
+                    <input
+                      ref={firstInputRef}
+                      type="text"
+                      value={clientData.name}
+                      onChange={(e) => setClientData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                      placeholder="Digite o nome do cliente"
+                      required
+                      autoComplete="name"
+                    />
+                  </div>
+                  
+                  {/* Nickname and Phone in row for space efficiency */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Apelido
+                      </label>
+                      <input
+                        type="text"
+                        value={clientData.nickname}
+                        onChange={(e) => setClientData(prev => ({ ...prev, nickname: e.target.value }))}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                        placeholder="Apelido (opcional)"
+                        autoComplete="nickname"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Phone size={16} className="inline mr-1" />
+                        Telefone
+                      </label>
+                      <input
+                        type="tel"
+                        value={clientData.phone}
+                        onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                        placeholder="(11) 99999-9999"
+                        autoComplete="tel"
+                        inputMode="tel"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Mail size={16} className="inline mr-1" />
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={clientData.email}
+                      onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                      placeholder="cliente@exemplo.com"
+                      autoComplete="email"
+                      inputMode="email"
+                    />
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    <Phone size={16} className="inline mr-2" />
-                    Telefone
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientData.phone}
-                    onChange={(e) => setClientData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                    placeholder="(11) 99999-9999"
-                    autoComplete="tel"
-                    inputMode="tel"
-                  />
+
+                {/* More Fields Toggle */}
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log('🔄 Toggle clicked, showMoreFields was:', showMoreFields);
+                      setShowMoreFields(!showMoreFields);
+                    }}
+                    className="text-pink-600 hover:text-pink-700 font-medium text-sm py-2 px-4 rounded-lg hover:bg-pink-50 transition-colors touch-manipulation"
+                  >
+                    {showMoreFields ? 'Ocultar campos opcionais' : 'Adicionar CPF e endereço'}
+                    <span className="ml-1">{showMoreFields ? '▲' : '▼'}</span>
+                  </button>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    <Mail size={16} className="inline mr-2" />
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={clientData.email}
-                    onChange={(e) => setClientData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                    placeholder="cliente@exemplo.com"
-                    autoComplete="email"
-                    inputMode="email"
-                  />
-                </div>
+
+                {/* Additional Fields - Collapsible */}
+                {showMoreFields && (
+                  <div className="space-y-4 pt-2 border-t border-gray-100">
+                    {/* CPF */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        CPF
+                      </label>
+                      <input
+                        type="text"
+                        value={clientData.cpf}
+                        onChange={(e) => setClientData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                        inputMode="numeric"
+                      />
+                    </div>
+
+                    {/* Address Section Header */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <div className="h-px bg-gray-200 flex-1"></div>
+                      <span className="text-xs font-medium text-gray-500 px-2">ENDEREÇO</span>
+                      <div className="h-px bg-gray-200 flex-1"></div>
+                    </div>
+
+                    {/* CEP with auto-fill */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        CEP
+                      </label>
+                      <input
+                        type="text"
+                        value={clientData.address_cep}
+                        onChange={(e) => setClientData(prev => ({ ...prev, address_cep: formatCep(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value.replace(/\D/g, '').length === 8) {
+                            handleCepLookup(e.target.value);
+                          }
+                        }}
+                        className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                        placeholder="00000-000"
+                        maxLength={9}
+                        inputMode="numeric"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Será preenchido automaticamente</p>
+                    </div>
+
+                    {/* Street and Number in compact row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Rua
+                        </label>
+                        <input
+                          type="text"
+                          value={clientData.address_street}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_street: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                          placeholder="Nome da rua"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Nº
+                        </label>
+                        <input
+                          type="text"
+                          value={clientData.address_number}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_number: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                          placeholder="123"
+                          inputMode="numeric"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Complement and Neighborhood */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Complemento
+                        </label>
+                        <input
+                          type="text"
+                          value={clientData.address_complement}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_complement: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                          placeholder="Apto, Bloco, etc."
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Bairro
+                        </label>
+                        <input
+                          type="text"
+                          value={clientData.address_neighborhood}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_neighborhood: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                          placeholder="Nome do bairro"
+                        />
+                      </div>
+                    </div>
+
+                    {/* City and State */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Cidade
+                        </label>
+                        <input
+                          type="text"
+                          value={clientData.address_city}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_city: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                          placeholder="Cidade"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Estado
+                        </label>
+                        <select
+                          value={clientData.address_state}
+                          onChange={(e) => setClientData(prev => ({ ...prev, address_state: e.target.value }))}
+                          className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors bg-white"
+                        >
+                          <option value="">UF</option>
+                          {BRAZILIAN_STATES.map(state => (
+                            <option key={state.code} value={state.code}>
+                              {state.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -760,71 +1111,6 @@ const WalkInModal = ({
           </div>
         );
         
-      case 4:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">Confirmar Walk-in</h3>
-            
-            {/* Summary */}
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
-                  <User size={16} className="mr-2" />
-                  Cliente
-                </h4>
-                <p className="font-medium">{clientData.name}</p>
-                {clientData.phone && <p className="text-sm text-gray-600 mt-1">{clientData.phone}</p>}
-                {clientData.email && <p className="text-sm text-gray-600">{clientData.email}</p>}
-              </div>
-              
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <h4 className="font-medium text-gray-800 mb-3 flex items-center">
-                  <Scissors size={16} className="mr-2" />
-                  Serviços e Profissionais
-                </h4>
-                <div className="space-y-3">
-                  {selectedServices.map((service) => {
-                    const assignedProfessionalId = serviceAssignments[service.id];
-                    const assignedProfessional = professionals.find(p => p.id === assignedProfessionalId);
-                    
-                    return (
-                      <div key={service.id} className="bg-white rounded-lg p-3 border">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{service.name}</p>
-                            <p className="text-xs text-gray-500">{formatDuration(service.duration_minutes)}</p>
-                          </div>
-                          <span className="font-semibold text-green-600">{formatPrice(service.price)}</span>
-                        </div>
-                        {assignedProfessional && (
-                          <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
-                            <div className="w-6 h-6 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full flex items-center justify-center">
-                              <User size={12} className="text-pink-600" />
-                            </div>
-                            <span className="text-xs font-medium text-gray-700">{assignedProfessional.full_name}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              
-              <div className="p-4 bg-gradient-to-r from-pink-50 to-pink-100 rounded-xl border border-pink-200">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="font-semibold text-pink-800">Total</span>
-                    <p className="text-sm text-pink-600">{formatDuration(estimatedDuration)}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-pink-800">{formatPrice(estimatedPrice)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
         
       default:
         return null;
@@ -844,7 +1130,7 @@ const WalkInModal = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm">
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-gray-900">Adicionar Serviços</h2>
-            <p className="text-sm text-gray-500">Passo {step} de 4</p>
+            <p className="text-sm text-gray-500">Passo {step} de 3</p>
           </div>
           <button
             onClick={onClose}
@@ -860,14 +1146,13 @@ const WalkInModal = ({
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
               className="bg-pink-500 h-3 rounded-full transition-all duration-300 shadow-sm"
-              style={{ width: `${(step / 4) * 100}%` }}
+              style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
             <span className={step >= 1 ? 'text-pink-600 font-medium' : ''}>Cliente</span>
             <span className={step >= 2 ? 'text-pink-600 font-medium' : ''}>Serviços</span>
             <span className={step >= 3 ? 'text-pink-600 font-medium' : ''}>Profissional</span>
-            <span className={step >= 4 ? 'text-pink-600 font-medium' : ''}>Confirmar</span>
           </div>
         </div>
         
@@ -894,7 +1179,7 @@ const WalkInModal = ({
             
             <button
               onClick={() => {
-                if (step === 4) {
+                if (step === 3) {
                   handleSubmit();
                 } else {
                   setStep(step + 1);
@@ -912,7 +1197,7 @@ const WalkInModal = ({
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Carregando...
                 </div>
-              ) : step === 4 ? 'Adicionar Serviços' : (
+              ) : step === 3 ? 'Adicionar Serviços' : (
                 step === 2 && selectedServices.length > 0 ? (
                   <div className="flex items-center justify-center gap-2">
                     <ShoppingCart size={16} />

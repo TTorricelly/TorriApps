@@ -24,7 +24,7 @@ export const createClient = async (clientData) => {
  */
 export const getClients = async () => {
   try {
-    const response = await apiClient.get('/api/v1/users/?role=CLIENTE');
+    const response = await apiClient.get('/api/v1/users/?role=CLIENTE&limit=10000');
     return response.data;
   } catch (error) {
     console.error("Error fetching clients:", error.response?.data || error.message);
@@ -41,7 +41,7 @@ export const getClients = async () => {
  */
 export const searchClients = async (searchTerm) => {
   try {
-    const response = await apiClient.get(`/api/v1/users/?role=CLIENTE&search=${encodeURIComponent(searchTerm)}`);
+    const response = await apiClient.get(`/api/v1/users/?role=CLIENTE&search=${encodeURIComponent(searchTerm)}&limit=10000`);
     return response.data;
   } catch (error) {
     console.error("Error searching clients:", error.response?.data || error.message);

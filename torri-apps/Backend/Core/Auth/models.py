@@ -21,6 +21,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=True)  # Match database nullable=True
     role = Column(SAEnum(UserRole), nullable=False)
     full_name = Column(String(255), nullable=True)  # Match database VARCHAR(255)
+    nickname = Column(String(255), nullable=True)  # Match database VARCHAR(255)
     phone_number = Column(String(50), nullable=True)  # Match database VARCHAR(50)
     date_of_birth = Column(Date, nullable=True)
     hair_type = Column(SAEnum(HairType), nullable=True)

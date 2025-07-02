@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getClientDisplayName, clientNameMatchesSearch } from '../../utils/clientUtils';
 import {
   Card,
   CardHeader,
@@ -37,7 +38,7 @@ function ClientsPage() { // Renamed component and removed default export from he
   // const [allServices, setAllServices] = useState([]); // Removed
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, client: null }); // Added deleteDialog state
 
@@ -49,10 +50,39 @@ function ClientsPage() { // Renamed component and removed default export from he
     // ]);
   }, []);
 
+
+  // Reload data when navigating back to this page (more reliable than focus)
+  useEffect(() => {
+    let wasHidden = false;
+    
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wasHidden = true;
+      } else if (wasHidden) {
+        // Only reload if page was actually hidden and then became visible again
+        console.log('🔄 Page became visible after being hidden - reloading clients');
+        loadClients();
+        wasHidden = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const loadClients = async () => {
+    // Prevent duplicate calls
+    if (isLoading) {
+      console.log('⏳ Already loading clients, skipping duplicate call');
+      return;
+    }
+    
     try {
       setIsLoading(true);
+      console.log('🔍 Loading clients from API...');
       const data = await clientsApi.getAllClients();
+      console.log('📋 Received clients data:', data);
+      console.log(`📊 Total clients found: ${data?.length || 0}`);
       setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -94,36 +124,43 @@ function ClientsPage() { // Renamed component and removed default export from he
     }
   };
 
+  // Optimized search function with memoization
+  const searchClients = useCallback((clientsList, query) => {
+    // If query is empty or less than 3 chars, show no clients
+    if (!query || query.trim().length < 3) return [];
+    
+    const searchLower = query.toLowerCase();
+    const searchDigits = query.replace(/\D/g, '');
+    
+    return clientsList.filter(client => {
+      // Name search (using utility function)
+      if (clientNameMatchesSearch(client, query)) return true;
+      
+      // Email search
+      if (client.email?.toLowerCase().includes(searchLower)) return true;
+      
+      // CPF search (digits only)
+      if (searchDigits && client.cpf?.replace(/\D/g, '').includes(searchDigits)) return true;
+      
+      return false;
+    });
+  }, []);
+
   // Filter clients based on search query and status
   const filteredClients = useMemo(() => {
     let filtered = clients;
 
-    // Filter by search query (name, email, or CPF)
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(client => // Changed variable name
-        client.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.cpf?.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''))
-      );
-    }
-
-    // Filter by status
+    // Apply status filter first (smaller dataset)
     if (statusFilter) {
       const isActive = statusFilter === 'active';
-      filtered = filtered.filter(client => client.is_active === isActive); // Changed variable name
+      filtered = filtered.filter(client => client.is_active === isActive);
     }
 
-    // Filter by services (if professional has any of the selected services)
-    // if (serviceFilter.length > 0) { // Removed service filter logic
-    //   filtered = filtered.filter(professional => {
-    //     // This would need to be implemented based on how services are associated with professionals
-    //     // For now, we'll skip this filter until the backend provides this data
-    //     return true;
-    //   });
-    // }
+    // Apply search filter on the already status-filtered results
+    filtered = searchClients(filtered, searchQuery);
 
     return filtered;
-  }, [clients, searchQuery, statusFilter]); // Updated dependencies
+  }, [clients, searchQuery, statusFilter, searchClients]);
 
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
@@ -203,13 +240,29 @@ function ClientsPage() { // Renamed component and removed default export from he
                 Clientes
               </Typography>
             </div>
-            <Button
-              className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
-              onClick={() => navigate('/clients/create')}
-            >
-              <PlusIcon className="h-4 w-4" />
-              Novo Cliente
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outlined"
+                onClick={loadClients}
+                disabled={isLoading}
+                className="border-bg-tertiary text-text-secondary hover:bg-bg-tertiary"
+                title="Atualizar lista de clientes"
+              >
+                {isLoading ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  '🔄'
+                )}
+              </Button>
+              
+              <Button
+                className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
+                onClick={() => navigate('/clients/create')}
+              >
+                <PlusIcon className="h-4 w-4" />
+                Novo Cliente
+              </Button>
+            </div>
           </div>
 
           {/* Filters Section */}
@@ -261,13 +314,11 @@ function ClientsPage() { // Renamed component and removed default export from he
         <CardBody className="bg-bg-secondary">
           {filteredClients.length === 0 ? ( // Use filteredClients
             <div className="text-center py-12">
-              <Typography className="text-text-secondary mb-4">
-                {searchQuery || statusFilter
-                  ? 'Nenhum cliente encontrado com os filtros aplicados' // Updated message
-                  : 'Nenhum cliente cadastrado ainda' // Updated message
-                }
-              </Typography>
-              {/* Removed "Criar Primeiro Profissional" button as there's no "Novo Cliente" button */}
+              {searchQuery && (
+                <Typography className="text-text-secondary mb-4">
+                  Nenhum cliente encontrado com os filtros aplicados
+                </Typography>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -312,7 +363,7 @@ function ClientsPage() { // Renamed component and removed default export from he
                       </td>
                       <td className="p-4">
                         <Typography className="text-text-primary font-medium">
-                          {client.full_name || 'Nome não informado'} {/* Use client */}
+                          {getClientDisplayName(client, 'selection') || 'Nome não informado'} {/* Use client */}
                         </Typography>
                       </td>
                       <td className="p-4">

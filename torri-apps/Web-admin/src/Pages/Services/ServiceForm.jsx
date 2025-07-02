@@ -371,6 +371,7 @@ export default function ServiceForm() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    service_sku: '',
     description: '',
     duration_minutes: '',
     commission_percentage: '',
@@ -531,6 +532,7 @@ export default function ServiceForm() {
       
       const loadedFormData = {
         name: serviceData.name || '',
+        service_sku: serviceData.service_sku || '',
         description: serviceData.description || '',
         duration_minutes: serviceData.duration_minutes?.toString() || '',
         commission_percentage: serviceData.commission_percentage?.toString() || '',
@@ -773,6 +775,7 @@ export default function ServiceForm() {
       
       const serviceData = {
         name: formData.name.trim(),
+        service_sku: formData.service_sku,
         description: formData.description,
         duration_minutes: parseInt(formData.duration_minutes),
         commission_percentage: parseFloat(formData.commission_percentage),
@@ -998,6 +1001,26 @@ export default function ServiceForm() {
                       {errors.name && (
                         <Typography className="text-status-error text-sm mt-1">
                           {errors.name}
+                        </Typography>
+                      )}
+                    </div>
+
+                    {/* Service SKU */}
+                    <div>
+                      <Input
+                        name="service_sku"
+                        label="SKU do Serviço"
+                        placeholder="Digite o SKU do serviço"
+                        value={formData.service_sku}
+                        onChange={(e) => handleInputChange('service_sku', e.target.value)}
+                        error={!!errors.service_sku}
+                        className="bg-bg-primary border-bg-tertiary text-text-primary"
+                        labelProps={{ className: "text-text-secondary" }}
+                        containerProps={{ className: "text-text-primary" }}
+                      />
+                      {errors.service_sku && (
+                        <Typography className="text-status-error text-sm mt-1">
+                          {errors.service_sku}
                         </Typography>
                       )}
                     </div>

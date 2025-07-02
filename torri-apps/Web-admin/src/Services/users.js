@@ -7,7 +7,7 @@ export const usersApi = {
     const endpoint = buildApiEndpoint('users/');
     
     return withApiErrorHandling(
-      () => api.get(endpoint),
+      () => api.get(endpoint, { params: { limit: 10000 } }),
       {
         defaultValue: [],
         transformData: (data) => {

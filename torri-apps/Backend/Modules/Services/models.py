@@ -41,6 +41,7 @@ class Service(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
     name = Column(String(150), nullable=False)  # Will enforce uniqueness at application level if needed
+    service_sku = Column(String(10), nullable=True, unique=True)
     description = Column(Text, nullable=True)
     duration_minutes = Column(Integer, nullable=False)
     price = Column(Numeric(10, 2), nullable=False)

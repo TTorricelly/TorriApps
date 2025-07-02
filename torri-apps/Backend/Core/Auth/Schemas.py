@@ -9,6 +9,7 @@ from Core.Utils.brazilian_validators import cpf_validator, cep_validator, state_
 class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr | None = None
     full_name: str | None = None
+    nickname: Optional[str] = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
     hair_type: Optional[HairType] = None
@@ -46,6 +47,7 @@ class UserCreate(UserBase): # Renamed from UserTenantCreate
 class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     email: EmailStr | None = None
     full_name: str | None = None
+    nickname: Optional[str] = None
     # Password update should be a separate endpoint/process for security best practices.
     # password: str | None = None
     role: UserRole | None = None
@@ -80,14 +82,37 @@ class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     def validate_state(cls, v):
         return state_validator(v)
 
-class User(UserBase): # Renamed from UserTenant
+# Read-only User schema without strict validators for existing data
+class UserRead(BaseModel):
     id: UUID
+    email: EmailStr | None = None
+    full_name: str | None = None
+    nickname: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    hair_type: Optional[HairType] = None
+    gender: Optional[Gender] = None
     role: UserRole
     is_active: bool
-    photo_path: Optional[str] = None # Added field
+    photo_path: Optional[str] = None
+    
+    # CPF field for Brazilian clients
+    cpf: Optional[str] = None
+    
+    # Address fields for clients
+    address_street: Optional[str] = None
+    address_number: Optional[str] = None
+    address_complement: Optional[str] = None
+    address_neighborhood: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_cep: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+# Alias for backward compatibility - points to the read schema
+User = UserRead
 
 # Schemas for Token Handling
 class Token(BaseModel):
@@ -107,6 +132,7 @@ class UserInfo(BaseModel): # This schema might still be useful elsewhere
     id: UUID
     email: str | None = None
     full_name: str | None = None
+    nickname: Optional[str] = None
     role: str
     phone_number: Optional[str] = None # Added field
 
@@ -145,6 +171,7 @@ class LoginRequest(BaseModel):
 # Public Registration Request Schema
 class PublicRegistrationRequest(BaseModel):
     full_name: str
+    nickname: Optional[str] = None
     email: EmailStr
     phone_number: Optional[str] = None
     password: str

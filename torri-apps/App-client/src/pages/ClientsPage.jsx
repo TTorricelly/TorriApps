@@ -28,16 +28,19 @@ const ClientsPage = () => {
   const canManageClients = hasRole(['GESTOR', 'ATENDENTE'])
   const canDeleteClients = hasRole(['GESTOR'])
 
-  // Debounced search function
-  const debouncedSearch = useMemo(() => {
-    const timeoutRef = { current: null }
+  // Optimized search function - no debounce, 3 char minimum
+  const performSearch = useMemo(() => {
     return (term) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      timeoutRef.current = setTimeout(() => {
+      // Only search if 3+ characters (never show all)
+      if (term.trim().length >= 3) {
         loadClients(true, term)
-      }, 300)
+      } else if (term.trim().length === 0) {
+        // Clear results when search is empty
+        setClients([])
+        setTotalClients(0)
+        setPage(0)
+        setHasMore(false)
+      }
     }
   }, [])
 
@@ -75,22 +78,30 @@ const ClientsPage = () => {
     }
   }, [page, searchTerm])
 
-  // Initial load
-  useEffect(() => {
-    loadClients(true)
-  }, [])
+  // No initial load - start with empty state like Web-admin
+  // useEffect(() => {
+  //   loadClients(true)
+  // }, [])
 
   // Handle search
   const handleSearch = (term) => {
     setSearchTerm(term)
     setPage(0)
-    debouncedSearch(term)
+    performSearch(term)
   }
 
   // Handle refresh
   const handleRefresh = () => {
     setPage(0)
-    loadClients(true)
+    // Only refresh if there's a search term (3+ chars)
+    if (searchTerm.trim().length >= 3) {
+      loadClients(true)
+    } else {
+      // Clear everything if no valid search
+      setClients([])
+      setTotalClients(0)
+      setHasMore(false)
+    }
   }
 
   // Load more (infinite scroll)
@@ -174,30 +185,53 @@ const ClientsPage = () => {
   )
 
   // Empty state
-  const EmptyState = () => (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-        <Users size={32} className="text-gray-400" />
+  const EmptyState = () => {
+    // If there's a search term, show "not found" message
+    if (searchTerm.trim().length >= 3) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Users size={32} className="text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Nenhum cliente encontrado
+          </h3>
+          <p className="text-gray-600 text-center mb-6">
+            Nenhum cliente encontrado para "{searchTerm}"
+          </p>
+          <p className="text-gray-500 text-center text-sm">
+            Tente buscar por nome, email ou telefone
+          </p>
+        </div>
+      )
+    }
+    
+    // Default empty state - search prompt
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-4">
+          <Search size={32} className="text-pink-500" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Buscar Clientes
+        </h3>
+        <p className="text-gray-600 text-center mb-6">
+          Digite pelo menos 3 caracteres no campo de busca para encontrar clientes
+        </p>
+        <p className="text-gray-500 text-center text-sm">
+          Busque por nome, email ou telefone
+        </p>
+        {canManageClients && (
+          <button
+            onClick={() => navigate('/professional/clients/new')}
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold mt-4"
+          >
+            Adicionar Novo Cliente
+          </button>
+        )}
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-      </h3>
-      <p className="text-gray-600 text-center mb-6">
-        {searchTerm 
-          ? 'Tente ajustar sua pesquisa ou limpar os filtros'
-          : 'Comece adicionando seu primeiro cliente'
-        }
-      </p>
-      {canManageClients && !searchTerm && (
-        <button
-          onClick={() => navigate('/professional/clients/new')}
-          className="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold"
-        >
-          Adicionar Cliente
-        </button>
-      )}
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -238,7 +272,7 @@ const ClientsPage = () => {
           <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por nome ou email..."
+            placeholder="Digite pelo menos 3 caracteres para buscar..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl border-0 focus:ring-2 focus:ring-pink-500 focus:bg-white transition-colors"

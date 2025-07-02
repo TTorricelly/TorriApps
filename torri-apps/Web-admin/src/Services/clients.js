@@ -7,12 +7,17 @@ export const clientsApi = {
     const endpoint = buildApiEndpoint('users/'); // Add trailing slash to match FastAPI route
     
     return withApiErrorHandling(
-      () => api.get(endpoint),
+      () => api.get(endpoint, { 
+        params: { 
+          role: 'CLIENTE',  // Filter by CLIENTE role on backend
+          limit: 10000      // High limit to get all clients
+        }
+      }),
       {
         defaultValue: [],
         transformData: (data) => {
           const users = Array.isArray(data) ? data : [];
-          // Filter to only return clients
+          // Backend already filters by role, but keep as backup
           return users.filter(user => user.role === 'CLIENTE');
         }
       }

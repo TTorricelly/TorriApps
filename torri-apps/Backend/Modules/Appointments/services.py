@@ -54,6 +54,7 @@ from .kanban_service import (
     create_walk_in_appointment_group,
     create_walk_in_appointment_group_with_assignments,
     add_services_to_appointment_group,
+    remove_service_from_appointment_group,
     create_merged_checkout_session,
     process_appointment_payment
 )
@@ -93,6 +94,7 @@ __all__ = [
     'create_walk_in_appointment_group',
     'create_walk_in_appointment_group_with_assignments',
     'add_services_to_appointment_group',
+    'remove_service_from_appointment_group',
     'create_merged_checkout_session',
     'process_appointment_payment'
 ]

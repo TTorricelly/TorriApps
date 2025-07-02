@@ -29,21 +29,17 @@ export const getClients = async (options = {}) => {
     params.append('search', search.trim())
   }
   
-  console.log('[ClientService] Getting clients:', {
-    endpoint: `${endpoint}?${params.toString()}`,
-    options
-  })
-  
   return withApiErrorHandling(
     () => apiClient.get(`${endpoint}?${params.toString()}`),
     {
       defaultValue: { items: [], total: 0, has_more: false },
       transformData: (data) => {
-        console.log('[ClientService] Got clients:', data)
+        const items = data.items || data || []
+        
         return {
-          items: data.items || data || [],
-          total: data.total || (data.items ? data.items.length : 0),
-          has_more: data.has_more || false
+          items: items,
+          total: data.total || items.length,
+          has_more: data.has_more || (items.length === limit)
         }
       },
       logErrors: true
@@ -59,17 +55,12 @@ export const getClients = async (options = {}) => {
 export const getClientById = async (clientId) => {
   const endpoint = buildApiEndpoint(`users/${clientId}`)
   
-  console.log('[ClientService] Getting client by ID:', {
-    endpoint,
-    clientId
-  })
   
   return withApiErrorHandling(
     () => apiClient.get(endpoint),
     {
       defaultValue: null,
       transformData: (data) => {
-        console.log('[ClientService] Got client:', data)
         return data
       },
       logErrors: true
@@ -86,18 +77,12 @@ export const getClientById = async (clientId) => {
 export const updateClient = async (clientId, updateData) => {
   const endpoint = buildApiEndpoint(`users/${clientId}`)
   
-  console.log('[ClientService] Updating client:', {
-    endpoint,
-    clientId,
-    updateData
-  })
   
   return withApiErrorHandling(
     () => apiClient.put(endpoint, updateData),
     {
       defaultValue: null,
       transformData: (data) => {
-        console.log('[ClientService] Updated client:', data)
         return data
       },
       logErrors: true
@@ -119,17 +104,12 @@ export const createClient = async (clientData) => {
     role: 'CLIENTE'
   }
   
-  console.log('[ClientService] Creating client:', {
-    endpoint,
-    dataWithRole
-  })
   
   return withApiErrorHandling(
     () => apiClient.post(endpoint, dataWithRole),
     {
       defaultValue: null,
       transformData: (data) => {
-        console.log('[ClientService] Created client:', data)
         return data
       },
       logErrors: true
@@ -145,17 +125,12 @@ export const createClient = async (clientData) => {
 export const deleteClient = async (clientId) => {
   const endpoint = buildApiEndpoint(`users/${clientId}`)
   
-  console.log('[ClientService] Deleting client:', {
-    endpoint,
-    clientId
-  })
   
   return withApiErrorHandling(
     () => apiClient.delete(endpoint),
     {
       defaultValue: false,
       transformData: () => {
-        console.log('[ClientService] Deleted client successfully')
         return true
       },
       logErrors: true
@@ -175,17 +150,12 @@ export const getClientAppointments = async (clientId) => {
     include_past: 'true'
   })
   
-  console.log('[ClientService] Getting client appointments:', {
-    endpoint: `${endpoint}?${params.toString()}`,
-    clientId
-  })
   
   return withApiErrorHandling(
     () => apiClient.get(`${endpoint}?${params.toString()}`),
     {
       defaultValue: [],
       transformData: (data) => {
-        console.log('[ClientService] Got client appointments:', data)
         return data.items || data || []
       },
       logErrors: true

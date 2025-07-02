@@ -9,6 +9,7 @@ import { servicesApi } from '../../Services/services';
 import { professionalsApi } from '../../Services/professionals'; // Added import
 import { createClient, getClients, searchClients } from '../../Services/clientsApi';
 import SearchableServiceSelect from '../../Components/SearchableServiceSelect';
+import { getClientDisplayName, clientNameMatchesSearch } from '../../utils/clientUtils';
 
 // Helper function to format date as YYYY-MM-DD in local time
 const formatDateToYYYYMMDD = (date) => {
@@ -471,7 +472,7 @@ const DailySchedulePage = () => {
     setLoadingClients(true);
     try {
       const clients = await getClients();
-      setAvailableClients(clients);
+      setAvailableClients(clients || []);
     } catch (err) {
       console.error("Error fetching clients:", err);
       setAvailableClients([]);
@@ -481,7 +482,8 @@ const DailySchedulePage = () => {
   }, []);
 
   const handleClientSearch = useCallback(async (searchTerm) => {
-    if (!searchTerm || searchTerm.length < 2) {
+    // Only search if 3+ characters
+    if (!searchTerm || searchTerm.length < 3) {
       setClientSearchResults([]);
       return;
     }
@@ -489,17 +491,46 @@ const DailySchedulePage = () => {
     setLoadingClients(true);
     try {
       const results = await searchClients(searchTerm);
-      setClientSearchResults(results || []);
+      
+      // WORKAROUND: Backend search is not working, filter client-side
+      if (results && results.length > 0) {
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = results.filter(client => {
+          const name = (client.full_name || '').toLowerCase();
+          const nickname = (client.nickname || '').toLowerCase();
+          const email = (client.email || '').toLowerCase();
+          const phone = (client.phone_number || '').replace(/\D/g, '');
+          const searchDigits = searchTerm.replace(/\D/g, '');
+          
+          return name.includes(searchLower) || 
+                 nickname.includes(searchLower) ||
+                 email.includes(searchLower) ||
+                 (searchDigits && phone.includes(searchDigits));
+        });
+        
+        setClientSearchResults(filtered.slice(0, 20)); // Show top 20 matches
+      } else {
+        setClientSearchResults([]);
+      }
     } catch (err) {
       console.error("Error searching clients:", err);
       setClientSearchResults([]);
       // Fallback to filtering from available clients if search API fails
       if (availableClients.length > 0) {
-        const filtered = availableClients.filter(client => 
-          (client.full_name && client.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-        setClientSearchResults(filtered.slice(0, 10)); // Limit to 10 results
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = availableClients.filter(client => {
+          const name = (client.full_name || '').toLowerCase();
+          const nickname = (client.nickname || '').toLowerCase();
+          const email = (client.email || '').toLowerCase();
+          const phone = (client.phone_number || '').replace(/\D/g, '');
+          const searchDigits = searchTerm.replace(/\D/g, '');
+          
+          return name.includes(searchLower) || 
+                 nickname.includes(searchLower) ||
+                 email.includes(searchLower) ||
+                 (searchDigits && phone.includes(searchDigits));
+        });
+        setClientSearchResults(filtered.slice(0, 20)); // Show top 20 matches
       }
     } finally {
       setLoadingClients(false);
@@ -940,7 +971,7 @@ const DailySchedulePage = () => {
                       
                       let cardOpacity = 'opacity-100';
                       if (clientSearchTerm && item.type === 'appointment') {
-                        if (!item.clientName.toLowerCase().includes(clientSearchTerm.toLowerCase())) {
+                        if (!clientNameMatchesSearch(item, clientSearchTerm)) {
                           cardOpacity = 'opacity-30 hover:opacity-100 transition-opacity';
                         }
                       }
@@ -981,7 +1012,7 @@ const DailySchedulePage = () => {
                                     <div className="mb-3">
                                       <div className="flex items-center justify-between mb-2">
                                         <Typography className="font-semibold text-accent-primary text-body">
-                                          {item.clientName}
+                                          {getClientDisplayName(item, 'card')}
                                         </Typography>
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
                                           {statusInfo.label}
@@ -1039,7 +1070,7 @@ const DailySchedulePage = () => {
                                   {item.duration <= 30 ? (
                                   // Content for appointments <= 30 minutes
                                   <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal text-center">
-                                    {item.clientName}
+                                    {getClientDisplayName(item, 'card')}
                                   </Typography>
                                 ) : (
                                   // Existing content for appointments > 30 minutes
@@ -1047,7 +1078,7 @@ const DailySchedulePage = () => {
                                     <div className="flex-1">
                                       <div className="flex items-center justify-between mb-1">
                                         <Typography variant="small" className="font-semibold text-accent-primary text-xs sm:text-body leading-tight sm:leading-normal">
-                                          {item.clientName}
+                                          {getClientDisplayName(item, 'card')}
                                         </Typography>
                                         {!hasSpaceForServices && (
                                           <span className={`w-2 h-2 rounded-full ${statusInfo.color.replace('border-', 'bg-')}`} title={statusInfo.label}></span>
@@ -1197,25 +1228,23 @@ const DailySchedulePage = () => {
                   {!isNewClient && (
                     <div className="relative">
                       <Input
-                        label="Buscar Cliente *"
+                        label="Buscar Cliente (min. 3 caracteres) *"
                         value={selectedClient ? selectedClient.full_name || selectedClient.email : appointmentForm.clientName}
                         onChange={(e) => {
                           const value = e.target.value;
                           setAppointmentForm(prev => ({ ...prev, clientName: value }));
                           setSelectedClient(null); // Clear selected client when typing
-                          if (value.length >= 2) {
-                            // Debounce search
-                            setTimeout(() => {
-                              handleClientSearch(value);
-                            }, 300);
+                          // Immediate search with 3+ characters
+                          if (value.length >= 3) {
+                            handleClientSearch(value);
                           } else {
                             setClientSearchResults([]);
                           }
                         }}
                         onFocus={() => {
-                          // If no search term, show some available clients
-                          if (!appointmentForm.clientName || appointmentForm.clientName.length < 2) {
-                            setClientSearchResults(availableClients.slice(0, 10)); // Show first 10 clients
+                          // If no search term, don't show any clients initially
+                          if (!appointmentForm.clientName || appointmentForm.clientName.length < 3) {
+                            setClientSearchResults([]); // Don't show clients until search
                           }
                         }}
                         className="bg-bg-primary border-bg-tertiary text-text-primary"

@@ -35,7 +35,7 @@ function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
 
@@ -45,10 +45,19 @@ function UsersPage() {
   }, []);
 
   const loadUsers = async () => {
-    setIsLoading(true);
+    // Prevent duplicate calls
+    if (isLoading) {
+      console.log('⏳ Already loading users, skipping duplicate call');
+      return;
+    }
+    
     try {
+      setIsLoading(true);
+      console.log('🔍 Loading users from API...');
       const userData = await usersApi.getAllUsers();
-      setUsers(userData);
+      console.log('📋 Received users data:', userData);
+      console.log(`📊 Total users found: ${userData?.length || 0}`);
+      setUsers(userData || []);
     } catch (error) {
       console.error('Error loading users:', error);
       showAlert('Erro ao carregar usuários', 'error');
@@ -78,8 +87,14 @@ function UsersPage() {
 
   // Filter users based on search query, role, and status
   const filteredUsers = useMemo(() => {
+    // If search query is less than 3 characters and no other filters, show no users
+    if ((!searchQuery || searchQuery.trim().length < 3) && !roleFilter && !statusFilter) {
+      return [];
+    }
+    
     return users.filter(user => {
-      const matchesSearch = user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = !searchQuery || searchQuery.trim().length < 3 || 
+                           user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            user.email?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = !roleFilter || user.role === roleFilter;
       const matchesStatus = !statusFilter || 
@@ -316,16 +331,17 @@ function UsersPage() {
 
           {!isLoading && filteredUsers.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12">
-              <UserIcon className="h-12 w-12 text-blue-gray-300 mb-4" />
-              <Typography color="blue-gray" className="text-center">
-                Nenhum usuário encontrado
-              </Typography>
-              <Typography color="blue-gray" className="text-center text-sm mt-1 opacity-70">
-                {searchQuery || roleFilter || statusFilter 
-                  ? 'Tente ajustar os filtros de busca'
-                  : 'Clique em "Novo Usuário" para adicionar o primeiro usuário'
-                }
-              </Typography>
+              {(searchQuery || roleFilter || statusFilter) && (
+                <>
+                  <UserIcon className="h-12 w-12 text-blue-gray-300 mb-4" />
+                  <Typography color="blue-gray" className="text-center">
+                    Nenhum usuário encontrado
+                  </Typography>
+                  <Typography color="blue-gray" className="text-center text-sm mt-1 opacity-70">
+                    Tente ajustar os filtros de busca
+                  </Typography>
+                </>
+              )}
             </div>
           )}
         </CardBody>

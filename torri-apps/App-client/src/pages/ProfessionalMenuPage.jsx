@@ -38,7 +38,7 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 const ProfessionalMenuPage = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
-  const { currentMode, toggleViewMode } = useViewModeStore();
+  const { currentMode, toggleMode } = useViewModeStore();
 
   // Menu sections with their options
   const menuSections = [
@@ -147,10 +147,10 @@ const ProfessionalMenuPage = () => {
 
   const handleModeToggle = () => {
     if (currentMode === 'professional') {
-      toggleViewMode(); // This switches to client mode
+      toggleMode(); // This switches to client mode
       navigate('/dashboard'); // Go to client dashboard
     } else {
-      toggleViewMode(); // This switches to professional mode  
+      toggleMode(); // This switches to professional mode  
       navigate('/professional/dashboard'); // Go to professional dashboard
     }
   };

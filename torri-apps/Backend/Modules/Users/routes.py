@@ -112,13 +112,14 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
     current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))], # Updated type
     skip: int = 0,
     limit: int = 100,
-    role: str = Query(None, description="Filter users by role (e.g., CLIENTE)")
+    role: str = Query(None, description="Filter users by role (e.g., CLIENTE)"),
+    search: str = Query(None, description="Search users by name, nickname, email, or phone")
 ):
     """
-    Retrieve all users, optionally filtered by role.
+    Retrieve all users, optionally filtered by role and search term.
     """
     users = user_services.get_users( # Renamed service call, tenant_id argument removed
-        db, skip=skip, limit=limit
+        db, skip=skip, limit=limit, search=search
     )
     
     # Filter by role if specified

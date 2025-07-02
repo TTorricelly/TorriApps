@@ -324,10 +324,20 @@ class AppointmentGroupStatusUpdate(BaseModel):
 
 
 class WalkInClientData(BaseModel):
-    # For new clients
+    # For new clients - basic info
     name: Optional[str] = None
+    nickname: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    cpf: Optional[str] = None
+    # Address fields
+    address_street: Optional[str] = None
+    address_number: Optional[str] = None
+    address_complement: Optional[str] = None
+    address_neighborhood: Optional[str] = None
+    address_city: Optional[str] = None
+    address_state: Optional[str] = None
+    address_cep: Optional[str] = None
     # For existing clients
     id: Optional[UUID] = None
 

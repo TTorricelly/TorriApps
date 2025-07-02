@@ -44,23 +44,13 @@ import {
 
 // Removed ServiceTagSelector component as it's not needed for clients
 
-// Renamed from BasicDataTab to ClientDataTab - simplified for client form
-const ClientDataForm = ({
+// Basic Information Tab Component
+const BasicInfoTab = ({
   formData,
   handleInputChange,
   errors,
-  isEditMode, // Renamed from isEdit for clarity
-  onCepLookup // Added for CEP lookup functionality
-  // Removed photo props: handlePhotoChange, photoPreview, handlePhotoRemove
-  // Removed service props: allServices, selectedServices, setSelectedServices, showAlert (if only for services)
+  isEditMode
 }) => {
-  // const fileInputRef = React.useRef(null); // Removed photo related ref
-
-  // Removed handleFileChange function
-
-  // Removed getInitials function (if not used elsewhere, or keep if a simple avatar placeholder is desired without photo upload)
-  // For now, assuming no avatar display in this simplified form. If needed, it can be added back.
-
   const hairTypeOptions = [
     { label: "Liso", value: "LISO" },
     { label: "Ondulado", value: "ONDULADO" },
@@ -75,16 +65,11 @@ const ClientDataForm = ({
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Basic Information */}
-      <div>
-        <Typography variant="h6" className="text-text-primary mb-4">
-          Informações do Cliente
-        </Typography>
-
-        <div className="grid gap-4">
-          {/* Full Name */}
-          <div>
+    <div className="space-y-4 pt-4">
+      <div className="grid gap-4">
+        {/* Name Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
             <Input
               name="full_name"
               label="Nome Completo"
@@ -103,60 +88,78 @@ const ClientDataForm = ({
               </Typography>
             )}
           </div>
-
-          {/* Email and Phone Number */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Input
-                name="email"
-                label="E-mail"
-                type="email"
-                autoComplete="off"
-                placeholder="cliente@exemplo.com"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                className="bg-bg-primary border-bg-tertiary text-text-primary"
-                labelProps={{ className: "text-text-secondary" }}
-                containerProps={{ className: "text-text-primary" }}
-                required
-              />
-              {errors.email && (
-                <Typography className="text-status-error text-sm mt-1">
-                  {errors.email}
-                </Typography>
-              )}
-            </div>
-            <div>
-              <Input
-                name="phone_number"
-                label="Telefone"
-                type="tel"
-                placeholder="(11) 99999-9999"
-                value={formData.phone_number || ''}
-                onChange={(e) => handleInputChange('phone_number', e.target.value)}
-                onBlur={(e) => {
-                  // Format phone for display when user finishes editing
-                  const value = e.target.value;
-                  if (value && isValidPhoneNumber(value)) {
-                    const formatted = formatPhoneForDisplay(normalizePhoneNumber(value));
-                    handleInputChange('phone_number', formatted);
-                  }
-                }}
-                error={!!errors.phone_number}
-                className="bg-bg-primary border-bg-tertiary text-text-primary"
-                labelProps={{ className: "text-text-secondary" }}
-                containerProps={{ className: "text-text-primary" }}
-              />
-              {errors.phone_number && (
-                <Typography className="text-status-error text-sm mt-1">
-                  {errors.phone_number}
-                </Typography>
-              )}
-            </div>
+          <div>
+            <Input
+              name="nickname"
+              label="Apelido"
+              placeholder="Apelido (opcional)"
+              value={formData.nickname || ''}
+              onChange={(e) => handleInputChange('nickname', e.target.value)}
+              error={!!errors.nickname}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.nickname && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.nickname}
+              </Typography>
+            )}
           </div>
+        </div>
 
-          {/* Date of Birth */}
+        {/* Contact Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Input
+              name="email"
+              label="E-mail"
+              type="email"
+              autoComplete="off"
+              placeholder="cliente@exemplo.com"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              error={!!errors.email}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.email && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.email}
+              </Typography>
+            )}
+          </div>
+          <div>
+            <Input
+              name="phone_number"
+              label="Telefone"
+              type="tel"
+              placeholder="(11) 99999-9999"
+              value={formData.phone_number || ''}
+              onChange={(e) => handleInputChange('phone_number', e.target.value)}
+              onBlur={(e) => {
+                const value = e.target.value;
+                if (value && isValidPhoneNumber(value)) {
+                  const formatted = formatPhoneForDisplay(normalizePhoneNumber(value));
+                  handleInputChange('phone_number', formatted);
+                }
+              }}
+              error={!!errors.phone_number}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.phone_number && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.phone_number}
+              </Typography>
+            )}
+          </div>
+        </div>
+
+        {/* Personal Details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Input
               name="date_of_birth"
@@ -175,33 +178,6 @@ const ClientDataForm = ({
               </Typography>
             )}
           </div>
-
-          {/* Hair Type */}
-          <div>
-            <Select
-              name="hair_type"
-              label="Tipo de Cabelo"
-              value={formData.hair_type}
-              onChange={(value) => handleInputChange('hair_type', value)}
-              error={!!errors.hair_type}
-              className="bg-bg-primary border-bg-tertiary text-text-primary"
-              labelProps={{ className: "text-text-secondary" }}
-              // containerProps is not a direct prop for Select, styling might need to be applied differently if needed
-            >
-              {hairTypeOptions.map(option => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-            {errors.hair_type && (
-              <Typography className="text-status-error text-sm mt-1">
-                {errors.hair_type}
-              </Typography>
-            )}
-          </div>
-
-          {/* Gender */}
           <div>
             <Select
               name="gender"
@@ -224,8 +200,32 @@ const ClientDataForm = ({
               </Typography>
             )}
           </div>
+          <div>
+            <Select
+              name="hair_type"
+              label="Tipo de Cabelo"
+              value={formData.hair_type}
+              onChange={(value) => handleInputChange('hair_type', value)}
+              error={!!errors.hair_type}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+            >
+              {hairTypeOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+            {errors.hair_type && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.hair_type}
+              </Typography>
+            )}
+          </div>
+        </div>
 
-          {/* CPF */}
+        {/* Document and Authentication */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Input
               name="cpf"
@@ -248,180 +248,6 @@ const ClientDataForm = ({
               </Typography>
             )}
           </div>
-
-          {/* Address Section */}
-          <div className="border-t border-bg-tertiary pt-6 mt-6">
-            <Typography variant="h6" className="text-text-primary mb-4">
-              Endereço
-            </Typography>
-
-            {/* CEP */}
-            <div className="mb-4">
-              <Input
-                name="address_cep"
-                label="CEP"
-                placeholder="00000-000"
-                value={formData.address_cep || ''}
-                onChange={(e) => {
-                  const formatted = handleCepInput(e.target.value);
-                  handleInputChange('address_cep', formatted);
-                }}
-                onBlur={async (e) => {
-                  const cep = e.target.value;
-                  if (cep && validateCepFormat(cep)) {
-                    const addressData = await lookupCep(cep);
-                    if (addressData && onCepLookup) {
-                      onCepLookup(addressData);
-                    }
-                  }
-                }}
-                error={!!errors.address_cep}
-                className="bg-bg-primary border-bg-tertiary text-text-primary"
-                labelProps={{ className: "text-text-secondary" }}
-                containerProps={{ className: "text-text-primary" }}
-                maxLength={9}
-              />
-              {errors.address_cep && (
-                <Typography className="text-status-error text-sm mt-1">
-                  {errors.address_cep}
-                </Typography>
-              )}
-            </div>
-
-            {/* Street and Number */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="md:col-span-2">
-                <Input
-                  name="address_street"
-                  label="Rua/Logradouro"
-                  placeholder="Nome da rua"
-                  value={formData.address_street || ''}
-                  onChange={(e) => handleInputChange('address_street', e.target.value)}
-                  error={!!errors.address_street}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                />
-                {errors.address_street && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_street}
-                  </Typography>
-                )}
-              </div>
-              <div>
-                <Input
-                  name="address_number"
-                  label="Número"
-                  placeholder="123"
-                  value={formData.address_number || ''}
-                  onChange={(e) => handleInputChange('address_number', e.target.value)}
-                  error={!!errors.address_number}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                />
-                {errors.address_number && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_number}
-                  </Typography>
-                )}
-              </div>
-            </div>
-
-            {/* Complement and Neighborhood */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <Input
-                  name="address_complement"
-                  label="Complemento"
-                  placeholder="Apto, Bloco, etc."
-                  value={formData.address_complement || ''}
-                  onChange={(e) => handleInputChange('address_complement', e.target.value)}
-                  error={!!errors.address_complement}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                />
-                {errors.address_complement && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_complement}
-                  </Typography>
-                )}
-              </div>
-              <div>
-                <Input
-                  name="address_neighborhood"
-                  label="Bairro"
-                  placeholder="Nome do bairro"
-                  value={formData.address_neighborhood || ''}
-                  onChange={(e) => handleInputChange('address_neighborhood', e.target.value)}
-                  error={!!errors.address_neighborhood}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                />
-                {errors.address_neighborhood && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_neighborhood}
-                  </Typography>
-                )}
-              </div>
-            </div>
-
-            {/* City and State */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Input
-                  name="address_city"
-                  label="Cidade"
-                  placeholder="Nome da cidade"
-                  value={formData.address_city || ''}
-                  onChange={(e) => handleInputChange('address_city', e.target.value)}
-                  error={!!errors.address_city}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                />
-                {errors.address_city && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_city}
-                  </Typography>
-                )}
-              </div>
-              <div>
-                <Select
-                  name="address_state"
-                  label="Estado"
-                  value={formData.address_state || ''}
-                  onChange={(value) => handleInputChange('address_state', value)}
-                  error={!!errors.address_state}
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  selected={(element) => {
-                    if (element && formData.address_state) {
-                      const selectedState = BRAZILIAN_STATES.find(state => state.code === formData.address_state);
-                      return selectedState ? `${selectedState.code} - ${selectedState.name}` : '';
-                    }
-                    return '';
-                  }}
-                >
-                  <Option value="">Selecione...</Option>
-                  {BRAZILIAN_STATES.map(state => (
-                    <Option key={state.code} value={state.code}>
-                      {state.code} - {state.name}
-                    </Option>
-                  ))}
-                </Select>
-                {errors.address_state && (
-                  <Typography className="text-status-error text-sm mt-1">
-                    {errors.address_state}
-                  </Typography>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Password (only for create mode) */}
           {!isEditMode && (
             <div>
               <Input
@@ -445,39 +271,201 @@ const ClientDataForm = ({
               )}
             </div>
           )}
+        </div>
 
-          {/* Role and Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Typography className="text-text-secondary text-sm mb-2">
-                Função/Role
-              </Typography>
-              <div className="bg-bg-primary border border-bg-tertiary rounded-lg p-3">
-                <Typography className="text-text-primary">
-                  CLIENTE
-                </Typography>
-              </div>
-            </div>
+        {/* Status */}
+        <div className="flex items-center gap-3 pt-2">
+          <Switch
+            checked={formData.is_active}
+            onChange={(e) => handleInputChange('is_active', e.target.checked)}
+            color="blue"
+            labelProps={{
+              className: "text-text-primary",
+            }}
+          />
+          <Typography className="text-text-primary">
+            {formData.is_active ? "Ativo" : "Inativo"}
+          </Typography>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-            <div className="flex items-center gap-3 pt-6">
-              <Switch
-                checked={formData.is_active}
-                onChange={(e) => handleInputChange('is_active', e.target.checked)}
-                color="blue" // Material Tailwind uses 'blue' as default accent
-                labelProps={{
-                  className: "text-text-primary",
-                }}
-              />
-              <Typography className="text-text-primary">
-                {formData.is_active ? "Ativo" : "Inativo"}
+// Address Tab Component
+const AddressTab = ({
+  formData,
+  handleInputChange,
+  errors,
+  onCepLookup
+}) => {
+  return (
+    <div className="space-y-6 pt-4">
+      <div className="grid gap-4">
+        {/* CEP */}
+        <div>
+          <Input
+            name="address_cep"
+            label="CEP"
+            placeholder="00000-000"
+            value={formData.address_cep || ''}
+            onChange={(e) => {
+              const formatted = handleCepInput(e.target.value);
+              handleInputChange('address_cep', formatted);
+            }}
+            onBlur={async (e) => {
+              const cep = e.target.value;
+              if (cep && validateCepFormat(cep)) {
+                const addressData = await lookupCep(cep);
+                if (addressData && onCepLookup) {
+                  onCepLookup(addressData);
+                }
+              }
+            }}
+            error={!!errors.address_cep}
+            className="bg-bg-primary border-bg-tertiary text-text-primary"
+            labelProps={{ className: "text-text-secondary" }}
+            containerProps={{ className: "text-text-primary" }}
+            maxLength={9}
+          />
+          {errors.address_cep && (
+            <Typography className="text-status-error text-sm mt-1">
+              {errors.address_cep}
+            </Typography>
+          )}
+        </div>
+
+        {/* Street and Number */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <Input
+              name="address_street"
+              label="Rua/Logradouro"
+              placeholder="Nome da rua"
+              value={formData.address_street || ''}
+              onChange={(e) => handleInputChange('address_street', e.target.value)}
+              error={!!errors.address_street}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.address_street && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_street}
               </Typography>
-            </div>
+            )}
+          </div>
+          <div>
+            <Input
+              name="address_number"
+              label="Número"
+              placeholder="123"
+              value={formData.address_number || ''}
+              onChange={(e) => handleInputChange('address_number', e.target.value)}
+              error={!!errors.address_number}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.address_number && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_number}
+              </Typography>
+            )}
+          </div>
+        </div>
+
+        {/* Complement and Neighborhood */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Input
+              name="address_complement"
+              label="Complemento"
+              placeholder="Apto, Bloco, etc."
+              value={formData.address_complement || ''}
+              onChange={(e) => handleInputChange('address_complement', e.target.value)}
+              error={!!errors.address_complement}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.address_complement && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_complement}
+              </Typography>
+            )}
+          </div>
+          <div>
+            <Input
+              name="address_neighborhood"
+              label="Bairro"
+              placeholder="Nome do bairro"
+              value={formData.address_neighborhood || ''}
+              onChange={(e) => handleInputChange('address_neighborhood', e.target.value)}
+              error={!!errors.address_neighborhood}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.address_neighborhood && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_neighborhood}
+              </Typography>
+            )}
+          </div>
+        </div>
+
+        {/* City and State */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Input
+              name="address_city"
+              label="Cidade"
+              placeholder="Nome da cidade"
+              value={formData.address_city || ''}
+              onChange={(e) => handleInputChange('address_city', e.target.value)}
+              error={!!errors.address_city}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              containerProps={{ className: "text-text-primary" }}
+            />
+            {errors.address_city && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_city}
+              </Typography>
+            )}
+          </div>
+          <div>
+            <Select
+              name="address_state"
+              label="Estado"
+              value={formData.address_state || ''}
+              onChange={(value) => handleInputChange('address_state', value)}
+              error={!!errors.address_state}
+              className="bg-bg-primary border-bg-tertiary text-text-primary"
+              labelProps={{ className: "text-text-secondary" }}
+              selected={() => {
+                if (formData.address_state) {
+                  const selectedState = BRAZILIAN_STATES.find(state => state.code === formData.address_state);
+                  return selectedState ? `${selectedState.code} - ${selectedState.name}` : '';
+                }
+                return '';
+              }}
+            >
+              {BRAZILIAN_STATES.map(state => (
+                <Option key={state.code} value={state.code}>
+                  {state.code} - {state.name}
+                </Option>
+              ))}
+            </Select>
+            {errors.address_state && (
+              <Typography className="text-status-error text-sm mt-1">
+                {errors.address_state}
+              </Typography>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Removed Profile Photo Section */}
-      {/* Removed Services Association Section */}
     </div>
   );
 };
@@ -492,6 +480,7 @@ export default function ClientForm() { // Renamed component
   // Form state
   const [formData, setFormData] = useState({
     full_name: '',
+    nickname: '',
     email: '',
     phone_number: '', // Added phone_number
     date_of_birth: '', // Added date_of_birth
@@ -512,11 +501,7 @@ export default function ClientForm() { // Renamed component
   });
 
   // UI state
-  // const [activeTab, setActiveTab] = useState('basic'); // Removed tabs
-  // const [allServices, setAllServices] = useState([]); // Removed services state
-  // const [selectedServices, setSelectedServices] = useState([]); // Removed services state
-  // const [photoPreview, setPhotoPreview] = useState(null); // Removed photo state
-  // const [photoFile, setPhotoFile] = useState(null); // Removed photo state
+  const [activeTab, setActiveTab] = useState('basic');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -565,6 +550,7 @@ export default function ClientForm() { // Renamed component
 
       const loadedFormData = {
         full_name: data.full_name || '',
+        nickname: data.nickname || '',
         email: data.email || '',
         phone_number: data.phone_number || '', // Added phone_number
         // Format date_of_birth to YYYY-MM-DD for the date input
@@ -607,9 +593,7 @@ export default function ClientForm() { // Renamed component
       newErrors.full_name = 'Nome completo é obrigatório';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'E-mail é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'E-mail deve ter um formato válido';
     }
 
@@ -692,7 +676,8 @@ export default function ClientForm() { // Renamed component
       // Prepare data with normalized phone number
       const dataToSave = preparePhoneDataForSubmission({
         full_name: cleanedData.full_name.trim(),
-        email: cleanedData.email.trim(),
+        nickname: cleanedData.nickname?.trim() || null,
+        email: cleanedData.email.trim() ? cleanedData.email.trim() : null,
         phone_number: cleanedData.phone_number?.trim() || null, // Will be normalized by preparePhoneDataForSubmission
         date_of_birth: cleanedData.date_of_birth || null, // Send null if empty
         hair_type: cleanedData.hair_type || null, // Send null if empty
@@ -798,32 +783,53 @@ export default function ClientForm() { // Renamed component
             </Button>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-2">
             <Typography variant="h4" className="text-text-primary">
-              {isEditMode ? 'Editar Cliente' : 'Criar Novo Cliente'} {/* Updated text */}
+              {isEditMode ? '' : 'Criar Novo Cliente'}
             </Typography>
-            {isEditMode && formData.full_name && (
-              <Typography className="text-text-secondary mt-1">
-                Editando: {formData.full_name}
-              </Typography>
-            )}
           </div>
         </CardHeader>
 
         <CardBody className="bg-bg-secondary">
-          {/* Removed Tabs */}
-          {/* The form content is now directly rendered */}
           <form onSubmit={handleSubmit}>
-            {/* Renamed from BasicDataTab */}
-            <ClientDataForm
-              formData={formData}
-              handleInputChange={handleInputChange}
-              errors={errors}
-              isEditMode={isEditMode} // Pass isEditMode
-              onCepLookup={handleCepLookup} // Add CEP lookup handler
-              // Removed photo and service props
-              // showAlert={showAlert} // showAlert is available in the main component scope
-            />
+            <Tabs value={activeTab} className="w-full">
+              <TabsHeader className="bg-bg-primary border-bg-tertiary">
+                <Tab 
+                  value="basic" 
+                  onClick={() => setActiveTab('basic')}
+                  className={`${activeTab === 'basic' ? 'text-accent-primary' : 'text-text-secondary'}`}
+                >
+                  Informações Básicas
+                </Tab>
+                <Tab 
+                  value="address" 
+                  onClick={() => setActiveTab('address')}
+                  className={`${activeTab === 'address' ? 'text-accent-primary' : 'text-text-secondary'}`}
+                >
+                  Endereço
+                </Tab>
+              </TabsHeader>
+              
+              <TabsBody className="mt-6">
+                <TabPanel value="basic" className="p-0">
+                  <BasicInfoTab
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    errors={errors}
+                    isEditMode={isEditMode}
+                  />
+                </TabPanel>
+                
+                <TabPanel value="address" className="p-0">
+                  <AddressTab
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    errors={errors}
+                    onCepLookup={handleCepLookup}
+                  />
+                </TabPanel>
+              </TabsBody>
+            </Tabs>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between pt-6 border-t border-bg-tertiary mt-8">
@@ -843,7 +849,7 @@ export default function ClientForm() { // Renamed component
                 className="bg-accent-primary hover:bg-accent-primary/90 flex items-center justify-center gap-2"
               >
                 {isSaving && <Spinner className="h-4 w-4" />}
-                {isSaving ? 'Salvando...' : (isEditMode ? 'Salvar Cliente' : 'Criar Cliente')} {/* Updated button text */}
+                {isSaving ? 'Salvando...' : (isEditMode ? 'Salvar Cliente' : 'Criar Cliente')}
               </Button>
             </div>
           </form>
