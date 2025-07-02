@@ -197,7 +197,7 @@ const ClientsPage = () => {
             Nenhum cliente encontrado
           </h3>
           <p className="text-gray-600 text-center mb-6">
-            Nenhum cliente encontrado para "{searchTerm}"
+            Nenhum cliente encontrado para &quot;{searchTerm}&quot;
           </p>
           <p className="text-gray-500 text-center text-sm">
             Tente buscar por nome, email ou telefone
