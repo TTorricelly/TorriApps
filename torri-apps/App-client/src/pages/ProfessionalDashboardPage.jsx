@@ -5,16 +5,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import { useAuthStore } from '../stores/authStore';
+import dashboardService from '../services/dashboardService';
 import { 
   Calendar, 
   Clock, 
   Users, 
-  TrendingUp,
   Bell,
-  Settings,
   CheckSquare,
   DollarSign,
   User
@@ -22,51 +20,31 @@ import {
 
 const ProfessionalDashboardPage = () => {
   const { user } = useAuthStore();
-  const navigate = useNavigate();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Update time every minute
+  // Fetch dashboard data on component mount
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await dashboardService.getTodayStats();
+        console.log('[ProfessionalDashboard] Received dashboard data:', data);
+        setDashboardData(data);
+      } catch (err) {
+        setError(err.message || 'Erro ao carregar dados do dashboard');
+        console.error('Error loading dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearInterval(timer);
+    fetchDashboardData();
   }, []);
 
-  // Format current time
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
-  // Format current date
-  const formatDate = (date) => {
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  // Get user role display name
-  const getRoleDisplayName = (role) => {
-    switch (role) {
-      case 'professional':
-        return 'Profissional';
-      case 'receptionist':
-        return 'Recepcionista';
-      case 'manager':
-        return 'Gerente';
-      case 'admin':
-        return 'Administrador';
-      default:
-        return 'Colaborador';
-    }
-  };
 
   // Render welcome header
   const renderWelcomeHeader = () => (
@@ -80,33 +58,30 @@ const ProfessionalDashboardPage = () => {
             <h1 className="text-xl font-bold text-white">
               Olá, {user?.fullName?.split(' ')[0] || 'Colaborador'}!
             </h1>
-            <p className="text-pink-100 text-sm">
-              {getRoleDisplayName(user?.role)}
-            </p>
           </div>
         </div>
         <button className="p-2 bg-pink-400 rounded-full hover:bg-pink-300 transition-smooth">
           <Bell size={20} className="text-white" />
         </button>
       </div>
-      
-      {/* Date and time */}
-      <div className="bg-pink-400 rounded-xl p-4">
-        <p className="text-white font-medium capitalize">
-          {formatDate(currentTime)}
-        </p>
-        <p className="text-pink-100 text-sm">
-          {formatTime(currentTime)}
-        </p>
-      </div>
     </div>
   );
 
   // Render quick stats
-  const renderQuickStats = () => (
-    <div className="px-6 py-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Hoje</h2>
-      <div className="grid grid-cols-2 gap-4">
+  const renderQuickStats = () => {
+    console.log('[ProfessionalDashboard] Rendering stats with data:', {
+      loading,
+      dashboardData,
+      appointments: dashboardData?.appointments,
+      completed: dashboardData?.completed,
+      clients: dashboardData?.clients,
+      revenue: dashboardData?.revenue
+    });
+    
+    return (
+      <div className="px-6 py-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Hoje</h2>
+        <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -114,7 +89,9 @@ const ProfessionalDashboardPage = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Agendamentos</p>
-              <p className="text-xl font-bold text-gray-900">12</p>
+              <p className="text-xl font-bold text-gray-900">
+                {loading ? '...' : dashboardData?.appointments || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -126,7 +103,9 @@ const ProfessionalDashboardPage = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Concluídos</p>
-              <p className="text-xl font-bold text-gray-900">8</p>
+              <p className="text-xl font-bold text-gray-900">
+                {loading ? '...' : dashboardData?.completed || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -138,7 +117,9 @@ const ProfessionalDashboardPage = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Clientes</p>
-              <p className="text-xl font-bold text-gray-900">8</p>
+              <p className="text-xl font-bold text-gray-900">
+                {loading ? '...' : dashboardData?.clients || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -150,98 +131,71 @@ const ProfessionalDashboardPage = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Faturamento</p>
-              <p className="text-xl font-bold text-gray-900">R$ 420</p>
+              <p className="text-xl font-bold text-gray-900">
+                {loading ? '...' : dashboardData?.revenue || 'R$ 0,00'}
+              </p>
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Render next appointments
   const renderNextAppointments = () => (
     <div className="px-6 pb-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Próximos Agendamentos</h2>
-        <button className="text-pink-600 text-sm font-medium">Ver todos</button>
       </div>
       
       <div className="space-y-3">
-        {/* Sample appointment card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium text-gray-900">Corte de Cabelo</h3>
-            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-              Confirmado
-            </span>
+        {loading ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-gray-500 text-center">Carregando agendamentos...</p>
           </div>
-          <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <div className="flex items-center space-x-1">
-              <Clock size={14} />
-              <span>14:30</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <User size={14} />
-              <span>Maria Silva</span>
-            </div>
+        ) : error ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-red-500 text-center">Erro ao carregar agendamentos</p>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium text-gray-900">Escova Progressiva</h3>
-            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-              Em andamento
-            </span>
-          </div>
-          <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <div className="flex items-center space-x-1">
-              <Clock size={14} />
-              <span>15:00</span>
+        ) : dashboardData?.nextAppointments && dashboardData.nextAppointments.length > 0 ? (
+          dashboardData.nextAppointments.map((appointment, index) => (
+            <div key={appointment.id || index} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-900">{appointment.service}</h3>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  appointment.status === 'Confirmado' ? 'bg-blue-100 text-blue-800' :
+                  appointment.status === 'Em Andamento' ? 'bg-amber-100 text-amber-800' :
+                  appointment.status === 'Agendado' ? 'bg-green-100 text-green-800' :
+                  appointment.status === 'Encaixe' ? 'bg-purple-100 text-purple-800' :
+                  appointment.status === 'Concluído' ? 'bg-emerald-100 text-emerald-800' :
+                  appointment.status === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {appointment.status}
+                </span>
+              </div>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Clock size={14} />
+                  <span>{appointment.time}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <User size={14} />
+                  <span>{appointment.client}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <User size={14} />
-              <span>Ana Costa</span>
-            </div>
+          ))
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <p className="text-gray-500 text-center">Nenhum agendamento próximo</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 
-  // Render quick actions
-  const renderQuickActions = () => (
-    <div className="px-6 pb-8">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <button 
-          onClick={() => navigate('/professional/agenda')}
-          className="bg-pink-500 text-white p-4 rounded-xl text-center hover:bg-pink-600 transition-smooth"
-        >
-          <Calendar size={24} className="mx-auto mb-2" />
-          <span className="text-sm font-medium">Ver Agenda</span>
-        </button>
-        
-        <button 
-          onClick={() => navigate('/professional/clients')}
-          className="bg-blue-500 text-white p-4 rounded-xl text-center hover:bg-blue-600 transition-smooth"
-        >
-          <Users size={24} className="mx-auto mb-2" />
-          <span className="text-sm font-medium">Clientes</span>
-        </button>
-        
-        <button className="bg-green-500 text-white p-4 rounded-xl text-center hover:bg-green-600 transition-smooth">
-          <TrendingUp size={24} className="mx-auto mb-2" />
-          <span className="text-sm font-medium">Relatórios</span>
-        </button>
-        
-        <button className="bg-gray-500 text-white p-4 rounded-xl text-center hover:bg-gray-600 transition-smooth">
-          <Settings size={24} className="mx-auto mb-2" />
-          <span className="text-sm font-medium">Configurações</span>
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="h-full flex flex-col">
@@ -251,9 +205,23 @@ const ProfessionalDashboardPage = () => {
           
           {/* Main Content */}
           <div className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 min-h-0">
+            {error && (
+              <div className="px-6 py-4">
+                <div className="bg-red-100 border border-red-300 rounded-xl p-4 mb-4">
+                  <p className="text-red-700 text-sm">
+                    ⚠️ {error}
+                  </p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="mt-2 text-red-600 text-sm font-medium hover:text-red-700"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              </div>
+            )}
             {renderQuickStats()}
             {renderNextAppointments()}
-            {renderQuickActions()}
           </div>
         </div>
       </div>

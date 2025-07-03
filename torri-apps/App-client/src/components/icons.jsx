@@ -35,7 +35,8 @@ import {
   Save,
   ArrowLeftRight,
   Briefcase,
-  Tag
+  Tag,
+  CreditCard
 } from 'lucide-react'
 
 export {
@@ -74,5 +75,6 @@ export {
   Save,
   ArrowLeftRight,
   Briefcase,
-  Tag
+  Tag,
+  CreditCard
 }

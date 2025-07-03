@@ -13,11 +13,13 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
-  Tag
+  Tag,
+  CreditCard
 } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
 import LabelChip from '../components/labels/LabelChip'
+import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils'
 
 const ClientDetailPage = () => {
   const { clientId } = useParams()
@@ -325,6 +327,26 @@ const ClientDetailPage = () => {
                 <div>
                   <p className="text-sm text-gray-600">Gênero</p>
                   <p className="font-medium text-gray-900">{getGenderLabel(client.gender)}</p>
+                </div>
+              </div>
+            )}
+
+            {client?.cpf && (
+              <div className="flex items-center">
+                <CreditCard size={20} className="text-gray-400 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-600">CPF</p>
+                  <p className="font-medium text-gray-900">{formatCpf(client.cpf)}</p>
+                </div>
+              </div>
+            )}
+
+            {(client?.address_street || client?.address_city || client?.address_cep) && (
+              <div className="flex items-start">
+                <MapPin size={20} className="text-gray-400 mr-3 mt-0.5" />
+                <div>
+                  <p className="text-sm text-gray-600">Endereço</p>
+                  <p className="font-medium text-gray-900 whitespace-pre-line">{formatAddressForDisplay(client)}</p>
                 </div>
               </div>
             )}

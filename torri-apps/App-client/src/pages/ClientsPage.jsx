@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Users, Phone, Mail, ChevronRight, UserX, Loader2, RefreshCw } from '../components/icons'
+import { Search, Plus, Users, Phone, Mail, ChevronRight, UserX, Loader2, RefreshCw, CreditCard, MapPin } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
 import { useViewModeStore } from '../stores/viewModeStore'
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation'
+import { formatCpf, formatAddressCompact } from '../utils/brazilianUtils'
 
 const ClientsPage = () => {
   const navigate = useNavigate()
@@ -157,6 +158,20 @@ const ClientsPage = () => {
               <div className="flex items-center mt-1 text-sm text-gray-600">
                 <Phone size={14} className="mr-1 flex-shrink-0" />
                 <span>{formatPhone(client.phone_number)}</span>
+              </div>
+            )}
+            
+            {client.cpf && (
+              <div className="flex items-center mt-1 text-sm text-gray-600">
+                <CreditCard size={14} className="mr-1 flex-shrink-0" />
+                <span>{formatCpf(client.cpf)}</span>
+              </div>
+            )}
+            
+            {(client.address_street || client.address_city) && (
+              <div className="flex items-center mt-1 text-sm text-gray-600">
+                <MapPin size={14} className="mr-1 flex-shrink-0" />
+                <span className="truncate">{formatAddressCompact(client)}</span>
               </div>
             )}
           </div>

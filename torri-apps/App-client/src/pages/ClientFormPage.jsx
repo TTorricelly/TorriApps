@@ -10,7 +10,9 @@ import {
   Loader2,
   Lock,
   Tag,
-  Plus
+  Plus,
+  CreditCard,
+  MapPin
 } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
@@ -18,6 +20,15 @@ import LabelChip from '../components/labels/LabelChip'
 import LabelSelector from '../components/labels/LabelSelector'
 import labelService from '../services/labelService'
 import { extractLabelIds } from '../utils/labelUtils'
+import { 
+  handleCpfInput, 
+  validateCpfChecksum, 
+  handleCepInput, 
+  lookupCep, 
+  validateBrazilianFields, 
+  cleanFormData, 
+  BRAZILIAN_STATES 
+} from '../utils/brazilianUtils'
 
 const ClientFormPage = () => {
   const { clientId } = useParams() // If editing existing client
@@ -35,6 +46,14 @@ const ClientFormPage = () => {
     password: '',
     date_of_birth: '',
     gender: '',
+    cpf: '',
+    address_street: '',
+    address_number: '',
+    address_complement: '',
+    address_neighborhood: '',
+    address_city: '',
+    address_state: '',
+    address_cep: '',
     is_active: true
   })
 
@@ -44,6 +63,7 @@ const ClientFormPage = () => {
   const [validationErrors, setValidationErrors] = useState({})
   const [isLabelSelectorOpen, setIsLabelSelectorOpen] = useState(false)
   const [selectedLabels, setSelectedLabels] = useState([])
+  const [isLookingUpCep, setIsLookingUpCep] = useState(false)
 
   // Handle permission check in useEffect instead of early return
   useEffect(() => {
@@ -72,6 +92,14 @@ const ClientFormPage = () => {
           password: '', // Don't populate password when editing
           date_of_birth: client.date_of_birth || '',
           gender: client.gender || '',
+          cpf: client.cpf || '',
+          address_street: client.address_street || '',
+          address_number: client.address_number || '',
+          address_complement: client.address_complement || '',
+          address_neighborhood: client.address_neighborhood || '',
+          address_city: client.address_city || '',
+          address_state: client.address_state || '',
+          address_cep: client.address_cep || '',
           is_active: client.is_active !== false
         })
         setSelectedLabels(client.labels || [])
@@ -99,6 +127,40 @@ const ClientFormPage = () => {
         ...prev,
         [field]: ''
       }))
+    }
+  }
+
+  // Handle CPF input with formatting
+  const handleCpfChange = (value) => {
+    const formatted = handleCpfInput(value)
+    handleChange('cpf', formatted)
+  }
+
+  // Handle CEP input with formatting and lookup
+  const handleCepChange = async (value) => {
+    const formatted = handleCepInput(value)
+    handleChange('address_cep', formatted)
+    
+    // Auto-lookup address if CEP is complete
+    if (formatted.length === 9) { // Format: 12345-678
+      setIsLookingUpCep(true)
+      try {
+        const addressData = await lookupCep(formatted)
+        if (addressData) {
+          setFormData(prev => ({
+            ...prev,
+            address_cep: formatted,
+            address_street: addressData.address_street || prev.address_street,
+            address_neighborhood: addressData.address_neighborhood || prev.address_neighborhood,
+            address_city: addressData.address_city || prev.address_city,
+            address_state: addressData.address_state || prev.address_state
+          }))
+        }
+      } catch (error) {
+        console.error('CEP lookup failed:', error)
+      } finally {
+        setIsLookingUpCep(false)
+      }
     }
   }
 
@@ -133,6 +195,10 @@ const ClientFormPage = () => {
       errors.phone_number = 'Telefone inválido'
     }
 
+    // Validate Brazilian fields (CPF, CEP, address)
+    const brazilianErrors = validateBrazilianFields(formData)
+    Object.assign(errors, brazilianErrors)
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -149,14 +215,12 @@ const ClientFormPage = () => {
       setIsSaving(true)
       setError('')
 
-      // Clean phone number (remove formatting)
-      const cleanedData = {
+      // Clean and format data for submission
+      const cleanedData = cleanFormData({
         ...formData,
         phone_number: formData.phone_number.replace(/\D/g, ''),
-        date_of_birth: formData.date_of_birth || null,
-        email: formData.email.trim() || null,
-        gender: formData.gender || null
-      }
+        email: formData.email.trim() || null
+      })
 
       // For editing, remove password if empty (don't change password)
       if (isEditing && !cleanedData.password.trim()) {
@@ -381,6 +445,29 @@ const ClientFormPage = () => {
                   />
                 </div>
               </div>
+
+              {/* CPF */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CPF
+                </label>
+                <div className="relative">
+                  <CreditCard size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={formData.cpf}
+                    onChange={(e) => handleCpfChange(e.target.value)}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 ${
+                      validationErrors.cpf ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  />
+                </div>
+                {validationErrors.cpf && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.cpf}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -418,6 +505,138 @@ const ClientFormPage = () => {
                   />
                   <span className="ml-2 text-sm text-gray-700">Cliente ativo</span>
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin size={20} className="text-pink-500" />
+              Endereço
+            </h2>
+            
+            <div className="space-y-4">
+              {/* CEP */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CEP
+                </label>
+                <div className="relative">
+                  <MapPin size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={formData.address_cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    placeholder="12345-678"
+                    maxLength={9}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 ${
+                      validationErrors.address_cep ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  />
+                  {isLookingUpCep && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 size={16} className="animate-spin text-pink-500" />
+                    </div>
+                  )}
+                </div>
+                {validationErrors.address_cep && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.address_cep}</p>
+                )}
+              </div>
+
+              {/* Street */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logradouro
+                </label>
+                <input
+                  type="text"
+                  value={formData.address_street}
+                  onChange={(e) => handleChange('address_street', e.target.value)}
+                  placeholder="Rua, Avenida, etc."
+                  className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                />
+              </div>
+
+              {/* Number and Complement */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address_number}
+                    onChange={(e) => handleChange('address_number', e.target.value)}
+                    placeholder="123"
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Complemento
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address_complement}
+                    onChange={(e) => handleChange('address_complement', e.target.value)}
+                    placeholder="Apto, Bloco, etc."
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  />
+                </div>
+              </div>
+
+              {/* Neighborhood */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bairro
+                </label>
+                <input
+                  type="text"
+                  value={formData.address_neighborhood}
+                  onChange={(e) => handleChange('address_neighborhood', e.target.value)}
+                  placeholder="Nome do bairro"
+                  className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                />
+              </div>
+
+              {/* City and State */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cidade
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address_city}
+                    onChange={(e) => handleChange('address_city', e.target.value)}
+                    placeholder="Nome da cidade"
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estado
+                  </label>
+                  <select
+                    value={formData.address_state}
+                    onChange={(e) => handleChange('address_state', e.target.value)}
+                    className={`w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 ${
+                      validationErrors.address_state ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Selecione</option>
+                    {BRAZILIAN_STATES.map(state => (
+                      <option key={state.code} value={state.code}>
+                        {state.code} - {state.name}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.address_state && (
+                    <p className="text-red-600 text-sm mt-1">{validationErrors.address_state}</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
