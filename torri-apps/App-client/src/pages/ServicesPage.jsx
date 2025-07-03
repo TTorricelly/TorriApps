@@ -19,6 +19,7 @@ import {
 import BottomNavigation from '../components/BottomNavigation';
 import useServicesStore from '../stores/servicesStore';
 import { buildAssetUrl } from '../utils/urlHelpers';
+import { buildServiceImages } from '../utils/imageUtils';
 import SchedulingWizardModal from '../components/SchedulingWizardModal';
 
 const ServicesPage = () => {
@@ -51,33 +52,7 @@ const ServicesPage = () => {
     return buildAssetUrl(relativePath);
   };
 
-  // Build service images array (identical to mobile pattern)
-  const buildServiceImages = (service) => {
-    const images = [];
-    
-    if (service?.image) {
-      const fullUrl = getFullImageUrl(service.image);
-      if (fullUrl) images.push({ src: fullUrl, caption: "Imagem do Serviço" });
-    }
-    if (service?.image_liso) {
-      const fullUrl = getFullImageUrl(service.image_liso);
-      if (fullUrl) images.push({ src: fullUrl, caption: "Liso" });
-    }
-    if (service?.image_ondulado) {
-      const fullUrl = getFullImageUrl(service.image_ondulado);
-      if (fullUrl) images.push({ src: fullUrl, caption: "Ondulado" });
-    }
-    if (service?.image_cacheado) {
-      const fullUrl = getFullImageUrl(service.image_cacheado);
-      if (fullUrl) images.push({ src: fullUrl, caption: "Cacheado" });
-    }
-    if (service?.image_crespo) {
-      const fullUrl = getFullImageUrl(service.image_crespo);
-      if (fullUrl) images.push({ src: fullUrl, caption: "Crespo" });
-    }
-    
-    return images;
-  };
+  // buildServiceImages function now imported from imageUtils utility
 
   // Service card expansion handlers (identical to mobile pattern)
   const handleToggleServiceExpansion = (serviceId) => {
@@ -365,9 +340,6 @@ const SwipeableServiceCard = ({
                         className="w-24 h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => onImagePress(image.src)}
                       />
-                      <p className="text-xs text-gray-500 text-center mt-1">
-                        {image.caption}
-                      </p>
                     </div>
                   ))}
                 </div>

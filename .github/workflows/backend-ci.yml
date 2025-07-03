@@ -104,6 +104,7 @@ jobs:
           --port 8080 \
           --memory 512Mi \
           --cpu 0.25 \
+          --concurrency 1 \
           --min-instances 1 \
           --max-instances 10 \
           --timeout 900

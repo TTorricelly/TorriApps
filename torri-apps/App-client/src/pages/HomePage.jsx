@@ -27,6 +27,7 @@ import { getAvailableTimeSlots } from '../services/appointmentService';
 import { buildAssetUrl } from '../utils/urlHelpers';
 import { generateAvailableDates, formatDateForDisplay as formatDateUtil } from '../utils/dateUtils';
 import { getProfessionalsForService } from '../services/professionalService';
+import { buildServiceImages, getPrimaryServiceImage, hasServiceImages } from '../utils/imageUtils';
 
 // Helper functions (identical to mobile)
 const formatDuration = (minutes) => {
@@ -47,33 +48,7 @@ const getFullImageUrl = (relativePath) => {
   return buildAssetUrl(relativePath);
 };
 
-// Build service images array (identical to mobile pattern)
-const buildServiceImages = (service) => {
-  const images = [];
-  
-  if (service?.image) {
-    const fullUrl = getFullImageUrl(service.image);
-    if (fullUrl) images.push({ src: fullUrl, caption: "Imagem do Serviço" });
-  }
-  if (service?.image_liso) {
-    const fullUrl = getFullImageUrl(service.image_liso);
-    if (fullUrl) images.push({ src: fullUrl, caption: "Liso" });
-  }
-  if (service?.image_ondulado) {
-    const fullUrl = getFullImageUrl(service.image_ondulado);
-    if (fullUrl) images.push({ src: fullUrl, caption: "Ondulado" });
-  }
-  if (service?.image_cacheado) {
-    const fullUrl = getFullImageUrl(service.image_cacheado);
-    if (fullUrl) images.push({ src: fullUrl, caption: "Cacheado" });
-  }
-  if (service?.image_crespo) {
-    const fullUrl = getFullImageUrl(service.image_crespo);
-    if (fullUrl) images.push({ src: fullUrl, caption: "Crespo" });
-  }
-  
-  return images;
-};
+// buildServiceImages function now imported from imageUtils utility
 
 const HomePageInner = ({ navigation }, ref) => {
   const location = useLocation();
@@ -113,6 +88,10 @@ const HomePageInner = ({ navigation }, ref) => {
   const [expandedServiceIds, setExpandedServiceIds] = useState(new Set());
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageForModal, setSelectedImageForModal] = useState(null);
+  
+  // Image loading and error state management
+  const [imageLoadingStates, setImageLoadingStates] = useState({});
+  const [imageErrors, setImageErrors] = useState({});
 
   // Auth and services store integration (identical to mobile)
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
@@ -228,7 +207,9 @@ const HomePageInner = ({ navigation }, ref) => {
           price: String(service.price),
           description: service.description,
           category_id: service.category_id,
-          // Fix field mapping to match mobile app exactly
+          // New dynamic images array from ServiceImage table
+          images: service.images || [],
+          // Legacy static image fields for backward compatibility
           image: service.image,
           image_liso: service.image_liso,
           image_ondulado: service.image_ondulado,
@@ -329,6 +310,22 @@ const HomePageInner = ({ navigation }, ref) => {
   const handleImagePress = (imageUrl) => {
     setSelectedImageForModal(imageUrl);
     setImageModalVisible(true);
+  };
+
+  // Image loading and error handlers
+  const handleImageLoad = (imageKey) => {
+    setImageLoadingStates(prev => ({ ...prev, [imageKey]: false }));
+    setImageErrors(prev => ({ ...prev, [imageKey]: false }));
+  };
+
+  const handleImageError = (imageKey) => {
+    setImageLoadingStates(prev => ({ ...prev, [imageKey]: false }));
+    setImageErrors(prev => ({ ...prev, [imageKey]: true }));
+  };
+
+  const handleImageLoadStart = (imageKey) => {
+    setImageLoadingStates(prev => ({ ...prev, [imageKey]: true }));
+    setImageErrors(prev => ({ ...prev, [imageKey]: false }));
   };
 
   // Categories screen render
@@ -563,19 +560,45 @@ const HomePageInner = ({ navigation }, ref) => {
                       {serviceImages.length > 0 && (
                         <div className="mb-4">
                           <div className="flex space-x-3 overflow-x-auto pb-2">
-                            {serviceImages.map((image, index) => (
-                              <div key={index} className="flex-shrink-0">
-                                <img
-                                  src={image.src}
-                                  alt={image.caption}
-                                  className="w-24 h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => handleImagePress(image.src)}
-                                />
-                                <p className="text-xs text-gray-500 text-center mt-1">
-                                  {image.caption}
-                                </p>
-                              </div>
-                            ))}
+                            {serviceImages.map((image, index) => {
+                              const imageKey = `${service.id}-${index}`;
+                              const isLoading = imageLoadingStates[imageKey];
+                              const hasError = imageErrors[imageKey];
+                              
+                              return (
+                                <div key={index} className="flex-shrink-0 relative">
+                                  {/* Loading placeholder */}
+                                  {isLoading && (
+                                    <div className="absolute inset-0 w-24 h-24 rounded-lg bg-gray-200 flex items-center justify-center">
+                                      <Loader2 size={16} className="spinner text-gray-400" />
+                                    </div>
+                                  )}
+                                  
+                                  {/* Error placeholder */}
+                                  {hasError && (
+                                    <div className="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                                      <Eye size={16} className="text-gray-400" />
+                                    </div>
+                                  )}
+                                  
+                                  {/* Image */}
+                                  {!hasError && (
+                                    <img
+                                      src={image.src}
+                                      alt={image.caption}
+                                      className={`w-24 h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity ${
+                                        isLoading ? 'opacity-0' : 'opacity-100'
+                                      }`}
+                                      onClick={() => handleImagePress(image.src)}
+                                      onLoadStart={() => handleImageLoadStart(imageKey)}
+                                      onLoad={() => handleImageLoad(imageKey)}
+                                      onError={() => handleImageError(imageKey)}
+                                    />
+                                  )}
+                                  
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

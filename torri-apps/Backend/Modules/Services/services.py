@@ -22,31 +22,14 @@ def _add_icon_url_to_category(category: Category, base_url: str = None) -> Categ
         category_data.icon_url = file_handler.get_public_url(category.icon_path, base_url)
     return category_data
 
-def _add_image_urls_to_service(service: Service, base_url: str = None) -> dict:
-    """Convert Service model to dict with image URLs."""
+def _process_service_images_urls(service: Service, base_url: str = None) -> None:
+    """Process service images to add full URLs to file_path fields."""
     if base_url is None:
         base_url = settings.SERVER_HOST
-    service_dict = {
-        'id': service.id,
-        'name': service.name,
-        'description': service.description,
-        'duration_minutes': service.duration_minutes,
-        'price': service.price,
-        'commission_percentage': service.commission_percentage,
-        'is_active': service.is_active,
-        'category_id': service.category_id,
-        'service_sku': service.service_sku,
-        # 'tenant_id': service.tenant_id, # Removed tenant_id
-        'image': file_handler.get_public_url(service.image, base_url) if service.image else None,
-        'image_liso': file_handler.get_public_url(service.image_liso, base_url) if service.image_liso else None,
-        'image_ondulado': file_handler.get_public_url(service.image_ondulado, base_url) if service.image_ondulado else None,
-        'image_cacheado': file_handler.get_public_url(service.image_cacheado, base_url) if service.image_cacheado else None,
-        'image_crespo': file_handler.get_public_url(service.image_crespo, base_url) if service.image_crespo else None,
-    }
-    # Add category info if available
-    if hasattr(service, 'category') and service.category:
-        service_dict['category'] = _add_icon_url_to_category(service.category, base_url)
-    return service_dict
+    
+    for image in service.images:
+        if image.file_path and not image.file_path.startswith(('http://', 'https://')):
+            image.file_path = file_handler.get_public_url(image.file_path, base_url)
 
 def _validate_professionals(db: Session, professional_ids: List[UUID]) -> List[User]: # Removed tenant_id, updated return type
     if not professional_ids:
@@ -195,9 +178,13 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
 def get_service_with_details_by_id(db: Session, service_id: UUID) -> Service | None:
     # SIMPLIFIED: Get service by ID only (no tenant filtering)
     stmt = select(Service).where(Service.id == service_id).options( # PostgreSQL UUID comparison
-        joinedload(Service.category)
+        joinedload(Service.category),
+        selectinload(Service.images)
     )
-    return db.execute(stmt).scalars().first()
+    service = db.execute(stmt).scalars().first()
+    if service:
+        _process_service_images_urls(service)
+    return service
 
 def get_services( # Renamed from get_services_by_tenant
     db: Session,
@@ -233,6 +220,11 @@ def get_all_services(
     stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
     # Ensure the return is a list of Service model instances
     services_list = list(db.execute(stmt).scalars().all())
+    
+    # Process image URLs for all services
+    for service in services_list:
+        _process_service_images_urls(service)
+    
     return services_list
 
 def update_service(db: Session, db_service: Service, service_data: ServiceUpdate) -> Service:
