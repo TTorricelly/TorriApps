@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { updateUserProfile } from '../services/userService';
-import { ArrowLeft, User, Mail, Phone, Save, Calendar, CreditCard, MapPin } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Save, Calendar, CreditCard, MapPin, Tag, Plus } from 'lucide-react';
 import { 
   handleCpfInput, 
   handleCepInput, 
@@ -14,17 +14,22 @@ import {
   cleanFormData,
   validateBrazilianFields
 } from '../utils/brazilianUtils';
+import LabelChip from '../components/labels/LabelChip';
+import LabelSelector from '../components/labels/LabelSelector';
+import labelService from '../services/labelService';
+import { areLabelsEqual, extractLabelIds } from '../utils/labelUtils';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
   const { user, setProfile } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLabelSelectorOpen, setIsLabelSelectorOpen] = useState(false);
+  const [selectedLabels, setSelectedLabels] = useState(user?.labels || []);
 
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
     phone_number: user?.phone_number || '',
-    hair_type: user?.hair_type || '',
     gender: user?.gender || '',
     date_of_birth: user?.date_of_birth || '',
     // CPF and Address fields
@@ -43,6 +48,22 @@ const EditProfilePage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleLabelRemove = async (labelToRemove) => {
+    try {
+      setSelectedLabels(prev => prev.filter(label => label.id !== labelToRemove.id));
+      await labelService.removeLabelFromUser(user.id, labelToRemove.id);
+    } catch (error) {
+      console.error('Error removing label:', error);
+      // Revert on error
+      setSelectedLabels(prev => [...prev, labelToRemove]);
+      alert('Erro ao remover label. Tente novamente.');
+    }
+  };
+
+  const handleLabelSelectionChange = (newLabels) => {
+    setSelectedLabels(newLabels);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     
@@ -59,6 +80,24 @@ const EditProfilePage = () => {
     const cleanedData = cleanFormData(formData);
     
     const updatedProfile = await updateUserProfile(cleanedData);
+    
+    // Update labels if they changed
+    if (updatedProfile) {
+      try {
+        // Check if labels actually changed using utility function
+        const labelsChanged = !areLabelsEqual(user?.labels, selectedLabels);
+        
+        if (labelsChanged) {
+          const labelIds = extractLabelIds(selectedLabels);
+          await labelService.updateUserLabels(user.id, labelIds);
+          updatedProfile.labels = selectedLabels;
+        }
+      } catch (error) {
+        console.error('Error updating labels:', error);
+        alert('Perfil atualizado, mas houve erro ao salvar labels. Tente novamente.');
+      }
+    }
+    
     setIsSaving(false);
 
     if (updatedProfile) {
@@ -140,28 +179,6 @@ const EditProfilePage = () => {
             </div>
           </div>
 
-          {/* Hair Type */}
-          <div>
-            <label htmlFor="hair_type" className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Cabelo
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">💇</span>
-              <select
-                id="hair_type"
-                name="hair_type"
-                value={formData.hair_type}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
-              >
-                <option value="">Selecione...</option>
-                <option value="LISO">Liso</option>
-                <option value="ONDULADO">Ondulado</option>
-                <option value="CACHEADO">Cacheado</option>
-                <option value="CRESPO">Crespo</option>
-              </select>
-            </div>
-          </div>
 
           {/* Gender */}
           <div>
@@ -371,6 +388,46 @@ const EditProfilePage = () => {
             </div>
           </div>
 
+          {/* Labels Section */}
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Tag size={20} className="text-pink-500" />
+              Preferências
+            </h3>
+
+            {/* Current Labels */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Preferências Atuais
+              </label>
+              {selectedLabels.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedLabels.map((label) => (
+                    <LabelChip
+                      key={label.id}
+                      label={label}
+                      size="medium"
+                      showRemove={true}
+                      onRemove={handleLabelRemove}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm mb-3">Nenhuma preferência selecionada</p>
+              )}
+              
+              {/* Add Label Button */}
+              <button
+                type="button"
+                onClick={() => setIsLabelSelectorOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              >
+                <Plus size={16} />
+                Adicionar Preferências
+              </button>
+            </div>
+          </div>
+
           <div className="pt-4">
             <button
               type="submit"
@@ -392,6 +449,16 @@ const EditProfilePage = () => {
           </div>
         </form>
       </div>
+
+      {/* Label Selector Modal */}
+      <LabelSelector
+        isOpen={isLabelSelectorOpen}
+        onClose={() => setIsLabelSelectorOpen(false)}
+        onSelectionChange={handleLabelSelectionChange}
+        selectedLabels={selectedLabels}
+        title="Selecionar Preferências"
+        allowMultiple={true}
+      />
     </div>
   );
 };

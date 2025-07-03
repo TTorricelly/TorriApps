@@ -18,6 +18,7 @@ def configure_relationships():
     from Modules.Professionals.models import ProfessionalAvailability, ProfessionalBlockedTime, ProfessionalBreak
     from Modules.Availability.models import ProfessionalAvailability as AvailabilityModel, ProfessionalBreak as BreakModel, ProfessionalBlockedTime as BlockedTimeModel
     from Modules.Stations.models import StationType, Station, ServiceStationRequirement
+    from Modules.Labels.models import Label, user_labels_association
     # from Modules.Payments.models import Payment, PaymentItem  # Temporarily disabled
     
     # Configure User relationships
@@ -73,6 +74,22 @@ def configure_relationships():
             cascade="all, delete-orphan"
         )
     
+    # Configure User-Labels relationship
+    if not hasattr(User, 'labels'):
+        User.labels = relationship(
+            "Label",
+            secondary=user_labels_association,
+            back_populates="users"
+        )
+    
+    # Configure Label-Users relationship
+    if not hasattr(Label, 'users'):
+        Label.users = relationship(
+            "User",
+            secondary=user_labels_association,
+            back_populates="labels"
+        )
+    
     # Configure Service relationships
     if not hasattr(Service, 'professionals'):
         Service.professionals = relationship(
@@ -94,6 +111,8 @@ def configure_relationships():
             back_populates="service",
             cascade="all, delete-orphan"
         )
+    
+    # Label-Users relationship is now configured directly in the Label model
     
     # Configure Appointment relationships
     if not hasattr(Appointment, 'client'):

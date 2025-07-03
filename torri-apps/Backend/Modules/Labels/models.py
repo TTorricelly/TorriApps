@@ -6,11 +6,20 @@ Labels are used for categorizing and organizing various entities in the system.
 """
 
 from uuid import uuid4
-from sqlalchemy import Column, String, Boolean, DateTime, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Text, Table, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from datetime import datetime
 
 from Config.Database import Base
+
+# Association table for users and labels - moved here to avoid circular imports
+user_labels_association = Table(
+    "user_labels",
+    Base.metadata,
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("label_id", UUID(as_uuid=True), ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class Label(Base):
@@ -46,6 +55,13 @@ class Label(Base):
     
     # Legacy tenant support
     tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Relationship to users that have this label
+    users = relationship(
+        "User",
+        secondary=user_labels_association,
+        back_populates="labels"
+    )
     
     def __repr__(self):
         return f"<Label(id={self.id}, name='{self.name}', color='{self.color}', is_active={self.is_active})>"

@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { clientsApi } from '../../Services/clients'; // Changed from professionalsApi
+import { usersApi } from '../../Services/users'; // Added for label management
 import { normalizePhoneNumber, formatPhoneForDisplay, isValidPhoneNumber, preparePhoneDataForSubmission } from '../../utils/phoneUtils';
 import { 
   handleCpfInput, 
@@ -40,6 +41,7 @@ import {
   cleanFormData,
   validateBrazilianFields
 } from '../../Utils/brazilianFormatters';
+import ClientLabels from '../../Components/Clients/ClientLabels';
 // import { servicesApi } from '../../Services/services'; // Removed servicesApi
 
 // Removed ServiceTagSelector component as it's not needed for clients
@@ -49,7 +51,8 @@ const BasicInfoTab = ({
   formData,
   handleInputChange,
   errors,
-  isEditMode
+  isEditMode,
+  onLabelUpdate
 }) => {
   const hairTypeOptions = [
     { label: "Liso", value: "LISO" },
@@ -201,26 +204,14 @@ const BasicInfoTab = ({
             )}
           </div>
           <div>
-            <Select
-              name="hair_type"
-              label="Tipo de Cabelo"
-              value={formData.hair_type}
-              onChange={(value) => handleInputChange('hair_type', value)}
-              error={!!errors.hair_type}
-              className="bg-bg-primary border-bg-tertiary text-text-primary"
-              labelProps={{ className: "text-text-secondary" }}
-            >
-              {hairTypeOptions.map(option => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-            {errors.hair_type && (
-              <Typography className="text-status-error text-sm mt-1">
-                {errors.hair_type}
-              </Typography>
-            )}
+            <Typography variant="h6" className="text-text-primary mb-2">
+              Preferências do Cliente
+            </Typography>
+            <ClientLabels
+              client={formData}
+              editable={true}
+              onUpdate={onLabelUpdate}
+            />
           </div>
         </div>
 
@@ -444,6 +435,13 @@ const AddressTab = ({
               error={!!errors.address_state}
               className="bg-bg-primary border-bg-tertiary text-text-primary"
               labelProps={{ className: "text-text-secondary" }}
+              menuProps={{ 
+                className: "z-[9999] !fixed",
+                style: { zIndex: 9999, position: 'fixed' }
+              }}
+              containerProps={{ className: "relative z-[9999]" }}
+              lockScroll={false}
+              placement="bottom-start"
               selected={() => {
                 if (formData.address_state) {
                   const selectedState = BRAZILIAN_STATES.find(state => state.code === formData.address_state);
@@ -488,6 +486,7 @@ export default function ClientForm() { // Renamed component
     gender: '', // Added gender
     password: '', // Kept for creation
     is_active: true,
+    labels: [], // Added labels
     // CPF and Address fields
     cpf: '',
     address_street: '',
@@ -568,6 +567,7 @@ export default function ClientForm() { // Renamed component
         address_city: data.address_city || '',
         address_state: data.address_state || '',
         address_cep: data.address_cep || '',
+        labels: data.labels || [], // Added labels
       };
 
       setFormData(loadedFormData);
@@ -703,9 +703,23 @@ export default function ClientForm() { // Renamed component
       let result;
       if (isEditMode) {
         result = await clientsApi.updateClient(clientId, dataToSave); // Use clientsApi
+        
+        // Update labels if they exist and have changed
+        if (formData.labels && formData.labels.length > 0) {
+          const labelIds = formData.labels.map(label => label.id);
+          await usersApi.updateUserLabels(clientId, labelIds);
+        }
+        
         showAlert('Cliente atualizado com sucesso!', 'success'); // Updated message
       } else {
         result = await clientsApi.createClient(dataToSave); // Use clientsApi
+        
+        // For new clients, add labels after creation if they exist
+        if (result && result.id && formData.labels && formData.labels.length > 0) {
+          const labelIds = formData.labels.map(label => label.id);
+          await usersApi.updateUserLabels(result.id, labelIds);
+        }
+        
         showAlert('Cliente criado com sucesso!', 'success'); // Updated message
       }
 
@@ -817,6 +831,12 @@ export default function ClientForm() { // Renamed component
                     handleInputChange={handleInputChange}
                     errors={errors}
                     isEditMode={isEditMode}
+                    onLabelUpdate={(updatedClient) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        labels: updatedClient.labels
+                      }));
+                    }}
                   />
                 </TabPanel>
                 

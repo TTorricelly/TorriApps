@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date, DateTime
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date, DateTime, Table
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship # Added for relationships
@@ -6,11 +6,13 @@ from sqlalchemy.sql import func
 from uuid import uuid4
 from Config.Database import Base # Adjusted import path
 from Config.Settings import settings # Adjusted import path
-from .constants import UserRole, HairType, Gender # Import Gender
+from .constants import UserRole, Gender # Import Gender
 # To prevent circular imports with type hinting, we can use string references for relationship models
 # or forward references if needed, but for `secondary` argument, the table object itself might be needed
 # or its string name "fully.qualified.path:table_object" or just "table_name" if in same metadata.
 # from Modules.Services.models import service_professionals_association (This would be circular)
+
+# Note: user_labels_association table is defined in Modules.Labels.models to avoid circular imports
 
 class User(Base):
     __tablename__ = 'users'
@@ -24,7 +26,6 @@ class User(Base):
     nickname = Column(String(255), nullable=True)  # Match database VARCHAR(255)
     phone_number = Column(String(50), nullable=True)  # Match database VARCHAR(50)
     date_of_birth = Column(Date, nullable=True)
-    hair_type = Column(SAEnum(HairType), nullable=True)
     gender = Column(SAEnum(Gender), nullable=True)
     is_active = Column(Boolean, default=True)
     
@@ -49,6 +50,13 @@ class User(Base):
     
     # Legacy tenant_id field (nullable for backward compatibility)
     tenant_id = Column(UUID(as_uuid=True), nullable=True)
+
+    # Relationship to labels assigned to this user
+    labels = relationship(
+        "Label",
+        secondary="user_labels",
+        back_populates="users"
+    )
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model

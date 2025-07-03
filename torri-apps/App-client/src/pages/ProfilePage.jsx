@@ -5,8 +5,9 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { getUserProfile } from '../services/userService';
-import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar, MapPin, CreditCard, ToggleLeft, ToggleRight, ChevronRight } from 'lucide-react';
+import { User, Mail, Phone, LogOut, Settings, HelpCircle, Edit, Calendar, MapPin, CreditCard, ToggleLeft, ToggleRight, ChevronRight, Tag } from 'lucide-react';
 import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils';
+import LabelChip from '../components/labels/LabelChip';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -100,15 +101,6 @@ const ProfilePage = () => {
 
                 
 
-                <div className="bg-white border border-gray-200 rounded-2xl p-4">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-gray-400">💇</span>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500">Tipo de Cabelo</p>
-                      <p className="text-gray-800 capitalize">{user?.hair_type || 'Não informado'}</p>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="bg-white border border-gray-200 rounded-2xl p-4">
                   <div className="flex items-center space-x-3">
@@ -157,6 +149,28 @@ const ProfilePage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Labels Section */}
+                {user?.labels && user.labels.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-4">
+                    <div className="flex items-start space-x-3">
+                      <Tag size={20} className="text-gray-400 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-3">Preferências</p>
+                        <div className="flex flex-wrap gap-2">
+                          {user.labels.map((label) => (
+                            <LabelChip
+                              key={label.id}
+                              label={label}
+                              size="medium"
+                              showRemove={false}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Mode Toggle for Professional Users */}

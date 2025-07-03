@@ -28,6 +28,9 @@ import {
 
 import { clientsApi } from '../../Services/clients.js';
 import { formatCpf, formatAddressCompact } from '../../Utils/brazilianFormatters';
+import { labelsApi } from '../../Services/labels.js';
+import ClientLabels from '../../Components/Clients/ClientLabels.jsx';
+import BulkLabelAssignment from '../../Components/Clients/BulkLabelAssignment.jsx';
 // import { servicesApi } from '../../Services/services'; // Removed as service filter is not used
 
 function ClientsPage() { // Renamed component and removed default export from here
@@ -38,16 +41,19 @@ function ClientsPage() { // Renamed component and removed default export from he
   // const [allServices, setAllServices] = useState([]); // Removed
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [availableLabels, setAvailableLabels] = useState([]);
+  const [selectedLabelFilters, setSelectedLabelFilters] = useState([]);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, client: null }); // Added deleteDialog state
 
   // Load data on component mount
   useEffect(() => {
-    // Promise.all([ // Removed Promise.all as only one data source is loaded
-    loadClients();
-    // loadAllServices() // Removed
-    // ]);
+    Promise.all([
+      loadClients(),
+      loadAvailableLabels()
+    ]);
   }, []);
 
 
@@ -83,6 +89,15 @@ function ClientsPage() { // Renamed component and removed default export from he
       const data = await clientsApi.getAllClients();
       console.log('📋 Received clients data:', data);
       console.log(`📊 Total clients found: ${data?.length || 0}`);
+      
+      // Validate client data integrity
+      if (data && Array.isArray(data)) {
+        const clientsWithoutIds = data.filter(client => !client || !client.id);
+        if (clientsWithoutIds.length > 0) {
+          console.warn('Some clients have invalid IDs and will be filtered out');
+        }
+      }
+      
       setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
@@ -93,16 +108,15 @@ function ClientsPage() { // Renamed component and removed default export from he
     }
   };
 
-  // const loadAllServices = async () => { // Removed function
-  //   try {
-  //     // Get all services from all categories for filtering
-  //     const data = await servicesApi.getAllServices();
-  //     setAllServices(data);
-  //   } catch (error) {
-  //     console.error('Erro ao carregar serviços:', error);
-  //     // Don't show error for services as it's not critical for main functionality
-  //   }
-  // };
+  const loadAvailableLabels = async () => {
+    try {
+      const response = await labelsApi.getAll({ limit: 100, is_active: true });
+      setAvailableLabels(response.items || []);
+    } catch (error) {
+      console.error('Erro ao carregar labels:', error);
+      // Don't show error for labels as it's not critical for main functionality
+    }
+  };
 
   const handleDeleteClient = (client) => {
     setDeleteDialog({ open: true, client });
@@ -146,7 +160,7 @@ function ClientsPage() { // Renamed component and removed default export from he
     });
   }, []);
 
-  // Filter clients based on search query and status
+  // Filter clients based on search query, status, and labels
   const filteredClients = useMemo(() => {
     let filtered = clients;
 
@@ -156,15 +170,64 @@ function ClientsPage() { // Renamed component and removed default export from he
       filtered = filtered.filter(client => client.is_active === isActive);
     }
 
-    // Apply search filter on the already status-filtered results
+    // Apply label filters
+    if (selectedLabelFilters.length > 0) {
+      filtered = filtered.filter(client => {
+        const clientLabels = client.labels || [];
+        return selectedLabelFilters.some(filterLabel => 
+          clientLabels.some(clientLabel => clientLabel.id === filterLabel.id)
+        );
+      });
+    }
+
+    // Apply search filter on the already filtered results
     filtered = searchClients(filtered, searchQuery);
 
     return filtered;
-  }, [clients, searchQuery, statusFilter, searchClients]);
+  }, [clients, searchQuery, statusFilter, selectedLabelFilters, searchClients]);
 
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 5000);
+  };
+
+  const updateClientInList = (updatedClient) => {
+    setClients(prev => prev.map(client => 
+      client.id === updatedClient.id ? updatedClient : client
+    ));
+  };
+
+  const handleClientSelect = (clientId, checked) => {
+    // Add validation to prevent undefined IDs
+    if (!clientId) {
+      console.error('Attempted to select client with undefined ID');
+      return;
+    }
+    
+    if (checked) {
+      setSelectedClientIds(prev => [...prev, clientId]);
+    } else {
+      setSelectedClientIds(prev => prev.filter(id => id !== clientId));
+    }
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      // Filter out any clients without valid IDs
+      const validClientIds = filteredClients
+        .filter(client => client && client.id && typeof client.id === 'string')
+        .map(client => client.id);
+        
+      setSelectedClientIds(validClientIds);
+    } else {
+      setSelectedClientIds([]);
+    }
+  };
+
+  const handleBulkComplete = () => {
+    setSelectedClientIds([]);
+    loadClients(); // Reload to get updated data
+    showAlert('Labels atualizados em lote com sucesso!', 'success');
   };
 
   // const handleCreateProfessional = () => { // Removed function
@@ -241,19 +304,12 @@ function ClientsPage() { // Renamed component and removed default export from he
               </Typography>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outlined"
-                onClick={loadClients}
-                disabled={isLoading}
-                className="border-bg-tertiary text-text-secondary hover:bg-bg-tertiary"
-                title="Atualizar lista de clientes"
-              >
-                {isLoading ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  '🔄'
-                )}
-              </Button>
+              {selectedClientIds.length > 0 && (
+                <BulkLabelAssignment
+                  selectedClients={selectedClientIds}
+                  onComplete={handleBulkComplete}
+                />
+              )}
               
               <Button
                 className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
@@ -266,7 +322,7 @@ function ClientsPage() { // Renamed component and removed default export from he
           </div>
 
           {/* Filters Section */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-end">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end mb-8">
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
               <Input
@@ -283,31 +339,44 @@ function ClientsPage() { // Renamed component and removed default export from he
 
             {/* Status Filter */}
             <div className="min-w-[140px] relative">
-              <Select
+              <label className="block text-sm font-medium text-text-secondary mb-1">Status</label>
+              <select
                 value={statusFilter}
-                onChange={setStatusFilter}
-                label="Status"
-                className="bg-bg-primary border-bg-tertiary text-text-primary"
-                labelProps={{ className: "text-text-secondary" }}
-                containerProps={{ className: "text-text-primary" }}
-                menuProps={{
-                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
-                  style: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 9999 }
-                }}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-bg-primary border border-bg-tertiary text-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary"
               >
-                <Option value="" className="text-text-primary hover:bg-bg-tertiary">
-                  Todos
-                </Option>
-                <Option value="active" className="text-text-primary hover:bg-bg-tertiary">
-                  Ativos
-                </Option>
-                <Option value="inactive" className="text-text-primary hover:bg-bg-tertiary">
-                  Inativos
-                </Option>
-              </Select>
+                <option value="">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
             </div>
 
-            {/* Service Filter Removed */}
+            {/* Label Filter */}
+            <div className="min-w-[200px] relative">
+              <label className="block text-sm font-medium text-text-secondary mb-1">Filtrar por preferências</label>
+              <select
+                value={selectedLabelFilters.length > 0 ? selectedLabelFilters[0]?.id || '' : ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value) {
+                    const label = availableLabels.find(l => l.id === value);
+                    if (label) {
+                      setSelectedLabelFilters([label]);
+                    }
+                  } else {
+                    setSelectedLabelFilters([]);
+                  }
+                }}
+                className="w-full px-3 py-2 bg-bg-primary border border-bg-tertiary text-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary"
+              >
+                <option value="">Todas as preferências</option>
+                {availableLabels.map((label) => (
+                  <option key={label.id} value={label.id}>
+                    {label.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </CardHeader>
 
@@ -325,12 +394,21 @@ function ClientsPage() { // Renamed component and removed default export from he
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bg-tertiary">
+                    <th className="text-left p-4 text-text-primary font-semibold w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedClientIds.length === filteredClients.length && filteredClients.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="rounded border-bg-tertiary"
+                      />
+                    </th>
                     <th className="text-left p-4 text-text-primary font-semibold">Foto</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">E-mail</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Telefone</th>
                     <th className="text-left p-4 text-text-primary font-semibold">CPF</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Endereço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Labels</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Status</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
                   </tr>
@@ -344,6 +422,14 @@ function ClientsPage() { // Renamed component and removed default export from he
                       }`}
                       onClick={() => navigate(`/clients/edit/${client.id}`)}
                     >
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedClientIds.includes(client.id)}
+                          onChange={(e) => handleClientSelect(client.id, e.target.checked)}
+                          className="rounded border-bg-tertiary"
+                        />
+                      </td>
                       <td className="p-4">
                         <div className="w-10 h-10">
                           {client.photo_url ? ( // Use client
@@ -387,6 +473,13 @@ function ClientsPage() { // Renamed component and removed default export from he
                             formatAddressCompact(client) : 'Não informado'
                           }
                         </Typography>
+                      </td>
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <ClientLabels 
+                          client={client} 
+                          editable={false}
+                          onUpdate={updateClientInList}
+                        />
                       </td>
                       <td className="p-4">
                         <Badge

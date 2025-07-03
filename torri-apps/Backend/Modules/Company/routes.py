@@ -36,7 +36,7 @@ def get_company_info(db: Annotated[Session, Depends(get_db)]):
     return company
 
 
-@router.get("/", response_model=List[CompanySchema])
+@router.get("", response_model=List[CompanySchema])
 def read_companies(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))],
@@ -50,7 +50,7 @@ def read_companies(
     return companies
 
 
-@router.post("/", response_model=CompanySchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CompanySchema, status_code=status.HTTP_201_CREATED)
 def create_company(
     company_data: CompanyCreate,
     db: Annotated[Session, Depends(get_db)],

@@ -1,5 +1,6 @@
 import React from "react";
 import { CalendarDaysIcon, UsersIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import LabelDistribution from '../../Components/Dashboard/LabelDistribution';
 
 export default function DashboardPage() {
   // Mock data - in real app this would come from API
@@ -93,55 +94,61 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-l">
-        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
-          <h3 className="text-h3 font-semibold text-text-primary mb-m">Ações Rápidas</h3>
-          <div className="space-y-s">
-            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
-              Novo Agendamento
-            </button>
-            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
-              Cadastrar Cliente
-            </button>
-            <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
-              Ver Relatórios
-            </button>
-          </div>
-        </div>
+      {/* Charts and Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-l">
+        {/* Label Distribution Chart */}
+        <LabelDistribution />
 
-        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
-          <h3 className="text-h3 font-semibold text-text-primary mb-m">Resumo Semanal</h3>
-          <div className="space-y-s">
-            <div className="flex justify-between">
-              <span className="text-small text-text-secondary">Agendamentos</span>
-              <span className="text-small font-medium text-text-primary">67</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-small text-text-secondary">Novos Clientes</span>
-              <span className="text-small font-medium text-text-primary">8</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-small text-text-secondary">Receita</span>
-              <span className="text-small font-medium text-text-primary">R$ 3.240</span>
+        {/* Quick Actions and Stats */}
+        <div className="space-y-l">
+          <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+            <h3 className="text-h3 font-semibold text-text-primary mb-m">Ações Rápidas</h3>
+            <div className="space-y-s">
+              <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
+                Novo Agendamento
+              </button>
+              <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
+                Cadastrar Cliente
+              </button>
+              <button className="w-full text-left px-m py-xs text-small text-accent-primary hover:bg-bg-tertiary rounded-button transition-colors duration-fast">
+                Ver Relatórios
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
-          <h3 className="text-h3 font-semibold text-text-primary mb-m">Status do Sistema</h3>
-          <div className="space-y-s">
-            <div className="flex items-center">
-              <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
-              <span className="text-small text-text-secondary">Sistema Online</span>
+          <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+            <h3 className="text-h3 font-semibold text-text-primary mb-m">Resumo Semanal</h3>
+            <div className="space-y-s">
+              <div className="flex justify-between">
+                <span className="text-small text-text-secondary">Agendamentos</span>
+                <span className="text-small font-medium text-text-primary">67</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-small text-text-secondary">Novos Clientes</span>
+                <span className="text-small font-medium text-text-primary">8</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-small text-text-secondary">Receita</span>
+                <span className="text-small font-medium text-text-primary">R$ 3.240</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
-              <span className="text-small text-text-secondary">Backup Atualizado</span>
-            </div>
-            <div className="flex items-center">
-              <div className="h-2 w-2 bg-status-warning rounded-full mr-s"></div>
-              <span className="text-small text-text-secondary">Sincronização Mobile</span>
+          </div>
+
+          <div className="bg-bg-secondary rounded-card shadow-card border border-bg-tertiary p-l">
+            <h3 className="text-h3 font-semibold text-text-primary mb-m">Status do Sistema</h3>
+            <div className="space-y-s">
+              <div className="flex items-center">
+                <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
+                <span className="text-small text-text-secondary">Sistema Online</span>
+              </div>
+              <div className="flex items-center">
+                <div className="h-2 w-2 bg-status-success rounded-full mr-s"></div>
+                <span className="text-small text-text-secondary">Backup Atualizado</span>
+              </div>
+              <div className="flex items-center">
+                <div className="h-2 w-2 bg-status-warning rounded-full mr-s"></div>
+                <span className="text-small text-text-secondary">Sincronização Mobile</span>
+              </div>
             </div>
           </div>
         </div>

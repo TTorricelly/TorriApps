@@ -175,11 +175,6 @@ const ClientsPage = () => {
           </span>
         </div>
         
-        {client.hair_type && (
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            {client.hair_type}
-          </span>
-        )}
       </div>
     </div>
   )

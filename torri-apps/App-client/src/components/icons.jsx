@@ -34,7 +34,8 @@ import {
   Star,
   Save,
   ArrowLeftRight,
-  Briefcase
+  Briefcase,
+  Tag
 } from 'lucide-react'
 
 export {
@@ -72,5 +73,6 @@ export {
   Star,
   Save,
   ArrowLeftRight,
-  Briefcase
+  Briefcase,
+  Tag
 }

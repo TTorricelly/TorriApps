@@ -1,10 +1,23 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from uuid import UUID
-from .constants import UserRole, HairType, Gender # Import Gender
+from .constants import UserRole, Gender # Import Gender
 from datetime import date # Import date
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
 import re
 from Core.Utils.brazilian_validators import cpf_validator, cep_validator, state_validator
+
+if TYPE_CHECKING:
+    from Modules.Labels.schemas import LabelSchema
+
+
+class UserLabelRead(BaseModel):
+    """Label information for user responses"""
+    id: UUID
+    name: str
+    color: str
+    
+    class Config:
+        from_attributes = True
 
 class UserBase(BaseModel): # Renamed from UserTenantBase
     email: EmailStr | None = None
@@ -12,7 +25,6 @@ class UserBase(BaseModel): # Renamed from UserTenantBase
     nickname: Optional[str] = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     
     # CPF field for Brazilian clients
@@ -54,7 +66,6 @@ class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     is_active: bool | None = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     
     # CPF field for Brazilian clients
@@ -90,11 +101,11 @@ class UserRead(BaseModel):
     nickname: Optional[str] = None
     phone_number: Optional[str] = None
     date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     role: UserRole
     is_active: bool
     photo_path: Optional[str] = None
+    labels: Optional[List[UserLabelRead]] = []
     
     # CPF field for Brazilian clients
     cpf: Optional[str] = None
@@ -108,8 +119,27 @@ class UserRead(BaseModel):
     address_state: Optional[str] = None
     address_cep: Optional[str] = None
 
+    @field_validator('labels', mode='before')
+    def convert_labels(cls, v):
+        """Convert SQLAlchemy relationship to list"""
+        if hasattr(v, '__iter__') and not isinstance(v, (str, dict)):
+            return list(v)
+        return v if v else []
+
     class Config:
         from_attributes = True
+
+class UserDetailRead(UserRead):
+    """Detailed user information including all label details"""
+    labels: Optional[List['LabelSchema']] = []
+
+
+class UserListResponse(BaseModel):
+    """Schema for paginated user list response"""
+    users: List[UserRead]
+    total: int
+    skip: int
+    limit: int
 
 # Alias for backward compatibility - points to the read schema
 User = UserRead
@@ -176,7 +206,6 @@ class PublicRegistrationRequest(BaseModel):
     phone_number: Optional[str] = None
     password: str
     date_of_birth: Optional[date] = None
-    hair_type: Optional[HairType] = None
     gender: Optional[Gender] = None
     
     # CPF field for Brazilian clients

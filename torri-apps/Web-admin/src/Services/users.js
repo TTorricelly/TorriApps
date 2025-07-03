@@ -63,5 +63,65 @@ export const usersApi = {
         defaultValue: null
       }
     );
+  },
+
+  // Get user labels
+  getUserLabels: async (userId) => {
+    const endpoint = buildApiEndpoint(`users/${userId}/labels`);
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint),
+      {
+        defaultValue: []
+      }
+    );
+  },
+
+  // Add label to user
+  addLabelToUser: async (userId, labelId) => {
+    const endpoint = buildApiEndpoint(`users/${userId}/labels/${labelId}`);
+    
+    return withApiErrorHandling(
+      () => api.post(endpoint),
+      {
+        defaultValue: null
+      }
+    );
+  },
+
+  // Remove label from user
+  removeLabelFromUser: async (userId, labelId) => {
+    const endpoint = buildApiEndpoint(`users/${userId}/labels/${labelId}`);
+    
+    return withApiErrorHandling(
+      () => api.delete(endpoint),
+      {
+        defaultValue: null
+      }
+    );
+  },
+
+  // Bulk update user labels
+  updateUserLabels: async (userId, labelIds) => {
+    const endpoint = buildApiEndpoint(`users/${userId}/labels/bulk`);
+    
+    return withApiErrorHandling(
+      () => api.post(endpoint, { label_ids: labelIds }),
+      {
+        defaultValue: null
+      }
+    );
+  },
+
+  // Get users by label
+  getUsersByLabel: async (labelId, params = {}) => {
+    const endpoint = buildApiEndpoint(`users/by-label/${labelId}`);
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint, { params }),
+      {
+        defaultValue: []
+      }
+    );
   }
 };

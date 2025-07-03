@@ -12,10 +12,12 @@ import {
   MapPin,
   Trash2,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Tag
 } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
+import LabelChip from '../components/labels/LabelChip'
 
 const ClientDetailPage = () => {
   const { clientId } = useParams()
@@ -171,15 +173,6 @@ const ClientDetailPage = () => {
     return labels[gender] || gender
   }
 
-  const getHairTypeLabel = (hairType) => {
-    const labels = {
-      'LISO': 'Liso',
-      'ONDULADO': 'Ondulado',
-      'CACHEADO': 'Cacheado',
-      'CRESPO': 'Crespo'
-    }
-    return labels[hairType] || hairType
-  }
 
   const getAppointmentStatusColor = (status) => {
     const normalizedStatus = status?.toLowerCase()
@@ -336,15 +329,26 @@ const ClientDetailPage = () => {
               </div>
             )}
 
-            {client?.hair_type && (
-              <div className="flex items-center">
-                <Scissors size={20} className="text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-600">Tipo de Cabelo</p>
-                  <p className="font-medium text-gray-900">{getHairTypeLabel(client.hair_type)}</p>
+            {/* Labels Section */}
+            {client?.labels && client.labels.length > 0 && (
+              <div className="flex items-start mt-4 pt-4 border-t border-gray-100">
+                <Tag size={20} className="text-gray-400 mr-3 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-3">Preferências</p>
+                  <div className="flex flex-wrap gap-2">
+                    {client.labels.map((label) => (
+                      <LabelChip
+                        key={label.id}
+                        label={label}
+                        size="medium"
+                        showRemove={false}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
+
           </div>
         </div>
 

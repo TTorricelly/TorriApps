@@ -59,17 +59,25 @@ def create_user(db: Session, user_data: UserCreate) -> User: # Removed tenant_id
         hashed_password=hashed_password,
         role=user_data.role,
         full_name=user_data.full_name,
+        nickname=user_data.nickname,
         phone_number=normalized_phone,
         date_of_birth=user_data.date_of_birth,
-        hair_type=user_data.hair_type,
         gender=user_data.gender,
+        cpf=user_data.cpf,
+        address_street=user_data.address_street,
+        address_number=user_data.address_number,
+        address_complement=user_data.address_complement,
+        address_neighborhood=user_data.address_neighborhood,
+        address_city=user_data.address_city,
+        address_state=user_data.address_state,
+        address_cep=user_data.address_cep,
         # tenant_id removed
         is_active=True # New users default to active
     )
 
     db.add(db_user)
     db.commit()
-    # Removed db.refresh() to avoid session issues
+    db.refresh(db_user)  # This is needed to get the generated ID and other database defaults
     return db_user
 
 def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> User | None: # Renamed, removed tenant_id, updated types
@@ -119,7 +127,7 @@ def update_user(db: Session, user_id: UUID, user_data: UserUpdate) -> User | Non
             setattr(db_user, field, value)
 
     db.commit()
-    # Removed db.refresh() to avoid session issues
+    db.refresh(db_user)  # Refresh to get any database-generated updates
     return db_user
 
 def delete_user(db: Session, user_id: UUID) -> bool: # Renamed, removed tenant_id

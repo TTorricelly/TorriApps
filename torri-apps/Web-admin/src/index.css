@@ -12,6 +12,46 @@
   }
 }
 
+/* Comprehensive fix for Material Tailwind Select dropdown z-index */
+[data-floating-ui-portal] {
+  z-index: 9999 !important;
+}
+
+/* Fix for Material Tailwind Select menu positioning */
+[role="listbox"] {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+/* More specific fix for select dropdowns */
+div[role="listbox"],
+ul[role="listbox"] {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+/* Target all possible dropdown selectors */
+.select-dropdown,
+[data-select-dropdown],
+[data-menu],
+[data-popover],
+.menu-list {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+/* Ensure tab containers don't create stacking context */
+.tab-container {
+  position: static !important;
+  transform: none !important;
+}
+
+/* Force tab headers to lower z-index */
+[role="tablist"] {
+  z-index: 1 !important;
+  position: relative !important;
+}
+
 /* Custom component styles for modern dark theme */
 @layer components {
   /* Primary Button Style */

@@ -340,17 +340,44 @@ export const validateBrazilianFields = (formData) => {
 export const cleanFormData = (formData) => {
   const cleaned = { ...formData };
   
-  // Format CPF
+  // Convert empty strings to null for optional fields that have validation constraints
+  const optionalFields = [
+    'gender', 
+    'date_of_birth', 
+    'cpf', 
+    'phone_number',
+    'nickname',
+    'address_street', 
+    'address_number', 
+    'address_complement', 
+    'address_neighborhood', 
+    'address_city', 
+    'address_state', 
+    'address_cep'
+  ];
+  
+  optionalFields.forEach(field => {
+    if (cleaned[field] === '' || cleaned[field] === undefined) {
+      cleaned[field] = null;
+    }
+  });
+  
+  // Special handling for date fields - ensure they are null if empty or invalid
+  if (cleaned.date_of_birth === '' || cleaned.date_of_birth === 'Invalid Date' || !cleaned.date_of_birth) {
+    cleaned.date_of_birth = null;
+  }
+  
+  // Format CPF (only if not null)
   if (cleaned.cpf) {
     cleaned.cpf = formatCpf(cleaned.cpf);
   }
   
-  // Format CEP
+  // Format CEP (only if not null)
   if (cleaned.address_cep) {
     cleaned.address_cep = formatCep(cleaned.address_cep);
   }
   
-  // Uppercase state
+  // Uppercase state (only if not null)
   if (cleaned.address_state) {
     cleaned.address_state = cleaned.address_state.toUpperCase();
   }

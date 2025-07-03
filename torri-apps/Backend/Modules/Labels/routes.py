@@ -21,7 +21,7 @@ from .schemas import LabelSchema, LabelCreate, LabelUpdate, LabelListResponse
 router = APIRouter(tags=["labels"])
 
 
-@router.get("/", response_model=LabelListResponse)
+@router.get("", response_model=LabelListResponse)
 async def get_labels(
     db: Session = Depends(get_db),
     current_user = Depends(require_role([UserRole.GESTOR])),
@@ -91,7 +91,7 @@ async def get_labels(
         )
 
 
-@router.post("/", response_model=LabelSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=LabelSchema, status_code=status.HTTP_201_CREATED)
 async def create_label(
     label_data: LabelCreate,
     db: Session = Depends(get_db),

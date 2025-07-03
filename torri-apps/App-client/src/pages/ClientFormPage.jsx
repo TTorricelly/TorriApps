@@ -8,10 +8,16 @@ import {
   User, 
   Calendar,
   Loader2,
-  Lock
+  Lock,
+  Tag,
+  Plus
 } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
+import LabelChip from '../components/labels/LabelChip'
+import LabelSelector from '../components/labels/LabelSelector'
+import labelService from '../services/labelService'
+import { extractLabelIds } from '../utils/labelUtils'
 
 const ClientFormPage = () => {
   const { clientId } = useParams() // If editing existing client
@@ -29,7 +35,6 @@ const ClientFormPage = () => {
     password: '',
     date_of_birth: '',
     gender: '',
-    hair_type: '',
     is_active: true
   })
 
@@ -37,6 +42,8 @@ const ClientFormPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [validationErrors, setValidationErrors] = useState({})
+  const [isLabelSelectorOpen, setIsLabelSelectorOpen] = useState(false)
+  const [selectedLabels, setSelectedLabels] = useState([])
 
   // Handle permission check in useEffect instead of early return
   useEffect(() => {
@@ -65,9 +72,9 @@ const ClientFormPage = () => {
           password: '', // Don't populate password when editing
           date_of_birth: client.date_of_birth || '',
           gender: client.gender || '',
-          hair_type: client.hair_type || '',
           is_active: client.is_active !== false
         })
+        setSelectedLabels(client.labels || [])
       } else {
         setError('Cliente não encontrado')
       }
@@ -95,6 +102,15 @@ const ClientFormPage = () => {
     }
   }
 
+  // Handle label management
+  const handleLabelRemove = (labelToRemove) => {
+    setSelectedLabels(prev => prev.filter(label => label.id !== labelToRemove.id))
+  }
+
+  const handleLabelSelectionChange = (newLabels) => {
+    setSelectedLabels(newLabels)
+  }
+
   // Validate form
   const validateForm = () => {
     const errors = {}
@@ -103,9 +119,7 @@ const ClientFormPage = () => {
       errors.full_name = 'Nome é obrigatório'
     }
 
-    if (!formData.email.trim()) {
-      errors.email = 'Email é obrigatório'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email inválido'
     }
 
@@ -139,7 +153,9 @@ const ClientFormPage = () => {
       const cleanedData = {
         ...formData,
         phone_number: formData.phone_number.replace(/\D/g, ''),
-        date_of_birth: formData.date_of_birth || null
+        date_of_birth: formData.date_of_birth || null,
+        email: formData.email.trim() || null,
+        gender: formData.gender || null
       }
 
       // For editing, remove password if empty (don't change password)
@@ -154,7 +170,18 @@ const ClientFormPage = () => {
         result = await clientService.createClient(cleanedData)
       }
 
-      if (result) {
+      if (result && result.id) {
+        // Update labels for both create and edit operations
+        try {
+          const labelIds = extractLabelIds(selectedLabels);
+          
+          // Always update labels (even if empty array) to ensure consistency
+          await labelService.updateUserLabels(result.id, labelIds);
+        } catch (error) {
+          console.error('Error updating client labels:', error);
+          // Continue even if labels fail - client was created/updated successfully
+        }
+        
         navigate('/professional/clients', {
           state: { 
             message: isEditing ? 'Cliente atualizado com sucesso' : 'Cliente criado com sucesso'
@@ -272,7 +299,7 @@ const ClientFormPage = () => {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Email
                 </label>
                 <div className="relative">
                   <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -280,7 +307,7 @@ const ClientFormPage = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="email@exemplo.com"
+                    placeholder="email@exemplo.com (opcional)"
                     autoComplete="off"
                     className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 ${
                       validationErrors.email ? 'border-red-300' : 'border-gray-300'
@@ -379,23 +406,6 @@ const ClientFormPage = () => {
                 </select>
               </div>
 
-              {/* Hair Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Cabelo
-                </label>
-                <select
-                  value={formData.hair_type}
-                  onChange={(e) => handleChange('hair_type', e.target.value)}
-                  className="w-full py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                >
-                  <option value="">Selecione o tipo de cabelo</option>
-                  <option value="LISO">Liso</option>
-                  <option value="ONDULADO">Ondulado</option>
-                  <option value="CACHEADO">Cacheado</option>
-                  <option value="CRESPO">Crespo</option>
-                </select>
-              </div>
 
               {/* Active Status */}
               <div>
@@ -411,8 +421,60 @@ const ClientFormPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Labels Section */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Tag size={20} className="text-pink-500" />
+              Preferências
+            </h2>
+            
+            <div className="space-y-4">
+              {/* Current Labels */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Preferências do Cliente
+                </label>
+                {selectedLabels.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedLabels.map((label) => (
+                      <LabelChip
+                        key={label.id}
+                        label={label}
+                        size="medium"
+                        showRemove={true}
+                        onRemove={handleLabelRemove}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-3">Nenhuma preferência selecionada</p>
+                )}
+                
+                {/* Add Label Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsLabelSelectorOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors"
+                >
+                  <Plus size={16} />
+                  Adicionar Preferências
+                </button>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
+
+      {/* Label Selector Modal */}
+      <LabelSelector
+        isOpen={isLabelSelectorOpen}
+        onClose={() => setIsLabelSelectorOpen(false)}
+        onSelectionChange={handleLabelSelectionChange}
+        selectedLabels={selectedLabels}
+        title="Selecionar Preferências do Cliente"
+        allowMultiple={true}
+      />
     </div>
   )
 }
