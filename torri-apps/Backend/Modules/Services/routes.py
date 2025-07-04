@@ -33,6 +33,7 @@ services_router = APIRouter()
     summary="Create a new service category for the current tenant."
 )
 async def create_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     name: Annotated[str, Form(min_length=1, max_length=100)],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
@@ -63,6 +64,7 @@ async def create_category_endpoint(
     summary="List all service categories for the current tenant."
 )
 def list_categories_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.CLIENTE]))],
     skip: int = Query(0, ge=0, description="Number of items to skip."),
@@ -79,6 +81,7 @@ def list_categories_endpoint(
     summary="Get a specific service category by ID for the current tenant."
 )
 def get_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
@@ -94,6 +97,7 @@ def get_category_endpoint(
     summary="Update a service category by ID for the current tenant."
 )
 async def update_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     category_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
@@ -135,6 +139,7 @@ async def update_category_endpoint(
     summary="Delete a service category by ID for the current tenant."
 )
 def delete_category_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     category_id: UUID = Path(..., description="ID of the category to delete.")
@@ -156,6 +161,7 @@ def delete_category_endpoint(
     summary="Create a new service for the current tenant."
 )
 def create_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_data: ServiceCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
@@ -169,6 +175,7 @@ def create_service_endpoint(
     summary="List services for the current tenant, optionally filtered by category."
 )
 def list_services_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.CLIENTE]))], # Allow more roles to view services
     category_id: Optional[UUID] = Query(None, description="Filter services by category ID."),
@@ -189,6 +196,7 @@ def list_services_endpoint(
     summary="Get a specific service by ID for the current tenant."
 )
 def get_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
     service_id: UUID = Path(..., description="ID of the service to retrieve.")
@@ -204,6 +212,7 @@ def get_service_endpoint(
     summary="Update a service by ID for the current tenant."
 )
 def update_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to update."),
@@ -225,6 +234,7 @@ def update_service_endpoint(
     summary="Delete a service by ID for the current tenant."
 )
 def delete_service_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
     service_id: UUID = Path(..., description="ID of the service to delete.")
@@ -234,3 +244,85 @@ def delete_service_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found or could not be deleted.")
     return None # For 204 No Content
 
+
+@services_router.post(
+    "/{service_id}/image",
+    response_model=ServiceWithProfessionalsResponse,
+    summary="Upload general image for a service."
+)
+async def upload_service_image_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    service_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    image: UploadFile = File(...)
+):
+    # Check if service exists
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
+    if not db_service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
+    
+    # Delete old image if exists
+    if db_service.image:
+        file_handler.delete_file(db_service.image)
+    
+    # Save new image
+    image_path = await file_handler.save_uploaded_file(
+        file=image,
+        tenant_id="default",  # Use default for single schema
+        subdirectory="services"
+    )
+    
+    # Update service with new image path
+    db_service.image = image_path
+    db.commit()
+    
+    return db_service
+
+@services_router.post(
+    "/{service_id}/images",
+    response_model=ServiceWithProfessionalsResponse,
+    summary="Upload images for a service (by hair type)."
+)
+async def upload_service_images_endpoint(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    service_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    liso: Optional[UploadFile] = File(None),
+    ondulado: Optional[UploadFile] = File(None),
+    cacheado: Optional[UploadFile] = File(None),
+    crespo: Optional[UploadFile] = File(None)
+):
+    # Check if service exists and belongs to tenant
+    db_service = services_logic.get_service_with_details_by_id(db=db, service_id=service_id)
+    if not db_service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
+    
+    # Handle image uploads
+    image_paths = {}
+    image_files = {'liso': liso, 'ondulado': ondulado, 'cacheado': cacheado, 'crespo': crespo}
+    
+    for hair_type, file in image_files.items():
+        if file:
+            # Delete old image if exists
+            old_path = getattr(db_service, f'image_{hair_type}')
+            if old_path:
+                file_handler.delete_file(old_path)
+            
+            # Save new image
+            image_path = await file_handler.save_uploaded_file(
+                file=file,
+                tenant_id="default",  # Use default for single schema
+                subdirectory=f"services/{hair_type}"
+            )
+            image_paths[f'image_{hair_type}'] = image_path
+    
+    # Update service with new image paths
+    if image_paths:
+        for field, path in image_paths.items():
+            setattr(db_service, field, path)
+        
+        db.commit()
+    
+    return db_service

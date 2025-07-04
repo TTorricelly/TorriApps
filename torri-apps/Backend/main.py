@@ -7,6 +7,7 @@ from Config.Settings import settings
 
 # Using absolute imports for main.py
 from Core.Auth.Routes import router as auth_router
+from Modules.Tenants.routes import router as tenants_router
 from Modules.Users.routes import router as users_router
 from Modules.Services.routes import categories_router, services_router
 from Modules.Services.image_routes import router as service_images_router
@@ -23,8 +24,10 @@ import Modules.Company.models  # Import Company models to register them
 import Modules.Payments.models  # Import Payment models to register them
 import Modules.Labels.models  # Import Labels models to register them
 import Modules.Services.models  # Import Services and ServiceImage models to register them
+import Modules.Tenants.models  # Import Tenant models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
+from Core.Middleware.tenant import TenantMiddleware
 # Placeholder for other routers:
 # from .Modules.AdminMaster.routes import router as admin_master_router
 
@@ -51,8 +54,8 @@ app.add_middleware(
 )
 
 # --- Custom Middlewares Registration ---
-# TenantMiddleware must be registered early, but typically after CORS.
-# app.add_middleware(TenantMiddleware) # TenantMiddleware removed
+# TenantMiddleware must be registered after CORS middleware
+app.add_middleware(TenantMiddleware)
 
 # --- Exception Handlers ---
 # Add custom exception handlers to the app.
@@ -71,19 +74,23 @@ configure_relationships()
 # This makes routes like /api/v1/auth/... and /api/v1/users/...
 API_V1_PREFIX = "/api/v1"
 
+# Public routes (no tenant context required)
 app.include_router(auth_router, prefix=API_V1_PREFIX, tags=["Authentication"])
-app.include_router(users_router, prefix=API_V1_PREFIX, tags=["Users Management (Tenant)"])
-app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags=["Service Categories (Tenant)"])
-app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
+app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenant Management"])
+
+# Tenant routes (require tenant context via {tenant_slug})
+app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/categories", tags=["Service Categories (Tenant)"])
+app.include_router(services_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/services", tags=["Services (Tenant)"])
 app.include_router(service_images_router, prefix=API_V1_PREFIX, tags=["Service Images Management"])
-app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])
-app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/appointments", tags=["Appointments (Tenant)"])
-app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/professionals", tags=["Professionals Management"])
-app.include_router(stations_router, prefix=API_V1_PREFIX, tags=["Stations Management"])
-app.include_router(settings_router, prefix=API_V1_PREFIX, tags=["Application Settings"])
-app.include_router(company_router, prefix=API_V1_PREFIX, tags=["Company Management"])
-app.include_router(commissions_router, prefix=API_V1_PREFIX, tags=["Commissions Management"])
-app.include_router(labels_router, prefix=f"{API_V1_PREFIX}/labels", tags=["Labels Management"])
+app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/availability", tags=["Professional Availability (Tenant)"])
+app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/appointments", tags=["Appointments (Tenant)"])
+app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/professionals", tags=["Professionals Management (Tenant)"])
+app.include_router(stations_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/stations", tags=["Stations Management (Tenant)"])
+app.include_router(settings_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/settings", tags=["Application Settings (Tenant)"])
+app.include_router(company_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/company", tags=["Company Management (Tenant)"])
+app.include_router(commissions_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/commissions", tags=["Commissions Management (Tenant)"])
+app.include_router(users_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/users", tags=["Users Management (Tenant)"])
+app.include_router(labels_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/labels", tags=["Labels Management (Tenant)"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---
