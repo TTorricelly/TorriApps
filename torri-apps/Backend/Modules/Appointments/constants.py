@@ -31,7 +31,7 @@ class AppointmentGroupStatus(str, enum.Enum):
     READY_TO_PAY = "READY_TO_PAY"  # All services completed, ready for payment
     COMPLETED = "COMPLETED"      # All appointments in group are completed
     CANCELLED = "CANCELLED"      # All appointments in group are cancelled
-    PARTIALLY_COMPLETED = "PARTIALLY_COMPLETED"  # Some appointments completed, others not
+    NO_SHOW = "NO_SHOW"  # Client did not show up for appointments in group
     
     # Deprecated - keeping for backward compatibility during migration
     IN_PROGRESS = "IN_SERVICE"   # Legacy status, maps to IN_SERVICE

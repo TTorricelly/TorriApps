@@ -1,110 +1,181 @@
 # Multi-Schema Migration Guide
 
-This guide explains how to manage database migrations across multiple PostgreSQL schemas in the TorriApps backend.
+This guide explains how to manage database migrations across multiple schemas (dev, prod, tenant-specific) using the enhanced Alembic setup.
 
-## 🏗️ Architecture Overview
+## Overview
 
-The TorriApps backend uses a **single PostgreSQL database with multiple schemas** approach:
+The migration system supports:
+- **Dev/Prod schemas**: `dev`, `prod` 
+- **Multi-tenant schemas**: `tenant-1`, `tenant-2`, etc.
+- **Fresh schema resets**: Complete schema recreation
+- **Easy schema switching**: Via command line or environment variables
 
-- **Database**: `postgres` (single database)
-- **Schemas**: `dev`, `prod`, `public` (multiple schemas for environments)
-- **Search Path**: Dynamically set based on `DEFAULT_SCHEMA_NAME` environment variable
+## Quick Start
 
-## 📋 Current Migration Status
+### 1. Using the Migration Helper Script
 
-### ✅ CPF and Address Fields Migration
+```bash
+# Reset and initialize dev schema
+python migrate.py reset --schema dev
 
-**Migration ID**: `add_cpf_and_address`
-**Status**: ✅ **APPLIED** to both `dev` and `prod` schemas
+# Reset and initialize prod schema  
+python migrate.py reset --schema prod
 
-## 🛠️ Migration Tools
+# Reset and initialize tenant schema
+python migrate.py reset --schema tenant-1
+```
 
-### 1. Multi-Schema Migration Script
+### 2. Creating New Migrations
 
-**Location**: `Scripts/multi_schema_migration.py`
+```bash
+# Create migration for dev schema
+python migrate.py revision --schema dev --message "add new feature"
 
-**Usage Examples**:
+# Create migration for prod schema
+python migrate.py revision --schema prod --message "add new feature"
+```
+
+### 3. Running Migrations
+
+```bash
+# Upgrade dev schema to latest
+python migrate.py upgrade --schema dev
+
+# Upgrade prod schema to latest
+python migrate.py upgrade --schema prod
+
+# Upgrade to specific revision
+python migrate.py upgrade --schema dev --target abc123
+```
+
+### 4. Migration Status
 
 ```bash
 # Check current migration status
-python Scripts/multi_schema_migration.py --schemas dev,prod --action current
+python migrate.py current --schema dev
 
-# Apply latest migrations to production
-python Scripts/multi_schema_migration.py --schemas prod --action upgrade
-
-# Apply specific migration
-python Scripts/multi_schema_migration.py --schemas dev --action upgrade --target add_cpf_and_address
-
-# Rollback to specific migration
-python Scripts/multi_schema_migration.py --schemas prod --action rollback --target 8285db59cac3
-
-# Dry run (show what would be done)
-python Scripts/multi_schema_migration.py --schemas prod --action upgrade --dry-run
+# View migration history
+python migrate.py history --schema dev
 ```
 
-### 2. Production Migration Script
+## Direct Alembic Commands
 
-**Location**: `Scripts/migrate_to_prod.sh`
+You can also use Alembic directly with schema specification:
 
 ```bash
-# Interactive production migration
-./Scripts/migrate_to_prod.sh
+# Upgrade dev schema
+alembic -x schema=dev upgrade head
 
-# Automated (for CI/CD)
-./Scripts/migrate_to_prod.sh --auto-confirm
+# Upgrade prod schema  
+alembic -x schema=prod upgrade head
 
-# Dry run
-./Scripts/migrate_to_prod.sh --dry-run
+# Create revision for specific schema
+alembic -x schema=dev revision --autogenerate -m "add new feature"
+
+# Upgrade tenant schema
+alembic -x schema=tenant-1 upgrade head
 ```
 
-## 🔄 Best Practices for Multi-Schema Migrations
+## Environment Variables
 
-### 1. Development Workflow
-
-```bash
-# 1. Create migration (always test in dev first)
-alembic revision --autogenerate -m "your_migration_description"
-
-# 2. Apply to dev schema
-DEFAULT_SCHEMA_NAME=dev alembic upgrade head
-
-# 3. Test thoroughly in dev environment
-
-# 4. Apply to prod using multi-schema tools
-python Scripts/multi_schema_migration.py --schemas prod --action upgrade
-```
-
-### 2. Schema Environment Variables
+Set these environment variables for default behavior:
 
 ```bash
-# For development
+# Set default schema
+export ALEMBIC_SCHEMA=dev
+
+# Alternative environment variable
 export DEFAULT_SCHEMA_NAME=dev
-
-# For production
-export DEFAULT_SCHEMA_NAME=prod
 ```
 
-### 3. Safety Guidelines
+## Schema Management
 
-#### ⚠️ Before Production Migrations:
-1. **✅ Test in dev/staging**
-2. **✅ Backup database**
-3. **✅ Check migration status**
-4. **✅ Plan downtime**
-5. **✅ Have rollback plan**
+### Fresh Start Process
 
-## 🚨 Emergency Procedures
+1. **Reset Dev Schema**:
+   ```bash
+   python migrate.py reset --schema dev
+   ```
 
-### Rolling Back a Migration
+2. **Reset Prod Schema**:
+   ```bash
+   python migrate.py reset --schema prod
+   ```
 
-```bash
-# 1. Identify the previous migration ID
-python Scripts/multi_schema_migration.py --schemas prod --action current
+3. **Create Tenant Schemas**:
+   ```bash
+   python migrate.py reset --schema tenant-1
+   python migrate.py reset --schema tenant-2
+   ```
 
-# 2. Rollback to previous migration
-python Scripts/multi_schema_migration.py --schemas prod --action rollback --target PREVIOUS_MIGRATION_ID
+### Schema Switching Workflow
 
-# 3. Verify rollback
-python Scripts/multi_schema_migration.py --schemas prod --action current
-```
-EOF < /dev/null
+1. **Develop in Dev Schema**:
+   ```bash
+   # Make model changes
+   python migrate.py revision --schema dev --message "add new feature"
+   python migrate.py upgrade --schema dev
+   ```
+
+2. **Apply to Prod Schema**:
+   ```bash
+   # Apply same migration to prod
+   python migrate.py upgrade --schema prod
+   ```
+
+3. **Apply to Tenant Schemas**:
+   ```bash
+   # Apply to each tenant
+   python migrate.py upgrade --schema tenant-1
+   python migrate.py upgrade --schema tenant-2
+   ```
+
+## Migration Commands Reference
+
+### migrate.py Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `reset` | Drop and recreate schema, run all migrations | `python migrate.py reset --schema dev` |
+| `revision` | Create new migration | `python migrate.py revision --schema dev -m "message"` |
+| `upgrade` | Apply migrations | `python migrate.py upgrade --schema dev` |
+| `downgrade` | Rollback migrations | `python migrate.py downgrade --schema dev --target -1` |
+| `current` | Show current revision | `python migrate.py current --schema dev` |
+| `history` | Show migration history | `python migrate.py history --schema dev` |
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--schema`, `-s` | Target schema name | `dev` |
+| `--message`, `-m` | Migration message | Required for revision |
+| `--target`, `-t` | Target revision | `head` |
+
+## Best Practices
+
+1. **Always test in dev first**:
+   ```bash
+   python migrate.py revision --schema dev -m "new feature"
+   python migrate.py upgrade --schema dev
+   ```
+
+2. **Keep schemas in sync**:
+   ```bash
+   # After dev testing, apply to prod
+   python migrate.py upgrade --schema prod
+   ```
+
+3. **Use descriptive migration messages**:
+   ```bash
+   python migrate.py revision --schema dev -m "add user preferences table"
+   ```
+
+4. **Reset schemas for fresh starts**:
+   ```bash
+   python migrate.py reset --schema dev
+   ```
+
+5. **Check status before making changes**:
+   ```bash
+   python migrate.py current --schema dev
+   ```

@@ -14,6 +14,7 @@ from Core.Auth.models import User # Changed from UserTenant
 from Modules.Services.models import Service, Category
 from Modules.Appointments.models import Appointment
 from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
+from Modules.Labels.models import Label, user_labels_association
 # from Modules.Payments.models import Payment, PaymentItem  # Import payment models - temporarily disabled
 # from Modules.AdminMaster.models import AdminMasterUser # Commented out due to ModuleNotFoundError
 # from Modules.Tenants.models import Tenant # Tenant model removed
@@ -73,25 +74,24 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    # version_table_schema can be passed via -x version_table_schema=my_schema
-    # or set in alembic.ini. If None, Alembic uses its default behavior.
-    vts = config.get_main_option("version_table_schema")
+    
+    # Get schema from command line argument or environment variable
+    schema_name = context.get_x_argument(as_dictionary=True).get('schema', 
+                 os.environ.get('ALEMBIC_SCHEMA', 
+                 os.environ.get('DEFAULT_SCHEMA_NAME', 'dev')))
 
-    # print(f"DEBUG: run_migrations_offline(): sqlalchemy.url={url}") # Using url from config
-    # print(f"DEBUG: run_migrations_offline(): metadata_choice={which_metadata}") # metadata_choice removed
-    # print(f"DEBUG: run_migrations_offline(): version_table_schema={vts}")
-    # print(f"DEBUG: run_migrations_offline(): Using metadata with tables: {list(target_metadata.tables.keys()) if target_metadata else 'None'}")
+    print(f"INFO: Offline migration on schema: {schema_name}")
 
     context.configure(
-        url=url,  # Use URL from alembic.ini
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_schemas=False,  # Set to False to avoid cross-schema issues
-        version_table_schema=vts,
+        include_schemas=False,
+        version_table_schema=schema_name,
         compare_type=True,
         compare_server_default=True,
-        include_object=include_object  # Add the filter
+        include_object=include_object
     )
 
     with context.begin_transaction():
@@ -112,9 +112,14 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Get schema from environment variable, default to 'public'
-        schema_name = os.environ.get('DEFAULT_SCHEMA_NAME', 'public')
+        # Get schema from command line argument or environment variable
+        schema_name = context.get_x_argument(as_dictionary=True).get('schema', 
+                     os.environ.get('ALEMBIC_SCHEMA', 
+                     os.environ.get('DEFAULT_SCHEMA_NAME', 'dev')))
 
+        # Create schema if it doesn't exist
+        connection.exec_driver_sql(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+        
         # Set search path for the connection
         connection.exec_driver_sql(f"SET search_path TO {schema_name}")
         
