@@ -309,7 +309,7 @@ function UsersPage() {
                             variant="text"
                             size="sm"
                             className="text-accent-primary hover:bg-accent-primary/10"
-                            onClick={() => navigate(`/settings/users/edit/${user.id}`)}
+                            onClick={() => navigate(`/${tenantSlug}/settings/users/edit/${user.id}`)}
                           >
                             <PencilIcon className="h-4 w-4" />
                           </Button>

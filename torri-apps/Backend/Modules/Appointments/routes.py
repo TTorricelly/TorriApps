@@ -124,7 +124,7 @@ def get_service_availability_for_professional_endpoint(
 
 # --- Appointment Booking Endpoint ---
 @router.post(
-    "", # Relative to /api/v1/appointments, so this is POST /api/v1/appointments
+    "/", # Relative to /api/v1/appointments, so this is POST /api/v1/appointments/
     response_model=AppointmentSchema,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new appointment."

@@ -10,7 +10,7 @@ from .schemas import (
 )
 from .service import SettingsService
 
-router = APIRouter(prefix="/settings", tags=["settings"])
+router = APIRouter(tags=["settings"])
 
 
 @router.get("/", response_model=List[AppSettingSchema])

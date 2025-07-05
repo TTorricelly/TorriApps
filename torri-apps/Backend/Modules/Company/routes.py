@@ -16,7 +16,6 @@ from Core.Auth.constants import UserRole
 from Core.Auth.models import User
 
 router = APIRouter(
-    prefix="/company",
     tags=["company"],
 )
 
