@@ -12,8 +12,13 @@ def get_public_db() -> Session:
     Get database session for public schema operations.
     Used for tenant management and authentication.
     """
+    from Config.Settings import Settings
+    settings = Settings()
+    
     db = SessionLocal()
     try:
+        # Set search_path to public schema for public operations (tenant management, auth, etc.)
+        db.execute(text("SET search_path TO public"))
         yield db
     except Exception as e:
         print(f"Exception in public database session: {e}")

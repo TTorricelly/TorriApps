@@ -5,6 +5,8 @@ This middleware extracts tenant_slug from URLs and sets up appropriate database 
 """
 
 import re
+import threading
+from contextvars import ContextVar
 from typing import Optional
 from fastapi import Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -18,36 +20,37 @@ from Modules.Tenants.models import Tenant
 
 
 class TenantContext:
-    """Thread-local storage for tenant context."""
-    _tenant: Optional[Tenant] = None
-    _tenant_slug: Optional[str] = None
+    """Context storage for tenant context using contextvars."""
+    _tenant_var: ContextVar[Optional['Tenant']] = ContextVar('tenant', default=None)
+    _tenant_slug_var: ContextVar[Optional[str]] = ContextVar('tenant_slug', default=None)
     
     @classmethod
     def set_tenant(cls, tenant: Tenant, slug: str):
         """Set current tenant context."""
-        cls._tenant = tenant
-        cls._tenant_slug = slug
+        cls._tenant_var.set(tenant)
+        cls._tenant_slug_var.set(slug)
     
     @classmethod
     def get_tenant(cls) -> Optional[Tenant]:
         """Get current tenant."""
-        return cls._tenant
+        return cls._tenant_var.get()
     
     @classmethod
     def get_tenant_slug(cls) -> Optional[str]:
         """Get current tenant slug."""
-        return cls._tenant_slug
+        return cls._tenant_slug_var.get()
     
     @classmethod
     def get_schema_name(cls) -> Optional[str]:
         """Get current tenant's database schema name."""
-        return cls._tenant.db_schema_name if cls._tenant else None
+        tenant = cls.get_tenant()
+        return tenant.db_schema_name if tenant else None
     
     @classmethod
     def clear(cls):
         """Clear tenant context."""
-        cls._tenant = None
-        cls._tenant_slug = None
+        cls._tenant_var.set(None)
+        cls._tenant_slug_var.set(None)
 
 
 class TenantMiddleware(BaseHTTPMiddleware):
@@ -83,25 +86,30 @@ class TenantMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         """Process request and set up tenant context."""
+        print(f"DEBUG: Middleware processing path: {request.url.path}")
         
         # Clear any existing tenant context
         TenantContext.clear()
         
         # Check if this is a public route
         if self._is_public_route(request.url.path):
+            print(f"DEBUG: Public route detected, skipping tenant context")
             return await call_next(request)
         
         # Extract tenant slug from URL
         tenant_slug = self._extract_tenant_slug(request.url.path)
+        print(f"DEBUG: Extracted tenant slug: {tenant_slug}")
         
         if tenant_slug:
             # Validate tenant and set context
             try:
+                print(f"DEBUG: Setting up tenant context for: {tenant_slug}")
                 await self._setup_tenant_context(tenant_slug)
                 
                 # Add tenant info to request state for easy access
                 request.state.tenant_slug = tenant_slug
                 request.state.tenant = TenantContext.get_tenant()
+                print(f"DEBUG: Tenant context set successfully")
                 
             except HTTPException as e:
                 return JSONResponse(
@@ -120,7 +128,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
     def _is_public_route(self, path: str) -> bool:
         """Check if the route is public and doesn't require tenant context."""
         for public_route in self.public_routes:
-            if path.startswith(public_route):
+            if path == public_route or path.startswith(public_route + "/"):
                 return True
         return False
     

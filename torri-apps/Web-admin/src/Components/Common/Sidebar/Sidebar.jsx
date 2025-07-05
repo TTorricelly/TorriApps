@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { 
   HomeIcon,
@@ -90,6 +90,7 @@ const menuItems = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const [expandedGroups, setExpandedGroups] = useState(['dashboard']); // Dashboard expanded by default
   const [isCollapsed, setIsCollapsed] = useState(() => {
     // Load collapsed state from localStorage
@@ -209,15 +210,20 @@ export default function Sidebar() {
   };
 
   const isItemActive = (path) => {
-    return location.pathname === path;
+    const fullPath = `/${tenantSlug}${path}`;
+    return location.pathname === fullPath;
   };
 
   const isGroupActive = (items) => {
-    return items.some(item => location.pathname === item.path);
+    return items.some(item => {
+      const fullPath = `/${tenantSlug}${item.path}`;
+      return location.pathname === fullPath;
+    });
   };
 
   const handleItemClick = (path) => {
-    navigate(path);
+    const fullPath = `/${tenantSlug}${path}`;
+    navigate(fullPath);
   };
 
   const handleLogout = () => {
@@ -225,7 +231,7 @@ export default function Sidebar() {
     // Clear tenant data on logout
     const { clearTenant } = useTenantStore.getState();
     clearTenant();
-    navigate('/login');
+    navigate(`/${tenantSlug}/login`);
   };
 
   const handleProfile = () => {

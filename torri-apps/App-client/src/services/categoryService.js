@@ -5,6 +5,7 @@
 
 import { withApiErrorHandling, buildApiEndpoint, transformEntityWithImages } from '../utils/apiHelpers';
 import apiClient from '../config/api';
+import { serviceImagesApi } from './serviceImagesService';
 
 // Image fields for category data
 const CATEGORY_IMAGE_FIELDS = ['icon_url', 'image_url', 'banner_url', 'photo_url'];
@@ -99,7 +100,24 @@ export const getServicesByCategory = async (categoryId) => {
   const endpoint = buildApiEndpoint('services');
   
   return withApiErrorHandling(
-    () => apiClient.get(endpoint, { params: { category_id: categoryId } }),
+    async () => {
+      const response = await apiClient.get(endpoint, { params: { category_id: categoryId } });
+      
+      // Fetch images for each service using public API
+      const servicesWithImages = await Promise.all(
+        response.data.map(async (service) => {
+          try {
+            const images = await serviceImagesApi.getServiceImages(service.id);
+            return { ...service, images };
+          } catch (error) {
+            console.warn(`Failed to fetch images for service ${service.id}:`, error);
+            return { ...service, images: [] };
+          }
+        })
+      );
+      
+      return { data: servicesWithImages };
+    },
     {
       defaultValue: [],
       transformData: (data) => transformServicesWithImages(data)

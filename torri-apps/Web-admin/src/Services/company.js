@@ -1,4 +1,5 @@
-import api from './api';
+import { api } from '../api/client';
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 /**
  * Company API service for managing salon/business information
@@ -10,7 +11,8 @@ import api from './api';
  */
 export const getCompanyInfo = async () => {
   try {
-    const response = await api.get('/api/v1/company/info');
+    const endpoint = buildApiEndpoint('company/info');
+    const response = await api.get(endpoint);
     return response.data;
   } catch (error) {
     console.error('Error fetching company info:', error);
@@ -27,7 +29,8 @@ export const getCompanyInfo = async () => {
  */
 export const getCompanies = async ({ skip = 0, limit = 100 } = {}) => {
   try {
-    const response = await api.get('/api/v1/company', {
+    const endpoint = buildApiEndpoint('company');
+    const response = await api.get(endpoint, {
       params: { skip, limit }
     });
     return response.data;
@@ -44,7 +47,8 @@ export const getCompanies = async ({ skip = 0, limit = 100 } = {}) => {
  */
 export const getCompanyById = async (companyId) => {
   try {
-    const response = await api.get(`/api/v1/company/${companyId}`);
+    const endpoint = buildApiEndpoint(`company/${companyId}`);
+    const response = await api.get(endpoint);
     return response.data;
   } catch (error) {
     console.error('Error fetching company by ID:', error);
@@ -63,7 +67,8 @@ export const getCompanyById = async (companyId) => {
  */
 export const createCompany = async (companyData) => {
   try {
-    const response = await api.post('/api/v1/company', companyData);
+    const endpoint = buildApiEndpoint('company');
+    const response = await api.post(endpoint, companyData);
     return response.data;
   } catch (error) {
     console.error('Error creating company:', error);
@@ -84,7 +89,8 @@ export const createCompany = async (companyData) => {
  */
 export const updateCompany = async (companyId, companyData) => {
   try {
-    const response = await api.put(`/api/v1/company/${companyId}`, companyData);
+    const endpoint = buildApiEndpoint(`company/${companyId}`);
+    const response = await api.put(endpoint, companyData);
     return response.data;
   } catch (error) {
     console.error('Error updating company:', error);
@@ -99,7 +105,8 @@ export const updateCompany = async (companyId, companyData) => {
  */
 export const deleteCompany = async (companyId) => {
   try {
-    await api.delete(`/api/v1/company/${companyId}`);
+    const endpoint = buildApiEndpoint(`company/${companyId}`);
+    await api.delete(endpoint);
   } catch (error) {
     console.error('Error deleting company:', error);
     throw error;

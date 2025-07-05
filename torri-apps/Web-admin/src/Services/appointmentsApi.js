@@ -1,4 +1,5 @@
 import { api as apiClient } from '../api/client'; // Adjust path as necessary
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 // Helper function to format date as YYYY-MM-DD
 const formatDateToYYYYMMDD = (date) => {
@@ -21,7 +22,7 @@ export const getDailySchedule = async (date) => {
   try {
     // The backend endpoint is /api/v1/appointments/daily-schedule/{schedule_date}
     // apiClient should be configured with the base URL (e.g., http://localhost:8000/api/v1)
-    const response = await apiClient.get(`/api/v1/appointments/daily-schedule/${dateString}`);
+    const response = await apiClient.get(buildApiEndpoint(`appointments/daily-schedule/${dateString}`));
 
     // The backend response is expected to be DailyScheduleResponseSchema:
     // { date: "YYYY-MM-DD", professionals_schedule: List[ProfessionalScheduleSchema] }
@@ -89,7 +90,7 @@ export const getDailySchedule = async (date) => {
  */
 export const createAppointment = async (appointmentData) => {
   try {
-    const response = await apiClient.post('/api/v1/appointments/', appointmentData);
+    const response = await apiClient.post(buildApiEndpoint('appointments/'), appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error creating appointment:", error.response?.data || error.message);
@@ -107,7 +108,7 @@ export const createAppointment = async (appointmentData) => {
  */
 export const updateAppointment = async (appointmentId, appointmentData) => {
   try {
-    const response = await apiClient.put(`/api/v1/appointments/${appointmentId}`, appointmentData);
+    const response = await apiClient.put(buildApiEndpoint(`appointments/${appointmentId}`), appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error updating appointment:", error.response?.data || error.message);
@@ -125,7 +126,7 @@ export const updateAppointment = async (appointmentId, appointmentData) => {
  */
 export const updateAppointmentWithMultipleServices = async (appointmentId, appointmentData) => {
   try {
-    const response = await apiClient.put(`/api/v1/appointments/${appointmentId}/multiple-services`, appointmentData);
+    const response = await apiClient.put(buildApiEndpoint(`appointments/${appointmentId}/multiple-services`), appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error updating appointment with multiple services:", error.response?.data || error.message);
@@ -146,7 +147,7 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
     // The backend PATCH endpoint for cancel expects an Optional[AppointmentCancelPayload].
     // An empty body or a body with { "reason": null/undefined } should be acceptable if reason is optional.
     // If reasonPayload is null, apiClient.patch might send an empty body or just the headers.
-    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/cancel`, reasonPayload);
+    const response = await apiClient.patch(buildApiEndpoint(`appointments/${appointmentId}/cancel`), reasonPayload);
     return response.data; // The cancel endpoint returns the updated appointment
   } catch (error) {
     console.error("Error cancelling appointment:", error.response?.data || error.message);
@@ -163,7 +164,7 @@ export const cancelAppointment = async (appointmentId, reasonPayload = null) => 
  */
 export const completeAppointment = async (appointmentId) => {
   try {
-    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/complete`);
+    const response = await apiClient.patch(buildApiEndpoint(`appointments/${appointmentId}/complete`));
     return response.data;
   } catch (error) {
     console.error("Error completing appointment:", error.response?.data || error.message);
@@ -180,7 +181,7 @@ export const completeAppointment = async (appointmentId) => {
  */
 export const markAppointmentAsNoShow = async (appointmentId) => {
   try {
-    const response = await apiClient.patch(`/api/v1/appointments/${appointmentId}/no-show`);
+    const response = await apiClient.patch(buildApiEndpoint(`appointments/${appointmentId}/no-show`));
     return response.data;
   } catch (error) {
     console.error("Error marking appointment as no-show:", error.response?.data || error.message);
@@ -197,7 +198,7 @@ export const markAppointmentAsNoShow = async (appointmentId) => {
  */
 export const getAppointmentGroups = async (params = {}) => {
   try {
-    const response = await apiClient.get('/api/v1/appointments/groups', { params });
+    const response = await apiClient.get(buildApiEndpoint('appointments/groups'), { params });
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error("Error fetching appointment groups:", error.response?.data || error.message);
@@ -215,7 +216,7 @@ export const getAppointmentGroups = async (params = {}) => {
  */
 export const updateAppointmentGroupStatus = async (groupId, newStatus) => {
   try {
-    const response = await apiClient.patch(`/api/v1/appointments/groups/${groupId}/status`, { 
+    const response = await apiClient.patch(buildApiEndpoint(`appointments/groups/${groupId}/status`), { 
       status: newStatus 
     });
     return response.data;
@@ -234,7 +235,7 @@ export const updateAppointmentGroupStatus = async (groupId, newStatus) => {
  */
 export const createWalkInAppointment = async (walkInData) => {
   try {
-    const response = await apiClient.post('/api/v1/appointments/walk-in', walkInData);
+    const response = await apiClient.post(buildApiEndpoint('appointments/walk-in'), walkInData);
     return response.data;
   } catch (error) {
     console.error("Error creating walk-in appointment:", error.response?.data || error.message);
@@ -253,7 +254,7 @@ export const createWalkInAppointment = async (walkInData) => {
 export const addServicesToAppointmentGroup = async (groupId, services) => {
   try {
     const requestData = { services: services };
-    const response = await apiClient.post(`/api/v1/appointments/add-services/${groupId}`, requestData);
+    const response = await apiClient.post(buildApiEndpoint(`appointments/add-services/${groupId}`), requestData);
     return response.data;
   } catch (error) {
     console.error("Error adding services to appointment group:", error.response?.data || error.message);
@@ -270,7 +271,7 @@ export const addServicesToAppointmentGroup = async (groupId, services) => {
  */
 export const getAppointmentGroupDetails = async (groupId) => {
   try {
-    const response = await apiClient.get(`/api/v1/appointments/groups/${groupId}`);
+    const response = await apiClient.get(buildApiEndpoint(`appointments/groups/${groupId}`));
     return response.data;
   } catch (error) {
     console.error("Error fetching appointment group details:", error.response?.data || error.message);
@@ -288,7 +289,7 @@ export const getAppointmentGroupDetails = async (groupId) => {
 export const createMergedCheckoutSession = async (groupIds) => {
   try {
     const requestData = { group_ids: groupIds };
-    const response = await apiClient.post('/api/v1/appointments/checkout/merge', requestData);
+    const response = await apiClient.post(buildApiEndpoint('appointments/checkout/merge'), requestData);
     return response.data;
   } catch (error) {
     console.error("Error creating merged checkout session:", error.response?.data || error.message);
@@ -305,7 +306,7 @@ export const createMergedCheckoutSession = async (groupIds) => {
  */
 export const processAppointmentPayment = async (paymentData) => {
   try {
-    const response = await apiClient.post('/api/v1/appointments/checkout/payment', paymentData);
+    const response = await apiClient.post(buildApiEndpoint('appointments/checkout/payment'), paymentData);
     return response.data;
   } catch (error) {
     console.error("Error processing appointment payment:", error.response?.data || error.message);

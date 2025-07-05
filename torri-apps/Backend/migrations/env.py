@@ -11,13 +11,17 @@ from Config.Database import Base # BasePublic removed
 
 # Import all models for the single schema operation
 from Core.Auth.models import User # Changed from UserTenant
-from Modules.Services.models import Service, Category
-from Modules.Appointments.models import Appointment
+from Modules.Services.models import Service, Category, ServiceImage, ServiceImageLabel, service_professionals_association
+from Modules.Appointments.models import Appointment, AppointmentGroup
 from Modules.Availability.models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlockedTime
 from Modules.Labels.models import Label, user_labels_association
-# from Modules.Payments.models import Payment, PaymentItem  # Import payment models - temporarily disabled
+from Modules.Payments.models import Payment, PaymentItem  # Import payment models
+from Modules.Commissions.models import Commission, CommissionPayment, CommissionPaymentItem  # Import commission models
+from Modules.Stations.models import Station, StationType, ServiceStationRequirement  # Import station models
+from Modules.Settings.models import AppSetting  # Import settings models
+from Modules.Company.models import Company  # Import company models
+# from Modules.Tenants.models import Tenant  # Tenant model is in public schema, not needed here
 # from Modules.AdminMaster.models import AdminMasterUser # Commented out due to ModuleNotFoundError
-# from Modules.Tenants.models import Tenant # Tenant model removed
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -137,6 +141,7 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+        connection.commit()
 
     if connectable:
         connectable.dispose()

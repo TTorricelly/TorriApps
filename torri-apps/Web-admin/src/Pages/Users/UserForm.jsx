@@ -209,7 +209,7 @@ const UserDataForm = ({
 
 function UserForm() {
   const navigate = useNavigate();
-  const { userId } = useParams();
+  const { userId, tenantSlug } = useParams();
   const isEditMode = Boolean(userId);
 
   // Form state
@@ -264,12 +264,12 @@ function UserForm() {
         setHasUnsavedChanges(false);
       } else {
         showAlert('Usuário não encontrado', 'error');
-        navigate('/settings/users');
+        navigate(`/${tenantSlug}/settings/users`);
       }
     } catch (error) {
       console.error('Error loading user:', error);
       showAlert('Erro ao carregar dados do usuário', 'error');
-      navigate('/settings/users');
+      navigate(`/${tenantSlug}/settings/users`);
     } finally {
       setIsLoading(false);
     }
@@ -363,7 +363,7 @@ function UserForm() {
         
         // Navigate back after a short delay
         setTimeout(() => {
-          navigate('/settings/users');
+          navigate(`/${tenantSlug}/settings/users`);
         }, 1500);
       } else {
         showAlert('Erro ao salvar usuário', 'error');
@@ -380,13 +380,13 @@ function UserForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate('/settings/users');
+      navigate(`/${tenantSlug}/settings/users`);
     }
   };
 
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate('/settings/users');
+    navigate(`/${tenantSlug}/settings/users`);
   };
 
   if (isLoading) {

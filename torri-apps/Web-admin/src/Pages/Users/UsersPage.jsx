@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   CardHeader,
@@ -29,6 +29,7 @@ import { usersApi } from '../../Services/users.js';
 
 function UsersPage() {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
 
   // State management
   const [users, setUsers] = useState([]);
@@ -153,7 +154,7 @@ function UsersPage() {
             <Button
               className="flex items-center gap-3 bg-accent-primary hover:bg-accent-primary/90"
               size="sm"
-              onClick={() => navigate('/settings/users/create')}
+              onClick={() => navigate(`/${tenantSlug}/settings/users/create`)}
             >
               <PlusIcon strokeWidth={2} className="h-4 w-4" />
               Novo Usuário

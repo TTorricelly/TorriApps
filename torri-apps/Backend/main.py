@@ -27,6 +27,7 @@ import Modules.Services.models  # Import Services and ServiceImage models to reg
 import Modules.Tenants.models  # Import Tenant models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
 from Config.Relationships import configure_relationships # Import relationship configuration
+from Core.Utils.file_handler import file_handler  # Initialize file handler with Google Cloud Storage
 from Core.Middleware.tenant import TenantMiddleware
 # Placeholder for other routers:
 # from .Modules.AdminMaster.routes import router as admin_master_router
@@ -80,8 +81,8 @@ app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenant Managemen
 
 # Tenant routes (require tenant context via {tenant_slug})
 app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/categories", tags=["Service Categories (Tenant)"])
+app.include_router(service_images_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Service Images Management (Tenant)"])
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/services", tags=["Services (Tenant)"])
-app.include_router(service_images_router, prefix=API_V1_PREFIX, tags=["Service Images Management"])
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/availability", tags=["Professional Availability (Tenant)"])
 app.include_router(appointments_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/appointments", tags=["Appointments (Tenant)"])
 app.include_router(professionals_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/professionals", tags=["Professionals Management (Tenant)"])

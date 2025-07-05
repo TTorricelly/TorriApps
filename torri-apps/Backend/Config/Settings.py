@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     tenant_url_template: str = ""  # Will use database_url if empty
     tenant_engine_pool_size: int = 3
     
-    def __post_init__(self):
+    def model_post_init(self, __context) -> None:
         # Ensure backward compatibility - if legacy URLs not set, use main database_url
         if not self.public_database_url:
             self.public_database_url = self.database_url

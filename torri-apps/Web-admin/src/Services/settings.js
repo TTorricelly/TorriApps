@@ -1,56 +1,66 @@
-import api from './api';
+import { api } from '../api/client';
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 export const settingsApi = {
   // Get all settings
   getAll: async () => {
-    const response = await api.get('/api/v1/settings/');
+    const endpoint = buildApiEndpoint('settings/');
+    const response = await api.get(endpoint);
     return response.data;
   },
 
   // Get all settings as typed values
   getAllValues: async () => {
-    const response = await api.get('/api/v1/settings/values');
+    const endpoint = buildApiEndpoint('settings/values');
+    const response = await api.get(endpoint);
     return response.data;
   },
 
   // Get specific setting by key
   getByKey: async (key) => {
-    const response = await api.get(`/api/v1/settings/${key}`);
+    const endpoint = buildApiEndpoint(`settings/${key}`);
+    const response = await api.get(endpoint);
     return response.data;
   },
 
   // Create new setting
   create: async (settingData) => {
-    const response = await api.post('/api/v1/settings/', settingData);
+    const endpoint = buildApiEndpoint('settings/');
+    const response = await api.post(endpoint, settingData);
     return response.data;
   },
 
   // Update existing setting
   update: async (key, settingData) => {
-    const response = await api.put(`/api/v1/settings/${key}`, settingData);
+    const endpoint = buildApiEndpoint(`settings/${key}`);
+    const response = await api.put(endpoint, settingData);
     return response.data;
   },
 
   // Delete setting
   delete: async (key) => {
-    const response = await api.delete(`/api/v1/settings/${key}`);
+    const endpoint = buildApiEndpoint(`settings/${key}`);
+    const response = await api.delete(endpoint);
     return response.data;
   },
 
   // Batch create/update settings
   batchUpdate: async (settings) => {
-    const response = await api.post('/api/v1/settings/batch', settings);
+    const endpoint = buildApiEndpoint('settings/batch');
+    const response = await api.post(endpoint, settings);
     return response.data;
   },
 
   // Convenience methods for common settings
   getDefaultProssuggested: async () => {
-    const response = await api.get('/api/v1/settings/pros/default-suggested');
+    const endpoint = buildApiEndpoint('settings/pros/default-suggested');
+    const response = await api.get(endpoint);
     return response.data;
   },
 
   setDefaultProsSuggested: async (value) => {
-    const response = await api.put(`/api/v1/settings/pros/default-suggested?value=${value}`);
+    const endpoint = buildApiEndpoint(`settings/pros/default-suggested?value=${value}`);
+    const response = await api.put(endpoint);
     return response.data;
   }
 };

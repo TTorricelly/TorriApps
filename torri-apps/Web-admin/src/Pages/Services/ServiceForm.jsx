@@ -274,7 +274,7 @@ const RichTextEditor = ({ value, onChange, placeholder, error }) => {
 
 export default function ServiceForm() {
   const navigate = useNavigate();
-  const { serviceId } = useParams();
+  const { serviceId, tenantSlug } = useParams();
   const location = useLocation();
   const isEdit = Boolean(serviceId);
   
@@ -320,7 +320,7 @@ export default function ServiceForm() {
     } else if (categoryIdFromUrl) {
       loadCategory();
     } else {
-      navigate('/services');
+      navigate(`/${tenantSlug}/services/list`);
     }
   }, [serviceId, categoryIdFromUrl]);
   
@@ -411,7 +411,7 @@ export default function ServiceForm() {
     } catch (error) {
       console.error('Erro ao carregar serviço:', error);
       showAlert('Erro ao carregar dados do serviço', 'error');
-      navigate('/services');
+      navigate(`/${tenantSlug}/services/list`);
     } finally {
       setIsLoading(false);
     }
@@ -430,7 +430,7 @@ export default function ServiceForm() {
     } catch (error) {
       console.error('Erro ao carregar categoria:', error);
       showAlert('Erro ao carregar categoria', 'error');
-      navigate('/services');
+      navigate(`/${tenantSlug}/services/list`);
     }
   };
   
@@ -642,7 +642,7 @@ export default function ServiceForm() {
         showAlert('Serviço salvo, mas houve erro ao salvar requisitos de estação', 'warning');
       }
       
-      navigate('/services');
+      navigate(`/${tenantSlug}/services/list`);
     } catch (error) {
       console.error('Erro ao salvar serviço:', error);
       if (error.response?.data?.detail) {
@@ -659,13 +659,13 @@ export default function ServiceForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate('/services');
+      navigate(`/${tenantSlug}/services/list`);
     }
   };
   
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate('/services');
+    navigate(`/${tenantSlug}/services/list`);
   };
   
   if (isLoading) {

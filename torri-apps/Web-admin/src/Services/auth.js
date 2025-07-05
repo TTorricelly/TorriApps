@@ -1,4 +1,5 @@
 import { api } from "../api/client"; // Imports the configured Axios instance
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 // Interface LoginCredentials (for reference, not strictly enforced in JS)
 // Frontend sends: { email: string; password: string; }
@@ -18,8 +19,8 @@ export async function loginRequest(credentials) {
     password: credentials.password
   };
   
-  // Using standard login endpoint.
-  const response = await api.post("/api/v1/auth/login", loginPayload);
+  // Using public login endpoint (no tenant context needed)
+  const response = await api.post(buildApiEndpoint("auth/login", "v1", { isPublic: true }), loginPayload);
   return response.data; // Axios automatically wraps the response in a data object
 }
 

@@ -472,7 +472,7 @@ const AddressTab = ({
 
 export default function ClientForm() { // Renamed component
   const navigate = useNavigate();
-  const { clientId } = useParams(); // Changed from professionalId to clientId
+  const { clientId, tenantSlug } = useParams(); // Changed from professionalId to clientId
   const isEditMode = Boolean(clientId); // Renamed from isEdit for clarity
 
   // Form state
@@ -580,7 +580,7 @@ export default function ClientForm() { // Renamed component
     } catch (error) {
       console.error('Erro ao carregar cliente:', error); // Updated error message
       showAlert('Erro ao carregar dados do cliente', 'error'); // Updated alert message
-      navigate('/clients'); // Navigate to clients list on error
+      navigate(`/${tenantSlug}/clients`); // Navigate to clients list on error
     } finally {
       setIsLoading(false);
     }
@@ -730,7 +730,7 @@ export default function ClientForm() { // Renamed component
       setHasUnsavedChanges(false); // Reset flag
 
       // Navigate to clients list page after save/create
-      navigate('/clients');
+      navigate(`/${tenantSlug}/clients`);
 
     } catch (error) {
       console.error('Erro ao salvar cliente:', error); // Updated error message
@@ -748,13 +748,13 @@ export default function ClientForm() { // Renamed component
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate('/clients'); // Navigate to clients list
+      navigate(`/${tenantSlug}/clients`); // Navigate to clients list
     }
   };
 
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate('/clients'); // Navigate to clients list
+    navigate(`/${tenantSlug}/clients`); // Navigate to clients list
   };
 
   // Removed handleTabChange as tabs are removed

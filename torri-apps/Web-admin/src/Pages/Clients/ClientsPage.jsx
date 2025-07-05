@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getClientDisplayName, clientNameMatchesSearch } from '../../Utils/clientUtils';
 import {
   Card,
@@ -35,6 +35,7 @@ import BulkLabelAssignment from '../../Components/Clients/BulkLabelAssignment.js
 
 function ClientsPage() { // Renamed component and removed default export from here
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
 
   // State management
   const [clients, setClients] = useState([]); // Renamed state
@@ -313,7 +314,7 @@ function ClientsPage() { // Renamed component and removed default export from he
               
               <Button
                 className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
-                onClick={() => navigate('/clients/create')}
+                onClick={() => navigate(`/${tenantSlug}/clients/create`)}
               >
                 <PlusIcon className="h-4 w-4" />
                 Novo Cliente
@@ -420,7 +421,7 @@ function ClientsPage() { // Renamed component and removed default export from he
                       className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
                         index % 2 === 0 ? 'bg-bg-primary/20' : 'bg-bg-secondary'
                       }`}
-                      onClick={() => navigate(`/clients/edit/${client.id}`)}
+                      onClick={() => navigate(`/${tenantSlug}/clients/edit/${client.id}`)}
                     >
                       <td className="p-4" onClick={(e) => e.stopPropagation()}>
                         <input

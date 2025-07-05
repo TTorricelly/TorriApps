@@ -1,23 +1,26 @@
 import { api } from '../api/client';
-import { processImageUrls } from '../Utils/urlHelpers';
+import { buildApiEndpoint, transformEntityWithImages } from '../Utils/apiHelpers';
 
 // Category API service functions
 export const categoriesApi = {
   // Get all categories
   getAll: async () => {
-    const response = await api.get('/api/v1/categories');
-    return processImageUrls(response.data, ['icon_url']);
+    const endpoint = buildApiEndpoint('categories');
+    const response = await api.get(endpoint);
+    return transformEntityWithImages(response.data, ['icon_url']);
   },
 
   // Get category by ID
   getById: async (id) => {
-    const response = await api.get(`/api/v1/categories/${id}`);
-    return processImageUrls(response.data, ['icon_url']);
+    const endpoint = buildApiEndpoint(`categories/${id}`);
+    const response = await api.get(endpoint);
+    return transformEntityWithImages(response.data, ['icon_url']);
   },
 
   // Create new category
   create: async (formData) => {
-    const response = await api.post('/api/v1/categories', formData, {
+    const endpoint = buildApiEndpoint('categories');
+    const response = await api.post(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -27,7 +30,8 @@ export const categoriesApi = {
 
   // Update category
   update: async (id, formData) => {
-    const response = await api.put(`/api/v1/categories/${id}`, formData, {
+    const endpoint = buildApiEndpoint(`categories/${id}`);
+    const response = await api.put(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -37,6 +41,7 @@ export const categoriesApi = {
 
   // Delete category
   delete: async (id) => {
-    await api.delete(`/api/v1/categories/${id}`);
+    const endpoint = buildApiEndpoint(`categories/${id}`);
+    await api.delete(endpoint);
   },
 };

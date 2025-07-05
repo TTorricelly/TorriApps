@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   CardHeader,
@@ -31,6 +31,7 @@ import { getAssetUrl } from '../../Utils/config';
 
 export default function ServicesPage() {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   
   // State management
   const [categories, setCategories] = useState([]);
@@ -151,11 +152,11 @@ export default function ServicesPage() {
       showAlert('Selecione uma categoria antes de criar um serviço', 'warning');
       return;
     }
-    navigate(`/services/create?categoryId=${selectedCategoryId}`);
+    navigate(`/${tenantSlug}/services/create?categoryId=${selectedCategoryId}`);
   };
 
   const handleEditService = (serviceId) => {
-    navigate(`/services/edit/${serviceId}`);
+    navigate(`/${tenantSlug}/services/edit/${serviceId}`);
   };
 
   const handleDeleteService = async (service) => {

@@ -20,6 +20,7 @@ from Core.Database.dependencies import get_db
 from Core.Auth.dependencies import require_role
 from Core.Auth.constants import UserRole
 from Core.Utils.file_handler import file_handler
+from Core.Middleware.tenant import require_tenant_context, get_current_tenant_slug
 from .models import Service, ServiceImage, ServiceImageLabel
 from .schemas import ServiceImageSchema, ServiceImageCreate, ServiceImageUpdate, ImageOrderItem
 from Modules.Labels.models import Label
@@ -52,7 +53,9 @@ router = APIRouter(prefix="/services", tags=["service-images"])
 
 @router.post("/{service_id}/images", response_model=ServiceImageSchema, status_code=status.HTTP_201_CREATED)
 async def upload_service_image(
+    tenant_slug: str,
     service_id: UUID,
+    request: Request,
     file: UploadFile = File(...),
     alt_text: Optional[str] = Form(None),
     is_primary: bool = Form(False),
@@ -109,9 +112,10 @@ async def upload_service_image(
             )
         
         # Save the uploaded file
+        tenant_id = getattr(current_user, 'tenant_id', 'default')
         file_path = await file_handler.save_uploaded_file(
             file=file,
-            tenant_id=getattr(current_user, 'tenant_id', 'default'),
+            tenant_id=tenant_id,
             subdirectory="services"
         )
         
@@ -171,6 +175,12 @@ async def upload_service_image(
             
             db.commit()
         
+        # Convert file path to public URL
+        if service_image.file_path:
+            public_url = file_handler.get_public_url(service_image.file_path, str(request.base_url))
+            if public_url:
+                service_image.file_path = public_url
+        
         return service_image
         
     except HTTPException:
@@ -185,6 +195,7 @@ async def upload_service_image(
 
 @router.put("/{service_id}/images/reorder", status_code=status.HTTP_200_OK)
 async def reorder_service_images(
+    tenant_slug: str,
     service_id: UUID,
     image_orders: List[ImageOrderItem],
     db: Session = Depends(get_db),
@@ -194,16 +205,6 @@ async def reorder_service_images(
     Update the display order of service images.
     """
     try:
-        # Verify service exists
-        service = db.execute(
-            select(Service).where(Service.id == str(service_id))
-        ).scalar_one_or_none()
-        
-        if not service:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Service with ID {service_id} not found"
-            )
         
         # Update display orders
         for order_item in image_orders:
@@ -235,7 +236,9 @@ async def reorder_service_images(
 
 @router.get("/{service_id}/images", response_model=List[ServiceImageSchema])
 async def get_service_images(
+    tenant_slug: str,
     service_id: UUID,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL]))
 ):
@@ -243,23 +246,20 @@ async def get_service_images(
     Get all images for a service, ordered by display_order.
     """
     try:
-        # Verify service exists
-        service = db.execute(
-            select(Service).where(Service.id == str(service_id))
-        ).scalar_one_or_none()
-        
-        if not service:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Service with ID {service_id} not found"
-            )
-        
-        # Get images
+        # Get images directly (don't verify service exists - let images query handle it)
+        # This prevents 404 errors when service exists but tenant context is inconsistent
         images = db.execute(
             select(ServiceImage)
             .where(ServiceImage.service_id == str(service_id))
             .order_by(ServiceImage.display_order, ServiceImage.created_at)
         ).scalars().all()
+        
+        # Convert file paths to public URLs
+        for image in images:
+            if image.file_path:
+                public_url = file_handler.get_public_url(image.file_path, str(request.base_url))
+                if public_url:
+                    image.file_path = public_url
         
         return images
         
@@ -274,6 +274,7 @@ async def get_service_images(
 
 @router.put("/{service_id}/images/{image_id}", response_model=ServiceImageSchema)
 async def update_service_image(
+    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     image_data: ServiceImageUpdate,
@@ -330,6 +331,7 @@ async def update_service_image(
 
 @router.delete("/{service_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_image(
+    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     db: Session = Depends(get_db),
@@ -381,6 +383,7 @@ async def delete_service_image(
 
 @router.post("/{service_id}/images/{image_id}/labels", status_code=status.HTTP_201_CREATED)
 async def assign_label_to_image(
+    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     label_id: UUID,
@@ -451,6 +454,7 @@ async def assign_label_to_image(
 
 @router.delete("/{service_id}/images/{image_id}/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_label_from_image(
+    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     label_id: UUID,

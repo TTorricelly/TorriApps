@@ -1,4 +1,5 @@
 import { api as apiClient } from '../api/client';
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 /**
  * Creates a new client user.
@@ -8,7 +9,8 @@ import { api as apiClient } from '../api/client';
  */
 export const createClient = async (clientData) => {
   try {
-    const response = await apiClient.post('/users', clientData);
+    const endpoint = buildApiEndpoint('users');
+    const response = await apiClient.post(endpoint, clientData);
     return response.data;
   } catch (error) {
     console.error("Error creating client:", error.response?.data || error.message);
@@ -24,7 +26,8 @@ export const createClient = async (clientData) => {
  */
 export const getClients = async () => {
   try {
-    const response = await apiClient.get('/api/v1/users/?role=CLIENTE&limit=10000');
+    const endpoint = buildApiEndpoint('users/?role=CLIENTE&limit=10000');
+    const response = await apiClient.get(endpoint);
     return response.data;
   } catch (error) {
     console.error("Error fetching clients:", error.response?.data || error.message);
@@ -41,7 +44,8 @@ export const getClients = async () => {
  */
 export const searchClients = async (searchTerm) => {
   try {
-    const response = await apiClient.get(`/api/v1/users/?role=CLIENTE&search=${encodeURIComponent(searchTerm)}&limit=10000`);
+    const endpoint = buildApiEndpoint(`users/?role=CLIENTE&search=${encodeURIComponent(searchTerm)}&limit=10000`);
+    const response = await apiClient.get(endpoint);
     return response.data;
   } catch (error) {
     console.error("Error searching clients:", error.response?.data || error.message);
@@ -58,7 +62,8 @@ export const searchClients = async (searchTerm) => {
  */
 export const getClientById = async (clientId) => {
   try {
-    const response = await apiClient.get(`/users/${clientId}`);
+    const endpoint = buildApiEndpoint(`users/${clientId}`);
+    const response = await apiClient.get(endpoint);
     return response.data;
   } catch (error) {
     console.error("Error fetching client:", error.response?.data || error.message);
@@ -76,7 +81,8 @@ export const getClientById = async (clientId) => {
  */
 export const updateClient = async (clientId, clientData) => {
   try {
-    const response = await apiClient.put(`/users/${clientId}`, clientData);
+    const endpoint = buildApiEndpoint(`users/${clientId}`);
+    const response = await apiClient.put(endpoint, clientData);
     return response.data;
   } catch (error) {
     console.error("Error updating client:", error.response?.data || error.message);

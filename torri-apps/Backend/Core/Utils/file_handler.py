@@ -6,6 +6,7 @@ from pathlib import Path
 from google.cloud import storage
 from google.cloud.exceptions import NotFound
 import logging
+from Config.Settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,8 @@ class FileHandler:
     def __init__(self, base_upload_dir: str = "public/uploads", bucket_name: str = "torri-apps-uploads"):
         self.base_upload_dir = Path(base_upload_dir)
         self.bucket_name = bucket_name
-        self.use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+        settings = Settings()
+        self.use_cloud_storage = settings.use_cloud_storage
         
         if self.use_cloud_storage:
             try:

@@ -67,14 +67,24 @@ export const ensureArray = (data, entityName = 'items') => {
 };
 
 /**
- * Build API endpoint URL with version prefix
- * Matches mobile app's buildApiEndpoint exactly
+ * Build API endpoint URL with version prefix and tenant context
  * @param {string} endpoint - API endpoint
  * @param {string} version - API version (default: v1)
+ * @param {Object} options - Options object
+ * @param {boolean} options.isPublic - Force public endpoint (no tenant context)
  * @returns {string} Full API endpoint
  */
-export const buildApiEndpoint = (endpoint, version = 'v1') => {
+export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
+  const { isPublic = false } = options;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  
+  if (isPublic) {
+    // Force public endpoint - no tenant context
+    return `/api/${version}/${cleanEndpoint}`;
+  }
+  
+  // For App-client, we don't use tenant context in URLs yet
+  // This maintains backward compatibility while supporting public endpoints
   return `/api/${version}/${cleanEndpoint}`;
 };
 

@@ -1,6 +1,5 @@
-import api from './api';
-
-const API_BASE = '/api/v1/commissions';
+import { api } from '../api/client';
+import { buildApiEndpoint } from '../Utils/apiHelpers';
 
 export const commissionsApi = {
   /**
@@ -18,7 +17,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/`, { params: cleanParams });
+      const endpoint = buildApiEndpoint('commissions/');
+      const response = await api.get(endpoint, { params: cleanParams });
       
       // Assuming the API returns data directly for now
       // In a real pagination setup, you might get { data, total_count, page, etc. }
@@ -46,7 +46,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/kpis`, { params: cleanParams });
+      const endpoint = buildApiEndpoint('commissions/kpis');
+      const response = await api.get(endpoint, { params: cleanParams });
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error fetching KPIs:', error);
@@ -61,7 +62,8 @@ export const commissionsApi = {
    */
   async getCommission(commissionId) {
     try {
-      const response = await api.get(`${API_BASE}/${commissionId}`);
+      const endpoint = buildApiEndpoint(`commissions/${commissionId}`);
+      const response = await api.get(endpoint);
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error fetching commission:', error);
@@ -77,7 +79,8 @@ export const commissionsApi = {
    */
   async updateCommission(commissionId, updateData) {
     try {
-      const response = await api.patch(`${API_BASE}/${commissionId}`, updateData);
+      const endpoint = buildApiEndpoint(`commissions/${commissionId}`);
+      const response = await api.patch(endpoint, updateData);
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error updating commission:', error);
@@ -92,7 +95,8 @@ export const commissionsApi = {
    */
   async createPayment(paymentData) {
     try {
-      const response = await api.post(`${API_BASE}/payments`, paymentData);
+      const endpoint = buildApiEndpoint('commissions/payments');
+      const response = await api.post(endpoint, paymentData);
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error creating payment:', error);
@@ -114,7 +118,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/export/csv`, {
+      const endpoint = buildApiEndpoint('commissions/export/csv');
+      const response = await api.get(endpoint, {
         params: cleanParams,
         responseType: 'blob'
       });
@@ -160,7 +165,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/export/pdf`, {
+      const endpoint = buildApiEndpoint('commissions/export/pdf');
+      const response = await api.get(endpoint, {
         params: cleanParams,
         responseType: 'blob'
       });
@@ -206,7 +212,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/payments`, { params: cleanParams });
+      const endpoint = buildApiEndpoint('commissions/payments');
+      const response = await api.get(endpoint, { params: cleanParams });
       return response.data;
     } catch (error) {
       console.error('[commissionsApi] Error fetching payments:', error);
@@ -221,7 +228,8 @@ export const commissionsApi = {
    */
   async downloadPaymentReceipt(paymentId) {
     try {
-      const response = await api.get(`${API_BASE}/payments/${paymentId}/receipt`, {
+      const endpoint = buildApiEndpoint(`commissions/payments/${paymentId}/receipt`);
+      const response = await api.get(endpoint, {
         responseType: 'blob'
       });
 
@@ -266,7 +274,8 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const response = await api.get(`${API_BASE}/export/receipt`, {
+      const endpoint = buildApiEndpoint('commissions/export/receipt');
+      const response = await api.get(endpoint, {
         params: cleanParams,
         responseType: 'blob'
       });

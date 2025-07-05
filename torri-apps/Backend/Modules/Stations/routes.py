@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Path
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from uuid import UUID
 
 from Core.Database.dependencies import get_db
@@ -13,12 +13,15 @@ from .schemas import (
     StationTypeWithStations, StationWithType
 )
 
-router = APIRouter(prefix="/stations", tags=["stations"])
+router = APIRouter(tags=["stations"])
 
 
 # --- StationType Routes ---
 @router.get("/types", response_model=List[StationTypeSchema])
-async def get_station_types(db: Session = Depends(get_db)):
+async def get_station_types(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    db: Session = Depends(get_db)
+):
     """Get all station types."""
     return db.query(StationType).all()
 
@@ -35,7 +38,11 @@ def generate_code_from_name(name: str) -> str:
 
 
 @router.post("/types", response_model=StationTypeSchema)
-async def create_station_type(station_type_data: StationTypeCreate, db: Session = Depends(get_db)):
+async def create_station_type(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_type_data: StationTypeCreate,
+    db: Session = Depends(get_db)
+):
     """Create a new station type."""
     # Auto-generate code from name if not provided
     if not hasattr(station_type_data, 'code') or not station_type_data.code:
@@ -65,7 +72,11 @@ async def create_station_type(station_type_data: StationTypeCreate, db: Session 
 
 
 @router.get("/types/{station_type_id}", response_model=StationTypeWithStations)
-async def get_station_type(station_type_id: UUID, db: Session = Depends(get_db)):
+async def get_station_type(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_type_id: UUID,
+    db: Session = Depends(get_db)
+):
     """Get a station type by ID with its stations."""
     station_type = db.query(StationType).filter(StationType.id == str(station_type_id)).first()
     if not station_type:
@@ -75,8 +86,9 @@ async def get_station_type(station_type_id: UUID, db: Session = Depends(get_db))
 
 @router.put("/types/{station_type_id}", response_model=StationTypeSchema)
 async def update_station_type(
-    station_type_id: UUID, 
-    station_type_data: StationTypeUpdate, 
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_type_id: UUID,
+    station_type_data: StationTypeUpdate,
     db: Session = Depends(get_db)
 ):
     """Update a station type."""
@@ -117,7 +129,11 @@ async def update_station_type(
 
 
 @router.delete("/types/{station_type_id}")
-async def delete_station_type(station_type_id: UUID, db: Session = Depends(get_db)):
+async def delete_station_type(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_type_id: UUID,
+    db: Session = Depends(get_db)
+):
     """Delete a station type."""
     station_type = db.query(StationType).filter(StationType.id == str(station_type_id)).first()
     if not station_type:
@@ -137,8 +153,9 @@ async def delete_station_type(station_type_id: UUID, db: Session = Depends(get_d
 
 
 # --- Station Routes ---
-@router.get("/", response_model=List[StationWithType])
+@router.get("", response_model=List[StationWithType])
 async def get_stations(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     type_id: Optional[UUID] = None,
     active_only: bool = True,
     db: Session = Depends(get_db)
@@ -155,8 +172,12 @@ async def get_stations(
     return query.all()
 
 
-@router.post("/", response_model=StationSchema)
-async def create_station(station_data: StationCreate, db: Session = Depends(get_db)):
+@router.post("", response_model=StationSchema)
+async def create_station(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_data: StationCreate,
+    db: Session = Depends(get_db)
+):
     """Create a new station."""
     # Verify station type exists
     station_type = db.query(StationType).filter(StationType.id == str(station_data.type_id)).first()
@@ -175,7 +196,11 @@ async def create_station(station_data: StationCreate, db: Session = Depends(get_
 
 
 @router.get("/{station_id}", response_model=StationWithType)
-async def get_station(station_id: UUID, db: Session = Depends(get_db)):
+async def get_station(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_id: UUID,
+    db: Session = Depends(get_db)
+):
     """Get a station by ID."""
     station = db.query(Station).filter(Station.id == str(station_id)).first()
     if not station:
@@ -185,8 +210,9 @@ async def get_station(station_id: UUID, db: Session = Depends(get_db)):
 
 @router.put("/{station_id}", response_model=StationSchema)
 async def update_station(
-    station_id: UUID, 
-    station_data: StationUpdate, 
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_id: UUID,
+    station_data: StationUpdate,
     db: Session = Depends(get_db)
 ):
     """Update a station."""
@@ -215,7 +241,11 @@ async def update_station(
 
 
 @router.delete("/{station_id}")
-async def delete_station(station_id: UUID, db: Session = Depends(get_db)):
+async def delete_station(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    station_id: UUID,
+    db: Session = Depends(get_db)
+):
     """Delete a station."""
     station = db.query(Station).filter(Station.id == str(station_id)).first()
     if not station:
@@ -228,7 +258,11 @@ async def delete_station(station_id: UUID, db: Session = Depends(get_db)):
 
 # --- ServiceStationRequirement Routes ---
 @router.get("/requirements/service/{service_id}", response_model=List[ServiceStationRequirementSchema])
-async def get_service_station_requirements(service_id: UUID, db: Session = Depends(get_db)):
+async def get_service_station_requirements(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    service_id: UUID,
+    db: Session = Depends(get_db)
+):
     """Get station requirements for a specific service."""
     return db.query(ServiceStationRequirement).filter(
         ServiceStationRequirement.service_id == str(service_id)
@@ -237,7 +271,8 @@ async def get_service_station_requirements(service_id: UUID, db: Session = Depen
 
 @router.post("/requirements", response_model=ServiceStationRequirementSchema)
 async def create_service_station_requirement(
-    requirement_data: ServiceStationRequirementCreate, 
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
+    requirement_data: ServiceStationRequirementCreate,
     db: Session = Depends(get_db)
 ):
     """Create a new service station requirement."""
@@ -269,6 +304,7 @@ async def create_service_station_requirement(
 
 @router.put("/requirements/{service_id}/{station_type_id}", response_model=ServiceStationRequirementSchema)
 async def update_service_station_requirement(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     station_type_id: UUID,
     requirement_data: ServiceStationRequirementUpdate,
@@ -297,6 +333,7 @@ async def update_service_station_requirement(
 
 @router.delete("/requirements/{service_id}/{station_type_id}")
 async def delete_service_station_requirement(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     station_type_id: UUID,
     db: Session = Depends(get_db)

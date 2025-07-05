@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   CardHeader,
@@ -31,6 +31,7 @@ import { servicesApi } from '../../Services/services';
 
 export default function ProfessionalsPage() {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   
   // State management
   const [professionals, setProfessionals] = useState([]);
@@ -128,11 +129,11 @@ export default function ProfessionalsPage() {
   };
 
   const handleCreateProfessional = () => {
-    navigate('/professionals/create');
+    navigate(`/${tenantSlug}/professionals/create`);
   };
 
   const handleEditProfessional = (professionalId) => {
-    navigate(`/professionals/edit/${professionalId}`);
+    navigate(`/${tenantSlug}/professionals/edit/${professionalId}`);
   };
 
   const handleDeleteProfessional = (professional) => {

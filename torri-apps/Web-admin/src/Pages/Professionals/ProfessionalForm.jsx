@@ -294,6 +294,7 @@ const BasicDataTab = ({
                 className="bg-bg-primary border-bg-tertiary text-text-primary"
                 labelProps={{ className: "text-text-secondary" }}
                 containerProps={{ className: "text-text-primary" }}
+                autoComplete="new-email"
                 required
               />
               {errors.email && (
@@ -316,6 +317,7 @@ const BasicDataTab = ({
                   className="bg-bg-primary border-bg-tertiary text-text-primary"
                   labelProps={{ className: "text-text-secondary" }}
                   containerProps={{ className: "text-text-primary" }}
+                  autoComplete="new-password"
                   required
                 />
                 {errors.password && (
@@ -1164,7 +1166,7 @@ const RecurringBreaksTab = ({ professionalId, showAlert }) => {
 
 export default function ProfessionalForm() {
   const navigate = useNavigate();
-  const { professionalId } = useParams();
+  const { professionalId, tenantSlug } = useParams();
   const isEdit = Boolean(professionalId);
   
   // Form state
@@ -1250,7 +1252,7 @@ export default function ProfessionalForm() {
     } catch (error) {
       console.error('Erro ao carregar profissional:', error);
       showAlert('Erro ao carregar dados do profissional', 'error');
-      navigate('/professionals');
+      navigate(`/${tenantSlug}/professionals`);
     } finally {
       setIsLoading(false);
     }
@@ -1352,7 +1354,7 @@ export default function ProfessionalForm() {
       
       // If creating, redirect to edit mode with all tabs available
       if (!isEdit) {
-        navigate(`/professionals/edit/${result.id}`);
+        navigate(`/${tenantSlug}/professionals/edit/${result.id}`);
       } else {
         // Update initial state and clear unsaved changes flag
         setInitialFormData(formData);
@@ -1374,13 +1376,13 @@ export default function ProfessionalForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate('/professionals');
+      navigate(`/${tenantSlug}/professionals`);
     }
   };
   
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate('/professionals');
+    navigate(`/${tenantSlug}/professionals`);
   };
   
   const handleTabChange = (value) => {

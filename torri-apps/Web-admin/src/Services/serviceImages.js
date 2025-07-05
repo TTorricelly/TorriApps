@@ -23,7 +23,7 @@ export const serviceImagesApi = {
    * @returns {Promise<Object>} Uploaded image data
    */
   uploadImage: async (serviceId, file, options = {}) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images`, 'v1');
     
     // Create FormData for file upload
     const formData = new FormData();
@@ -60,7 +60,7 @@ export const serviceImagesApi = {
    * @returns {Promise<Array>} Array of service images
    */
   getServiceImages: async (serviceId) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images`, 'v1');
     
     return withApiErrorHandling(
       () => api.get(endpoint),
@@ -79,7 +79,7 @@ export const serviceImagesApi = {
    * @returns {Promise<Object>} Updated image data
    */
   updateImage: async (serviceId, imageId, updateData) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}`, 'v1');
     
     return withApiErrorHandling(
       () => api.put(endpoint, updateData),
@@ -97,7 +97,7 @@ export const serviceImagesApi = {
    * @returns {Promise<boolean>} Success status
    */
   deleteImage: async (serviceId, imageId) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}`, 'v1');
     
     return withApiErrorHandling(
       () => api.delete(endpoint),
@@ -116,7 +116,7 @@ export const serviceImagesApi = {
    * @returns {Promise<boolean>} Success status
    */
   assignLabel: async (serviceId, imageId, labelId) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}/labels`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}/labels`, 'v1');
     
     return withApiErrorHandling(
       () => api.post(endpoint, {}, { params: { label_id: labelId } }),
@@ -135,7 +135,7 @@ export const serviceImagesApi = {
    * @returns {Promise<boolean>} Success status
    */
   removeLabel: async (serviceId, imageId, labelId) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}/labels/${labelId}`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images/${imageId}/labels/${labelId}`, 'v1');
     
     return withApiErrorHandling(
       () => api.delete(endpoint),
@@ -153,7 +153,7 @@ export const serviceImagesApi = {
    * @returns {Promise<boolean>} Success status
    */
   reorderImages: async (serviceId, imageOrders) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images/reorder`);
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images/reorder`, 'v1');
     
     return withApiErrorHandling(
       () => api.put(endpoint, imageOrders),

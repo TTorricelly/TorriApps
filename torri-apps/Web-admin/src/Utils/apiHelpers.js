@@ -70,14 +70,51 @@ export const transformEntityWithImages = (data, imageFields = []) => {
 };
 
 /**
- * Build API endpoint URL with version prefix
+ * Extract tenant slug from current URL path
+ * @returns {string|null} Tenant slug or null if not found
+ */
+export const getTenantSlugFromUrl = () => {
+  const path = window.location.pathname;
+  // Match patterns like /tenant-slug/... or /tenant-slug (but not /login, /register, etc.)
+  const match = path.match(/^\/([a-z0-9_-]+)(?:\/|$)/);
+  
+  // Exclude common non-tenant paths
+  const excludedPaths = ['login', 'register', 'auth', 'admin', 'api', 'docs'];
+  if (match && !excludedPaths.includes(match[1])) {
+    console.log(`DEBUG: Detected tenant slug '${match[1]}' from URL: ${path}`);
+    return match[1];
+  }
+  
+  console.log(`DEBUG: No tenant slug detected from URL: ${path}`);
+  return null;
+};
+
+/**
+ * Build API endpoint URL with version prefix and tenant context
  * @param {string} endpoint - API endpoint
  * @param {string} version - API version (default: v1)
+ * @param {Object} options - Options object
+ * @param {string|null} options.tenantSlug - Override tenant slug (auto-detected if not provided)
+ * @param {boolean} options.isPublic - Force public endpoint (no tenant context)
  * @returns {string} Full API endpoint
  */
-export const buildApiEndpoint = (endpoint, version = 'v1') => {
+export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
+  const { tenantSlug = null, isPublic = false } = options;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `/api/${version}/${cleanEndpoint}`;
+  
+  if (isPublic) {
+    // Force public endpoint - no tenant context
+    return `/api/${version}/${cleanEndpoint}`;
+  }
+  
+  const tenant = tenantSlug || getTenantSlugFromUrl();
+  
+  if (tenant) {
+    return `/api/${version}/${tenant}/${cleanEndpoint}`;
+  } else {
+    // Fallback to non-tenant endpoint for public routes
+    return `/api/${version}/${cleanEndpoint}`;
+  }
 };
 
 /**
