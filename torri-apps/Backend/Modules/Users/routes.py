@@ -1,7 +1,7 @@
 from typing import List, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Query # Added Response and Query
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query, Path # Added Response, Query, and Path
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 
@@ -22,14 +22,13 @@ class BulkLabelUpdateRequest(BaseModel):
     label_ids: List[UUID]
 
 router = APIRouter(
-    prefix="/users",
     tags=["users"],
-    # The X-Tenant-ID header will be implicitly checked by get_current_user_tenant for most routes.
-    # For routes accessible by multiple roles, specific checks might be needed if behavior differs.
+    # Tenant context is handled by TenantMiddleware and tenant_slug path parameters
 )
 
 @router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
 def register_new_client(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     registration_data: PublicRegistrationRequest,
     db: Annotated[Session, Depends(get_db)]
 ):
@@ -54,6 +53,7 @@ def register_new_client(
 
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
 def create_new_user(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_data: UserCreate, # Updated schema
     db: Annotated[Session, Depends(get_db)],
     # Only a GESTOR can create new users.
@@ -70,6 +70,7 @@ def create_new_user(
 
 @router.get("/me", response_model=UserSchema) # Updated schema
 def read_users_me(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     # Changed dependency to get_current_user_from_db
     current_user: Annotated[User, Depends(get_current_user_from_db)]
 ):
@@ -80,6 +81,7 @@ def read_users_me(
 
 @router.put("/me", response_model=UserSchema)
 def update_current_user_profile(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_update_data: UserUpdate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user_from_db)]
@@ -113,6 +115,7 @@ def update_current_user_profile(
 
 @router.get("/", response_model=List[UserSchema]) # Updated schema
 def read_users_in_tenant( # Function name might be misleading now, consider renaming to read_all_users
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     # GESTOR and ATENDENTE can list all users (for client management).
     current_user: Annotated[User, Depends(require_role([UserRole.GESTOR, UserRole.ATENDENTE]))], # Updated type
@@ -155,6 +158,7 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
 
 @router.get("/{user_id}", response_model=UserSchema) # Updated schema
 def read_user_by_id(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     # GESTOR and ATENDENTE can fetch users by ID (for client management).
@@ -171,6 +175,7 @@ def read_user_by_id(
 
 @router.put("/{user_id}", response_model=UserSchema) # Updated schema
 def update_existing_user(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     user_update_data: UserUpdate, # Updated schema
     db: Annotated[Session, Depends(get_db)],
@@ -194,6 +199,7 @@ def update_existing_user(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_existing_user(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     # Only a GESTOR can delete users.
@@ -218,6 +224,7 @@ def delete_existing_user(
 # Label management endpoints
 @router.post("/{user_id}/labels/bulk", response_model=UserSchema)
 async def bulk_update_user_labels(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     request: BulkLabelUpdateRequest,
     db: Annotated[Session, Depends(get_db)],
@@ -258,6 +265,7 @@ async def bulk_update_user_labels(
 
 @router.post("/{user_id}/labels/{label_id}", response_model=UserSchema)
 async def add_label_to_user(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     label_id: UUID,
     db: Annotated[Session, Depends(get_db)],
@@ -293,6 +301,7 @@ async def add_label_to_user(
 
 @router.delete("/{user_id}/labels/{label_id}", response_model=UserSchema)
 async def remove_label_from_user(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_id: UUID,
     label_id: UUID,
     db: Annotated[Session, Depends(get_db)],
@@ -328,6 +337,7 @@ async def remove_label_from_user(
 
 @router.get("/by-label/{label_id}", response_model=UserListResponse)
 async def get_users_by_label(
+    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     label_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_role([UserRole.GESTOR]))],

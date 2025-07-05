@@ -86,30 +86,24 @@ class TenantMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         """Process request and set up tenant context."""
-        print(f"DEBUG: Middleware processing path: {request.url.path}")
-        
         # Clear any existing tenant context
         TenantContext.clear()
         
         # Check if this is a public route
         if self._is_public_route(request.url.path):
-            print(f"DEBUG: Public route detected, skipping tenant context")
             return await call_next(request)
         
         # Extract tenant slug from URL
         tenant_slug = self._extract_tenant_slug(request.url.path)
-        print(f"DEBUG: Extracted tenant slug: {tenant_slug}")
         
         if tenant_slug:
             # Validate tenant and set context
             try:
-                print(f"DEBUG: Setting up tenant context for: {tenant_slug}")
                 await self._setup_tenant_context(tenant_slug)
                 
                 # Add tenant info to request state for easy access
                 request.state.tenant_slug = tenant_slug
                 request.state.tenant = TenantContext.get_tenant()
-                print(f"DEBUG: Tenant context set successfully")
                 
             except HTTPException as e:
                 return JSONResponse(

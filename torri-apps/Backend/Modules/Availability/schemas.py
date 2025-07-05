@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from datetime import time, date # Ensure these are imported from datetime
 
 from .constants import DayOfWeek
@@ -73,3 +73,26 @@ class ProfessionalBlockedTimeSchema(ProfessionalBlockedTimeBase):
 
     class Config:
         from_attributes = True
+
+
+# --- Bulk Update Schemas ---
+class BulkAvailabilitySlotCreate(BaseModel):
+    """Schema for individual slot in bulk update"""
+    day_of_week: DayOfWeek
+    start_time: time
+    end_time: time
+    
+    @model_validator(mode='after')
+    def validate_start_end_time(self):
+        if self.start_time >= self.end_time:
+            raise ValueError("start_time must be before end_time")
+        return self
+
+class BulkAvailabilityUpdate(BaseModel):
+    """Schema for bulk availability update"""
+    slots: List[BulkAvailabilitySlotCreate] = Field(..., description="List of availability slots to replace current schedule")
+    
+class BulkAvailabilityResponse(BaseModel):
+    """Response schema for bulk update"""
+    created_slots: List[ProfessionalAvailabilitySchema]
+    message: str = "Availability updated successfully"

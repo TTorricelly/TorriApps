@@ -130,35 +130,80 @@ export const professionalsApi = {
     }
   },
 
-  // Update professional availability (bulk replace all slots)
+  // Update professional availability (optimized with batch operations)
   updateAvailability: async (professionalId, availabilityData) => {
     try {
-      // Get current slots to delete them first
-      const slotsEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
-      const currentSlots = await api.get(slotsEndpoint);
-      
-      // Delete all existing slots
-      for (const slot of currentSlots.data) {
-        const deleteEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots/${slot.id}`);
-        await api.delete(deleteEndpoint);
-      }
-      
-      // Create new slots from availabilityData
-      const results = [];
+      // Convert availabilityData to flat array for operations
+      const slots = [];
       for (const [dayOfWeek, periods] of Object.entries(availabilityData)) {
         for (const period of periods) {
-          const slotData = {
+          slots.push({
             day_of_week: dayOfWeek,
             start_time: period.start_time,
             end_time: period.end_time
-          };
-          const createEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
-          const response = await api.post(createEndpoint, slotData);
-          results.push(response.data);
+          });
         }
       }
       
-      return results;
+      // Try bulk update endpoint first (preferred - will be added to backend later)
+      try {
+        const bulkEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/bulk-update`);
+        const response = await api.put(bulkEndpoint, { slots });
+        return response.data;
+      } catch (bulkError) {
+        // Check if it's a 404 (endpoint doesn't exist) or other error
+        if (bulkError.response?.status === 404) {
+          console.log('Using individual operations for availability update');
+        } else {
+          console.warn('Bulk update failed, falling back to individual operations:', bulkError.message);
+        }
+        
+        // Optimized fallback: Batch operations in smaller chunks
+        const slotsEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+        
+        // Get current slots
+        const currentSlots = await api.get(slotsEndpoint);
+        
+        // Delete existing slots in batches of 10 for better performance
+        const deletePromises = [];
+        const batchSize = 10;
+        
+        for (let i = 0; i < currentSlots.data.length; i += batchSize) {
+          const batch = currentSlots.data.slice(i, i + batchSize);
+          const batchPromises = batch.map(slot => {
+            const deleteEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots/${slot.id}`);
+            return api.delete(deleteEndpoint).catch(err => {
+              console.warn(`Failed to delete slot ${slot.id}:`, err.message);
+              return null; // Don't fail the entire operation
+            });
+          });
+          deletePromises.push(Promise.all(batchPromises));
+        }
+        
+        // Execute delete batches
+        await Promise.all(deletePromises);
+        
+        // Create new slots in batches
+        const createPromises = [];
+        for (let i = 0; i < slots.length; i += batchSize) {
+          const batch = slots.slice(i, i + batchSize);
+          const batchPromises = batch.map(slotData => {
+            const createEndpoint = buildApiEndpoint(`availability/professional/${professionalId}/slots`);
+            return api.post(createEndpoint, slotData).catch(err => {
+              console.warn('Failed to create slot:', slotData, err.message);
+              return null; // Don't fail the entire operation
+            });
+          });
+          createPromises.push(Promise.all(batchPromises));
+        }
+        
+        // Execute create batches
+        const results = await Promise.all(createPromises);
+        
+        // Flatten results and filter out failed operations
+        const flatResults = results.flat().filter(r => r && r.data);
+        return flatResults.map(r => r.data);
+      }
     } catch (error) {
       console.error('Erro ao atualizar disponibilidade:', error);
       throw error;

@@ -11,7 +11,8 @@ from .models import ProfessionalAvailability, ProfessionalBreak, ProfessionalBlo
 from .schemas import (
     ProfessionalAvailabilityCreate, ProfessionalAvailabilitySchema,
     ProfessionalBreakCreate, ProfessionalBreakSchema,
-    ProfessionalBlockedTimeCreate, ProfessionalBlockedTimeSchema
+    ProfessionalBlockedTimeCreate, ProfessionalBlockedTimeSchema,
+    BulkAvailabilitySlotCreate
 )
 from .constants import DayOfWeek, AvailabilityBlockType
 from Core.Auth.models import User # Updated import
@@ -371,6 +372,60 @@ def delete_blocked_time(
     db.delete(db_blocked_time)
     db.commit()
     return True
+
+# --- Bulk Operations ---
+def bulk_update_availability(
+    db: Session,
+    professional_user_id: UUID,
+    slots: List[BulkAvailabilitySlotCreate]
+) -> List[ProfessionalAvailabilitySchema]:
+    """
+    Efficiently replace all availability slots for a professional with new ones.
+    This is much faster than individual create/delete operations.
+    """
+    # First, delete all existing slots for this professional
+    delete_stmt = delete(ProfessionalAvailability).where(
+        ProfessionalAvailability.professional_user_id == str(professional_user_id)
+    )
+    db.execute(delete_stmt)
+    
+    # Create new slots in batch
+    new_slots = []
+    for slot_data in slots:
+        # Validate time overlap within the new slots
+        for existing_slot in new_slots:
+            if (existing_slot.day_of_week == slot_data.day_of_week and 
+                _times_overlap(slot_data.start_time, slot_data.end_time, 
+                              existing_slot.start_time, existing_slot.end_time)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Time overlap detected for {slot_data.day_of_week.name}: {slot_data.start_time}-{slot_data.end_time} overlaps with {existing_slot.start_time}-{existing_slot.end_time}"
+                )
+        
+        # Create the slot
+        db_slot = ProfessionalAvailability(
+            professional_user_id=str(professional_user_id),
+            day_of_week=slot_data.day_of_week,
+            start_time=slot_data.start_time,
+            end_time=slot_data.end_time
+        )
+        new_slots.append(slot_data)
+        db.add(db_slot)
+    
+    # Commit all changes
+    db.commit()
+    
+    # Return the created slots
+    stmt = select(ProfessionalAvailability).where(
+        ProfessionalAvailability.professional_user_id == str(professional_user_id)
+    )
+    created_slots = db.execute(stmt).scalars().all()
+    
+    return [ProfessionalAvailabilitySchema.model_validate(slot) for slot in created_slots]
+
+def _times_overlap(start1: time, end1: time, start2: time, end2: time) -> bool:
+    """Helper function to check if two time ranges overlap"""
+    return start1 < end2 and end1 > start2
 
 # Helper for sqlalchemy "not" operator in overlap checks - REMOVED
 # def not_(expression):

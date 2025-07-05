@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
@@ -51,7 +51,6 @@ const ServiceTagSelector = ({ services, selectedServices, onServicesChange, show
 
   const handleAddService = (serviceId) => {
     if (!selectedServices.includes(serviceId)) {
-      console.log('Adding service:', serviceId);
       onServicesChange([...selectedServices, serviceId]);
     }
     setSearchTerm('');
@@ -59,7 +58,6 @@ const ServiceTagSelector = ({ services, selectedServices, onServicesChange, show
   };
 
   const handleRemoveService = (serviceId) => {
-    console.log('Removing service:', serviceId);
     onServicesChange(selectedServices.filter(id => id !== serviceId));
   };
 
@@ -450,13 +448,17 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
     { key: 'sunday', label: 'Domingo' }
   ];
 
-  const timeSlots = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push(time);
+  // Memoize time slots to prevent recreation on every render
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(time);
+      }
     }
-  }
+    return slots;
+  }, []);
 
   useEffect(() => {
     if (professionalId) {
@@ -484,7 +486,6 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
       });
       
       setAvailability(availabilityByDay);
-      console.log('Availability loaded and converted:', availabilityByDay);
     } catch (error) {
       console.error('Erro ao carregar disponibilidade:', error);
       setAvailability({});
@@ -511,14 +512,15 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
     }));
   };
 
-  const handlePeriodChange = (day, index, field, value) => {
+  // Debounced period change to prevent excessive re-renders
+  const handlePeriodChange = useCallback((day, index, field, value) => {
     setAvailability(prev => ({
       ...prev,
       [day]: prev[day].map((period, i) => 
         i === index ? { ...period, [field]: value } : period
       )
     }));
-  };
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -528,8 +530,8 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
       const availabilityForApi = {};
       Object.keys(availability).forEach(day => {
         availabilityForApi[day] = availability[day].map(period => ({
-          start_time: period.start_time + ':00', // Convert "09:00" to "09:00:00"
-          end_time: period.end_time + ':00'       // Convert "18:00" to "18:00:00"
+          start_time: period.start_time + ':00',
+          end_time: period.end_time + ':00'
         }));
       });
       
@@ -571,8 +573,9 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-accent-primary hover:bg-accent-primary/90"
+          className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
         >
+          {isSaving && <Spinner className="h-4 w-4" />}
           {isSaving ? 'Salvando...' : 'Salvar Disponibilidade'}
         </Button>
       </div>
@@ -585,98 +588,106 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
           </Typography>
         </div>
       )}
-
-      <div className="space-y-4">
-        {daysOfWeek.map(({ key, label }) => (
-          <div key={key} className="border border-bg-tertiary rounded-lg p-4">
-            <div className="flex justify-between items-center mb-3">
-              <Typography className="text-text-primary font-medium">
-                {label}
-              </Typography>
-              <Button
-                size="sm"
-                variant="outlined"
-                onClick={() => handleAddPeriod(key)}
-                className="border-accent-primary text-accent-primary hover:bg-accent-primary/10"
-              >
-                + Adicionar Período
-              </Button>
-            </div>
-
-            {availability[key]?.length > 0 ? (
-              <div className="space-y-2">
-                {availability[key].map((period, index) => (
-                  <div key={index} className="flex items-center gap-4">
-                    <Select
-                      value={period.start_time}
-                      onChange={(value) => handlePeriodChange(key, index, 'start_time', value)}
-                      label="Início"
-                      className="bg-bg-primary border-bg-tertiary text-text-primary flex-1"
-                      labelProps={{ className: "text-text-secondary" }}
-                      containerProps={{ className: "text-text-primary" }}
-                      menuProps={{ 
-                        className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
-                        style: { 
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: '4px',
-                          zIndex: 9999
-                        }
-                      }}
-                    >
-                      {timeSlots.map((time) => (
-                        <Option key={time} value={time} className="text-text-primary hover:bg-bg-tertiary hover:text-white focus:bg-bg-tertiary focus:text-accent-primary selected:bg-accent-primary selected:text-white data-[selected=true]:bg-accent-primary data-[selected=true]:text-white data-[selected=true]:hover:text-white">
-                          {time}
-                        </Option>
-                      ))}
-                    </Select>
-
-                    <Select
-                      value={period.end_time}
-                      onChange={(value) => handlePeriodChange(key, index, 'end_time', value)}
-                      label="Fim"
-                      className="bg-bg-primary border-bg-tertiary text-text-primary flex-1"
-                      labelProps={{ className: "text-text-secondary" }}
-                      containerProps={{ className: "text-text-primary" }}
-                      menuProps={{ 
-                        className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
-                        style: { 
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: '4px',
-                          zIndex: 9999
-                        }
-                      }}
-                    >
-                      {timeSlots.map((time) => (
-                        <Option key={time} value={time} className="text-text-primary hover:bg-bg-tertiary hover:text-white focus:bg-bg-tertiary focus:text-accent-primary selected:bg-accent-primary selected:text-white data-[selected=true]:bg-accent-primary data-[selected=true]:text-white data-[selected=true]:hover:text-white">
-                          {time}
-                        </Option>
-                      ))}
-                    </Select>
-
-                    <Button
-                      size="sm"
-                      variant="outlined"
-                      onClick={() => handleRemovePeriod(key, index)}
-                      className="border-status-error text-status-error hover:bg-status-error/10"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Typography className="text-text-tertiary text-sm">
-                Nenhum período configurado
-              </Typography>
-            )}
+      
+      {isSaving && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <Spinner className="h-4 w-4 text-blue-600" />
+            <Typography className="text-blue-800 text-sm font-medium">
+              Salvando disponibilidade...
+            </Typography>
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* Optimized day sections with reduced re-renders */}
+      <div className="space-y-4">
+        {daysOfWeek.map(({ key, label }) => {
+          const dayPeriods = availability[key] || [];
+          
+          return (
+            <div key={key} className="border border-bg-tertiary rounded-lg p-4">
+              <div className="flex justify-between items-center mb-3">
+                <Typography className="text-text-primary font-medium">
+                  {label}
+                </Typography>
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  onClick={() => handleAddPeriod(key)}
+                  className="border-accent-primary text-accent-primary hover:bg-accent-primary/10"
+                >
+                  + Adicionar Período
+                </Button>
+              </div>
+
+              {dayPeriods.length > 0 ? (
+                <div className="space-y-2">
+                  {dayPeriods.map((period, index) => (
+                    <div key={`${key}-${index}`} className="flex items-center gap-4">
+                      <Select
+                        value={period.start_time}
+                        onChange={(value) => handlePeriodChange(key, index, 'start_time', value)}
+                        label="Início"
+                        className="bg-bg-primary border-bg-tertiary text-text-primary flex-1"
+                        labelProps={{ className: "text-text-secondary" }}
+                        containerProps={{ className: "text-text-primary" }}
+                        menuProps={{ 
+                          className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50"
+                        }}
+                      >
+                        {timeSlots.map((time) => (
+                          <Option 
+                            key={time} 
+                            value={time} 
+                            className="text-text-primary hover:bg-bg-tertiary hover:text-white focus:bg-bg-tertiary focus:text-accent-primary"
+                          >
+                            {time}
+                          </Option>
+                        ))}
+                      </Select>
+
+                      <Select
+                        value={period.end_time}
+                        onChange={(value) => handlePeriodChange(key, index, 'end_time', value)}
+                        label="Fim"
+                        className="bg-bg-primary border-bg-tertiary text-text-primary flex-1"
+                        labelProps={{ className: "text-text-secondary" }}
+                        containerProps={{ className: "text-text-primary" }}
+                        menuProps={{ 
+                          className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50"
+                        }}
+                      >
+                        {timeSlots.map((time) => (
+                          <Option 
+                            key={time} 
+                            value={time} 
+                            className="text-text-primary hover:bg-bg-tertiary hover:text-white focus:bg-bg-tertiary focus:text-accent-primary"
+                          >
+                            {time}
+                          </Option>
+                        ))}
+                      </Select>
+
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        onClick={() => handleRemovePeriod(key, index)}
+                        className="border-status-error text-status-error hover:bg-status-error/10"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Typography className="text-text-tertiary text-sm">
+                  Nenhum período configurado
+                </Typography>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -738,7 +749,6 @@ const BlockedPeriodsTab = ({ professionalId, showAlert }) => {
         end_time: newBlock.end_time + ':00'       // Convert "18:00" to "18:00:00"
       };
       
-      console.log('Creating blocked period with data:', blockForApi);
       await professionalsApi.createBlockedPeriod(professionalId, blockForApi);
       showAlert('Período bloqueado criado com sucesso!', 'success');
       setShowAddForm(false);
@@ -805,7 +815,6 @@ const BlockedPeriodsTab = ({ professionalId, showAlert }) => {
                 label="Data"
                 value={newBlock.blocked_date}
                 onChange={(e) => {
-                  console.log('Date selected:', e.target.value);
                   setNewBlock({...newBlock, blocked_date: e.target.value});
                 }}
                 className="bg-bg-secondary border-bg-tertiary text-text-primary"
@@ -987,7 +996,6 @@ const RecurringBreaksTab = ({ professionalId, showAlert }) => {
         end_time: newBreak.end_time + ':00'       // Convert "13:00" to "13:00:00"
       };
       
-      console.log('Creating break with data:', breakForApi);
       await professionalsApi.createBreak(professionalId, breakForApi);
       showAlert('Pausa criada com sucesso!', 'success');
       setShowAddForm(false);
@@ -1340,12 +1348,9 @@ export default function ProfessionalForm() {
       
       // Update services association
       const profId = result?.id || professionalId;
-      console.log('Updating services for professional:', profId);
-      console.log('Selected services:', selectedServices);
       if (selectedServices.length > 0 || isEdit) {
         try {
-          const servicesResult = await professionalsApi.updateProfessionalServices(profId, selectedServices);
-          console.log('Services update result:', servicesResult);
+          await professionalsApi.updateProfessionalServices(profId, selectedServices);
         } catch (error) {
           console.error('Erro ao associar serviços:', error, error.response?.data);
           showAlert('Profissional salvo, mas houve erro na associação de serviços', 'warning');

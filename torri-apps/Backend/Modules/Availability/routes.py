@@ -14,7 +14,8 @@ from . import services as availability_services # Alias
 from .schemas import (
     ProfessionalAvailabilitySchema, ProfessionalAvailabilityCreate,
     ProfessionalBreakSchema, ProfessionalBreakCreate,
-    ProfessionalBlockedTimeSchema, ProfessionalBlockedTimeCreate
+    ProfessionalBlockedTimeSchema, ProfessionalBlockedTimeCreate,
+    BulkAvailabilityUpdate, BulkAvailabilityResponse
 )
 from .constants import DayOfWeek
 
@@ -93,6 +94,39 @@ def delete_professional_availability_slot_endpoint(
     if not success: # Should be handled by exceptions in service now
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found or deletion failed.")
     return None
+
+
+@router.put(
+    "/professional/{professional_user_id_managed}/bulk-update",
+    response_model=BulkAvailabilityResponse,
+    summary="Bulk update all availability slots for a professional."
+)
+def bulk_update_professional_availability(
+    professional_user_id_managed: UUID = Path(..., description="ID of the professional whose availability is being updated."),
+    bulk_data: BulkAvailabilityUpdate = Body(...),
+    requesting_user: Annotated[User, Depends(get_current_user_tenant)] = None,
+    db: Annotated[Session, Depends(get_db)] = None
+):
+    """
+    Efficiently replace all availability slots for a professional with new ones.
+    This is much faster than individual create/delete operations.
+    """
+    # Permission check
+    availability_services._get_professional_for_availability_management(
+        db, professional_user_id_to_manage=professional_user_id_managed, requesting_user=requesting_user
+    )
+    
+    # Perform bulk update
+    created_slots = availability_services.bulk_update_availability(
+        db=db,
+        professional_user_id=professional_user_id_managed,
+        slots=bulk_data.slots
+    )
+    
+    return BulkAvailabilityResponse(
+        created_slots=created_slots,
+        message=f"Successfully updated {len(created_slots)} availability slots"
+    )
 
 
 # --- ProfessionalBreak (Weekly Recurring Breaks) Endpoints ---

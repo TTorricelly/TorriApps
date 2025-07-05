@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
@@ -28,6 +28,112 @@ import {
 
 import { professionalsApi } from '../../Services/professionals';
 import { servicesApi } from '../../Services/services';
+
+// Optimized Professional Row Component with memoization
+const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, getServiceTags, getInitials }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  const handleRowClick = useCallback(() => {
+    onEdit(professional.id);
+  }, [onEdit, professional.id]);
+  
+  const handleEdit = useCallback((e) => {
+    e.stopPropagation();
+    onEdit(professional.id);
+  }, [onEdit, professional.id]);
+  
+  const handleDelete = useCallback((e) => {
+    e.stopPropagation();
+    onDelete(professional);
+  }, [onDelete, professional]);
+  
+  const serviceTags = useMemo(() => getServiceTags(professional), [getServiceTags, professional]);
+  const initials = useMemo(() => getInitials(professional.full_name), [getInitials, professional.full_name]);
+  
+  return (
+    <tr 
+      className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
+        index % 2 === 0 ? 'bg-bg-primary/20' : 'bg-bg-secondary'
+      }`}
+      onClick={handleRowClick}
+    >
+      <td className="p-4">
+        <div className="w-10 h-10">
+          {professional.photo_url && !imageError ? (
+            <Avatar
+              src={professional.photo_url}
+              alt={professional.full_name}
+              className="w-10 h-10"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-10 h-10 bg-bg-tertiary rounded-full flex items-center justify-center">
+              <Typography className="text-text-secondary text-sm font-medium">
+                {initials}
+              </Typography>
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <Typography className="text-text-primary font-medium">
+          {professional.full_name || 'Nome não informado'}
+        </Typography>
+      </td>
+      <td className="p-4">
+        <Typography className="text-text-primary">
+          {professional.email}
+        </Typography>
+      </td>
+      <td className="p-4">
+        <div className="flex flex-wrap gap-1">
+          {serviceTags.length > 0 ? (
+            serviceTags.map((service, idx) => (
+              <span 
+                key={service.id || idx} 
+                className="inline-block px-2 py-1 text-xs bg-accent-primary/10 text-accent-primary rounded-md border border-accent-primary/20"
+              >
+                {service.name}
+              </span>
+            ))
+          ) : (
+            <Typography className="text-text-tertiary text-sm">
+              Nenhum serviço
+            </Typography>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <Badge 
+          color={professional.is_active ? "green" : "orange"}
+          className="text-xs"
+        >
+          {professional.is_active ? "Ativo" : "Inativo"}
+        </Badge>
+      </td>
+      <td className="p-4">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outlined"
+            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-2"
+            onClick={handleEdit}
+          >
+            <PencilIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outlined"
+            className="border-status-error text-status-error hover:bg-status-error/10 p-2"
+            onClick={handleDelete}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 export default function ProfessionalsPage() {
   const navigate = useNavigate();
@@ -68,7 +174,7 @@ export default function ProfessionalsPage() {
     };
   }, []);
 
-  const loadProfessionals = async () => {
+  const loadProfessionals = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await professionalsApi.getAll();
@@ -76,22 +182,20 @@ export default function ProfessionalsPage() {
     } catch (error) {
       console.error('Erro ao carregar profissionais:', error);
       showAlert('Erro ao carregar profissionais', 'error');
-      setProfessionals([]); // Set empty array on error
+      setProfessionals([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const loadAllServices = async () => {
+  const loadAllServices = useCallback(async () => {
     try {
-      // Get all services from all categories for filtering
       const data = await servicesApi.getAllServices();
       setAllServices(data);
     } catch (error) {
       console.error('Erro ao carregar serviços:', error);
-      // Don't show error for services as it's not critical for main functionality
     }
-  };
+  }, []);
 
   // Filter professionals based on search query, status, and services
   const filteredProfessionals = useMemo(() => {
@@ -132,13 +236,13 @@ export default function ProfessionalsPage() {
     navigate(`/${tenantSlug}/professionals/create`);
   };
 
-  const handleEditProfessional = (professionalId) => {
+  const handleEditProfessional = useCallback((professionalId) => {
     navigate(`/${tenantSlug}/professionals/edit/${professionalId}`);
-  };
+  }, [navigate, tenantSlug]);
 
-  const handleDeleteProfessional = (professional) => {
+  const handleDeleteProfessional = useCallback((professional) => {
     setDeleteDialog({ open: true, professional });
-  };
+  }, []);
 
   const confirmDeleteProfessional = async () => {
     try {
@@ -154,12 +258,11 @@ export default function ProfessionalsPage() {
     }
   };
 
-  const getServiceTags = (professional) => {
-    // Return services from the professional object
+  const getServiceTags = useCallback((professional) => {
     return professional.services_offered || [];
-  };
+  }, []);
 
-  const getInitials = (fullName) => {
+  const getInitials = useCallback((fullName) => {
     if (!fullName) return '?';
     return fullName
       .split(' ')
@@ -167,7 +270,7 @@ export default function ProfessionalsPage() {
       .slice(0, 2)
       .join('')
       .toUpperCase();
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -314,87 +417,15 @@ export default function ProfessionalsPage() {
                 </thead>
                 <tbody>
                   {filteredProfessionals.map((professional, index) => (
-                    <tr 
-                      key={professional.id} 
-                      className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
-                        index % 2 === 0 ? 'bg-bg-primary/20' : 'bg-bg-secondary'
-                      }`}
-                      onClick={() => handleEditProfessional(professional.id)}
-                    >
-                      <td className="p-4">
-                        <div className="w-10 h-10">
-                          {professional.photo_url ? (
-                            <Avatar
-                              src={professional.photo_url}
-                              alt={professional.full_name}
-                              className="w-10 h-10"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-bg-tertiary rounded-full flex items-center justify-center">
-                              <Typography className="text-text-secondary text-sm font-medium">
-                                {getInitials(professional.full_name)}
-                              </Typography>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Typography className="text-text-primary font-medium">
-                          {professional.full_name || 'Nome não informado'}
-                        </Typography>
-                      </td>
-                      <td className="p-4">
-                        <Typography className="text-text-primary">
-                          {professional.email}
-                        </Typography>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-1">
-                          {getServiceTags(professional).length > 0 ? (
-                            getServiceTags(professional).map((service, idx) => (
-                              <span 
-                                key={idx} 
-                                className="inline-block px-2 py-1 text-xs bg-accent-primary/10 text-accent-primary rounded-md border border-accent-primary/20"
-                              >
-                                {service.name}
-                              </span>
-                            ))
-                          ) : (
-                            <Typography className="text-text-tertiary text-sm">
-                              Nenhum serviço
-                            </Typography>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge 
-                          color={professional.is_active ? "green" : "orange"}
-                          className="text-xs"
-                        >
-                          {professional.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-2"
-                            onClick={() => handleEditProfessional(professional.id)}
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="border-status-error text-status-error hover:bg-status-error/10 p-2"
-                            onClick={() => handleDeleteProfessional(professional)}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                    <ProfessionalRow
+                      key={professional.id}
+                      professional={professional}
+                      index={index}
+                      onEdit={handleEditProfessional}
+                      onDelete={handleDeleteProfessional}
+                      getServiceTags={getServiceTags}
+                      getInitials={getInitials}
+                    />
                   ))}
                 </tbody>
               </table>
