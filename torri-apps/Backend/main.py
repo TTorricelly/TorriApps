@@ -76,10 +76,10 @@ configure_relationships()
 API_V1_PREFIX = "/api/v1"
 
 # Public routes (no tenant context required)
-app.include_router(auth_router, prefix=API_V1_PREFIX, tags=["Authentication"])
 app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenant Management"])
 
 # Tenant routes (require tenant context via {tenant_slug})
+app.include_router(auth_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/auth", tags=["Authentication (Tenant)"])
 app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/categories", tags=["Service Categories (Tenant)"])
 app.include_router(service_images_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}", tags=["Service Images Management (Tenant)"])
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/{{tenant_slug}}/services", tags=["Services (Tenant)"])

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Search, Plus, Users, Phone, Mail, ChevronRight, UserX, Loader2, RefreshCw, CreditCard, MapPin } from '../components/icons'
 import { clientService } from '../services/clientService'
 import { useAuthStore } from '../stores/authStore'
@@ -9,6 +9,7 @@ import { formatCpf, formatAddressCompact } from '../utils/brazilianUtils'
 
 const ClientsPage = () => {
   const navigate = useNavigate()
+  const { tenantSlug } = useParams()
   const { hasRole } = useAuthStore()
   const { isProfessionalMode } = useViewModeStore()
   
@@ -132,7 +133,7 @@ const ClientsPage = () => {
   const ClientCard = ({ client }) => (
     <div 
       className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 active:bg-gray-50 transition-colors"
-      onClick={() => navigate(`/professional/clients/${client.id}`)}
+      onClick={() => navigate(`/${tenantSlug}/professional/clients/${client.id}`)}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center flex-1 min-w-0">
@@ -233,7 +234,7 @@ const ClientsPage = () => {
         </p>
         {canManageClients && (
           <button
-            onClick={() => navigate('/professional/clients/new')}
+            onClick={() => navigate(`/${tenantSlug}/professional/clients/new`)}
             className="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold mt-4"
           >
             Adicionar Novo Cliente
@@ -268,7 +269,7 @@ const ClientsPage = () => {
             {/* Add client button */}
             {canManageClients && (
               <button
-                onClick={() => navigate('/professional/clients/new')}
+                onClick={() => navigate(`/${tenantSlug}/professional/clients/new`)}
                 className="bg-pink-500 text-white p-2 rounded-xl"
               >
                 <Plus size={20} />

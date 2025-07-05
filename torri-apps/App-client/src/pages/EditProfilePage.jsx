@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { updateUserProfile } from '../services/userService';
 import { ArrowLeft, User, Mail, Phone, Save, Calendar, CreditCard, MapPin, Tag, Plus } from 'lucide-react';
@@ -21,6 +21,7 @@ import { areLabelsEqual, extractLabelIds } from '../utils/labelUtils';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { user, setProfile } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isLabelSelectorOpen, setIsLabelSelectorOpen] = useState(false);
@@ -102,7 +103,7 @@ const EditProfilePage = () => {
 
     if (updatedProfile) {
       setProfile(updatedProfile);
-      navigate('/profile');
+      navigate(`/${tenantSlug}/profile`);
     } else {
       // Handle error case, e.g., show a notification
       alert('Failed to update profile. Please try again.');

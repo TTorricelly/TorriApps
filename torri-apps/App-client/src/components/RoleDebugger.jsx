@@ -5,12 +5,13 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
 const RoleDebugger = () => {
   const { user, setProfile, isProfessional, isClient, getUserRole } = useAuthStore();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Only show in development
@@ -24,9 +25,9 @@ const RoleDebugger = () => {
     
     // Navigate to appropriate dashboard based on new role
     if (['PROFISSIONAL', 'ATENDENTE', 'GESTOR'].includes(newRole)) {
-      navigate('/professional/dashboard');
+      navigate(`/${tenantSlug}/professional/dashboard`);
     } else {
-      navigate('/dashboard');
+      navigate(`/${tenantSlug}/dashboard`);
     }
   };
 

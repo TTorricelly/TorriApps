@@ -249,7 +249,7 @@ const WizardDateScreen = () => {
       </div>
 
       {/* Calendar Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -259,55 +259,55 @@ const WizardDateScreen = () => {
           display: none;
         }
         
-        .calendar-container :global(.wizard-calendar) {
+        .calendar-container .wizard-calendar {
           border: none;
           border-radius: 12px;
           font-family: inherit;
         }
         
-        .calendar-container :global(.react-calendar__navigation) {
+        .calendar-container .react-calendar__navigation {
           margin-bottom: 1rem;
         }
         
-        .calendar-container :global(.react-calendar__navigation button) {
+        .calendar-container .react-calendar__navigation button {
           color: #ec4899;
           font-weight: 600;
           font-size: 1rem;
         }
         
-        .calendar-container :global(.react-calendar__navigation button:hover) {
+        .calendar-container .react-calendar__navigation button:hover {
           background-color: #fdf2f8;
         }
         
-        .calendar-container :global(.react-calendar__tile) {
+        .calendar-container .react-calendar__tile {
           background: white;
           border: 1px solid #f3f4f6;
           font-weight: 500;
         }
         
-        .calendar-container :global(.react-calendar__tile:hover) {
+        .calendar-container .react-calendar__tile:hover {
           background-color: #fdf2f8;
         }
         
-        .calendar-container :global(.react-calendar__tile.past-date) {
+        .calendar-container .react-calendar__tile.past-date {
           color: #d1d5db;
           background-color: #f9fafb;
         }
         
-        .calendar-container :global(.react-calendar__tile.selected-date) {
+        .calendar-container .react-calendar__tile.selected-date {
           background-color: #ec4899 !important;
           color: white !important;
         }
         
-        .calendar-container :global(.react-calendar__tile.available-date:hover) {
+        .calendar-container .react-calendar__tile.available-date:hover {
           background-color: #fdf2f8;
         }
         
-        .calendar-container :global(.react-calendar__tile.unavailable-date) {
+        .calendar-container .react-calendar__tile.unavailable-date {
           color: #9ca3af;
         }
         
-        .calendar-container :global(.react-calendar__tile--now) {
+        .calendar-container .react-calendar__tile--now {
           background-color: #fef3f2;
           color: #ec4899;
         }

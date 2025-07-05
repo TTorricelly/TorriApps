@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import { useAuthStore } from '../stores/authStore';
@@ -11,6 +11,7 @@ import LabelChip from '../components/labels/LabelChip';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { user, logout, setProfile, isProfessional } = useAuthStore();
   const { currentMode, toggleMode } = useViewModeStore();
   const [isLoading, setIsLoading] = useState(true);
@@ -30,16 +31,16 @@ const ProfilePage = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate(`/${tenantSlug}/login`);
   };
 
   const handleModeToggle = () => {
     if (currentMode === 'professional') {
       toggleMode(); // This switches to client mode
-      navigate('/dashboard'); // Go to client dashboard
+      navigate(`/${tenantSlug}/dashboard`); // Go to client dashboard
     } else {
       toggleMode(); // This switches to professional mode  
-      navigate('/professional/dashboard'); // Go to professional dashboard
+      navigate(`/${tenantSlug}/professional/dashboard`); // Go to professional dashboard
     }
   };
 
@@ -63,7 +64,7 @@ const ProfilePage = () => {
               {/* User Info */}
               <div className="relative text-center mb-8">
                 <button
-                  onClick={() => navigate('/profile/edit')}
+                  onClick={() => navigate(`/${tenantSlug}/profile/edit`)}
                   className="absolute top-0 right-0 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
                 >
                   <Edit size={20} className="text-pink-500" />

@@ -17,7 +17,7 @@ export const commissionsApi = {
         return acc;
       }, {});
 
-      const endpoint = buildApiEndpoint('commissions/');
+      const endpoint = buildApiEndpoint('commissions');
       const response = await api.get(endpoint, { params: cleanParams });
       
       // Assuming the API returns data directly for now

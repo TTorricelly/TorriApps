@@ -14,13 +14,14 @@ from Config.Settings import settings # For access_token_expire_minutes
 # UserTenant schema might be needed if returning user details post-login, but Token is the primary response
 # from Core.Auth.Schemas import UserTenant
 
-router = APIRouter(prefix='/auth', tags=['auth'])
+router = APIRouter(tags=['auth'])
 
 # The /register endpoint is removed as per instructions.
 # User creation will be handled by a dedicated Users module.
 
 @router.post("/login", response_model=Schemas.Token)
 async def login_for_access_token(
+    tenant_slug: str,
     login_request: Schemas.LoginRequest, # Using Pydantic model for request body
     db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
 ):

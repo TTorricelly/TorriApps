@@ -51,7 +51,7 @@ def register_new_client(
     db_user = user_services.create_user(db=db, user_data=user_data)
     return db_user
 
-@router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
+@router.post("", response_model=UserSchema, status_code=status.HTTP_201_CREATED) # Fixed UserTenantSchema to UserSchema
 def create_new_user(
     tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     user_data: UserCreate, # Updated schema
@@ -113,7 +113,7 @@ def update_current_user_profile(
         )
     return updated_user
 
-@router.get("/", response_model=List[UserSchema]) # Updated schema
+@router.get("", response_model=List[UserSchema]) # Updated schema
 def read_users_in_tenant( # Function name might be misleading now, consider renaming to read_all_users
     tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],

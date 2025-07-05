@@ -72,20 +72,38 @@ export const ensureArray = (data, entityName = 'items') => {
  * @param {string} version - API version (default: v1)
  * @param {Object} options - Options object
  * @param {boolean} options.isPublic - Force public endpoint (no tenant context)
+ * @param {string} options.tenantSlug - Tenant slug for tenant-aware endpoints
  * @returns {string} Full API endpoint
  */
 export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
-  const { isPublic = false } = options;
+  const { isPublic = false, tenantSlug = null } = options;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
   if (isPublic) {
-    // Force public endpoint - no tenant context
-    return `/api/${version}/${cleanEndpoint}`;
+    return `api/${version}/${cleanEndpoint}`;
   }
   
-  // For App-client, we don't use tenant context in URLs yet
-  // This maintains backward compatibility while supporting public endpoints
-  return `/api/${version}/${cleanEndpoint}`;
+  const currentTenantSlug = tenantSlug || getTenantSlugFromUrl();
+  if (!currentTenantSlug) {
+    throw new Error('Tenant slug is required for API calls');
+  }
+  
+  return `api/${version}/${currentTenantSlug}/${cleanEndpoint}`;
+};
+
+/**
+ * Extract tenant slug from current URL
+ * @returns {string|null} Tenant slug or null if not found
+ */
+const getTenantSlugFromUrl = () => {
+  const path = window.location.pathname;
+  const segments = path.split('/').filter(Boolean);
+  
+  if (segments.length > 0 && !['login', 'dashboard', 'services', 'appointments', 'profile', 'professional'].includes(segments[0])) {
+    return segments[0];
+  }
+  
+  return null;
 };
 
 /**

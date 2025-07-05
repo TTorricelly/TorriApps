@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Calendar, Clock, User, CreditCard, MessageSquare, CheckCircle, Loader2, Users } from 'lucide-react';
 import { useWizardStore } from '../../stores/wizardStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -14,6 +14,7 @@ import { createMultiServiceBooking, buildBookingRequest } from '../../services/w
 
 const WizardConfirmationScreen = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const [clientNotes, setClientNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
@@ -445,7 +446,7 @@ const WizardConfirmationScreen = () => {
             resetWizard();
             
             // Use React Router navigation to go to appointments page
-            navigate('/appointments');
+            navigate(`/${tenantSlug}/appointments`);
           }}
           className="w-full py-[18px] bg-green-500 text-white rounded-2xl font-semibold text-base shadow-lg hover:bg-green-600 transition-smooth"
         >

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import ClientDetailsModal from '../components/ClientDetailsModal';
 import { 
@@ -39,6 +39,7 @@ import { useAuthStore } from '../stores/authStore';
 
 const ProfessionalAgendaPage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { validateStoredToken, isAuthenticated } = useAuthStore();
   
   // State management
@@ -77,7 +78,7 @@ const ProfessionalAgendaPage = () => {
   useEffect(() => {
     const isValid = validateStoredToken();
     if (!isValid && !isAuthenticated) {
-      navigate('/login');
+      navigate(`/${tenantSlug}/login`);
       return;
     }
   }, [validateStoredToken, isAuthenticated, navigate]);
@@ -371,7 +372,7 @@ const ProfessionalAgendaPage = () => {
     <div className="safe-area-top bg-pink-500 px-4 py-3">
       <div className="flex items-center justify-between mb-3">
         <button
-          onClick={() => navigate('/professional/dashboard')}
+          onClick={() => navigate(`/${tenantSlug}/professional/dashboard`)}
           className="p-2 hover:bg-pink-600 rounded-lg transition-smooth"
         >
           <ArrowLeft size={24} className="text-white" />

@@ -4,13 +4,14 @@
  * Only UI components are adapted for web - all logic preserved
  */
 
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Home, ShoppingCart, Calendar, User } from 'lucide-react';
 import useServicesStore from '../stores/servicesStore';
 
 const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { selectedServices } = useServicesStore();
 
   // Navigation items (identical to mobile)
@@ -19,30 +20,30 @@ const BottomNavigation = () => {
       key: 'home',
       label: 'Início',
       icon: Home,
-      route: '/dashboard',
-      isActive: location.pathname === '/dashboard'
+      route: `/${tenantSlug}/dashboard`,
+      isActive: location.pathname === `/${tenantSlug}/dashboard`
     },
     {
       key: 'services',
       label: 'Serviços',
       icon: ShoppingCart,
-      route: '/services',
-      isActive: location.pathname === '/services',
+      route: `/${tenantSlug}/services`,
+      isActive: location.pathname === `/${tenantSlug}/services`,
       badge: selectedServices.length > 0 ? selectedServices.length : null
     },
     {
       key: 'appointments',
       label: 'Agendamentos',
       icon: Calendar,
-      route: '/appointments',
-      isActive: location.pathname === '/appointments'
+      route: `/${tenantSlug}/appointments`,
+      isActive: location.pathname === `/${tenantSlug}/appointments`
     },
     {
       key: 'profile',
       label: 'Perfil',
       icon: User,
-      route: '/profile',
-      isActive: location.pathname === '/profile'
+      route: `/${tenantSlug}/profile`,
+      isActive: location.pathname === `/${tenantSlug}/profile`
     }
   ];
 

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { 
   LayoutDashboard,
   Calendar,
@@ -18,6 +18,7 @@ import {
 const ProfessionalBottomNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { tenantSlug } = useParams();
 
   // Navigation items for professional interface
   const navigationItems = [
@@ -25,36 +26,36 @@ const ProfessionalBottomNavigation = () => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: '/professional/dashboard',
-      isActive: location.pathname === '/professional/dashboard'
+      path: `/${tenantSlug}/professional/dashboard`,
+      isActive: location.pathname === `/${tenantSlug}/professional/dashboard`
     },
     {
       id: 'kanban',
       label: 'Atendimentos',
       icon: Kanban,
-      path: '/kanban',
-      isActive: location.pathname === '/kanban' || location.pathname === '/professional/kanban'
+      path: `/${tenantSlug}/kanban`,
+      isActive: location.pathname === `/${tenantSlug}/kanban` || location.pathname === `/${tenantSlug}/professional/kanban`
     },
     {
       id: 'agenda',
       label: 'Agenda',
       icon: Calendar,
-      path: '/professional/agenda',
-      isActive: location.pathname === '/professional/agenda'
+      path: `/${tenantSlug}/professional/agenda`,
+      isActive: location.pathname === `/${tenantSlug}/professional/agenda`
     },
     {
       id: 'clients',
       label: 'Clientes',
       icon: Users,
-      path: '/professional/clients',
-      isActive: location.pathname.startsWith('/professional/clients')
+      path: `/${tenantSlug}/professional/clients`,
+      isActive: location.pathname.startsWith(`/${tenantSlug}/professional/clients`)
     },
     {
       id: 'menu',
       label: 'Menu',
       icon: Menu,
-      path: '/professional/menu',
-      isActive: location.pathname === '/professional/menu'
+      path: `/${tenantSlug}/professional/menu`,
+      isActive: location.pathname === `/${tenantSlug}/professional/menu`
     }
     // Future expansion items (commented for now):
     // {

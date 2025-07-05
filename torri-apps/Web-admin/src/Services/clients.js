@@ -4,7 +4,7 @@ import { withApiErrorHandling, buildApiEndpoint } from '../Utils/apiHelpers';
 export const clientsApi = {
   // Get all clients (users with CLIENTE role)
   getAllClients: async () => {
-    const endpoint = buildApiEndpoint('users/'); // Add trailing slash to match FastAPI route
+    const endpoint = buildApiEndpoint('users'); // No trailing slash for consistency
     
     return withApiErrorHandling(
       () => api.get(endpoint, { 
@@ -26,7 +26,7 @@ export const clientsApi = {
 
   // Create new client
   createClient: async (clientData) => {
-    const endpoint = buildApiEndpoint('users/'); // Add trailing slash to match FastAPI route
+    const endpoint = buildApiEndpoint('users'); // No trailing slash for consistency
     // Ensure the role is set to CLIENTE
     const dataToCreate = { ...clientData, role: 'CLIENTE' };
     

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { 
   Calendar, 
@@ -23,6 +23,7 @@ import { getUserAppointments, cancelAppointment } from '../services/appointmentS
 
 const AppointmentsPage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { user, isAuthenticated } = useAuthStore();
   
   // State management (mobile-exact)
@@ -277,7 +278,7 @@ const AppointmentsPage = () => {
       </p>
       {activeTab === 'upcoming' && (
         <button 
-          onClick={() => navigate('/services')}
+          onClick={() => navigate(`/${tenantSlug}/services`)}
           className="px-6 py-3 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-smooth"
         >
           Agendar Serviço

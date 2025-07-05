@@ -18,7 +18,7 @@ export const serviceImagesApi = {
    * @returns {Promise<Array>} Array of service images
    */
   getServiceImages: async (serviceId) => {
-    const endpoint = buildApiEndpoint(`services/${serviceId}/images`, 'v1', { isPublic: true });
+    const endpoint = buildApiEndpoint(`services/${serviceId}/images`, 'v1');
     
     return withApiErrorHandling(
       () => apiClient.get(endpoint),

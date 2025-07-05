@@ -5,7 +5,7 @@
  */
 
 import apiClient from '../config/api';
-import { withApiErrorHandling } from '../utils/apiHelpers';
+import { withApiErrorHandling, buildApiEndpoint } from '../utils/apiHelpers';
 
 /**
  * Get appointments for a specific month to show calendar indicators
@@ -15,7 +15,7 @@ import { withApiErrorHandling } from '../utils/apiHelpers';
  */
 export const getCalendarAppointments = async (year, month) => {
   return withApiErrorHandling(
-    () => apiClient.get('/api/v1/appointments/calendar', {
+    () => apiClient.get(buildApiEndpoint('appointments/calendar'), {
       params: {
         year,
         month
@@ -35,7 +35,7 @@ export const getCalendarAppointments = async (year, month) => {
  */
 export const getDailySchedule = async (date) => {
   return withApiErrorHandling(
-    () => apiClient.get(`/api/v1/appointments/daily-schedule/${date}`),
+    () => apiClient.get(buildApiEndpoint(`appointments/daily-schedule/${date}`)),
     {
       defaultValue: { professionals: [] },
       logErrors: true
@@ -50,7 +50,7 @@ export const getDailySchedule = async (date) => {
  */
 export const getDateAppointmentSummary = async (date) => {
   return withApiErrorHandling(
-    () => apiClient.get('/api/v1/appointments/date-summary', {
+    () => apiClient.get(buildApiEndpoint('appointments/date-summary'), {
       params: { date }
     }),
     {
@@ -67,7 +67,7 @@ export const getDateAppointmentSummary = async (date) => {
  */
 export const getBatchAppointmentCounts = async (dates) => {
   return withApiErrorHandling(
-    () => apiClient.post('/api/v1/appointments/batch-counts', {
+    () => apiClient.post(buildApiEndpoint('appointments/batch-counts'), {
       dates
     }),
     {
@@ -86,7 +86,7 @@ export const getBatchAppointmentCounts = async (dates) => {
  */
 export const getCalendarAvailability = async (year, month) => {
   return withApiErrorHandling(
-    () => apiClient.get('/api/v1/appointments/wizard/available-dates-fast', {
+    () => apiClient.get(buildApiEndpoint('appointments/wizard/available-dates-fast'), {
       params: {
         year,
         month,

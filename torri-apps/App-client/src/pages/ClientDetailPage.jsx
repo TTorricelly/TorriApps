@@ -22,7 +22,7 @@ import LabelChip from '../components/labels/LabelChip'
 import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils'
 
 const ClientDetailPage = () => {
-  const { clientId } = useParams()
+  const { clientId, tenantSlug } = useParams()
   const navigate = useNavigate()
   const { hasRole } = useAuthStore()
   
@@ -81,7 +81,7 @@ const ClientDetailPage = () => {
       const success = await clientService.deleteClient(clientId)
       
       if (success) {
-        navigate('/professional/clients', { 
+        navigate(`/${tenantSlug}/professional/clients`, { 
           state: { message: 'Cliente excluído com sucesso' }
         })
       } else {
@@ -219,7 +219,7 @@ const ClientDetailPage = () => {
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Erro</h2>
         <p className="text-gray-600 text-center mb-6">{error}</p>
         <button
-          onClick={() => navigate('/professional/clients')}
+          onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
           className="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold"
         >
           Voltar para Clientes
@@ -235,7 +235,7 @@ const ClientDetailPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
-              onClick={() => navigate('/professional/clients')}
+              onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
               className="mr-3 p-2 rounded-xl hover:bg-gray-100"
             >
               <ArrowLeft size={20} className="text-gray-600" />
@@ -249,7 +249,7 @@ const ClientDetailPage = () => {
           {canEditClient && (
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => navigate(`/professional/clients/${clientId}/edit`)}
+                onClick={() => navigate(`/${tenantSlug}/professional/clients/${clientId}/edit`)}
                 className="p-2 rounded-xl bg-gray-100"
               >
                 <Edit size={18} className="text-gray-600" />

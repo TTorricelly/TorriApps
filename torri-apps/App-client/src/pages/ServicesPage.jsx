@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -24,6 +24,7 @@ import SchedulingWizardModal from '../components/SchedulingWizardModal';
 
 const ServicesPage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { selectedServices, removeService, clearServices, getTotalPrice, getTotalDuration } = useServicesStore();
   
   // State for expandable cards (identical to mobile pattern)
@@ -84,7 +85,7 @@ const ServicesPage = () => {
         <div className="fixed top-0 left-0 right-0 z-40 bg-pink-500">
           <div className="safe-area-top px-6 py-4 flex items-center">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(`/${tenantSlug}/dashboard`)}
               className="mr-4 p-2 hover:bg-pink-600 rounded-lg transition-smooth"
             >
               <ArrowLeft size={24} className="text-white" />
@@ -109,7 +110,7 @@ const ServicesPage = () => {
                 </p>
                 
                 <button
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate(`/${tenantSlug}/dashboard`)}
                   className="inline-flex items-center space-x-2 px-6 py-3 border border-pink-500 text-pink-500 rounded-xl hover:bg-pink-50 transition-smooth"
                 >
                   <Plus size={20} />
@@ -159,7 +160,7 @@ const ServicesPage = () => {
           {/* Action Buttons */}
           <div className="flex space-x-3">
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(`/${tenantSlug}/dashboard`)}
               className="flex-1 flex items-center justify-center space-x-2 py-3 border border-pink-500 text-pink-500 rounded-xl hover:bg-pink-50 transition-smooth"
             >
               <Plus size={18} />

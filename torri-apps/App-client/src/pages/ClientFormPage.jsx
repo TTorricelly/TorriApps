@@ -31,7 +31,7 @@ import {
 } from '../utils/brazilianUtils'
 
 const ClientFormPage = () => {
-  const { clientId } = useParams() // If editing existing client
+  const { clientId, tenantSlug } = useParams() // If editing existing client
   const navigate = useNavigate()
   const { hasRole } = useAuthStore()
   
@@ -68,7 +68,7 @@ const ClientFormPage = () => {
   // Handle permission check in useEffect instead of early return
   useEffect(() => {
     if (!canManageClients) {
-      navigate('/professional/dashboard')
+      navigate(`/${tenantSlug}/professional/dashboard`)
     }
   }, [canManageClients, navigate])
 
@@ -246,7 +246,7 @@ const ClientFormPage = () => {
           // Continue even if labels fail - client was created/updated successfully
         }
         
-        navigate('/professional/clients', {
+        navigate(`/${tenantSlug}/professional/clients`, {
           state: { 
             message: isEditing ? 'Cliente atualizado com sucesso' : 'Cliente criado com sucesso'
           }
@@ -294,7 +294,7 @@ const ClientFormPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
-              onClick={() => navigate('/professional/clients')}
+              onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
               className="mr-3 p-2 rounded-xl hover:bg-gray-100"
             >
               <ArrowLeft size={20} className="text-gray-600" />

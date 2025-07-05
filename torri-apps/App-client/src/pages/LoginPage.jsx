@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Phone, Loader2 } from '../components/icons'
 import { useAuthStore } from '../stores/authStore'
 import { useViewModeStore } from '../stores/viewModeStore'
@@ -14,6 +14,7 @@ const isProfessionalRole = (role) => {
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const { tenantSlug } = useParams()
   const { login, isLoading, setLoading } = useAuthStore()
   const { currentMode } = useViewModeStore()
   
@@ -66,11 +67,11 @@ const LoginPage = () => {
         // Smart redirect based on user role and view mode
         if (user && isProfessionalRole(user.role)) {
           // Professional users: respect their current view mode
-          const redirectPath = currentMode === 'client' ? '/dashboard' : '/professional/dashboard'
+          const redirectPath = currentMode === 'client' ? `/${tenantSlug}/dashboard` : `/${tenantSlug}/professional/dashboard`
           navigate(redirectPath)
         } else {
           // Regular clients always go to client dashboard
-          navigate('/dashboard')
+          navigate(`/${tenantSlug}/dashboard`)
         }
       } else {
         setError('Credenciais inválidas. Tente novamente.')

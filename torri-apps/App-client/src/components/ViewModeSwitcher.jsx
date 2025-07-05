@@ -1,11 +1,12 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Users, Briefcase, ArrowLeftRight } from '../components/icons'
 import { useViewModeStore } from '../stores/viewModeStore'
 import { useAuthStore } from '../stores/authStore'
 
 const ViewModeSwitcher = ({ compact = false }) => {
   const navigate = useNavigate()
+  const { tenantSlug } = useParams()
   const { currentMode, switchToProfessionalMode, switchToClientMode } = useViewModeStore()
   const { isProfessional } = useAuthStore()
   
@@ -17,10 +18,10 @@ const ViewModeSwitcher = ({ compact = false }) => {
   const handleModeSwitch = () => {
     if (currentMode === 'professional') {
       switchToClientMode()
-      navigate('/dashboard') // Go to client dashboard
+      navigate(`/${tenantSlug}/dashboard`) // Go to client dashboard
     } else {
       switchToProfessionalMode()
-      navigate('/professional/dashboard') // Go to professional dashboard
+      navigate(`/${tenantSlug}/professional/dashboard`) // Go to professional dashboard
     }
   }
 

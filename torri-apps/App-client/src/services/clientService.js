@@ -16,7 +16,7 @@ import apiClient from '../config/api'
  */
 export const getClients = async (options = {}) => {
   const { search = '', skip = 0, limit = 20 } = options
-  const endpoint = buildApiEndpoint('users/')
+  const endpoint = buildApiEndpoint('users')
   
   const params = new URLSearchParams({
     role: 'CLIENTE',
@@ -96,7 +96,7 @@ export const updateClient = async (clientId, updateData) => {
  * @returns {Promise<Object|null>} Created client data or null
  */
 export const createClient = async (clientData) => {
-  const endpoint = buildApiEndpoint('users/')
+  const endpoint = buildApiEndpoint('users')
   
   // Ensure the role is set to CLIENTE
   const dataWithRole = {
@@ -144,7 +144,7 @@ export const deleteClient = async (clientId) => {
  * @returns {Promise<Array>} Client appointments
  */
 export const getClientAppointments = async (clientId) => {
-  const endpoint = buildApiEndpoint('appointments/')
+  const endpoint = buildApiEndpoint('appointments')
   const params = new URLSearchParams({
     client_id: clientId,
     include_past: 'true'

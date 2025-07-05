@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { 
@@ -37,6 +37,7 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 
 const ProfessionalMenuPage = () => {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { logout, user } = useAuthStore();
   const { currentMode, toggleMode } = useViewModeStore();
 
@@ -138,26 +139,31 @@ const ProfessionalMenuPage = () => {
   ];
 
   const handleNavigation = (path) => {
-    navigate(path);
+    // Add tenant slug for tenant-aware paths
+    if (path.startsWith('/') && !path.startsWith(`/${tenantSlug}`)) {
+      navigate(`/${tenantSlug}${path}`);
+    } else {
+      navigate(path);
+    }
   };
 
   const handleBack = () => {
-    navigate('/professional/dashboard');
+    navigate(`/${tenantSlug}/professional/dashboard`);
   };
 
   const handleModeToggle = () => {
     if (currentMode === 'professional') {
       toggleMode(); // This switches to client mode
-      navigate('/dashboard'); // Go to client dashboard
+      navigate(`/${tenantSlug}/dashboard`); // Go to client dashboard
     } else {
       toggleMode(); // This switches to professional mode  
-      navigate('/professional/dashboard'); // Go to professional dashboard
+      navigate(`/${tenantSlug}/professional/dashboard`); // Go to professional dashboard
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate(`/${tenantSlug}/login`);
   };
 
   return (

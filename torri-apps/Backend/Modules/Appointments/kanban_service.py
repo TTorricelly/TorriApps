@@ -294,10 +294,7 @@ def create_walk_in_appointment_group_with_assignments(
         service = service_info['service']
         professional_id = service_info['professional_id']
         
-        appointment_end = current_time.replace(
-            hour=(current_time.hour + service.duration_minutes // 60) % 24,
-            minute=(current_time.minute + service.duration_minutes % 60) % 60
-        )
+        appointment_end = current_time + timedelta(minutes=service.duration_minutes)
         
         appointment = Appointment(
             client_id=client.id,
@@ -441,10 +438,7 @@ def create_walk_in_appointment_group(
     # Create individual appointments
     current_time = start_time
     for service in services:
-        appointment_end = current_time.replace(
-            hour=(current_time.hour + service.duration_minutes // 60) % 24,
-            minute=(current_time.minute + service.duration_minutes % 60) % 60
-        )
+        appointment_end = current_time + timedelta(minutes=service.duration_minutes)
         
         appointment = Appointment(
             client_id=client.id,
