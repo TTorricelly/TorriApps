@@ -24,6 +24,28 @@ export const clientsApi = {
     );
   },
 
+  // Search clients by query
+  searchClients: async (searchQuery) => {
+    const endpoint = buildApiEndpoint('users');
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint, { 
+        params: { 
+          role: 'CLIENTE',
+          search: searchQuery,
+          limit: 10000
+        }
+      }),
+      {
+        defaultValue: [],
+        transformData: (data) => {
+          const users = Array.isArray(data) ? data : [];
+          return users.filter(user => user.role === 'CLIENTE');
+        }
+      }
+    );
+  },
+
   // Create new client
   createClient: async (clientData) => {
     const endpoint = buildApiEndpoint('users'); // No trailing slash for consistency

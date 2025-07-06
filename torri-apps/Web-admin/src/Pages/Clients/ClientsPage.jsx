@@ -49,35 +49,22 @@ function ClientsPage() { // Renamed component and removed default export from he
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, client: null }); // Added deleteDialog state
 
-  // Load data on component mount
+  // Load labels on component mount (but not clients)
   useEffect(() => {
-    Promise.all([
-      loadClients(),
-      loadAvailableLabels()
-    ]);
+    loadAvailableLabels();
   }, []);
 
 
-  // Reload data when navigating back to this page (more reliable than focus)
+  // Add search effect with debounce
   useEffect(() => {
-    let wasHidden = false;
-    
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        wasHidden = true;
-      } else if (wasHidden) {
-        // Only reload if page was actually hidden and then became visible again
-        console.log('🔄 Page became visible after being hidden - reloading clients');
-        loadClients();
-        wasHidden = false;
-      }
-    };
+    const timer = setTimeout(() => {
+      loadClients(searchQuery);
+    }, 300); // 300ms debounce
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const loadClients = async () => {
+  const loadClients = async (searchQuery = '') => {
     // Prevent duplicate calls
     if (isLoading) {
       console.log('⏳ Already loading clients, skipping duplicate call');
@@ -86,8 +73,11 @@ function ClientsPage() { // Renamed component and removed default export from he
     
     try {
       setIsLoading(true);
-      console.log('🔍 Loading clients from API...');
-      const data = await clientsApi.getAllClients();
+      console.log('🔍 Loading clients from API...', { searchQuery });
+      
+      // Only search if there's a query, otherwise show empty results
+      const data = searchQuery ? await clientsApi.searchClients(searchQuery) : [];
+      
       console.log('📋 Received clients data:', data);
       console.log(`📊 Total clients found: ${data?.length || 0}`);
       
@@ -102,7 +92,7 @@ function ClientsPage() { // Renamed component and removed default export from he
       setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
-      showAlert('Erro ao carregar clientes. Verifique a consola para mais detalhes.', 'error'); // Updated alert message
+      showAlert('Erro ao carregar clientes. Verifique a consola para mais detalhes.', 'error');
       setClients([]);
     } finally {
       setIsLoading(false);
@@ -139,33 +129,12 @@ function ClientsPage() { // Renamed component and removed default export from he
     }
   };
 
-  // Optimized search function with memoization
-  const searchClients = useCallback((clientsList, query) => {
-    // If query is empty or less than 3 chars, show no clients
-    if (!query || query.trim().length < 3) return [];
-    
-    const searchLower = query.toLowerCase();
-    const searchDigits = query.replace(/\D/g, '');
-    
-    return clientsList.filter(client => {
-      // Name search (using utility function)
-      if (clientNameMatchesSearch(client, query)) return true;
-      
-      // Email search
-      if (client.email?.toLowerCase().includes(searchLower)) return true;
-      
-      // CPF search (digits only)
-      if (searchDigits && client.cpf?.replace(/\D/g, '').includes(searchDigits)) return true;
-      
-      return false;
-    });
-  }, []);
 
-  // Filter clients based on search query, status, and labels
+  // Filter clients based on status and labels (search is now server-side)
   const filteredClients = useMemo(() => {
     let filtered = clients;
 
-    // Apply status filter first (smaller dataset)
+    // Apply status filter
     if (statusFilter) {
       const isActive = statusFilter === 'active';
       filtered = filtered.filter(client => client.is_active === isActive);
@@ -181,11 +150,8 @@ function ClientsPage() { // Renamed component and removed default export from he
       });
     }
 
-    // Apply search filter on the already filtered results
-    filtered = searchClients(filtered, searchQuery);
-
     return filtered;
-  }, [clients, searchQuery, statusFilter, selectedLabelFilters, searchClients]);
+  }, [clients, statusFilter, selectedLabelFilters]);
 
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
@@ -382,12 +348,25 @@ function ClientsPage() { // Renamed component and removed default export from he
         </CardHeader>
 
         <CardBody className="bg-bg-secondary">
-          {filteredClients.length === 0 ? ( // Use filteredClients
+          {filteredClients.length === 0 ? (
             <div className="text-center py-12">
-              {searchQuery && (
-                <Typography className="text-text-secondary mb-4">
-                  Nenhum cliente encontrado com os filtros aplicados
-                </Typography>
+              {!searchQuery ? (
+                <div>
+                  <MagnifyingGlassIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
+                  <Typography className="text-text-secondary mb-2">
+                    Digite para pesquisar clientes
+                  </Typography>
+                  <Typography className="text-text-tertiary text-sm">
+                    Use o campo de busca acima para encontrar clientes por nome, email ou CPF
+                  </Typography>
+                </div>
+              ) : (
+                <div>
+                  <UserIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
+                  <Typography className="text-text-secondary mb-4">
+                    Nenhum cliente encontrado com os filtros aplicados
+                  </Typography>
+                </div>
               )}
             </div>
           ) : (

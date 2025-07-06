@@ -202,6 +202,11 @@ function App() {
             <KanbanBoardPage />
           </RoleBasedRoute>
         } />
+        <Route path="/:tenantSlug/professional/kanban" element={
+          <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
+            <KanbanBoardPage />
+          </RoleBasedRoute>
+        } />
         <Route path="/professional/clients" element={
           <RoleBasedRoute allowedRoles={['ATENDENTE', 'GESTOR']} professionalOnly={true}>
             <ClientsPage />

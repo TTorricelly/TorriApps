@@ -171,7 +171,7 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
       </div>
 
       {/* Custom Styles for smooth animations */}
-      <style jsx>{`
+      <style jsx="true">{`
         .modal-enter {
           transform: translateY(100%);
         }

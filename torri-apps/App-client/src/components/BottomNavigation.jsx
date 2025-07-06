@@ -4,35 +4,16 @@
  * Only UI components are adapted for web - all logic preserved
  */
 
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Home, ShoppingCart, Calendar, User } from 'lucide-react';
 import useServicesStore from '../stores/servicesStore';
-import { getTenantInfo } from '../utils/apiHelpers';
+import { useNavigation } from '../shared/hooks/useNavigation';
+import { BOTTOM_NAV_CONFIG } from '../shared/navigation';
 
 const BottomNavigation = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate, buildRoute, isActive } = useNavigation();
   const { selectedServices } = useServicesStore();
-
-  // Get tenant info to determine URL structure
-  const tenantInfo = getTenantInfo();
-  const useSlugInUrl = tenantInfo?.method === 'slug';
-  const currentTenantSlug = tenantSlug || tenantInfo?.slug;
-
-  // Helper function to build routes based on tenant type
-  const buildRoute = (path) => {
-    if (useSlugInUrl && currentTenantSlug) {
-      return `/${currentTenantSlug}${path}`;
-    }
-    return path;
-  };
-
-  // Helper function to check if route is active
-  const isRouteActive = (path) => {
-    const targetRoute = buildRoute(path);
-    return location.pathname === targetRoute;
-  };
 
   // Icon mapping
   const iconMap = {

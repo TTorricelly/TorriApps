@@ -75,16 +75,13 @@ const transformServicesWithImages = (data) => {
   
   if (Array.isArray(data)) {
     return data.map(service => {
-      // First apply new image transformation
-      const transformedService = transformServiceImages(service);
-      // Then apply legacy field processing for any remaining static fields
-      return transformEntityWithImages(transformedService, LEGACY_SERVICE_IMAGE_FIELDS);
+      // Only apply new image transformation since images are already processed by backend
+      return transformServiceImages(service);
     });
   }
   
-  // Single service
-  const transformedService = transformServiceImages(data);
-  return transformEntityWithImages(transformedService, LEGACY_SERVICE_IMAGE_FIELDS);
+  // Single service - only apply new image transformation
+  return transformServiceImages(data);
 };
 
 /**

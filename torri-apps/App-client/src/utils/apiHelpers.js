@@ -122,7 +122,7 @@ export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
   if (isPublic) {
-    return `api/${version}/${cleanEndpoint}`;
+    return `/api/${version}/${cleanEndpoint}`;
   }
   
   // Get tenant info to determine how to build the URL
@@ -131,11 +131,11 @@ export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
   if (tenantInfo) {
     if (tenantInfo.method === 'domain') {
       // Domain-based tenant: clean URLs without slug
-      return `api/${version}/${cleanEndpoint}`;
+      return `/api/${version}/${cleanEndpoint}`;
     } else if (tenantInfo.method === 'slug') {
       // Slug-based tenant: include slug in URL for backward compatibility
       const slug = tenantSlug || tenantInfo.slug;
-      return `api/${version}/${slug}/${cleanEndpoint}`;
+      return `/api/${version}/${slug}/${cleanEndpoint}`;
     }
   }
   

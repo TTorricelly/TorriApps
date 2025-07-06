@@ -39,6 +39,13 @@ class UserBase(BaseModel): # Renamed from UserTenantBase
     address_state: Optional[str] = None
     address_cep: Optional[str] = None
     
+    # Email validator to handle empty strings
+    @field_validator('email', mode='before')
+    def validate_email(cls, v):
+        if v == '':
+            return None
+        return v
+    
     # Validators for Brazilian fields
     @field_validator('cpf')
     def validate_cpf(cls, v):
@@ -79,6 +86,13 @@ class UserUpdate(BaseModel): # Renamed from UserTenantUpdate
     address_city: Optional[str] = None
     address_state: Optional[str] = None
     address_cep: Optional[str] = None
+    
+    # Email validator to handle empty strings
+    @field_validator('email', mode='before')
+    def validate_email(cls, v):
+        if v == '':
+            return None
+        return v
     
     # Validators for Brazilian fields
     @field_validator('cpf')

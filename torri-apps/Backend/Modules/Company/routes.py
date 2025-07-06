@@ -19,11 +19,11 @@ router = APIRouter(
     tags=["company"],
 )
 
-# Public endpoint for mobile app to get company info
-@router.get("/info", response_model=CompanyPublic)
+# Endpoint to get company info
+@router.get("/info", response_model=CompanySchema)
 def get_company_info(db: Annotated[Session, Depends(get_db)]):
     """
-    Public endpoint to get basic company information for mobile app.
+    Get complete company information including contact details.
     Returns the first active company.
     """
     company = company_services.get_active_company(db)

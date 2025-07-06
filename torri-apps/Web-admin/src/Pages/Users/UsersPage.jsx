@@ -45,7 +45,16 @@ function UsersPage() {
     loadUsers();
   }, []);
 
-  const loadUsers = async () => {
+  // Search when query or role filter changes (with debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadUsers(searchQuery, roleFilter);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, roleFilter]);
+
+  const loadUsers = async (search = '', role = '') => {
     // Prevent duplicate calls
     if (isLoading) {
       console.log('⏳ Already loading users, skipping duplicate call');
@@ -54,8 +63,13 @@ function UsersPage() {
     
     try {
       setIsLoading(true);
-      console.log('🔍 Loading users from API...');
-      const userData = await usersApi.getAllUsers();
+      console.log('🔍 Loading users from API...', { search, role });
+      
+      // Use search API if there's a search query or role filter, otherwise get all
+      const userData = (search || role) 
+        ? await usersApi.searchUsers(search, role)
+        : await usersApi.getAllUsers();
+        
       console.log('📋 Received users data:', userData);
       console.log(`📊 Total users found: ${userData?.length || 0}`);
       setUsers(userData || []);
@@ -86,25 +100,16 @@ function UsersPage() {
     }
   };
 
-  // Filter users based on search query, role, and status
+  // Filter users based on status only (search and role are handled server-side)
   const filteredUsers = useMemo(() => {
-    // If search query is less than 3 characters and no other filters, show no users
-    if ((!searchQuery || searchQuery.trim().length < 3) && !roleFilter && !statusFilter) {
-      return [];
-    }
-    
     return users.filter(user => {
-      const matchesSearch = !searchQuery || searchQuery.trim().length < 3 || 
-                           user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           user.email?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesRole = !roleFilter || user.role === roleFilter;
       const matchesStatus = !statusFilter || 
                            (statusFilter === 'active' && user.is_active) ||
                            (statusFilter === 'inactive' && !user.is_active);
       
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesStatus;
     });
-  }, [users, searchQuery, roleFilter, statusFilter]);
+  }, [users, statusFilter]);
 
   const getRoleBadgeColor = (role) => {
     const roleColors = {

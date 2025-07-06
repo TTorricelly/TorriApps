@@ -33,12 +33,6 @@ const UserDataForm = ({
   errors,
   isEditMode
 }) => {
-  const hairTypeOptions = [
-    { label: "Liso", value: "LISO" },
-    { label: "Ondulado", value: "ONDULADO" },
-    { label: "Cacheado", value: "CACHEADO" },
-    { label: "Crespo", value: "CRESPO" },
-  ];
 
   const genderOptions = [
     { label: "Masculino", value: "MASCULINO" },
@@ -69,7 +63,7 @@ const UserDataForm = ({
         />
         
         <Input
-          label="Email *"
+          label="Email"
           placeholder="email@exemplo.com"
           type="email"
           value={formData.email}
@@ -137,24 +131,6 @@ const UserDataForm = ({
           containerProps={{ className: "text-text-primary" }}
         />
 
-        <Select
-          label="Tipo de Cabelo"
-          value={formData.hair_type || ''}
-          onChange={(value) => handleInputChange('hair_type', value)}
-          className="bg-bg-primary border-bg-tertiary text-text-primary"
-          labelProps={{ className: "text-text-secondary" }}
-          containerProps={{ className: "text-text-primary" }}
-          menuProps={{
-            className: "bg-bg-secondary border-bg-tertiary z-50"
-          }}
-        >
-          <Option value="" className="text-white hover:bg-bg-tertiary">Selecione...</Option>
-          {hairTypeOptions.map((hairType) => (
-            <Option key={hairType.value} value={hairType.value} className="text-white hover:bg-bg-tertiary">
-              {hairType.label}
-            </Option>
-          ))}
-        </Select>
 
         <Select
           label="Gênero"
@@ -222,7 +198,6 @@ function UserForm() {
     phone_number: '',
     role: 'CLIENTE',
     date_of_birth: '',
-    hair_type: '',
     gender: '',
     is_active: true,
   });
@@ -259,7 +234,6 @@ function UserForm() {
           phone_number: userData.phone_number || '',
           role: userData.role || 'CLIENTE',
           date_of_birth: userData.date_of_birth || '',
-          hair_type: userData.hair_type || '',
           gender: userData.gender || '',
           is_active: userData.is_active !== undefined ? userData.is_active : true,
         });
@@ -294,9 +268,8 @@ function UserForm() {
       newErrors.full_name = 'Nome completo é obrigatório';
     }
 
-    if (!formData.email?.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email validation (optional but must be valid if provided)
+    if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email deve ter um formato válido';
     }
 
@@ -335,8 +308,9 @@ function UserForm() {
       let dataToSubmit = {
         ...formData,
         date_of_birth: formData.date_of_birth || null,
-        hair_type: formData.hair_type || null,
         gender: formData.gender || null,
+        // Convert empty email to null
+        email: formData.email || null,
       };
 
       // Normalize phone number if provided

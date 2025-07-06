@@ -179,7 +179,7 @@ class FileHandler:
         Convert a file path to a public URL.
         
         Args:
-            file_path: Relative path (e.g., "/uploads/tenant_id/icons/filename.png")
+            file_path: Relative path (e.g., "/uploads/tenant_id/icons/filename.png") or complete URL
             base_url: Base URL of the application (e.g., "https://api.example.com")
         
         Returns:
@@ -187,6 +187,10 @@ class FileHandler:
         """
         if not file_path:
             return None
+        
+        # If already a complete URL, return as-is
+        if file_path.startswith('http://') or file_path.startswith('https://'):
+            return file_path
         
         if self.use_cloud_storage:
             # Return Google Cloud Storage public URL

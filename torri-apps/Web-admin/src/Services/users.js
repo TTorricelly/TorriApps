@@ -4,10 +4,33 @@ import { withApiErrorHandling, buildApiEndpoint } from '../Utils/apiHelpers';
 export const usersApi = {
   // Get all users
   getAllUsers: async () => {
-    const endpoint = buildApiEndpoint('users/');
+    const endpoint = buildApiEndpoint('users');
     
     return withApiErrorHandling(
       () => api.get(endpoint, { params: { limit: 10000 } }),
+      {
+        defaultValue: [],
+        transformData: (data) => {
+          return Array.isArray(data) ? data : [];
+        }
+      }
+    );
+  },
+
+  // Search users
+  searchUsers: async (searchQuery, role = null, limit = 10000) => {
+    const endpoint = buildApiEndpoint('users');
+    const params = { limit };
+    
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
+    if (role) {
+      params.role = role;
+    }
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint, { params }),
       {
         defaultValue: [],
         transformData: (data) => {
@@ -31,7 +54,7 @@ export const usersApi = {
 
   // Create new user
   createUser: async (userData) => {
-    const endpoint = buildApiEndpoint('users/');
+    const endpoint = buildApiEndpoint('users');
     
     return withApiErrorHandling(
       () => api.post(endpoint, userData),

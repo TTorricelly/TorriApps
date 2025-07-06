@@ -41,7 +41,7 @@ def validate_commission_access(user: User) -> None:
 # Note: ADMIN role might not exist in this system, using GESTOR for now
 
 
-@router.get("/", response_model=List[CommissionResponse])
+@router.get("", response_model=List[CommissionResponse])
 async def list_commissions(
     professional_id: UUID = Query(None, description="Filter by professional ID"),
     payment_status: str = Query(None, description="Filter by payment status (PENDING, PAID, REVERSED)"),

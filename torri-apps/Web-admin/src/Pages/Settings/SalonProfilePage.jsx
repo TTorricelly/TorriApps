@@ -43,11 +43,11 @@ const SalonProfilePage = () => {
       setIsLoading(true);
       const data = await getCompanyInfo();
       setCompanyData({
-        id: data.id || '',
-        name: data.name || '',
-        logo_url: data.logo_url || '',
-        contact_email: data.contact_email || '',
-        contact_phone: data.contact_phone || ''
+        id: data.id ?? '',
+        name: data.name ?? '',
+        logo_url: data.logo_url ?? '',
+        contact_email: data.contact_email ?? '',
+        contact_phone: data.contact_phone ?? ''
       });
       setIsNewCompany(false);
     } catch (error) {
@@ -104,7 +104,13 @@ const SalonProfilePage = () => {
         result = await updateCompany(companyData.id, submitData);
       }
 
-      setCompanyData(prev => ({ ...prev, ...result }));
+      setCompanyData(prev => ({ 
+        ...prev, 
+        ...result,
+        logo_url: result.logo_url ?? '',
+        contact_email: result.contact_email ?? '',
+        contact_phone: result.contact_phone ?? ''
+      }));
       showAlert(isNewCompany ? 'Empresa criada com sucesso!' : 'Informações atualizadas com sucesso!', 'success');
     } catch (error) {
       console.error('Error saving company data:', error);
