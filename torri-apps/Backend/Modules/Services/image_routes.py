@@ -53,7 +53,6 @@ router = APIRouter(prefix="/services", tags=["service-images"])
 
 @router.post("/{service_id}/images", response_model=ServiceImageSchema, status_code=status.HTTP_201_CREATED)
 async def upload_service_image(
-    tenant_slug: str,
     service_id: UUID,
     request: Request,
     file: UploadFile = File(...),
@@ -195,7 +194,6 @@ async def upload_service_image(
 
 @router.put("/{service_id}/images/reorder", status_code=status.HTTP_200_OK)
 async def reorder_service_images(
-    tenant_slug: str,
     service_id: UUID,
     image_orders: List[ImageOrderItem],
     db: Session = Depends(get_db),
@@ -236,7 +234,6 @@ async def reorder_service_images(
 
 @router.get("/{service_id}/images", response_model=List[ServiceImageSchema])
 async def get_service_images(
-    tenant_slug: str,
     service_id: UUID,
     request: Request,
     db: Session = Depends(get_db),
@@ -274,7 +271,6 @@ async def get_service_images(
 
 @router.put("/{service_id}/images/{image_id}", response_model=ServiceImageSchema)
 async def update_service_image(
-    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     image_data: ServiceImageUpdate,
@@ -331,7 +327,6 @@ async def update_service_image(
 
 @router.delete("/{service_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_image(
-    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     db: Session = Depends(get_db),
@@ -383,7 +378,6 @@ async def delete_service_image(
 
 @router.post("/{service_id}/images/{image_id}/labels", status_code=status.HTTP_201_CREATED)
 async def assign_label_to_image(
-    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     label_id: UUID,
@@ -454,7 +448,6 @@ async def assign_label_to_image(
 
 @router.delete("/{service_id}/images/{image_id}/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_label_from_image(
-    tenant_slug: str,
     service_id: UUID,
     image_id: UUID,
     label_id: UUID,

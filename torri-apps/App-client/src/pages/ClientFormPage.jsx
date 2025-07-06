@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useNavigation } from '../shared/hooks/useNavigation'
+import { ROUTES } from '../shared/navigation'
 import { 
   ArrowLeft, 
   Save, 
@@ -31,8 +33,8 @@ import {
 } from '../utils/brazilianUtils'
 
 const ClientFormPage = () => {
-  const { clientId, tenantSlug } = useParams() // If editing existing client
-  const navigate = useNavigate()
+  const { clientId } = useParams() // If editing existing client
+  const { navigate } = useNavigation()
   const { hasRole } = useAuthStore()
   
   const isEditing = Boolean(clientId && clientId !== 'new')
@@ -68,7 +70,7 @@ const ClientFormPage = () => {
   // Handle permission check in useEffect instead of early return
   useEffect(() => {
     if (!canManageClients) {
-      navigate(`/${tenantSlug}/professional/dashboard`)
+      navigate(ROUTES.PROFESSIONAL.DASHBOARD)
     }
   }, [canManageClients, navigate])
 
@@ -246,7 +248,7 @@ const ClientFormPage = () => {
           // Continue even if labels fail - client was created/updated successfully
         }
         
-        navigate(`/${tenantSlug}/professional/clients`, {
+        navigate(ROUTES.PROFESSIONAL.CLIENTS, {
           state: { 
             message: isEditing ? 'Cliente atualizado com sucesso' : 'Cliente criado com sucesso'
           }
@@ -294,7 +296,7 @@ const ClientFormPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
-              onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
+              onClick={() => navigate(ROUTES.PROFESSIONAL.CLIENTS)}
               className="mr-3 p-2 rounded-xl hover:bg-gray-100"
             >
               <ArrowLeft size={20} className="text-gray-600" />

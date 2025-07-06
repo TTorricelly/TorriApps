@@ -30,6 +30,10 @@ class Tenant(Base):
     slug = Column(String(50), nullable=False, unique=True, index=True, 
                   comment="URL-safe identifier for the tenant")
     
+    # Custom domain for domain-based tenant identification
+    custom_domain = Column(String(255), nullable=True, unique=True, index=True,
+                          comment="Custom domain for this tenant (e.g., tenant1.com.br)")
+    
     # Database schema name - typically 'tenant_' + slug
     db_schema_name = Column(String(63), nullable=False, unique=True, index=True,
                            comment="PostgreSQL schema name for this tenant")
@@ -57,6 +61,7 @@ class Tenant(Base):
             "id": str(self.id),
             "name": self.name,
             "slug": self.slug,
+            "custom_domain": self.custom_domain,
             "db_schema_name": self.db_schema_name,
             "is_active": self.is_active,
             "max_users": self.max_users,

@@ -12,9 +12,10 @@
  */
 
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
+import { useNavigation } from '../shared/hooks/useNavigation';
+import { ROUTES } from '../shared/navigation';
 import { 
   User,
   Scissors,
@@ -36,8 +37,7 @@ import {
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 
 const ProfessionalMenuPage = () => {
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate } = useNavigation();
   const { logout, user } = useAuthStore();
   const { currentMode, toggleMode } = useViewModeStore();
 
@@ -139,31 +139,26 @@ const ProfessionalMenuPage = () => {
   ];
 
   const handleNavigation = (path) => {
-    // Add tenant slug for tenant-aware paths
-    if (path.startsWith('/') && !path.startsWith(`/${tenantSlug}`)) {
-      navigate(`/${tenantSlug}${path}`);
-    } else {
-      navigate(path);
-    }
+    navigate(path);
   };
 
   const handleBack = () => {
-    navigate(`/${tenantSlug}/professional/dashboard`);
+    navigate(ROUTES.PROFESSIONAL.DASHBOARD);
   };
 
   const handleModeToggle = () => {
     if (currentMode === 'professional') {
       toggleMode(); // This switches to client mode
-      navigate(`/${tenantSlug}/dashboard`); // Go to client dashboard
+      navigate(ROUTES.DASHBOARD); // Go to client dashboard
     } else {
       toggleMode(); // This switches to professional mode  
-      navigate(`/${tenantSlug}/professional/dashboard`); // Go to professional dashboard
+      navigate(ROUTES.PROFESSIONAL.DASHBOARD); // Go to professional dashboard
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate(`/${tenantSlug}/login`);
+    navigate(ROUTES.LOGIN);
   };
 
   return (

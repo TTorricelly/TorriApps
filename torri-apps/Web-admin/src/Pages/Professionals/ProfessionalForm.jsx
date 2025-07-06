@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavigation } from '../../shared/hooks/useNavigation';
+import { ROUTES } from '../../shared/navigation';
 import {
   Card,
   CardHeader,
@@ -1173,8 +1175,8 @@ const RecurringBreaksTab = ({ professionalId, showAlert }) => {
 };
 
 export default function ProfessionalForm() {
-  const navigate = useNavigate();
-  const { professionalId, tenantSlug } = useParams();
+  const { navigate } = useNavigation();
+  const { professionalId } = useParams();
   const isEdit = Boolean(professionalId);
   
   // Form state
@@ -1260,7 +1262,7 @@ export default function ProfessionalForm() {
     } catch (error) {
       console.error('Erro ao carregar profissional:', error);
       showAlert('Erro ao carregar dados do profissional', 'error');
-      navigate(`/${tenantSlug}/professionals`);
+      navigate(ROUTES.PROFESSIONALS.LIST);
     } finally {
       setIsLoading(false);
     }
@@ -1359,7 +1361,7 @@ export default function ProfessionalForm() {
       
       // If creating, redirect to edit mode with all tabs available
       if (!isEdit) {
-        navigate(`/${tenantSlug}/professionals/edit/${result.id}`);
+        navigate(ROUTES.PROFESSIONALS.EDIT(result.id));
       } else {
         // Update initial state and clear unsaved changes flag
         setInitialFormData(formData);
@@ -1381,13 +1383,13 @@ export default function ProfessionalForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate(`/${tenantSlug}/professionals`);
+      navigate(ROUTES.PROFESSIONALS.LIST);
     }
   };
   
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate(`/${tenantSlug}/professionals`);
+    navigate(ROUTES.PROFESSIONALS.LIST);
   };
   
   const handleTabChange = (value) => {

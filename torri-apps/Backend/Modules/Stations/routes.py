@@ -19,7 +19,6 @@ router = APIRouter(tags=["stations"])
 # --- StationType Routes ---
 @router.get("/types", response_model=List[StationTypeSchema])
 async def get_station_types(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Session = Depends(get_db)
 ):
     """Get all station types."""
@@ -39,7 +38,6 @@ def generate_code_from_name(name: str) -> str:
 
 @router.post("/types", response_model=StationTypeSchema)
 async def create_station_type(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_type_data: StationTypeCreate,
     db: Session = Depends(get_db)
 ):
@@ -73,7 +71,6 @@ async def create_station_type(
 
 @router.get("/types/{station_type_id}", response_model=StationTypeWithStations)
 async def get_station_type(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_type_id: UUID,
     db: Session = Depends(get_db)
 ):
@@ -86,7 +83,6 @@ async def get_station_type(
 
 @router.put("/types/{station_type_id}", response_model=StationTypeSchema)
 async def update_station_type(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_type_id: UUID,
     station_type_data: StationTypeUpdate,
     db: Session = Depends(get_db)
@@ -130,7 +126,6 @@ async def update_station_type(
 
 @router.delete("/types/{station_type_id}")
 async def delete_station_type(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_type_id: UUID,
     db: Session = Depends(get_db)
 ):
@@ -155,7 +150,6 @@ async def delete_station_type(
 # --- Station Routes ---
 @router.get("", response_model=List[StationWithType])
 async def get_stations(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     type_id: Optional[UUID] = None,
     active_only: bool = True,
     db: Session = Depends(get_db)
@@ -174,7 +168,6 @@ async def get_stations(
 
 @router.post("", response_model=StationSchema)
 async def create_station(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_data: StationCreate,
     db: Session = Depends(get_db)
 ):
@@ -197,7 +190,6 @@ async def create_station(
 
 @router.get("/{station_id}", response_model=StationWithType)
 async def get_station(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_id: UUID,
     db: Session = Depends(get_db)
 ):
@@ -210,7 +202,6 @@ async def get_station(
 
 @router.put("/{station_id}", response_model=StationSchema)
 async def update_station(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_id: UUID,
     station_data: StationUpdate,
     db: Session = Depends(get_db)
@@ -242,7 +233,6 @@ async def update_station(
 
 @router.delete("/{station_id}")
 async def delete_station(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     station_id: UUID,
     db: Session = Depends(get_db)
 ):
@@ -259,7 +249,6 @@ async def delete_station(
 # --- ServiceStationRequirement Routes ---
 @router.get("/requirements/service/{service_id}", response_model=List[ServiceStationRequirementSchema])
 async def get_service_station_requirements(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     db: Session = Depends(get_db)
 ):
@@ -271,7 +260,6 @@ async def get_service_station_requirements(
 
 @router.post("/requirements", response_model=ServiceStationRequirementSchema)
 async def create_service_station_requirement(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     requirement_data: ServiceStationRequirementCreate,
     db: Session = Depends(get_db)
 ):
@@ -304,7 +292,6 @@ async def create_service_station_requirement(
 
 @router.put("/requirements/{service_id}/{station_type_id}", response_model=ServiceStationRequirementSchema)
 async def update_service_station_requirement(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     station_type_id: UUID,
     requirement_data: ServiceStationRequirementUpdate,
@@ -333,7 +320,6 @@ async def update_service_station_requirement(
 
 @router.delete("/requirements/{service_id}/{station_type_id}")
 async def delete_service_station_requirement(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_id: UUID,
     station_type_id: UUID,
     db: Session = Depends(get_db)

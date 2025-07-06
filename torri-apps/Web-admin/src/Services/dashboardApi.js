@@ -25,7 +25,7 @@ export const dashboardApi = {
         // Today's appointments
         api.get(buildApiEndpoint(`appointments?date_from=${today}&date_to=${today}`)),
         // Active clients count
-        api.get(buildApiEndpoint('users/?role=CLIENTE')),
+        api.get(buildApiEndpoint('users?role=CLIENTE')),
         // Weekly revenue data
         api.get(buildApiEndpoint(`commissions/kpis?date_from=${weekStart}&date_to=${weekEnd}`)),
         // Today's detailed schedule

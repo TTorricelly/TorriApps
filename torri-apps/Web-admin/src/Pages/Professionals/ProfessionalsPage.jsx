@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigation } from '../../shared/hooks/useNavigation';
+import { ROUTES } from '../../shared/navigation';
 import {
   Card,
   CardHeader,
@@ -136,8 +137,7 @@ const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, get
 });
 
 export default function ProfessionalsPage() {
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate } = useNavigation();
   
   // State management
   const [professionals, setProfessionals] = useState([]);
@@ -233,12 +233,12 @@ export default function ProfessionalsPage() {
   };
 
   const handleCreateProfessional = () => {
-    navigate(`/${tenantSlug}/professionals/create`);
+    navigate(ROUTES.PROFESSIONALS.CREATE);
   };
 
   const handleEditProfessional = useCallback((professionalId) => {
-    navigate(`/${tenantSlug}/professionals/edit/${professionalId}`);
-  }, [navigate, tenantSlug]);
+    navigate(ROUTES.PROFESSIONALS.EDIT(professionalId));
+  }, [navigate]);
 
   const handleDeleteProfessional = useCallback((professional) => {
     setDeleteDialog({ open: true, professional });

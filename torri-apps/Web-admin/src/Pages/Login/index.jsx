@@ -1,12 +1,12 @@
 import React, { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigation } from "../../shared/hooks/useNavigation";
+import { ROUTES } from "../../shared/navigation";
 import LoginForm from "../../Components/LoginForm"; // Adjusted path
 import { useAuthStore } from "../../stores/auth"; // Adjusted path
 import logoUrl from "../../assets/Reilo1.png"; // Assuming logo is in src/assets
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate } = useNavigation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const checkAuth = useAuthStore((state) => state.checkAuth); // Assuming a checkAuth method if needed for token validation beyond simple flag
 
@@ -14,7 +14,7 @@ export default function LoginPage() {
     // If there's a persisted auth state, Zustand might rehydrate after initial render.
     // A simple check on mount, and potentially if `isAuthenticated` changes.
     if (isAuthenticated) {
-      navigate(`/${tenantSlug}/dashboard`, { replace: true });
+      navigate(ROUTES.DASHBOARD, { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
   //   const validateTokenAndRedirect = async () => {
   //     // Ideal: if (await checkAuth()) { // checkAuth would verify token validity
   //     if (isAuthenticated) { // Simplified: relies on persisted isAuthenticated flag
-  //       navigate(`/${tenantSlug}/dashboard`, { replace: true });
+  //       navigate(buildRoute('/dashboard'), { replace: true });
   //     }
   //   };
   //   validateTokenAndRedirect();

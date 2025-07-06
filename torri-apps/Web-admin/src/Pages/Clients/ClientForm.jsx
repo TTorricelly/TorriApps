@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavigation } from '../../shared/hooks/useNavigation';
+import { ROUTES } from '../../shared/navigation';
 import {
   Card,
   CardHeader,
@@ -471,8 +473,8 @@ const AddressTab = ({
 // Removed AvailabilityTab, BlockedPeriodsTab, RecurringBreaksTab components
 
 export default function ClientForm() { // Renamed component
-  const navigate = useNavigate();
-  const { clientId, tenantSlug } = useParams(); // Changed from professionalId to clientId
+  const { navigate } = useNavigation();
+  const { clientId } = useParams(); // Changed from professionalId to clientId
   const isEditMode = Boolean(clientId); // Renamed from isEdit for clarity
 
   // Form state
@@ -580,7 +582,7 @@ export default function ClientForm() { // Renamed component
     } catch (error) {
       console.error('Erro ao carregar cliente:', error); // Updated error message
       showAlert('Erro ao carregar dados do cliente', 'error'); // Updated alert message
-      navigate(`/${tenantSlug}/clients`); // Navigate to clients list on error
+      navigate(ROUTES.CLIENTS.LIST); // Navigate to clients list on error
     } finally {
       setIsLoading(false);
     }
@@ -730,7 +732,7 @@ export default function ClientForm() { // Renamed component
       setHasUnsavedChanges(false); // Reset flag
 
       // Navigate to clients list page after save/create
-      navigate(`/${tenantSlug}/clients`);
+      navigate(ROUTES.CLIENTS.LIST);
 
     } catch (error) {
       console.error('Erro ao salvar cliente:', error); // Updated error message
@@ -748,13 +750,13 @@ export default function ClientForm() { // Renamed component
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate(`/${tenantSlug}/clients`); // Navigate to clients list
+      navigate(ROUTES.CLIENTS.LIST); // Navigate to clients list
     }
   };
 
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate(`/${tenantSlug}/clients`); // Navigate to clients list
+    navigate(ROUTES.CLIENTS.LIST); // Navigate to clients list
   };
 
   // Removed handleTabChange as tabs are removed

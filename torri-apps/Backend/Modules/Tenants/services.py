@@ -40,6 +40,15 @@ def create_tenant(db: Session, tenant_data: TenantCreate) -> Tenant:
             detail=f"Tenant with slug '{tenant_data.slug}' already exists"
         )
     
+    # Check if custom domain already exists (if provided)
+    if tenant_data.custom_domain:
+        existing_domain = db.query(Tenant).filter(Tenant.custom_domain == tenant_data.custom_domain).first()
+        if existing_domain:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Domain '{tenant_data.custom_domain}' is already in use"
+            )
+    
     # Generate schema name
     schema_name = _generate_schema_name(tenant_data.slug)
     
@@ -55,6 +64,7 @@ def create_tenant(db: Session, tenant_data: TenantCreate) -> Tenant:
     db_tenant = Tenant(
         name=tenant_data.name,
         slug=tenant_data.slug,
+        custom_domain=tenant_data.custom_domain,
         db_schema_name=schema_name,
         is_active=tenant_data.is_active,
         max_users=tenant_data.max_users
@@ -114,6 +124,32 @@ def get_active_tenant_by_slug(db: Session, slug: str) -> Optional[Tenant]:
         Tenant.slug == slug,
         Tenant.is_active == True
     ).first()
+
+
+def get_tenant_by_domain(db: Session, domain: str) -> Optional[Tenant]:
+    """Get tenant by custom domain."""
+    return db.query(Tenant).filter(Tenant.custom_domain == domain).first()
+
+
+def get_active_tenant_by_domain(db: Session, domain: str) -> Optional[Tenant]:
+    """Get active tenant by custom domain."""
+    return db.query(Tenant).filter(
+        Tenant.custom_domain == domain,
+        Tenant.is_active == True
+    ).first()
+
+
+def get_tenant_by_slug_or_domain(db: Session, slug: str = None, domain: str = None) -> Optional[Tenant]:
+    """Get tenant by slug or domain (for multi-identification support)."""
+    if domain:
+        tenant = get_active_tenant_by_domain(db, domain)
+        if tenant:
+            return tenant
+    
+    if slug:
+        return get_active_tenant_by_slug(db, slug)
+    
+    return None
 
 
 def get_tenants(db: Session, skip: int = 0, limit: int = 100, active_only: bool = False) -> Tuple[List[Tenant], int]:

@@ -26,7 +26,7 @@ export const createClient = async (clientData) => {
  */
 export const getClients = async () => {
   try {
-    const endpoint = buildApiEndpoint('users/?role=CLIENTE&limit=10000');
+    const endpoint = buildApiEndpoint('users?role=CLIENTE&limit=10000');
     const response = await apiClient.get(endpoint);
     return response.data;
   } catch (error) {
@@ -44,7 +44,7 @@ export const getClients = async () => {
  */
 export const searchClients = async (searchTerm) => {
   try {
-    const endpoint = buildApiEndpoint(`users/?role=CLIENTE&search=${encodeURIComponent(searchTerm)}&limit=10000`);
+    const endpoint = buildApiEndpoint(`users?role=CLIENTE&search=${encodeURIComponent(searchTerm)}&limit=10000`);
     const response = await apiClient.get(endpoint);
     return response.data;
   } catch (error) {

@@ -37,7 +37,7 @@ jobs:
     - name: Build application
       run: |
         cd torri-apps/Web-admin
-        VITE_API_BASE_URL=https://torri-backend-419996576894.us-central1.run.app npm run build
+        VITE_API_BASE_URL=https://api.vervio.com.br npm run build
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

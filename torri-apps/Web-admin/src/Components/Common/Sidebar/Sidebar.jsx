@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { 
   HomeIcon,
@@ -21,76 +21,29 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
+import { useNavigation } from '../../../shared/hooks/useNavigation';
+import { SIDEBAR_CONFIG } from '../../../shared/navigation';
 
-const menuItems = [
-  {
-    id: 'appointments',
-    title: 'Agendamentos',
-    icon: CalendarDaysIcon,
-    items: [
-      { title: 'Agenda Diária', path: '/appointments/daily-schedule' },
-      { title: 'Kanban Board', path: '/appointments/kanban' }
-    ]
-  },
-  {
-    id: 'services',
-    title: 'Serviços',
-    icon: WrenchScrewdriverIcon,
-    items: [
-      { title: 'Categorias', path: '/services/catalog' },
-      { title: 'Catálogo de Serviços', path: '/services/list' },
-      { title: 'Rótulos', path: '/labels' }
-    ]
-  },
-  {
-    id: 'professionals',
-    title: 'Profissionais',
-    icon: UserGroupIcon,
-    items: [
-      { title: 'Equipe', path: '/professionals/team' }
-    ]
-  },
-  {
-    id: 'stations',
-    title: 'Estações',
-    icon: BuildingStorefrontIcon,
-    items: [
-      { title: 'Tipos de Estação', path: '/stations/types' },
-      { title: 'Estações', path: '/stations' }
-    ]
-  },
-  {
-    id: 'clients',
-    title: 'Clientes',
-    icon: UsersIcon,
-    items: [
-      { title: 'Cadastros', path: '/clients' } // Changed path here
-    ]
-  },
-  {
-    id: 'financial',
-    title: 'Financeiro',
-    icon: BanknotesIcon,
-    items: [
-      { title: 'Comissões', path: '/commissions' }
-    ]
-  },
-  {
-    id: 'settings',
-    title: 'Configurações',
-    icon: Cog6ToothIcon,
-    items: [
-      { title: 'Configurações do App', path: '/settings' },
-      { title: 'Perfil do Salão', path: '/settings/salon-profile' },
-      { title: 'Usuários', path: '/settings/users' }
-    ]
-  }
-];
+// Icon mapping for sidebar configuration
+const iconMap = {
+  'appointments': CalendarDaysIcon,
+  'services': WrenchScrewdriverIcon,
+  'professionals': UserGroupIcon,
+  'stations': BuildingStorefrontIcon,
+  'clients': UsersIcon,
+  'financial': BanknotesIcon,
+  'settings': Cog6ToothIcon,
+};
+
+// Enhanced menu items with icons from config
+const menuItems = SIDEBAR_CONFIG.map(item => ({
+  ...item,
+  icon: iconMap[item.id] || Cog6ToothIcon
+}));
 
 export default function Sidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate, buildRoute, isActive } = useNavigation();
   const [expandedGroups, setExpandedGroups] = useState(['dashboard']); // Dashboard expanded by default
   const [isCollapsed, setIsCollapsed] = useState(() => {
     // Load collapsed state from localStorage
@@ -209,21 +162,20 @@ export default function Sidebar() {
     );
   };
 
+  // Helper function to check if item is active
   const isItemActive = (path) => {
-    const fullPath = `/${tenantSlug}${path}`;
-    return location.pathname === fullPath;
+    return isActive(path);
   };
 
   const isGroupActive = (items) => {
     return items.some(item => {
-      const fullPath = `/${tenantSlug}${item.path}`;
+      const fullPath = buildRoute(item.path);
       return location.pathname === fullPath;
     });
   };
 
   const handleItemClick = (path) => {
-    const fullPath = `/${tenantSlug}${path}`;
-    navigate(fullPath);
+    navigate(path);
   };
 
   const handleLogout = () => {
@@ -231,7 +183,7 @@ export default function Sidebar() {
     // Clear tenant data on logout
     const { clearTenant } = useTenantStore.getState();
     clearTenant();
-    navigate(`/${tenantSlug}/login`);
+    navigate('/login');
   };
 
   const handleProfile = () => {

@@ -13,6 +13,7 @@ class TenantBase(BaseModel):
     """Base tenant schema with common fields."""
     name: str = Field(..., min_length=1, max_length=255, description="Display name of the tenant")
     slug: str = Field(..., min_length=1, max_length=50, description="URL-safe identifier")
+    custom_domain: Optional[str] = Field(None, max_length=255, description="Custom domain for this tenant")
     is_active: bool = Field(True, description="Whether the tenant is active")
     max_users: int = Field(50, ge=1, le=1000, description="Maximum number of users allowed")
     
@@ -43,6 +44,31 @@ class TenantBase(BaseModel):
         if not v or not v.strip():
             raise ValueError('Tenant name cannot be empty or whitespace')
         return v.strip()
+    
+    @validator('custom_domain')
+    def validate_custom_domain(cls, v):
+        """Validate custom domain format."""
+        if v is None:
+            return v
+        
+        v = v.strip().lower()
+        if not v:
+            return None
+        
+        # Basic domain validation
+        domain_pattern = re.compile(
+            r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+        )
+        
+        if not domain_pattern.match(v):
+            raise ValueError('Invalid domain format')
+        
+        # Reserved domains
+        reserved_domains = {'localhost', 'example.com', 'test.com', 'vervio.com.br'}
+        if v in reserved_domains:
+            raise ValueError(f'Domain "{v}" is reserved and cannot be used')
+        
+        return v
 
 
 class TenantCreate(TenantBase):
@@ -53,6 +79,7 @@ class TenantCreate(TenantBase):
 class TenantUpdate(BaseModel):
     """Schema for updating an existing tenant."""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    custom_domain: Optional[str] = Field(None, max_length=255)
     is_active: Optional[bool] = None
     max_users: Optional[int] = Field(None, ge=1, le=1000)
     
@@ -62,6 +89,31 @@ class TenantUpdate(BaseModel):
         if v is not None and (not v or not v.strip()):
             raise ValueError('Tenant name cannot be empty or whitespace')
         return v.strip() if v else v
+    
+    @validator('custom_domain')
+    def validate_custom_domain(cls, v):
+        """Validate custom domain format if provided."""
+        if v is None:
+            return v
+        
+        v = v.strip().lower()
+        if not v:
+            return None
+        
+        # Basic domain validation
+        domain_pattern = re.compile(
+            r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+        )
+        
+        if not domain_pattern.match(v):
+            raise ValueError('Invalid domain format')
+        
+        # Reserved domains
+        reserved_domains = {'localhost', 'example.com', 'test.com', 'vervio.com.br'}
+        if v in reserved_domains:
+            raise ValueError(f'Domain "{v}" is reserved and cannot be used')
+        
+        return v
 
 
 class TenantSchema(TenantBase):

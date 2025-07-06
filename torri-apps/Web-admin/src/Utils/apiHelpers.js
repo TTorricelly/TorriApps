@@ -70,23 +70,45 @@ export const transformEntityWithImages = (data, imageFields = []) => {
 };
 
 /**
- * Extract tenant slug from current URL path
+ * Extract tenant information from current URL or domain
+ * @returns {object|null} Tenant info object with method and identifier
+ */
+export const getTenantInfo = () => {
+  const hostname = window.location.hostname.toLowerCase();
+  const path = window.location.pathname;
+  
+  // Check if we're on a custom domain (not the main domain)
+  if (hostname && hostname !== 'vervio.com.br' && !hostname.startsWith('localhost')) {
+    console.log(`DEBUG: Detected domain-based tenant '${hostname}'`);
+    return {
+      method: 'domain',
+      domain: hostname,
+      slug: null // Domain-based tenants don't need slug in URLs
+    };
+  }
+  
+  // For slug-based tenants on main domain, first path segment is always the tenant slug
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    console.log(`DEBUG: Detected slug-based tenant '${segments[0]}' from URL: ${path}`);
+    return {
+      method: 'slug',
+      domain: null,
+      slug: segments[0]
+    };
+  }
+  
+  console.log(`DEBUG: No tenant detected from URL or domain`);
+  return null;
+};
+
+/**
+ * Extract tenant slug from current URL path (legacy compatibility)
  * @returns {string|null} Tenant slug or null if not found
  */
 export const getTenantSlugFromUrl = () => {
-  const path = window.location.pathname;
-  // Match patterns like /tenant-slug/... or /tenant-slug (but not /login, /register, etc.)
-  const match = path.match(/^\/([a-z0-9_-]+)(?:\/|$)/);
-  
-  // Exclude common non-tenant paths
-  const excludedPaths = ['login', 'register', 'auth', 'admin', 'api', 'docs'];
-  if (match && !excludedPaths.includes(match[1])) {
-    console.log(`DEBUG: Detected tenant slug '${match[1]}' from URL: ${path}`);
-    return match[1];
-  }
-  
-  console.log(`DEBUG: No tenant slug detected from URL: ${path}`);
-  return null;
+  const tenantInfo = getTenantInfo();
+  return tenantInfo?.slug || null;
 };
 
 /**
@@ -107,14 +129,22 @@ export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
     return `/api/${version}/${cleanEndpoint}`;
   }
   
-  const tenant = tenantSlug || getTenantSlugFromUrl();
+  // Get tenant info to determine how to build the URL
+  const tenantInfo = getTenantInfo();
   
-  if (tenant) {
-    return `/api/${version}/${tenant}/${cleanEndpoint}`;
-  } else {
-    // Fallback to non-tenant endpoint for public routes
-    return `/api/${version}/${cleanEndpoint}`;
+  if (tenantInfo) {
+    if (tenantInfo.method === 'domain') {
+      // Domain-based tenant: clean URLs without slug
+      return `/api/${version}/${cleanEndpoint}`;
+    } else if (tenantInfo.method === 'slug') {
+      // Slug-based tenant: include slug in URL for backward compatibility
+      const slug = tenantSlug || tenantInfo.slug;
+      return `/api/${version}/${slug}/${cleanEndpoint}`;
+    }
   }
+  
+  // Fallback to non-tenant endpoint
+  return `/api/${version}/${cleanEndpoint}`;
 };
 
 /**

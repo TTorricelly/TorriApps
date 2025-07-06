@@ -90,7 +90,7 @@ export const getDailySchedule = async (date) => {
  */
 export const createAppointment = async (appointmentData) => {
   try {
-    const response = await apiClient.post(buildApiEndpoint('appointments/'), appointmentData);
+    const response = await apiClient.post(buildApiEndpoint('appointments'), appointmentData);
     return response.data;
   } catch (error) {
     console.error("Error creating appointment:", error.response?.data || error.message);

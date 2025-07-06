@@ -5,7 +5,9 @@
  */
 
 import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useNavigation } from '../shared/hooks/useNavigation';
+import { ROUTES } from '../shared/navigation';
 import { 
   Scissors,
   User, 
@@ -52,8 +54,7 @@ const getFullImageUrl = (relativePath) => {
 
 const HomePageInner = ({ navigation }, ref) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate } = useNavigation();
   
   // All state variables (identical to mobile)
   const [currentScreen, setCurrentScreen] = useState('categories');
@@ -432,7 +433,7 @@ const HomePageInner = ({ navigation }, ref) => {
         
         <button 
           onClick={() => {
-            navigate(`/${tenantSlug}/services`);
+            navigate(ROUTES.SERVICES);
           }}
           className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-pink-600 transition-smooth"
         >

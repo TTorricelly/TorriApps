@@ -5,7 +5,9 @@
  */
 
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useNavigation } from '../shared/hooks/useNavigation';
+import { ROUTES } from '../shared/navigation';
 import { useWizardStore } from '../stores/wizardStore';
 import useServicesStore from '../stores/servicesStore';
 import WizardHeader from '../components/WizardHeader';
@@ -16,9 +18,8 @@ import WizardDateScreen from '../components/wizard/WizardDateScreen';
 // import WizardConfirmationScreen from '../components/wizard/WizardConfirmationScreen';
 
 const SchedulingWizardPage = () => {
-  const navigate = useNavigate();
+  const { navigate } = useNavigation();
   const location = useLocation();
-  const { tenantSlug } = useParams();
   const { selectedServices } = useServicesStore();
   
   const {
@@ -36,7 +37,7 @@ const SchedulingWizardPage = () => {
     
     if (!servicesToUse || servicesToUse.length === 0) {
       // No services selected, redirect back to services page
-      navigate(`/${tenantSlug}/services`);
+      navigate(ROUTES.SERVICES);
       return;
     }
 
@@ -49,7 +50,7 @@ const SchedulingWizardPage = () => {
     if (currentStep === 1) {
       // First step - go back to services page and reset wizard
       resetWizard();
-      navigate(`/${tenantSlug}/services`);
+      navigate(ROUTES.SERVICES);
     } else {
       // Other steps - go to previous step
       goToPreviousStep();

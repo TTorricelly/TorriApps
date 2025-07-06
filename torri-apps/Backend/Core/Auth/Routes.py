@@ -21,7 +21,6 @@ router = APIRouter(tags=['auth'])
 
 @router.post("/login", response_model=Schemas.Token)
 async def login_for_access_token(
-    tenant_slug: str,
     login_request: Schemas.LoginRequest, # Using Pydantic model for request body
     db: Session = Depends(get_db)  # SIMPLIFIED: Use single schema DB
 ):

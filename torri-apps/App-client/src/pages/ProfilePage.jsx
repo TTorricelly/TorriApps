@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigation } from '../shared/hooks/useNavigation';
+import { ROUTES } from '../shared/navigation';
 import BottomNavigation from '../components/BottomNavigation';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import { useAuthStore } from '../stores/authStore';
@@ -10,8 +11,7 @@ import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils';
 import LabelChip from '../components/labels/LabelChip';
 
 const ProfilePage = () => {
-  const navigate = useNavigate();
-  const { tenantSlug } = useParams();
+  const { navigate } = useNavigation();
   const { user, logout, setProfile, isProfessional } = useAuthStore();
   const { currentMode, toggleMode } = useViewModeStore();
   const [isLoading, setIsLoading] = useState(true);
@@ -31,16 +31,16 @@ const ProfilePage = () => {
 
   const handleLogout = () => {
     logout();
-    navigate(`/${tenantSlug}/login`);
+    navigate(ROUTES.LOGIN);
   };
 
   const handleModeToggle = () => {
     if (currentMode === 'professional') {
       toggleMode(); // This switches to client mode
-      navigate(`/${tenantSlug}/dashboard`); // Go to client dashboard
+      navigate(ROUTES.DASHBOARD); // Go to client dashboard
     } else {
       toggleMode(); // This switches to professional mode  
-      navigate(`/${tenantSlug}/professional/dashboard`); // Go to professional dashboard
+      navigate(ROUTES.PROFESSIONAL.DASHBOARD); // Go to professional dashboard
     }
   };
 
@@ -64,7 +64,7 @@ const ProfilePage = () => {
               {/* User Info */}
               <div className="relative text-center mb-8">
                 <button
-                  onClick={() => navigate(`/${tenantSlug}/profile/edit`)}
+                  onClick={() => navigate(ROUTES.EDIT_PROFILE)}
                   className="absolute top-0 right-0 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
                 >
                   <Edit size={20} className="text-pink-500" />

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from sqlalchemy.orm import Session
 
 from Core.Database.dependencies import get_public_db
-from Modules.Tenants.services import get_active_tenant_by_slug
+from Modules.Tenants.services import get_active_tenant_by_slug, get_tenant_by_slug_or_domain
 from Modules.Tenants.models import Tenant
 
 
@@ -23,12 +23,14 @@ class TenantContext:
     """Context storage for tenant context using contextvars."""
     _tenant_var: ContextVar[Optional['Tenant']] = ContextVar('tenant', default=None)
     _tenant_slug_var: ContextVar[Optional[str]] = ContextVar('tenant_slug', default=None)
+    _identification_method_var: ContextVar[Optional[str]] = ContextVar('identification_method', default=None)
     
     @classmethod
-    def set_tenant(cls, tenant: Tenant, slug: str):
+    def set_tenant(cls, tenant: Tenant, slug: str, identification_method: str = 'slug'):
         """Set current tenant context."""
         cls._tenant_var.set(tenant)
         cls._tenant_slug_var.set(slug)
+        cls._identification_method_var.set(identification_method)
     
     @classmethod
     def get_tenant(cls) -> Optional[Tenant]:
@@ -41,6 +43,11 @@ class TenantContext:
         return cls._tenant_slug_var.get()
     
     @classmethod
+    def get_identification_method(cls) -> Optional[str]:
+        """Get how tenant was identified ('slug' or 'domain')."""
+        return cls._identification_method_var.get()
+    
+    @classmethod
     def get_schema_name(cls) -> Optional[str]:
         """Get current tenant's database schema name."""
         tenant = cls.get_tenant()
@@ -51,6 +58,7 @@ class TenantContext:
         """Clear tenant context."""
         cls._tenant_var.set(None)
         cls._tenant_slug_var.set(None)
+        cls._identification_method_var.set(None)
 
 
 class TenantMiddleware(BaseHTTPMiddleware):
@@ -58,10 +66,11 @@ class TenantMiddleware(BaseHTTPMiddleware):
     Middleware to handle multi-tenant routing and database context.
     
     This middleware:
-    1. Extracts tenant_slug from URLs matching /api/v1/{tenant_slug}/...
+    1. Extracts tenant from custom domain (Host header) or URL slug
     2. Validates the tenant exists and is active
-    3. Sets up tenant context for database operations
-    4. Allows public routes to pass through without tenant context
+    3. Rewrites paths for slug-based tenants to clean URLs
+    4. Sets up tenant context for database operations
+    5. Allows public routes to pass through without tenant context
     """
     
     def __init__(self, app, public_routes: Optional[list] = None):
@@ -91,17 +100,22 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if self._is_public_route(request.url.path):
             return await call_next(request)
         
-        # Extract tenant slug from URL
-        tenant_slug = self._extract_tenant_slug(request.url.path)
+        # Extract tenant from domain or URL slug
+        tenant_info = self._extract_tenant_info(request)
         
-        if tenant_slug:
+        if tenant_info:
             # Validate tenant and set context
             try:
-                await self._setup_tenant_context(tenant_slug)
+                await self._setup_tenant_context_from_info(tenant_info)
+                
+                # Rewrite path if needed (for slug-based tenants)
+                if tenant_info['method'] == 'slug':
+                    self._rewrite_request_path(request, tenant_info['slug'])
                 
                 # Add tenant info to request state for easy access
-                request.state.tenant_slug = tenant_slug
+                request.state.tenant_slug = tenant_info['slug']
                 request.state.tenant = TenantContext.get_tenant()
+                request.state.identification_method = tenant_info['method']
                 
             except HTTPException as e:
                 return JSONResponse(
@@ -124,6 +138,33 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 return True
         return False
     
+    def _extract_tenant_info(self, request: Request) -> Optional[dict]:
+        """Extract tenant information from domain or URL slug."""
+        # First try to get tenant from custom domain
+        host = request.headers.get('host', '').lower()
+        if host:
+            # Remove port if present
+            domain = host.split(':')[0]
+            
+            # Check if it's not the main domain (vervio.com.br)
+            if domain and domain != 'vervio.com.br' and not domain.startswith('localhost'):
+                return {
+                    'method': 'domain',
+                    'domain': domain,
+                    'slug': None  # Will be set from database lookup
+                }
+        
+        # Fallback to URL slug extraction
+        tenant_slug = self._extract_tenant_slug(request.url.path)
+        if tenant_slug:
+            return {
+                'method': 'slug',
+                'domain': None,
+                'slug': tenant_slug
+            }
+        
+        return None
+    
     def _extract_tenant_slug(self, path: str) -> Optional[str]:
         """Extract tenant slug from URL path."""
         match = self.tenant_route_pattern.match(path)
@@ -131,25 +172,45 @@ class TenantMiddleware(BaseHTTPMiddleware):
             return match.group(1)  # The tenant_slug part
         return None
     
-    async def _setup_tenant_context(self, tenant_slug: str):
-        """Validate tenant and set up database context."""
+    def _rewrite_request_path(self, request: Request, tenant_slug: str):
+        """Rewrite request path to remove tenant slug."""
+        # Remove tenant slug from path: /api/v1/{tenant_slug}/... -> /api/v1/...
+        original_path = request.url.path
+        slug_pattern = f'/api/v1/{tenant_slug}'
         
+        if original_path.startswith(slug_pattern):
+            # Remove the tenant slug part
+            new_path = original_path.replace(slug_pattern, '/api/v1', 1)
+            # Update the request scope
+            request.scope['path'] = new_path
+    
+    async def _setup_tenant_context_from_info(self, tenant_info: dict):
+        """Validate tenant and set up database context from tenant info."""
         # Get database session for public schema
         db_gen = get_public_db()
         db = next(db_gen)
         
         try:
-            # Look up tenant by slug
-            tenant = get_active_tenant_by_slug(db=db, slug=tenant_slug)
+            # Look up tenant by domain or slug
+            tenant = get_tenant_by_slug_or_domain(
+                db=db, 
+                slug=tenant_info['slug'], 
+                domain=tenant_info['domain']
+            )
             
             if not tenant:
+                identifier = tenant_info['domain'] or tenant_info['slug']
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Tenant '{tenant_slug}' not found or inactive"
+                    detail=f"Tenant '{identifier}' not found or inactive"
                 )
             
             # Set tenant context
-            TenantContext.set_tenant(tenant=tenant, slug=tenant_slug)
+            TenantContext.set_tenant(
+                tenant=tenant, 
+                slug=tenant.slug,  # Always use the actual slug from database
+                identification_method=tenant_info['method']
+            )
             
         finally:
             # Close the database session
@@ -176,7 +237,7 @@ def tenant_context(tenant_slug: str):
             raise ValueError(f"Tenant '{tenant_slug}' not found or inactive")
         
         # Set context
-        TenantContext.set_tenant(tenant=tenant, slug=tenant_slug)
+        TenantContext.set_tenant(tenant=tenant, slug=tenant_slug, identification_method='slug')
         yield tenant
         
     finally:

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigation } from '../shared/hooks/useNavigation'
+import { ROUTES } from '../shared/navigation'
 import { Mail, Lock, Eye, EyeOff, Phone, Loader2 } from '../components/icons'
 import { useAuthStore } from '../stores/authStore'
 import { useViewModeStore } from '../stores/viewModeStore'
 import { authService } from '../services/authService'
 import { companyService } from '../services/companyService'
 import { runAuthTests } from '../utils/authTestUtils'
+import { getTenantInfo } from '../utils/apiHelpers'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -13,8 +15,7 @@ const isProfessionalRole = (role) => {
 }
 
 const LoginPage = () => {
-  const navigate = useNavigate()
-  const { tenantSlug } = useParams()
+  const { navigate } = useNavigation()
   const { login, isLoading, setLoading } = useAuthStore()
   const { currentMode } = useViewModeStore()
   
@@ -67,11 +68,11 @@ const LoginPage = () => {
         // Smart redirect based on user role and view mode
         if (user && isProfessionalRole(user.role)) {
           // Professional users: respect their current view mode
-          const redirectPath = currentMode === 'client' ? `/${tenantSlug}/dashboard` : `/${tenantSlug}/professional/dashboard`
+          const redirectPath = currentMode === 'client' ? ROUTES.DASHBOARD : ROUTES.PROFESSIONAL.DASHBOARD
           navigate(redirectPath)
         } else {
           // Regular clients always go to client dashboard
-          navigate(`/${tenantSlug}/dashboard`)
+          navigate(ROUTES.DASHBOARD)
         }
       } else {
         setError('Credenciais inválidas. Tente novamente.')

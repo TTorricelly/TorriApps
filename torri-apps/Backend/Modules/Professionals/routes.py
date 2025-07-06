@@ -25,7 +25,6 @@ router = APIRouter(tags=["Professionals"])
 # Professional CRUD endpoints
 @router.get("", response_model=List[Professional])
 def list_professionals(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.CLIENTE]))],
     skip: int = Query(0, ge=0, description="Number of items to skip"),
@@ -41,7 +40,6 @@ def list_professionals(
 
 @router.post("", response_model=Professional, status_code=status.HTTP_201_CREATED)
 def create_professional(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     professional_data: ProfessionalCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]

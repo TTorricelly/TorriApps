@@ -50,17 +50,15 @@ router = APIRouter(
     summary="Get the daily schedule for all professionals, including appointments and blocked times."
 )
 def get_daily_schedule_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     schedule_date: date = Path(..., description="The target date for the schedule (YYYY-MM-DD)."),
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
     db: Annotated[Session, Depends(get_db)] = None
 ):
     # Permission: Any authenticated user can view this.
-    # Service layer handles fetching data.
+    # Service layer handles fetching data - db session already has tenant context
     daily_schedule_data = appointments_services.get_daily_schedule_data(
         db=db,
         schedule_date=schedule_date
-        # tenant_id=requesting_user.tenant_id # Argument removed
     )
     if not daily_schedule_data.professionals_schedule:
         # Depending on desired behavior, either return 200 with empty list or 404.
@@ -79,7 +77,6 @@ def get_daily_schedule_endpoint(
     summary="Get daily availability slots for a professional on a specific date."
 )
 def get_professional_daily_availability_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     professional_id: UUID = Path(..., description="ID of the professional."),
     target_date: date = Query(..., description="The target date for availability (YYYY-MM-DD).", alias="date"),
     requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
@@ -104,7 +101,6 @@ def get_professional_daily_availability_endpoint(
     summary="Get available time slots for a specific service by a professional for a given month."
 )
 def get_service_availability_for_professional_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     availability_request: AvailabilityRequest = Body(...),
     requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None, # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)] = None
@@ -130,7 +126,6 @@ def get_service_availability_for_professional_endpoint(
     summary="Create a new appointment."
 )
 def create_new_appointment_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     appointment_data: AppointmentCreate,
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)]
@@ -157,8 +152,7 @@ def create_new_appointment_endpoint(
     summary="List appointments based on filters and user role." # Updated summary
 )
 def list_appointments_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
-    requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
+    requesting_user: Annotated[User, Depends(get_current_user_from_db)],
     db: Annotated[Session, Depends(get_db)],
     professional_id: Optional[UUID] = Query(None, description="Filter by professional ID."),
     client_id: Optional[UUID] = Query(None, description="Filter by client ID."),
@@ -169,9 +163,9 @@ def list_appointments_endpoint(
     limit: int = Query(100, ge=1, le=200, description="Number of items to return.")
 ):
     # The service function get_appointments handles role-based filtering internally.
+    # db session already has tenant context from middleware
     appointments = appointments_services.get_appointments(
         db=db,
-        # tenant_id=requesting_user.tenant_id, # Argument removed
         requesting_user=requesting_user,
         professional_id=professional_id,
         client_id=client_id,
@@ -533,7 +527,6 @@ def process_appointment_payment_endpoint(
     summary="Get a specific appointment by its ID."
 )
 def get_appointment_by_id_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to retrieve.")
@@ -556,7 +549,6 @@ def get_appointment_by_id_endpoint(
     summary="Cancel an appointment."
 )
 def cancel_appointment_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to cancel."),
@@ -578,7 +570,6 @@ def cancel_appointment_endpoint(
     summary="Reschedule an appointment."
 )
 def reschedule_appointment_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Use get_current_user_from_db to get actual User object
     db: Annotated[Session, Depends(get_db)],
     payload: AppointmentReschedulePayload = Body(...),
@@ -601,7 +592,6 @@ def reschedule_appointment_endpoint(
     summary="Mark an appointment as completed."
 )
 def complete_appointment_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     # This dependency ensures only specified roles can attempt this. Service layer does finer checks.
     requesting_user: Annotated[User, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))], # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)],
@@ -621,7 +611,6 @@ def complete_appointment_endpoint(
     summary="Mark an appointment as No Show."
 )
 def mark_appointment_as_no_show_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     requesting_user: Annotated[User, Depends(require_role([UserRole.PROFISSIONAL, UserRole.ATENDENTE, UserRole.GESTOR]))], # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)],
     appointment_id: UUID = Path(..., description="ID of the appointment to mark as No Show.")
@@ -641,7 +630,6 @@ def mark_appointment_as_no_show_endpoint(
     summary="Update appointment details (e.g., notes, client info, time, services)."
 )
 def update_appointment_details_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     appointment_id: UUID,
     update_data: AppointmentUpdate,
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Updated UserTenant to User
@@ -662,7 +650,6 @@ def update_appointment_details_endpoint(
     summary="Update appointment with multiple services (creates one appointment per service)."
 )
 def update_appointment_multiple_services_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     appointment_id: UUID,
     requesting_user: Annotated[User, Depends(get_current_user_from_db)], # Updated UserTenant to User
     db: Annotated[Session, Depends(get_db)],
@@ -700,7 +687,6 @@ def update_appointment_multiple_services_endpoint(
     summary="Get available professionals for multiple services on a specific date."
 )
 def get_available_professionals_for_wizard_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_ids: List[UUID] = Query(..., description="List of service IDs"),
     target_date: date = Query(..., description="Target date for availability (YYYY-MM-DD)", alias="date"),
     requesting_user: Annotated[User, Depends(get_current_user_from_db)] = None,
@@ -722,7 +708,6 @@ def get_available_professionals_for_wizard_endpoint(
     summary="Get available time slots for multiple services."
 )
 def get_multi_service_availability_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_ids: List[UUID] = Query(..., description="List of service IDs"),
     target_date: date = Query(..., description="Target date for availability (YYYY-MM-DD)", alias="date"),
     professionals_requested: int = Query(default=1, ge=1, le=3, description="Number of professionals requested"),
@@ -753,7 +738,6 @@ def get_multi_service_availability_endpoint(
     summary="Create a multi-service appointment booking."
 )
 def create_multi_service_booking_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     booking_data: MultiServiceBookingRequest,
     requesting_user: Annotated[User, Depends(get_current_user_from_db)],
     db: Annotated[Session, Depends(get_db)]
@@ -775,7 +759,6 @@ def create_multi_service_booking_endpoint(
     summary="Get dates that have availability for the specified services."
 )
 def get_available_dates_for_services_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_ids: List[UUID] = Query(..., description="List of service IDs"),
     year: int = Query(..., description="Year to check"),
     month: int = Query(..., description="Month to check (1-12)"),
@@ -800,7 +783,6 @@ def get_available_dates_for_services_endpoint(
     summary="OPTIMIZED: Get dates with availability for calendar display (fast version)"
 )
 def get_available_dates_for_calendar_endpoint(
-    tenant_slug: Annotated[str, Path(description="Tenant identifier")],
     service_ids: List[UUID] = Query(..., description="List of service IDs"),
     year: int = Query(..., description="Year to check"),
     month: int = Query(..., description="Month to check (1-12)"),

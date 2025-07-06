@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useNavigation } from '../shared/hooks/useNavigation'
+import { ROUTES } from '../shared/navigation'
 import { 
   ArrowLeft, 
   Edit, 
@@ -22,8 +24,8 @@ import LabelChip from '../components/labels/LabelChip'
 import { formatCpf, formatAddressForDisplay } from '../utils/brazilianUtils'
 
 const ClientDetailPage = () => {
-  const { clientId, tenantSlug } = useParams()
-  const navigate = useNavigate()
+  const { clientId } = useParams()
+  const { navigate } = useNavigation()
   const { hasRole } = useAuthStore()
   
   // State
@@ -81,7 +83,7 @@ const ClientDetailPage = () => {
       const success = await clientService.deleteClient(clientId)
       
       if (success) {
-        navigate(`/${tenantSlug}/professional/clients`, { 
+        navigate(ROUTES.PROFESSIONAL.CLIENTS, { 
           state: { message: 'Cliente excluído com sucesso' }
         })
       } else {
@@ -219,7 +221,7 @@ const ClientDetailPage = () => {
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Erro</h2>
         <p className="text-gray-600 text-center mb-6">{error}</p>
         <button
-          onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
+          onClick={() => navigate(ROUTES.PROFESSIONAL.CLIENTS)}
           className="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold"
         >
           Voltar para Clientes
@@ -235,7 +237,7 @@ const ClientDetailPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
-              onClick={() => navigate(`/${tenantSlug}/professional/clients`)}
+              onClick={() => navigate(ROUTES.PROFESSIONAL.CLIENTS)}
               className="mr-3 p-2 rounded-xl hover:bg-gray-100"
             >
               <ArrowLeft size={20} className="text-gray-600" />
@@ -249,7 +251,7 @@ const ClientDetailPage = () => {
           {canEditClient && (
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => navigate(`/${tenantSlug}/professional/clients/${clientId}/edit`)}
+                onClick={() => navigate(ROUTES.PROFESSIONAL.CLIENT_EDIT(clientId))}
                 className="p-2 rounded-xl bg-gray-100"
               >
                 <Edit size={18} className="text-gray-600" />

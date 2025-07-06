@@ -14,11 +14,37 @@ import {
   Menu,
   Kanban
 } from 'lucide-react';
+import { getTenantInfo } from '../utils/apiHelpers';
 
 const ProfessionalBottomNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { tenantSlug } = useParams();
+
+  // Get tenant info to determine URL structure
+  const tenantInfo = getTenantInfo();
+  const useSlugInUrl = tenantInfo?.method === 'slug';
+  const currentTenantSlug = tenantSlug || tenantInfo?.slug;
+
+  // Helper function to build routes based on tenant type
+  const buildRoute = (path) => {
+    if (useSlugInUrl && currentTenantSlug) {
+      return `/${currentTenantSlug}${path}`;
+    }
+    return path;
+  };
+
+  // Helper function to check if route is active
+  const isRouteActive = (path) => {
+    const targetRoute = buildRoute(path);
+    return location.pathname === targetRoute;
+  };
+
+  // Helper function to check if route starts with path
+  const isRouteStartsWith = (path) => {
+    const targetRoute = buildRoute(path);
+    return location.pathname.startsWith(targetRoute);
+  };
 
   // Navigation items for professional interface
   const navigationItems = [
@@ -26,36 +52,36 @@ const ProfessionalBottomNavigation = () => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: `/${tenantSlug}/professional/dashboard`,
-      isActive: location.pathname === `/${tenantSlug}/professional/dashboard`
+      path: buildRoute('/professional/dashboard'),
+      isActive: isRouteActive('/professional/dashboard')
     },
     {
       id: 'kanban',
       label: 'Atendimentos',
       icon: Kanban,
-      path: `/${tenantSlug}/kanban`,
-      isActive: location.pathname === `/${tenantSlug}/kanban` || location.pathname === `/${tenantSlug}/professional/kanban`
+      path: buildRoute('/kanban'),
+      isActive: isRouteActive('/kanban') || isRouteActive('/professional/kanban')
     },
     {
       id: 'agenda',
       label: 'Agenda',
       icon: Calendar,
-      path: `/${tenantSlug}/professional/agenda`,
-      isActive: location.pathname === `/${tenantSlug}/professional/agenda`
+      path: buildRoute('/professional/agenda'),
+      isActive: isRouteActive('/professional/agenda')
     },
     {
       id: 'clients',
       label: 'Clientes',
       icon: Users,
-      path: `/${tenantSlug}/professional/clients`,
-      isActive: location.pathname.startsWith(`/${tenantSlug}/professional/clients`)
+      path: buildRoute('/professional/clients'),
+      isActive: isRouteStartsWith('/professional/clients')
     },
     {
       id: 'menu',
       label: 'Menu',
       icon: Menu,
-      path: `/${tenantSlug}/professional/menu`,
-      isActive: location.pathname === `/${tenantSlug}/professional/menu`
+      path: buildRoute('/professional/menu'),
+      isActive: isRouteActive('/professional/menu')
     }
     // Future expansion items (commented for now):
     // {

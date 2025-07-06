@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
+import { useNavigation } from '../../shared/hooks/useNavigation';
+import { ROUTES } from '../../shared/navigation';
 import {
   Card,
   CardHeader,
@@ -273,8 +275,8 @@ const RichTextEditor = ({ value, onChange, placeholder, error }) => {
 
 
 export default function ServiceForm() {
-  const navigate = useNavigate();
-  const { serviceId, tenantSlug } = useParams();
+  const { navigate } = useNavigation();
+  const { serviceId } = useParams();
   const location = useLocation();
   const isEdit = Boolean(serviceId);
   
@@ -320,7 +322,7 @@ export default function ServiceForm() {
     } else if (categoryIdFromUrl) {
       loadCategory();
     } else {
-      navigate(`/${tenantSlug}/services/list`);
+      navigate(ROUTES.SERVICES.LIST);
     }
   }, [serviceId, categoryIdFromUrl]);
   
@@ -411,7 +413,7 @@ export default function ServiceForm() {
     } catch (error) {
       console.error('Erro ao carregar serviço:', error);
       showAlert('Erro ao carregar dados do serviço', 'error');
-      navigate(`/${tenantSlug}/services/list`);
+      navigate(ROUTES.SERVICES.LIST);
     } finally {
       setIsLoading(false);
     }
@@ -430,7 +432,7 @@ export default function ServiceForm() {
     } catch (error) {
       console.error('Erro ao carregar categoria:', error);
       showAlert('Erro ao carregar categoria', 'error');
-      navigate(`/${tenantSlug}/services/list`);
+      navigate(ROUTES.SERVICES.LIST);
     }
   };
   
@@ -642,7 +644,7 @@ export default function ServiceForm() {
         showAlert('Serviço salvo, mas houve erro ao salvar requisitos de estação', 'warning');
       }
       
-      navigate(`/${tenantSlug}/services/list`);
+      navigate(ROUTES.SERVICES.LIST);
     } catch (error) {
       console.error('Erro ao salvar serviço:', error);
       if (error.response?.data?.detail) {
@@ -659,13 +661,13 @@ export default function ServiceForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate(`/${tenantSlug}/services/list`);
+      navigate(ROUTES.SERVICES.LIST);
     }
   };
   
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate(`/${tenantSlug}/services/list`);
+    navigate(ROUTES.SERVICES.LIST);
   };
   
   if (isLoading) {

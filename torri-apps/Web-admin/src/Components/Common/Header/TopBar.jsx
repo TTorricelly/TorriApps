@@ -3,11 +3,26 @@ import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../../stores/auth';
 import { useTenantStore } from '../../../stores/tenant';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getTenantInfo } from '../../../Utils/apiHelpers';
 
 export default function TopBar() {
   const { userEmail, clearAuth, tenantData, userData, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
+  
+  // Get tenant info to determine URL structure
+  const tenantInfo = getTenantInfo();
+  const useSlugInUrl = tenantInfo?.method === 'slug';
+  const currentTenantSlug = tenantSlug || tenantInfo?.slug;
+  
+  // Helper function to build routes based on tenant type
+  const buildRoute = (path) => {
+    if (useSlugInUrl && currentTenantSlug) {
+      return `/${currentTenantSlug}${path}`;
+    }
+    return path;
+  };
   
   // Use tenant data from auth store (no API call needed)
   const displayTenantName = () => {
@@ -25,7 +40,7 @@ export default function TopBar() {
     // Clear tenant data on logout
     const { clearTenant } = useTenantStore.getState();
     clearTenant();
-    navigate('/login');
+    navigate(buildRoute('/login'));
   };
 
   const handleProfile = () => {

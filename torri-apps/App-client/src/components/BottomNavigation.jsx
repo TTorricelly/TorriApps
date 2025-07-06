@@ -7,6 +7,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Home, ShoppingCart, Calendar, User } from 'lucide-react';
 import useServicesStore from '../stores/servicesStore';
+import { getTenantInfo } from '../utils/apiHelpers';
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -14,38 +15,40 @@ const BottomNavigation = () => {
   const { tenantSlug } = useParams();
   const { selectedServices } = useServicesStore();
 
-  // Navigation items (identical to mobile)
-  const navItems = [
-    {
-      key: 'home',
-      label: 'Início',
-      icon: Home,
-      route: `/${tenantSlug}/dashboard`,
-      isActive: location.pathname === `/${tenantSlug}/dashboard`
-    },
-    {
-      key: 'services',
-      label: 'Serviços',
-      icon: ShoppingCart,
-      route: `/${tenantSlug}/services`,
-      isActive: location.pathname === `/${tenantSlug}/services`,
-      badge: selectedServices.length > 0 ? selectedServices.length : null
-    },
-    {
-      key: 'appointments',
-      label: 'Agendamentos',
-      icon: Calendar,
-      route: `/${tenantSlug}/appointments`,
-      isActive: location.pathname === `/${tenantSlug}/appointments`
-    },
-    {
-      key: 'profile',
-      label: 'Perfil',
-      icon: User,
-      route: `/${tenantSlug}/profile`,
-      isActive: location.pathname === `/${tenantSlug}/profile`
+  // Get tenant info to determine URL structure
+  const tenantInfo = getTenantInfo();
+  const useSlugInUrl = tenantInfo?.method === 'slug';
+  const currentTenantSlug = tenantSlug || tenantInfo?.slug;
+
+  // Helper function to build routes based on tenant type
+  const buildRoute = (path) => {
+    if (useSlugInUrl && currentTenantSlug) {
+      return `/${currentTenantSlug}${path}`;
     }
-  ];
+    return path;
+  };
+
+  // Helper function to check if route is active
+  const isRouteActive = (path) => {
+    const targetRoute = buildRoute(path);
+    return location.pathname === targetRoute;
+  };
+
+  // Icon mapping
+  const iconMap = {
+    'home': Home,
+    'services': ShoppingCart,
+    'appointments': Calendar,
+    'profile': User,
+  };
+
+  // Navigation items from config with icons and state
+  const navItems = BOTTOM_NAV_CONFIG.CLIENT.map(item => ({
+    ...item,
+    icon: iconMap[item.key] || User,
+    isActive: isActive(item.route),
+    badge: item.key === 'services' && selectedServices.length > 0 ? selectedServices.length : null
+  }));
 
   const handleNavigation = (route) => {
     navigate(route);

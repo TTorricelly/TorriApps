@@ -67,12 +67,54 @@ export const ensureArray = (data, entityName = 'items') => {
 };
 
 /**
+ * Extract tenant information from current URL or domain
+ * @returns {object|null} Tenant info object with method and identifier
+ */
+export const getTenantInfo = () => {
+  const hostname = window.location.hostname.toLowerCase();
+  const path = window.location.pathname;
+  
+  // Check if we're on a custom domain (not the main domain)
+  if (hostname && hostname !== 'vervio.com.br' && !hostname.startsWith('localhost')) {
+    console.log(`DEBUG: Detected domain-based tenant '${hostname}'`);
+    return {
+      method: 'domain',
+      domain: hostname,
+      slug: null // Domain-based tenants don't need slug in URLs
+    };
+  }
+  
+  // For slug-based tenants on main domain, first path segment is always the tenant slug
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    console.log(`DEBUG: Detected slug-based tenant '${segments[0]}' from URL: ${path}`);
+    return {
+      method: 'slug',
+      domain: null,
+      slug: segments[0]
+    };
+  }
+  
+  console.log(`DEBUG: No tenant detected from URL or domain`);
+  return null;
+};
+
+/**
+ * Extract tenant slug from current URL (legacy compatibility)
+ * @returns {string|null} Tenant slug or null if not found
+ */
+export const getTenantSlugFromUrl = () => {
+  const tenantInfo = getTenantInfo();
+  return tenantInfo?.slug || null;
+};
+
+/**
  * Build API endpoint URL with version prefix and tenant context
  * @param {string} endpoint - API endpoint
  * @param {string} version - API version (default: v1)
  * @param {Object} options - Options object
  * @param {boolean} options.isPublic - Force public endpoint (no tenant context)
- * @param {string} options.tenantSlug - Tenant slug for tenant-aware endpoints
+ * @param {string} options.tenantSlug - Override tenant slug (auto-detected if not provided)
  * @returns {string} Full API endpoint
  */
 export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
@@ -83,27 +125,22 @@ export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
     return `api/${version}/${cleanEndpoint}`;
   }
   
-  const currentTenantSlug = tenantSlug || getTenantSlugFromUrl();
-  if (!currentTenantSlug) {
-    throw new Error('Tenant slug is required for API calls');
+  // Get tenant info to determine how to build the URL
+  const tenantInfo = getTenantInfo();
+  
+  if (tenantInfo) {
+    if (tenantInfo.method === 'domain') {
+      // Domain-based tenant: clean URLs without slug
+      return `api/${version}/${cleanEndpoint}`;
+    } else if (tenantInfo.method === 'slug') {
+      // Slug-based tenant: include slug in URL for backward compatibility
+      const slug = tenantSlug || tenantInfo.slug;
+      return `api/${version}/${slug}/${cleanEndpoint}`;
+    }
   }
   
-  return `api/${version}/${currentTenantSlug}/${cleanEndpoint}`;
-};
-
-/**
- * Extract tenant slug from current URL
- * @returns {string|null} Tenant slug or null if not found
- */
-const getTenantSlugFromUrl = () => {
-  const path = window.location.pathname;
-  const segments = path.split('/').filter(Boolean);
-  
-  if (segments.length > 0 && !['login', 'dashboard', 'services', 'appointments', 'profile', 'professional'].includes(segments[0])) {
-    return segments[0];
-  }
-  
-  return null;
+  // Fallback for when no tenant is detected
+  throw new Error('Tenant context is required for API calls');
 };
 
 /**

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavigation } from '../../shared/hooks/useNavigation';
+import { ROUTES } from '../../shared/navigation';
 import {
   Card,
   CardHeader,
@@ -208,8 +210,8 @@ const UserDataForm = ({
 };
 
 function UserForm() {
-  const navigate = useNavigate();
-  const { userId, tenantSlug } = useParams();
+  const { navigate } = useNavigation();
+  const { userId } = useParams();
   const isEditMode = Boolean(userId);
 
   // Form state
@@ -264,12 +266,12 @@ function UserForm() {
         setHasUnsavedChanges(false);
       } else {
         showAlert('Usuário não encontrado', 'error');
-        navigate(`/${tenantSlug}/settings/users`);
+        navigate(ROUTES.USERS.LIST);
       }
     } catch (error) {
       console.error('Error loading user:', error);
       showAlert('Erro ao carregar dados do usuário', 'error');
-      navigate(`/${tenantSlug}/settings/users`);
+      navigate(ROUTES.USERS.LIST);
     } finally {
       setIsLoading(false);
     }
@@ -363,7 +365,7 @@ function UserForm() {
         
         // Navigate back after a short delay
         setTimeout(() => {
-          navigate(`/${tenantSlug}/settings/users`);
+          navigate(ROUTES.USERS.LIST);
         }, 1500);
       } else {
         showAlert('Erro ao salvar usuário', 'error');
@@ -380,13 +382,13 @@ function UserForm() {
     if (hasUnsavedChanges) {
       setCancelDialog(true);
     } else {
-      navigate(`/${tenantSlug}/settings/users`);
+      navigate(ROUTES.USERS.LIST);
     }
   };
 
   const confirmCancel = () => {
     setCancelDialog(false);
-    navigate(`/${tenantSlug}/settings/users`);
+    navigate(ROUTES.USERS.LIST);
   };
 
   if (isLoading) {
