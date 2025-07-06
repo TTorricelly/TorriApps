@@ -21,7 +21,7 @@ import labelService from '../services/labelService';
 import { areLabelsEqual, extractLabelIds } from '../utils/labelUtils';
 
 const EditProfilePage = () => {
-  const { navigate } = useNavigation();
+  const { navigate, navigateBack } = useNavigation();
   const { user, setProfile } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isLabelSelectorOpen, setIsLabelSelectorOpen] = useState(false);
@@ -114,7 +114,7 @@ const EditProfilePage = () => {
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
       <div className="flex items-center p-4 bg-white border-b border-gray-200">
-        <button onClick={() => navigate(-1)} className="p-2">
+        <button onClick={() => navigateBack(ROUTES.PROFILE)} className="p-2">
           <ArrowLeft size={24} className="text-gray-600" />
         </button>
         <h1 className="text-lg font-bold text-gray-800 ml-4">Editar Perfil</h1>

@@ -139,22 +139,31 @@ class TenantMiddleware(BaseHTTPMiddleware):
         return False
     
     def _extract_tenant_info(self, request: Request) -> Optional[dict]:
-        """Extract tenant information from domain or URL slug."""
-        # First try to get tenant from custom domain
-        host = request.headers.get('host', '').lower()
-        if host:
-            # Remove port if present
-            domain = host.split(':')[0]
-            
-            # Check if it's not the main domain (vervio.com.br)
-            if domain and domain != 'vervio.com.br' and not domain.startswith('localhost'):
-                return {
-                    'method': 'domain',
-                    'domain': domain,
-                    'slug': None  # Will be set from database lookup
-                }
+        """Extract tenant information from frontend origin or URL slug."""
+        # Option 1: Domain-based tenant (from frontend origin)
+        origin = request.headers.get('origin', '').lower()
+        referer = request.headers.get('referer', '').lower()
         
-        # Fallback to URL slug extraction
+        # Try origin first, then referer as fallback
+        frontend_url = origin or referer
+        if frontend_url:
+            # Extract domain from frontend URL
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(frontend_url)
+                domain = parsed.hostname
+                
+                # Check if it's a domain-based tenant (not main vervio domains)
+                if domain and domain != 'vervio.com.br' and not domain.startswith('app.vervio.com.br') and not domain.startswith('admin.vervio.com.br') and not domain.startswith('localhost'):
+                    return {
+                        'method': 'domain',
+                        'domain': domain,
+                        'slug': None  # Will be set from database lookup
+                    }
+            except Exception:
+                pass
+        
+        # Option 2: Slug-based tenant (from URL path)
         tenant_slug = self._extract_tenant_slug(request.url.path)
         if tenant_slug:
             return {
