@@ -34,13 +34,14 @@ class CommissionService:
     def __init__(self, db: Session):
         self.db = db
     
-    def create_commission_for_appointment(self, appointment_id: UUID) -> Optional[Commission]:
+    def create_commission_for_appointment(self, appointment_id: UUID, discounted_price: Optional[Decimal] = None) -> Optional[Commission]:
         """
         Creates a commission record for a completed appointment.
         Called automatically when appointment status changes to COMPLETED.
         
         Args:
             appointment_id: UUID of the completed appointment
+            discounted_price: Optional discounted price after payment processing (used if setting allows)
             
         Returns:
             Commission object if created successfully, None if appointment not found or commission already exists
@@ -68,10 +69,20 @@ class CommissionService:
             if not service or service.commission_percentage is None:
                 return None
                 
+            # Determine which price to use for commission calculation based on setting
+            from Modules.Settings.service import get_commission_on_discounted_price
+            use_discounted_price = get_commission_on_discounted_price(self.db)
+            
+            # Use discounted price if setting is enabled and discounted_price is provided
+            if use_discounted_price and discounted_price is not None:
+                calculation_price = discounted_price
+            else:
+                calculation_price = appointment.price_at_booking
+            
             # Calculate commission value with validation
             try:
                 commission_value = self.calculate_commission_value(
-                    appointment.price_at_booking, 
+                    calculation_price, 
                     service.commission_percentage
                 )
             except ValueError as e:
@@ -83,7 +94,7 @@ class CommissionService:
             commission = Commission(
                 professional_id=appointment.professional_id,
                 appointment_id=appointment_id,
-                service_price=appointment.price_at_booking,
+                service_price=calculation_price,  # Use the price that was actually used for calculation
                 commission_percentage=service.commission_percentage,
                 calculated_value=commission_value,
                 payment_status=CommissionPaymentStatus.PENDING

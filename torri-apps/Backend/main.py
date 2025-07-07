@@ -19,6 +19,7 @@ from Modules.Settings.routes import router as settings_router
 from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
 from Modules.Labels.routes import router as labels_router
+from Modules.Payments.routes import router as payments_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
 import Modules.Payments.models  # Import Payment models to register them
@@ -92,6 +93,7 @@ app.include_router(company_router, prefix=f"{API_V1_PREFIX}/company", tags=["Com
 app.include_router(commissions_router, prefix=f"{API_V1_PREFIX}/commissions", tags=["Commissions Management (Tenant)"])
 app.include_router(users_router, prefix=f"{API_V1_PREFIX}/users", tags=["Users Management (Tenant)"])
 app.include_router(labels_router, prefix=f"{API_V1_PREFIX}/labels", tags=["Labels Management (Tenant)"])
+app.include_router(payments_router, prefix=f"{API_V1_PREFIX}/payments", tags=["Payments Management (Tenant)"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

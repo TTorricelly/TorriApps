@@ -556,6 +556,7 @@ def process_appointment_payment(
 ) -> Dict[str, Any]:
     """
     Process payment for multiple appointment groups.
+    Follows Single Responsibility Principle by delegating payment creation to PaymentService.
     
     Args:
         db: Database session
@@ -565,6 +566,9 @@ def process_appointment_payment(
     Returns:
         Payment processing result
     """
+    from Modules.Payments.services import create_payment_service
+    from decimal import Decimal
+    
     # Get all appointment groups to be paid
     groups = db.query(AppointmentGroup).filter(
         AppointmentGroup.id.in_(payment_data.group_ids)
@@ -578,8 +582,30 @@ def process_appointment_payment(
     if abs(float(payment_data.subtotal) - float(expected_subtotal)) > 0.01:
         raise ValueError(f"Payment subtotal {payment_data.subtotal} does not match expected {expected_subtotal}")
     
-    # Generate payment ID
-    payment_id = f"pay_{int(datetime.now().timestamp())}_{len(payment_data.group_ids)}"
+    # Get client ID from first group
+    client_id = groups[0].client_id
+    
+    # Create payment record using PaymentService (following Dependency Injection)
+    payment_service = create_payment_service(db)
+    try:
+        payment_record = payment_service.create_payment_from_checkout(
+            client_id=client_id,
+            group_ids=payment_data.group_ids,
+            subtotal=Decimal(str(payment_data.subtotal)),
+            discount_amount=Decimal(str(payment_data.discount_amount)),
+            tip_amount=Decimal(str(payment_data.tip_amount)),
+            total_amount=Decimal(str(payment_data.total_amount)),
+            payment_method=payment_data.payment_method,
+            notes=f"Checkout payment for {len(payment_data.group_ids)} appointment group(s)"
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise ValueError(f"Failed to create payment record: {str(e)}")
+    
+    # Calculate total original price across all groups for proportional discount calculation
+    total_original_price = sum([group.total_price for group in groups])
+    discount_per_unit = Decimal(str(payment_data.discount_amount)) / total_original_price if total_original_price > 0 else Decimal('0')
     
     # Update all groups to COMPLETED status
     for group in groups:
@@ -596,22 +622,29 @@ def process_appointment_payment(
             appointment.paid_manually = True
             appointment.updated_at = datetime.utcnow()
             
-            # Create commission for each completed appointment
+            # Calculate proportional discount for this appointment
+            appointment_original_price = appointment.price_at_booking or Decimal('0')
+            appointment_discount = appointment_original_price * discount_per_unit
+            discounted_price = appointment_original_price - appointment_discount
+            
+            # Create commission for each completed appointment with discounted price
             try:
                 from Modules.Commissions.services import CommissionService
                 commission_service = CommissionService(db)
-                commission_service.create_commission_for_appointment(appointment.id)
+                commission_service.create_commission_for_appointment(
+                    appointment.id, 
+                    discounted_price=discounted_price
+                )
             except Exception as e:
                 # Log the error but don't fail the payment process
                 print(f"Warning: Failed to create commission for appointment {appointment.id}: {str(e)}")
     
-    # TODO: Here you would integrate with a real payment processor
-    # For now, we just mark as completed for cash/manual payments
-    
+    # Commit all changes (payment record + appointment status updates)
     db.commit()
     
     return {
-        'payment_id': payment_id,
+        'payment_id': payment_record.payment_id,
+        'payment_record_id': str(payment_record.id),
         'group_ids': [str(group_id) for group_id in payment_data.group_ids],
         'total_amount': float(payment_data.total_amount),
         'payment_method': payment_data.payment_method,

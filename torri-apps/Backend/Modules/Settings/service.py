@@ -197,3 +197,19 @@ def set_default_pros_suggested(value: int, db: Session = None) -> AppSetting:
         data_type='integer',
         db=db
     )
+
+
+def get_commission_on_discounted_price(db: Session = None) -> bool:
+    """Get whether commissions should be calculated on discounted price vs original price."""
+    return SettingsService.get_setting('commission_on_discounted_price', default=False, db=db)
+
+
+def set_commission_on_discounted_price(value: bool, db: Session = None) -> AppSetting:
+    """Set whether commissions should be calculated on discounted price vs original price."""
+    return SettingsService.set_setting(
+        'commission_on_discounted_price', 
+        value, 
+        description="Calculate commissions on discounted price (true) or original service price (false)",
+        data_type='boolean',
+        db=db
+    )
