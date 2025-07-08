@@ -9,6 +9,7 @@ import { useNavigation } from '../shared/hooks/useNavigation';
 import { ROUTES } from '../shared/navigation';
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
 import ClientDetailsModal from '../components/ClientDetailsModal';
+import SchedulingWizardModal from '../components/SchedulingWizardModal';
 import { 
   Calendar, 
   ChevronLeft,
@@ -56,6 +57,9 @@ const ProfessionalAgendaPage = () => {
   // Client details modal state
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
+  
+  // Scheduling wizard modal state
+  const [showSchedulingWizard, setShowSchedulingWizard] = useState(false);
 
   // Professionals data from API
   const [professionals, setProfessionals] = useState([]);
@@ -320,6 +324,62 @@ const ProfessionalAgendaPage = () => {
   const handleCloseClientModal = () => {
     setShowClientModal(false);
     setSelectedAppointmentId(null);
+  };
+  
+  // Handle scheduling wizard modal
+  const handleOpenSchedulingWizard = () => {
+    setShowSchedulingWizard(true);
+  };
+  
+  const handleCloseSchedulingWizard = () => {
+    setShowSchedulingWizard(false);
+  };
+  
+  // Handle appointment creation callback
+  const handleAppointmentCreated = () => {
+    // Close the modal first
+    setShowSchedulingWizard(false);
+    
+    // Refresh schedule data after successful appointment creation
+    if (professionals.length > 0 && selectedDate) {
+      const dateString = formatDateForApi(selectedDate);
+      getDailySchedule(dateString).then(dailyScheduleData => {
+        const professionalsWithAppointments = professionals.map(professional => {
+          const professionalSchedule = dailyScheduleData?.professionals_schedule?.find(
+            p => p.professional_id === professional.id
+          );
+          
+          const transformedAppointments = (professionalSchedule?.appointments || []).map(apt => ({
+            id: apt.id,
+            clientName: apt.client_name || 'Cliente',
+            startTime: new Date(apt.start_time).toLocaleTimeString('en-US', { 
+              hour12: false, 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            endTime: apt.end_time ? new Date(apt.end_time).toLocaleTimeString('en-US', { 
+              hour12: false, 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }) : null,
+            duration: apt.duration_minutes || 60,
+            services: (apt.services || []).map(service => 
+              typeof service === 'string' ? service : service.name || service.service_name || 'Serviço'
+            ),
+            status: apt.status || 'SCHEDULED'
+          }));
+          
+          return {
+            ...professional,
+            appointments: transformedAppointments
+          };
+        });
+        
+        setScheduleData({ professionals: professionalsWithAppointments });
+      }).catch(error => {
+        console.error('Error refreshing schedule:', error);
+      });
+    }
   };
 
   // Get professional initials for avatar fallback
@@ -766,7 +826,10 @@ const ProfessionalAgendaPage = () => {
 
   // Render floating action button
   const renderFAB = () => (
-    <button className="fixed bottom-20 right-4 w-14 h-14 bg-pink-500 rounded-full shadow-lg flex items-center justify-center hover:bg-pink-600 transition-smooth z-30">
+    <button 
+      onClick={handleOpenSchedulingWizard}
+      className="fixed bottom-20 right-4 w-14 h-14 bg-pink-500 rounded-full shadow-lg flex items-center justify-center hover:bg-pink-600 transition-smooth z-30"
+    >
       <Plus size={24} className="text-white" />
     </button>
   );
@@ -786,6 +849,14 @@ const ProfessionalAgendaPage = () => {
         isOpen={showClientModal}
         onClose={handleCloseClientModal}
         appointmentId={selectedAppointmentId}
+      />
+      
+      {/* Scheduling Wizard Modal */}
+      <SchedulingWizardModal
+        isVisible={showSchedulingWizard}
+        onClose={handleCloseSchedulingWizard}
+        selectedServices={[]} // Empty array initially, let user select services in wizard
+        onAppointmentCreated={handleAppointmentCreated}
       />
     </div>
   );

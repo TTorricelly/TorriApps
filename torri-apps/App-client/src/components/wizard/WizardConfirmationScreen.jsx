@@ -11,8 +11,10 @@ import { useWizardStore } from '../../stores/wizardStore';
 import { useAuthStore } from '../../stores/authStore';
 import useServicesStore from '../../stores/servicesStore';
 import { createMultiServiceBooking, buildBookingRequest } from '../../services/wizardApiService';
+import { createClient } from '../../services/clientService';
+import { ROUTES } from '../../shared/navigation';
 
-const WizardConfirmationScreen = () => {
+const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
   const [clientNotes, setClientNotes] = useState('');
@@ -22,6 +24,7 @@ const WizardConfirmationScreen = () => {
   const [error, setError] = useState(null);
 
   const {
+    clientData,
     selectedServices,
     selectedDate,
     selectedSlot,
@@ -37,7 +40,7 @@ const WizardConfirmationScreen = () => {
 
   // Set current step on mount (mobile behavior)
   useEffect(() => {
-    setCurrentStep(4);
+    setCurrentStep(6);
     console.log('[WizardConfirmationScreen] Component mounted, current state:', {
       selectedServices: selectedServices?.length,
       selectedDate,
@@ -115,8 +118,12 @@ const WizardConfirmationScreen = () => {
   // Handle booking confirmation
   const handleConfirmBooking = useCallback(async () => {
     if (!selectedSlot) {
-      // Mobile uses Alert.alert for errors - make it prominent
       alert('Erro: Nenhum horário selecionado.');
+      return;
+    }
+
+    if (!clientData.id && !clientData.name.trim()) {
+      alert('Erro: Nenhum cliente selecionado.');
       return;
     }
 
@@ -129,15 +136,46 @@ const WizardConfirmationScreen = () => {
     setError(null);
 
     try {
+      let clientId = clientData.id;
+
+      // Create new client if needed
+      if (!clientId && clientData.isNewClient && clientData.name.trim()) {
+        console.log('[WizardConfirmationScreen] Creating new client...', clientData);
+        
+        const newClientData = {
+          full_name: clientData.name.trim(),
+          nickname: clientData.nickname?.trim() || null,
+          phone: clientData.phone?.trim() || null,
+          email: clientData.email?.trim() || null,
+          cpf: clientData.cpf?.replace(/\D/g, '') || null,
+          address_cep: clientData.address_cep?.replace(/\D/g, '') || null,
+          address_street: clientData.address_street?.trim() || null,
+          address_number: clientData.address_number?.trim() || null,
+          address_complement: clientData.address_complement?.trim() || null,
+          address_neighborhood: clientData.address_neighborhood?.trim() || null,
+          address_city: clientData.address_city?.trim() || null,
+          address_state: clientData.address_state?.trim() || null,
+        };
+
+        const newClient = await createClient(newClientData);
+        clientId = newClient.id;
+        console.log('[WizardConfirmationScreen] New client created with ID:', clientId);
+      }
+
+      if (!clientId) {
+        alert('Erro: Não foi possível identificar o cliente.');
+        return;
+      }
+
       console.log('[WizardConfirmationScreen] Building booking request...', {
-        userId: user.id,
+        clientId,
         selectedDate,
         selectedSlot: selectedSlot?.id,
         clientNotes: clientNotes.trim() || null
       });
 
       const bookingRequest = buildBookingRequest(
-        user.id,
+        clientId,
         selectedDate,
         selectedSlot,
         clientNotes.trim() || null
@@ -166,6 +204,11 @@ const WizardConfirmationScreen = () => {
       // Clear local state
       setClientNotes('');
       
+      // Call the callback to refresh agenda data
+      if (onAppointmentCreated) {
+        onAppointmentCreated();
+      }
+      
     } catch (error) {
       console.error('[WizardConfirmationScreen] Booking error:', error);
       console.error('[WizardConfirmationScreen] Error details:', {
@@ -179,7 +222,7 @@ const WizardConfirmationScreen = () => {
     } finally {
       setIsBooking(false);
     }
-  }, [selectedSlot, user, selectedDate, clientNotes, selectedServices, resetWizard]);
+  }, [selectedSlot, user, selectedDate, clientNotes, selectedServices, clientData, resetWizard]);
 
   // Get unique professional count
   const getUniqueProfessionalCount = () => {
@@ -187,6 +230,36 @@ const WizardConfirmationScreen = () => {
     const uniqueProfessionals = new Set(selectedSlot.services.map(s => s.professional_id));
     return uniqueProfessionals.size;
   };
+
+  // Render client summary card
+  const renderClientCard = () => (
+    <div className="bg-white rounded-xl border border-gray-200 mb-4 shadow-sm">
+      <div className="flex items-center p-4">
+        <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+          <span className="text-sm">👤</span>
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 mb-1">Cliente</h3>
+          <p className="font-medium text-gray-900 mb-1">
+            {clientData.name || 'Cliente não identificado'}
+          </p>
+          <div className="space-y-1">
+            {clientData.phone && (
+              <p className="text-sm text-gray-500">{clientData.phone}</p>
+            )}
+            {clientData.email && (
+              <p className="text-sm text-gray-500">{clientData.email}</p>
+            )}
+            {clientData.isNewClient && (
+              <div className="inline-block bg-green-100 px-2 py-1 rounded-md">
+                <span className="text-xs font-medium text-green-800">Novo Cliente</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   // Render date/time summary card (mobile-exact compact design)
   const renderDateTimeCard = () => (
@@ -445,8 +518,8 @@ const WizardConfirmationScreen = () => {
             // Reset wizard state when user completes the flow
             resetWizard();
             
-            // Use React Router navigation to go to appointments page
-            navigate(`/${tenantSlug}/appointments`);
+            // Navigate back to professional agenda page
+            navigate(ROUTES.PROFESSIONAL.AGENDA);
           }}
           className="w-full py-[18px] bg-green-500 text-white rounded-2xl font-semibold text-base shadow-lg hover:bg-green-600 transition-smooth"
         >
@@ -490,6 +563,7 @@ const WizardConfirmationScreen = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="px-4 py-4">
+          {renderClientCard()}
           {renderDateTimeCard()}
           {renderServicesCard()}
           {renderClientNotesCard()}
@@ -504,7 +578,7 @@ const WizardConfirmationScreen = () => {
       {renderBookingButton()}
       
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .transition-smooth {
           transition: all 0.2s ease-in-out;
         }

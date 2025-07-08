@@ -15,8 +15,28 @@ export const useWizardStore = create(
       isLoading: false,
       error: null,
       
-      // Step 1: Date selection
+      // Step 1: Client selection
+      clientData: {
+        id: null,
+        name: '',
+        nickname: '',
+        phone: '',
+        email: '',
+        cpf: '',
+        address_cep: '',
+        address_street: '',
+        address_number: '',
+        address_complement: '',
+        address_neighborhood: '',
+        address_city: '',
+        address_state: '',
+        isNewClient: false
+      },
+      
+      // Step 2: Service selection
       selectedServices: [],
+      
+      // Step 3: Date selection
       selectedDate: null,
       availableDates: [],
       currentMonth: {
@@ -24,39 +44,43 @@ export const useWizardStore = create(
         month: new Date().getMonth() + 1
       },
       
-      // Step 2: Professional selection  
+      // Step 4: Professional selection  
       professionalsRequested: 1,
       maxParallelPros: 2,
       defaultProsRequested: 1,
       selectedProfessionals: [],
       availableProfessionals: [],
       
-      // Step 3: Time slot selection
+      // Step 5: Time slot selection
       availableSlots: [],
       selectedSlot: null,
       
-      // Step 4: Confirmation
+      // Step 6: Confirmation
       notes: '',
       isBooking: false,
       bookingResult: null,
 
-      // Step validation (identical to mobile)
+      // Step validation (updated for 6-step flow)
       canProceedToStep: (step) => {
         const state = get();
         switch (step) {
           case 1:
             return true;
           case 2:
-            return state.selectedServices.length > 0 && state.selectedDate !== null;
+            return state.clientData.id || state.clientData.name.trim();
           case 3:
+            return (state.clientData.id || state.clientData.name.trim()) && state.selectedServices.length > 0;
+          case 4:
+            return state.selectedServices.length > 0 && state.selectedDate !== null;
+          case 5:
             return (
               state.selectedServices.length > 0 &&
               state.selectedDate !== null &&
               state.selectedProfessionals.length === state.professionalsRequested &&
               state.selectedProfessionals.every(prof => prof !== null && prof !== undefined)
             );
-          case 4:
-            return state.selectedSlot !== null && state.canProceedToStep(3);
+          case 6:
+            return state.selectedSlot !== null && state.canProceedToStep(5);
           default:
             return false;
         }
@@ -66,7 +90,7 @@ export const useWizardStore = create(
       setCurrentStep: (step) => set({ currentStep: step }),
       
       goToNextStep: () => set((state) => ({ 
-        currentStep: Math.min(state.currentStep + 1, 4) 
+        currentStep: Math.min(state.currentStep + 1, 6) 
       })),
       
       goToPreviousStep: () => set((state) => ({ 
@@ -78,7 +102,13 @@ export const useWizardStore = create(
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
 
-      // Actions - Services (Step 1)
+      // Actions - Client Data (Step 1)
+      setClientData: (clientData) => set({ 
+        clientData: clientData,
+        error: null 
+      }),
+
+      // Actions - Services (Step 2)
       setSelectedServices: (services) => set({ 
         selectedServices: services,
         selectedDate: null,
@@ -90,7 +120,7 @@ export const useWizardStore = create(
         error: null
       }),
 
-      // Actions - Date Selection (Step 1)
+      // Actions - Date Selection (Step 3)
       setSelectedDate: (date) => set({ 
         selectedDate: date,
         selectedProfessionals: [],

@@ -7,12 +7,14 @@
 import React, { useEffect, useState } from 'react';
 import { useWizardStore } from '../stores/wizardStore';
 import WizardHeader from './WizardHeader';
+import WizardClientScreen from './wizard/WizardClientScreen';
+import WizardServiceScreen from './wizard/WizardServiceScreen';
 import WizardDateScreen from './wizard/WizardDateScreen';
 import WizardProfessionalsScreen from './wizard/WizardProfessionalsScreen';
 import WizardSlotsScreen from './wizard/WizardSlotsScreen';
 import WizardConfirmationScreen from './wizard/WizardConfirmationScreen';
 
-const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
+const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppointmentCreated }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   
   const {
@@ -23,19 +25,25 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
     canProceedToStep
   } = useWizardStore();
 
-  // Initialize wizard with services when modal opens
+  // Initialize wizard when modal opens
   useEffect(() => {
-    if (isVisible && selectedServices?.length > 0) {
-      const wizardServices = selectedServices.map(service => ({
-        id: service.id,
-        name: service.name,
-        duration_minutes: service.duration_minutes,
-        price: parseFloat(service.price),
-        parallelable: service.parallelable ?? false,
-        max_parallel_pros: service.max_parallel_pros ?? 1,
-      }));
-      
-      initializeWizard(wizardServices);
+    if (isVisible) {
+      if (selectedServices?.length > 0) {
+        // If services are pre-selected, skip to date selection
+        const wizardServices = selectedServices.map(service => ({
+          id: service.id,
+          name: service.name,
+          duration_minutes: service.duration_minutes,
+          price: parseFloat(service.price),
+          parallelable: service.parallelable ?? false,
+          max_parallel_pros: service.max_parallel_pros ?? 1,
+        }));
+        
+        initializeWizard(wizardServices);
+      } else {
+        // Start with empty wizard for service selection
+        initializeWizard([]);
+      }
     }
   }, [isVisible, selectedServices, initializeWizard]);
 
@@ -98,12 +106,16 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
   const getStepTitle = (step) => {
     switch (step) {
       case 1:
-        return 'Escolher data';
+        return 'Selecionar cliente';
       case 2:
-        return 'Escolher profissionais';
+        return 'Escolher serviços';
       case 3:
-        return 'Escolher horário';
+        return 'Escolher data';
       case 4:
+        return 'Escolher profissionais';
+      case 5:
+        return 'Escolher horário';
+      case 6:
         return 'Confirmar agendamento';
       default:
         return 'Agendamento';
@@ -114,13 +126,17 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return <WizardDateScreen />;
+        return <WizardClientScreen />;
       case 2:
-        return <WizardProfessionalsScreen />;
+        return <WizardServiceScreen />;
       case 3:
-        return <WizardSlotsScreen />;
+        return <WizardDateScreen />;
       case 4:
-        return <WizardConfirmationScreen />;
+        return <WizardProfessionalsScreen />;
+      case 5:
+        return <WizardSlotsScreen />;
+      case 6:
+        return <WizardConfirmationScreen onAppointmentCreated={onAppointmentCreated} />;
       default:
         return <div className="p-6"><p>Invalid step</p></div>;
     }
@@ -159,7 +175,7 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
           <WizardHeader
             title={getStepTitle(currentStep)}
             currentStep={currentStep}
-            totalSteps={4}
+            totalSteps={6}
             onBack={handleBack}
           />
 
@@ -171,7 +187,7 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices }) => {
       </div>
 
       {/* Custom Styles for smooth animations */}
-      <style jsx="true">{`
+      <style>{`
         .modal-enter {
           transform: translateY(100%);
         }

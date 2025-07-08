@@ -381,7 +381,7 @@ const WizardSlotsScreen = () => {
       {renderContinueButton()}
       
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
