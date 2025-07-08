@@ -74,7 +74,6 @@ const CheckoutDrawer = ({
           const session = await createMergedCheckoutSession(groupIds);
           setCheckoutSession(session);
         } catch (error) {
-          console.error('Failed to fetch checkout session:', error);
           setPaymentError('Erro ao carregar detalhes do checkout');
         }
       } else {
@@ -177,7 +176,6 @@ const CheckoutDrawer = ({
       }
       
     } catch (error) {
-      console.error('Failed to remove service:', error);
       setPaymentError('Erro ao remover serviço. Tente novamente.');
     }
   };
@@ -326,7 +324,6 @@ const CheckoutDrawer = ({
       onClose();
       
     } catch (error) {
-      console.error('[CheckoutDrawer] Payment processing error:', error);
       setPaymentError('Erro ao processar pagamento. Tente novamente.');
     } finally {
       setIsProcessingPayment(false);
@@ -350,7 +347,6 @@ const CheckoutDrawer = ({
         onGroupAdd(group);
       }
     } catch (error) {
-      console.error('[CheckoutDrawer] Error handling drop:', error);
     }
   };
   

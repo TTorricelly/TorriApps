@@ -73,7 +73,6 @@ const ClientsPage = () => {
       setTotalClients(response.total)
     } catch (error) {
       setError('Erro ao carregar clientes. Tente novamente.')
-      console.error('Failed to load clients:', error)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)

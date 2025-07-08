@@ -18,7 +18,6 @@ export const updateThemeColor = (color) => {
   // Update body background for status bar area
   document.body.style.backgroundColor = color;
   
-  console.log('🎨 Theme color updated to:', color);
 };
 
 /**

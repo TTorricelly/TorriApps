@@ -34,7 +34,6 @@ const LoginPage = () => {
           setCompanyName(companyInfo.name)
         }
       } catch (error) {
-        console.log('Failed to fetch company info, using default name:', error)
       }
     }
 

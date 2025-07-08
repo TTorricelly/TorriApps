@@ -20,7 +20,6 @@ const RoleDebugger = () => {
   }
 
   const switchRole = (newRole) => {
-    console.log(`[RoleDebugger] Switching role from ${getUserRole()} to ${newRole}`);
     setProfile({ role: newRole });
     
     // Navigate to appropriate dashboard based on new role

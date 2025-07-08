@@ -129,7 +129,6 @@ const HomePageInner = ({ navigation }, ref) => {
           const rawProfileData = await getUserProfile();
           setProfile(rawProfileData);
         } catch (error) {
-          console.error('[HomePage] Error fetching profile:', error);
           alert("Não foi possível carregar os detalhes do seu perfil.");
         } finally {
           setIsProfileLoading(false);
@@ -156,9 +155,7 @@ const HomePageInner = ({ navigation }, ref) => {
         });
         
         // Debug: Log category data to see image URLs
-        console.log('[HomePage] Fetched categories:', sortedData);
         sortedData.forEach(cat => {
-          console.log(`[HomePage] Category "${cat.name}":`, {
             id: cat.id,
             icon_url: cat.icon_url,
             processed_url: getFullImageUrl(cat.icon_url)
@@ -167,11 +164,9 @@ const HomePageInner = ({ navigation }, ref) => {
         
         setFetchedCategories(sortedData);
       } else {
-        console.warn("getCategories did not return an array:", data);
         setFetchedCategories([]);
       }
     } catch (err) {
-      console.error('[HomePage] Error fetching categories:', err);
       const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load categories.';
       setCategoryError(errorMessage);
       setFetchedCategories([]);
@@ -222,11 +217,9 @@ const HomePageInner = ({ navigation }, ref) => {
           max_parallel_pros: service.max_parallel_pros,
         })));
       } else {
-        console.warn("getServicesByCategory did not return an array:", data);
         setFetchedServices([]);
       }
     } catch (err) {
-      console.error(`[HomePage] Error fetching services for category ${categoryId}:`, err);
       const errorMessage = typeof err.message === 'string' ? err.message : 'Failed to load services for this category.';
       setServiceError(errorMessage);
       setFetchedServices([]);
@@ -389,7 +382,6 @@ const HomePageInner = ({ navigation }, ref) => {
                       alt={category.name}
                       className="w-16 h-16 rounded-full mb-4 object-cover"
                       onError={(e) => {
-                        console.log(`[HomePage] Image failed to load: ${e.target.src}`);
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'flex';
                       }}
@@ -415,8 +407,6 @@ const HomePageInner = ({ navigation }, ref) => {
 
   // Service cart footer component (identical to mobile pattern)
   const renderServiceCartFooter = () => {
-    console.log('[HomePage] renderServiceCartFooter - selectedServices:', selectedServices);
-    console.log('[HomePage] renderServiceCartFooter - selectedServices.length:', selectedServices.length);
     
     if (selectedServices.length === 0) return null;
     

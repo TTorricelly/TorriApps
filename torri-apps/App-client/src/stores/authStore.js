@@ -57,7 +57,6 @@ export const useAuthStore = create(
           return user
         } catch (error) {
           set({ isLoading: false })
-          console.error("Failed to decode token or store data:", error);
           throw new Error('Failed to process login token')
         }
       },
@@ -101,7 +100,6 @@ export const useAuthStore = create(
                 const parsedStorage = JSON.parse(authStorage);
                 token = parsedStorage.state?.token;
               } catch (error) {
-                console.warn('Failed to parse auth storage:', error);
               }
             }
           }
@@ -119,7 +117,6 @@ export const useAuthStore = create(
           
           // If token is valid but not in state, restore it
           if (!state.token) {
-            console.log('[AuthStore] Restoring valid token to state');
             
             // Apply the same role mapping as in login
             const roleMapping = {
@@ -155,7 +152,6 @@ export const useAuthStore = create(
           
           return true;
         } catch (error) {
-          console.error('[AuthStore] Invalid token, logging out:', error);
           state.logout();
           return false;
         }

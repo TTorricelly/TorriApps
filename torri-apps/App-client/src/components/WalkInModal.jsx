@@ -97,7 +97,6 @@ const lookupCep = async (cep) => {
       address_complement: data.complemento || ''
     };
   } catch (error) {
-    console.error('CEP lookup error:', error);
     return null;
   }
 };
@@ -355,7 +354,6 @@ const WalkInModal = ({
         setClientSearchResults([]);
       }
     } catch (err) {
-      console.error('Error searching clients:', err);
       setClientSearchResults([]);
     } finally {
       setSearchingClients(false);
@@ -737,7 +735,6 @@ const WalkInModal = ({
                   <button
                     type="button"
                     onClick={() => {
-                      console.log('🔄 Toggle clicked, showMoreFields was:', showMoreFields);
                       setShowMoreFields(!showMoreFields);
                     }}
                     className="text-pink-600 hover:text-pink-700 font-medium text-sm py-2 px-4 rounded-lg hover:bg-pink-50 transition-colors touch-manipulation"

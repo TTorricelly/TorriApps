@@ -52,7 +52,6 @@ const RoleBasedRoute = ({ children, allowedRoles, professionalOnly = false }) =>
     const inProfMode = currentMode === 'professional'
     
     if (!isProf || !inProfMode) {
-      console.log('[RoleBasedRoute] Professional-only route access denied:', {
         userRole: user?.role,
         isProfessional: isProf,
         currentMode,
@@ -68,7 +67,6 @@ const RoleBasedRoute = ({ children, allowedRoles, professionalOnly = false }) =>
   // For role-based routes, check actual user roles
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     // Debug logging for role mismatch
-    console.log('[RoleBasedRoute] Access denied:', {
       userRole: user?.role,
       allowedRoles,
       user: user
@@ -94,7 +92,6 @@ function App() {
 
   // Initialize tenant theme on app startup
   useEffect(() => {
-    initializeTenantTheme().catch(console.error)
   }, [])
 
   // Smart redirect based on user role and view mode

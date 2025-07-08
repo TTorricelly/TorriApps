@@ -58,7 +58,6 @@ const WizardSlotsScreen = () => {
       setAvailableSlots(slots);
       
     } catch (err) {
-      console.error('[WizardSlotsScreen] Error loading available slots:', err);
       setError('Erro ao carregar horários disponíveis. Tente novamente.');
     } finally {
       setLoading(false);

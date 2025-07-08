@@ -53,7 +53,6 @@ const lookupCep = async (cep) => {
       address_complement: data.complemento || ''
     };
   } catch (error) {
-    console.error('CEP lookup error:', error);
     return null;
   }
 };
@@ -104,7 +103,6 @@ const WizardClientScreen = () => {
       });
       setClientSearchResults(results.items || []);
     } catch (error) {
-      console.error('Error searching clients:', error);
       setError('Erro ao buscar clientes. Tente novamente.');
       setClientSearchResults([]);
     } finally {

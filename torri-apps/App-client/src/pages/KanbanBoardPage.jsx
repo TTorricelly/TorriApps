@@ -149,7 +149,6 @@ const KanbanBoardPage = () => {
       
     } catch (err) {
       // Silent failure - don't show errors to user for background loading
-      console.warn('[KanbanBoard] Service preloading failed (silent):', err);
     }
   }, []);
   
@@ -163,7 +162,6 @@ const KanbanBoardPage = () => {
       const data = await getAppointmentGroups(params);
       setAppointmentGroups(data || []);
     } catch (err) {
-      console.error('[KanbanBoard] Error loading appointment groups:', err);
       setError('Erro ao carregar agendamentos. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -235,7 +233,6 @@ const KanbanBoardPage = () => {
       );
       
     } catch (error) {
-      console.error('[KanbanBoard] Error updating appointment status:', error);
       showToast('Erro ao atualizar status do agendamento. Tente novamente.', 'error');
       // Optionally reload data to sync with server
       loadAppointmentGroups();
@@ -284,7 +281,6 @@ const KanbanBoardPage = () => {
       }
       
     } catch (error) {
-      console.error('[KanbanBoard] Error moving card:', error);
       
       // Error haptic feedback
       if (navigator.vibrate) {

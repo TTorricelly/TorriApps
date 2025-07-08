@@ -107,7 +107,6 @@ export const getServicesByCategory = async (categoryId) => {
             const images = await serviceImagesApi.getServiceImages(service.id);
             return { ...service, images };
           } catch (error) {
-            console.warn(`Failed to fetch images for service ${service.id}:`, error);
             return { ...service, images: [] };
           }
         })

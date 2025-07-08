@@ -8,7 +8,6 @@
  * @param {string} primaryColor - Hex color code
  */
 export const applySimpleTheme = (primaryColor) => {
-  console.log('🎨 Applying simple theme:', primaryColor);
   
   // Remove existing theme styles
   const existingStyle = document.getElementById('simple-theme-override');
@@ -77,7 +76,6 @@ export const applySimpleTheme = (primaryColor) => {
   // Update body background for status bar
   document.body.style.backgroundColor = primaryColor;
   
-  console.log('✅ Simple theme applied successfully');
 };
 
 /**

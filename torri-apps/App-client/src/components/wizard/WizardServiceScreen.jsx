@@ -66,7 +66,6 @@ const WizardServiceScreen = () => {
       
       setServices(allServices);
     } catch (error) {
-      console.error('Error loading services:', error);
       setError('Erro ao carregar serviços. Tente novamente.');
     } finally {
       setLoadingServices(false);

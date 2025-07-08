@@ -18,23 +18,17 @@ const ThemeCustomizer = ({ isOpen, onClose }) => {
   }, [currentTheme]);
 
   const handleColorChange = async (color) => {
-    console.log('🎨 Color changed:', color);
     setSelectedColor(color);
     try {
       await updatePrimaryColor(color);
-      console.log('✅ Color applied successfully');
     } catch (error) {
-      console.error('❌ Failed to apply color:', error);
     }
   };
 
   const handlePresetSelect = async (presetKey) => {
-    console.log('🎨 Preset selected:', presetKey);
     try {
       await applyPreset(presetKey);
-      console.log('✅ Preset applied successfully');
     } catch (error) {
-      console.error('❌ Failed to apply preset:', error);
     }
   };
 

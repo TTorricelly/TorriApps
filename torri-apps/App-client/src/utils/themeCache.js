@@ -37,7 +37,6 @@ export const getCachedTheme = () => {
     
     // Check version compatibility
     if (parsed.version !== CACHE_CONFIG.CACHE_VERSION) {
-      console.log('🗑️ Theme cache version mismatch, clearing cache');
       clearThemeCache();
       return null;
     }
@@ -47,15 +46,12 @@ export const getCachedTheme = () => {
     const age = now - parsed.timestamp;
     
     if (age > CACHE_CONFIG.THEME_TTL) {
-      console.log('🗑️ Theme cache expired, clearing cache');
       clearThemeCache();
       return null;
     }
 
-    console.log('✅ Using cached theme');
     return parsed.theme;
   } catch (error) {
-    console.warn('Failed to read theme cache:', error);
     clearThemeCache();
     return null;
   }
@@ -75,9 +71,7 @@ export const setCachedTheme = (theme) => {
     };
 
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    console.log('💾 Theme cached successfully');
   } catch (error) {
-    console.warn('Failed to cache theme:', error);
   }
 };
 
@@ -88,9 +82,7 @@ export const clearThemeCache = () => {
   try {
     const cacheKey = getTenantStorageKey('theme_cache');
     localStorage.removeItem(cacheKey);
-    console.log('🗑️ Theme cache cleared');
   } catch (error) {
-    console.warn('Failed to clear theme cache:', error);
   }
 };
 
@@ -137,7 +129,6 @@ export const memoryCache = new ThemeMemoryCache();
 export const clearAllThemeCaches = () => {
   memoryCache.clear();
   clearThemeCache();
-  console.log('🗑️ All theme caches cleared');
 };
 
 /**

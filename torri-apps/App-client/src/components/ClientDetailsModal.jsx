@@ -45,7 +45,6 @@ const ClientDetailsModal = ({ isOpen, onClose, appointmentId }) => {
       // Debug: Log current user info for troubleshooting
       const { useAuthStore } = await import('../stores/authStore');
       const currentUser = useAuthStore.getState().user;
-      console.log('🔍 Current user role:', currentUser?.role);
       
       // Get appointment details first
       const appointmentData = await getAppointmentDetails(appointmentId);
@@ -53,24 +52,18 @@ const ClientDetailsModal = ({ isOpen, onClose, appointmentId }) => {
       
       if (appointmentData?.client?.id) {
         // Get full client info and history in parallel
-        console.log('🔍 Attempting to load client data for ID:', appointmentData.client.id);
         
         try {
           const clientInfo = await getClientInfo(appointmentData.client.id);
-          console.log('✅ Client info loaded:', clientInfo);
           setClientData(clientInfo);
         } catch (clientError) {
-          console.error('❌ Error loading client info:', clientError);
-          console.log('🔄 Falling back to basic client info from appointment');
           setClientData(appointmentData.client);
         }
         
         try {
           const history = await getClientAppointmentHistory(appointmentData.client.id);
-          console.log('✅ Appointment history loaded:', history);
           setAppointmentHistory(history);
         } catch (historyError) {
-          console.error('❌ Error loading appointment history:', historyError);
           setAppointmentHistory([]);
         }
       } else if (appointmentData?.client) {
@@ -81,12 +74,10 @@ const ClientDetailsModal = ({ isOpen, onClose, appointmentId }) => {
           const history = await getClientAppointmentHistory(appointmentData.client.id);
           setAppointmentHistory(history);
         } catch (historyError) {
-          console.warn('Could not load appointment history:', historyError);
           setAppointmentHistory([]);
         }
       }
     } catch (err) {
-      console.error('Error loading client data:', err);
       setError('Não foi possível carregar os dados do cliente');
     } finally {
       setLoading(false);

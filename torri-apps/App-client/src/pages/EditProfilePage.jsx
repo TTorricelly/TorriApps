@@ -54,7 +54,6 @@ const EditProfilePage = () => {
       setSelectedLabels(prev => prev.filter(label => label.id !== labelToRemove.id));
       await labelService.removeLabelFromUser(user.id, labelToRemove.id);
     } catch (error) {
-      console.error('Error removing label:', error);
       // Revert on error
       setSelectedLabels(prev => [...prev, labelToRemove]);
       alert('Erro ao remover label. Tente novamente.');
@@ -98,7 +97,6 @@ const EditProfilePage = () => {
           updatedProfile.labels = selectedLabels;
         }
       } catch (error) {
-        console.error('Error updating labels:', error);
         alert('Perfil atualizado, mas houve erro ao salvar labels. Tente novamente.');
       }
       
@@ -109,7 +107,6 @@ const EditProfilePage = () => {
       navigate(ROUTES.PROFILE);
       
     } catch (error) {
-      console.error('Error saving profile:', error);
       alert(`Erro ao salvar perfil: ${error.message || 'Tente novamente.'}`);
     } finally {
       setIsSaving(false);

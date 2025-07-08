@@ -14,11 +14,9 @@ export const fetchTenantTheme = async () => {
   try {
     // Debug tenant info
     const tenantInfo = getTenantInfo();
-    console.log('🏢 Current tenant info:', tenantInfo);
     
     // Get theme config from settings API - theme_config is the key parameter
     const apiUrl = buildApiEndpoint('settings/theme_config');
-    console.log('🔍 Fetching theme from URL:', apiUrl);
     
     const response = await apiClient.get(apiUrl);
     const data = response.data;
@@ -26,7 +24,6 @@ export const fetchTenantTheme = async () => {
     // Parse JSON string value from settings
     return data.value ? JSON.parse(data.value) : null;
   } catch (error) {
-    console.warn('⚠️ API not available, using fallback storage:', error.message);
     
     // FALLBACK: Use localStorage when API is not available
     try {
@@ -36,7 +33,6 @@ export const fetchTenantTheme = async () => {
       const storedTheme = localStorage.getItem(fallbackKey);
       return storedTheme ? JSON.parse(storedTheme) : null;
     } catch (fallbackError) {
-      console.warn('Fallback storage also failed:', fallbackError);
       const simpleTheme = localStorage.getItem('simple-theme-color');
       return simpleTheme ? { primary: simpleTheme } : null;
     }
@@ -52,12 +48,9 @@ export const saveTenantTheme = async (themeConfig) => {
   try {
     // Debug tenant info
     const tenantInfo = getTenantInfo();
-    console.log('🏢 Current tenant info:', tenantInfo);
     
     // Save theme config as JSON string in settings using correct tenant-scoped endpoint
     const apiUrl = buildApiEndpoint('settings/theme_config');
-    console.log('🔍 Saving theme to URL:', apiUrl);
-    console.log('📝 Theme config:', themeConfig);
     
     // Try to update existing setting first
     try {
@@ -69,7 +62,6 @@ export const saveTenantTheme = async (themeConfig) => {
     } catch (error) {
       // If setting doesn't exist (404), create it
       if (error.response?.status === 404) {
-        console.log('⚠️ Theme setting not found, creating new one...');
         const createUrl = buildApiEndpoint('settings');
         await apiClient.post(createUrl, { 
           key: 'theme_config',
@@ -82,10 +74,8 @@ export const saveTenantTheme = async (themeConfig) => {
       }
     }
 
-    console.log('✅ Theme saved successfully');
     return true;
   } catch (error) {
-    console.warn('⚠️ API not available, using fallback storage:', error.message);
     
     // FALLBACK: Use localStorage when API is not available
     try {
@@ -93,10 +83,8 @@ export const saveTenantTheme = async (themeConfig) => {
       const identifier = tenantInfo?.domain || tenantInfo?.slug || 'default';
       const fallbackKey = `${identifier}_theme_fallback`;
       localStorage.setItem(fallbackKey, JSON.stringify(themeConfig));
-      console.log('✅ Theme saved to fallback storage');
       return true;
     } catch (fallbackError) {
-      console.error('Fallback storage save failed:', fallbackError);
       // Last resort - use simple localStorage
       localStorage.setItem('simple-theme-color', themeConfig.primary || themeConfig.primaryColor);
       return false;
@@ -113,7 +101,6 @@ export const resetTenantTheme = async () => {
     await apiClient.delete(buildApiEndpoint('settings/theme_config'));
     return true;
   } catch (error) {
-    console.warn('⚠️ API not available, using fallback storage:', error.message);
     
     // FALLBACK: Clear localStorage when API is not available
     try {
@@ -122,10 +109,8 @@ export const resetTenantTheme = async () => {
       const fallbackKey = `${identifier}_theme_fallback`;
       localStorage.removeItem(fallbackKey);
       localStorage.removeItem('simple-theme-color');
-      console.log('✅ Theme reset using fallback storage');
       return true;
     } catch (fallbackError) {
-      console.error('Fallback storage reset failed:', fallbackError);
       localStorage.removeItem('simple-theme-color');
       return false;
     }
@@ -149,7 +134,6 @@ export const fetchPublicTenantTheme = async (tenantId) => {
     const data = response.data;
     return data.value ? JSON.parse(data.value) : null;
   } catch (error) {
-    console.warn('⚠️ Public API not available, using fallback storage:', error.message);
     
     // FALLBACK: Use localStorage for public theme
     try {
@@ -157,7 +141,6 @@ export const fetchPublicTenantTheme = async (tenantId) => {
       const storedTheme = localStorage.getItem(fallbackKey);
       return storedTheme ? JSON.parse(storedTheme) : null;
     } catch (fallbackError) {
-      console.warn('Public fallback storage failed:', fallbackError);
       const simpleTheme = localStorage.getItem('simple-theme-color');
       return simpleTheme ? { primary: simpleTheme } : null;
     }

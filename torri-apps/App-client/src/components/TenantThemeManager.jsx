@@ -73,23 +73,19 @@ const TenantThemeManager = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.theme?.primaryColor) {
-          console.log('🎨 Loaded tenant theme from server:', data.theme.primaryColor);
           return data.theme.primaryColor;
         }
       } else if (response.status === 404) {
         // No custom theme set, use default
-        console.log('📋 No custom tenant theme found, using default');
         return '#ec4899';
       } else {
         throw new Error(`Server error: ${response.status}`);
       }
     } catch (error) {
-      console.warn('⚠️ Failed to fetch tenant theme from server:', error.message);
       
       // Fallback to localStorage for offline/development mode
       const localTheme = localStorage.getItem('simple-theme-color');
       if (localTheme) {
-        console.log('🔄 Using localStorage fallback theme:', localTheme);
         return localTheme;
       }
       
@@ -121,7 +117,6 @@ const TenantThemeManager = () => {
       });
 
       if (response.ok) {
-        console.log('✅ Tenant theme saved to server:', color);
         
         // Also save to localStorage as backup
         localStorage.setItem('simple-theme-color', color);
@@ -131,11 +126,9 @@ const TenantThemeManager = () => {
         throw new Error(`Failed to save theme: ${response.status}`);
       }
     } catch (error) {
-      console.warn('⚠️ Failed to save theme to server:', error.message);
       
       // Fallback to localStorage
       localStorage.setItem('simple-theme-color', color);
-      console.log('🔄 Saved theme to localStorage as fallback');
       
       setError('Theme saved locally. Server sync will happen when connection is restored.');
       return true;
@@ -146,7 +139,6 @@ const TenantThemeManager = () => {
 
   // Apply theme CSS
   const applyTheme = (color) => {
-    console.log('🎨 Applying tenant theme:', color);
     
     // Remove existing theme
     const existingStyle = document.getElementById('tenant-theme');

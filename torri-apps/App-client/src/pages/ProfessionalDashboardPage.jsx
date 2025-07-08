@@ -31,11 +31,9 @@ const ProfessionalDashboardPage = () => {
         setLoading(true);
         setError(null);
         const data = await dashboardService.getTodayStats();
-        console.log('[ProfessionalDashboard] Received dashboard data:', data);
         setDashboardData(data);
       } catch (err) {
         setError(err.message || 'Erro ao carregar dados do dashboard');
-        console.error('Error loading dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -69,7 +67,6 @@ const ProfessionalDashboardPage = () => {
 
   // Render quick stats
   const renderQuickStats = () => {
-    console.log('[ProfessionalDashboard] Rendering stats with data:', {
       loading,
       dashboardData,
       appointments: dashboardData?.appointments,

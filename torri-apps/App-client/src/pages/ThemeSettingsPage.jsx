@@ -41,7 +41,6 @@ const ThemeSettingsPage = () => {
           setCurrentTheme(themeData.primaryColor);
         }
       } catch (error) {
-        console.warn('Could not load current theme:', error);
       } finally {
         setLoading(false);
       }
@@ -94,9 +93,7 @@ const ThemeSettingsPage = () => {
       // Apply theme immediately to preview
       applyThemePreview(color);
       
-      console.log('✅ Theme saved successfully');
     } catch (error) {
-      console.error('Failed to save theme:', error);
     } finally {
       setSaving(false);
     }

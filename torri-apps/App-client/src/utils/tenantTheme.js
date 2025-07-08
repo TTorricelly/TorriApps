@@ -61,7 +61,6 @@ export const getTenantTheme = async (bypassCache = false) => {
     if (!bypassCache) {
       const memoryTheme = memoryCache.get();
       if (memoryTheme) {
-        console.log('🚀 Using memory cached theme');
         return memoryTheme;
       }
     }
@@ -77,7 +76,6 @@ export const getTenantTheme = async (bypassCache = false) => {
     }
 
     // 3. Fetch from server (slow but authoritative)
-    console.log('🌐 Fetching theme from server');
     const serverTheme = await fetchTenantTheme();
     
     if (serverTheme) {
@@ -91,11 +89,9 @@ export const getTenantTheme = async (bypassCache = false) => {
     }
 
     // 4. Fallback to default theme
-    console.log('🎨 Using default theme');
     return DEFAULT_THEME;
 
   } catch (error) {
-    console.error('Failed to get tenant theme:', error);
     return DEFAULT_THEME;
   }
 };
@@ -118,13 +114,11 @@ export const saveTenantTheme = async (themeConfig) => {
       setCachedTheme(validatedTheme);
       memoryCache.set(validatedTheme);
       
-      console.log('🎨 Tenant theme saved successfully:', validatedTheme);
       return true;
     }
 
     return false;
   } catch (error) {
-    console.error('Failed to save tenant theme:', error);
     return false;
   }
 };
@@ -152,9 +146,7 @@ export const applyTenantTheme = async (customTheme = null) => {
     // Update Tailwind primary color classes dynamically
     updateTailwindPrimaryColors(theme);
     
-    console.log('🎨 Tenant theme applied:', theme);
   } catch (error) {
-    console.error('Failed to apply tenant theme:', error);
     // Fallback to default theme
     applyTenantTheme(DEFAULT_THEME);
   }
@@ -179,13 +171,11 @@ export const preloadTenantTheme = async (tenantId) => {
       // Apply immediately for faster perceived performance
       applyTenantTheme(validatedTheme);
       
-      console.log('🚀 Tenant theme preloaded:', validatedTheme);
       return validatedTheme;
     }
     
     return DEFAULT_THEME;
   } catch (error) {
-    console.warn('Failed to preload tenant theme:', error);
     return DEFAULT_THEME;
   }
 };
@@ -285,13 +275,11 @@ export const resetTenantTheme = async () => {
       // Apply default theme
       await applyTenantTheme(DEFAULT_THEME);
       
-      console.log('🎨 Tenant theme reset to default');
       return true;
     }
     
     return false;
   } catch (error) {
-    console.error('Failed to reset tenant theme:', error);
     return false;
   }
 };

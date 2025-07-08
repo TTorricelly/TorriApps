@@ -46,7 +46,6 @@ export const buildAssetUrl = (assetPath) => {
     // Extract the path part from localhost URL
     const url = new URL(assetPath);
     const relativePath = url.pathname;
-    console.log(`[buildAssetUrl] Converting localhost URL to relative: "${assetPath}" → "${relativePath}"`);
     return relativePath;
   }
   
@@ -60,7 +59,6 @@ export const buildAssetUrl = (assetPath) => {
   
   // Debug logging to see what URLs are being generated
   if (import.meta.env.DEV) {
-    console.log(`[buildAssetUrl] Input: "${assetPath}" | BaseUrl: "${baseUrl}" | Output: "${!baseUrl ? cleanAssetPath : `${baseUrl.replace(/\/$/, '')}${cleanAssetPath}`}"`);
   }
   
   // If baseUrl is empty (development with proxy), return relative URL
@@ -99,7 +97,6 @@ export const processImageUrls = (data, imageFields = ['icon_url', 'image_url', '
         processedData[field] = processedUrl;
         
         if (import.meta.env.DEV && processedData.name) {
-          console.log(`[urlHelpers] Field "${field}": "${originalUrl}" → "${processedUrl}"`);
         }
       }
     });

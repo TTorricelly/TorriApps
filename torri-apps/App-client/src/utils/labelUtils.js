@@ -18,7 +18,6 @@ export const getContrastTextColor = (backgroundColor) => {
   
   // Validate hex format (3 or 6 characters)
   if (!/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex)) {
-    console.warn(`Invalid hex color: ${backgroundColor}`);
     return '#000000'; // Default to black text
   }
   

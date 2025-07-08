@@ -36,7 +36,6 @@ const isStorageAvailable = (type) => {
  */
 const getStorage = (type = STORAGE_TYPES.LOCAL) => {
   if (!isStorageAvailable(type)) {
-    console.warn(`${type} is not available`);
     return null;
   }
   return window[type];
@@ -58,7 +57,6 @@ export const setItem = (key, value, type = STORAGE_TYPES.LOCAL) => {
     storage.setItem(key, serializedValue);
     return true;
   } catch (error) {
-    console.error(`Error storing item with key ${key}:`, error);
     return false;
   }
 };
@@ -80,7 +78,6 @@ export const getItem = (key, defaultValue = null, type = STORAGE_TYPES.LOCAL) =>
     
     return JSON.parse(serializedValue);
   } catch (error) {
-    console.error(`Error retrieving item with key ${key}:`, error);
     return defaultValue;
   }
 };
@@ -99,7 +96,6 @@ export const removeItem = (key, type = STORAGE_TYPES.LOCAL) => {
     storage.removeItem(key);
     return true;
   } catch (error) {
-    console.error(`Error removing item with key ${key}:`, error);
     return false;
   }
 };
@@ -117,7 +113,6 @@ export const clear = (type = STORAGE_TYPES.LOCAL) => {
     storage.clear();
     return true;
   } catch (error) {
-    console.error(`Error clearing ${type}:`, error);
     return false;
   }
 };
@@ -134,7 +129,6 @@ export const getAllKeys = (type = STORAGE_TYPES.LOCAL) => {
     
     return Object.keys(storage);
   } catch (error) {
-    console.error(`Error getting all keys from ${type}:`, error);
     return [];
   }
 };
@@ -152,7 +146,6 @@ export const hasItem = (key, type = STORAGE_TYPES.LOCAL) => {
     
     return storage.getItem(key) !== null;
   } catch (error) {
-    console.error(`Error checking if key ${key} exists:`, error);
     return false;
   }
 };
@@ -175,7 +168,6 @@ export const getStorageSize = (type = STORAGE_TYPES.LOCAL) => {
     }
     return totalSize;
   } catch (error) {
-    console.error(`Error calculating ${type} size:`, error);
     return 0;
   }
 };
@@ -199,7 +191,6 @@ export const migrateItem = (key, fromType, toType) => {
     }
     return false;
   } catch (error) {
-    console.error(`Error migrating item ${key} from ${fromType} to ${toType}:`, error);
     return false;
   }
 };

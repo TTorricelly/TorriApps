@@ -113,7 +113,6 @@ const ProfessionalAgendaPage = () => {
         }));
         setProfessionals(transformedProfessionals);
       } catch (error) {
-        console.error('Error loading professionals:', error);
         setProfessionals([]);
       } finally {
         setProfessionalsLoading(false);
@@ -131,9 +130,7 @@ const ProfessionalAgendaPage = () => {
       try {
         setIsLoading(true);
         const dateString = formatDateForApi(selectedDate);
-        console.log('📅 Loading schedule for date:', dateString);
         const dailyScheduleData = await getDailySchedule(dateString);
-        console.log('📋 Daily schedule response:', dailyScheduleData);
         
         // Merge schedule data with professionals
         const professionalsWithAppointments = professionals.map(professional => {
@@ -141,11 +138,9 @@ const ProfessionalAgendaPage = () => {
             p => p.professional_id === professional.id
           );
           
-          console.log(`📋 Professional ${professional.name} (${professional.id}):`, professionalSchedule);
           
           // Debug: Log appointment structure
           if (professionalSchedule?.appointments?.length > 0) {
-            console.log('📋 Sample appointment data:', professionalSchedule.appointments[0]);
           }
           
           // Transform appointments to match expected format
@@ -177,7 +172,6 @@ const ProfessionalAgendaPage = () => {
         
         setScheduleData({ professionals: professionalsWithAppointments });
       } catch (error) {
-        console.error('Error loading schedule:', error);
         // Fallback to professionals without appointments
         setScheduleData({ professionals });
       } finally {
@@ -377,7 +371,6 @@ const ProfessionalAgendaPage = () => {
         
         setScheduleData({ professionals: professionalsWithAppointments });
       }).catch(error => {
-        console.error('Error refreshing schedule:', error);
       });
     }
   };
@@ -794,7 +787,6 @@ const ProfessionalAgendaPage = () => {
       ? professionalsWithAppointments 
       : (professionalsWithAppointments[currentProfessionalIndex] ? [professionalsWithAppointments[currentProfessionalIndex]] : []);
     
-    console.log('🎯 Rendering professionals:', visibleProfessionals.map(p => ({
       name: p.name,
       appointmentCount: p.appointments?.length || 0,
       appointments: p.appointments

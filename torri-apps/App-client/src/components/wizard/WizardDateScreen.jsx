@@ -59,7 +59,6 @@ const WizardDateScreen = () => {
       setAvailableDates(dates);
       setCurrentMonth({ year, month });
     } catch (err) {
-      console.error('[WizardDateScreen] Error loading available dates:', err);
       setError('Erro ao carregar datas disponíveis. Tente novamente.');
     } finally {
       setLoading(false);
@@ -98,20 +97,12 @@ const WizardDateScreen = () => {
     // Auto-advance to next step after 500ms delay (identical to mobile)
     setTimeout(() => {
       const nextStep = currentStep + 1;
-      console.log('🔄 Date selected - attempting to advance:', { 
-        currentStep, 
-        nextStep, 
-        dateString, 
-        canProceed: canProceedToStep(nextStep) 
-      });
       
       if (canProceedToStep(nextStep)) {
-        console.log('✅ Advancing to next step:', nextStep);
         goToNextStep();
         // TODO: Navigate to next step when implemented
         // navigate('/scheduling-wizard?step=2');
       } else {
-        console.log('❌ Cannot proceed to next step:', nextStep);
       }
     }, 500);
   }, [availableDates, setSelectedDate, canProceedToStep, goToNextStep, currentStep]);

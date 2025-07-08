@@ -43,12 +43,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
   // Set current step on mount (mobile behavior)
   useEffect(() => {
     setCurrentStep(6);
-    console.log('[WizardConfirmationScreen] Component mounted, current state:', {
-      selectedServices: selectedServices?.length,
-      selectedDate,
-      selectedSlot: selectedSlot?.id,
-      user: user?.id
-    });
   }, [setCurrentStep, selectedServices, selectedDate, selectedSlot, user]);
 
   const maxNotesLength = 500;
@@ -142,7 +136,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
 
       // Create new client if needed
       if (!clientId && clientData.isNewClient && clientData.name.trim()) {
-        console.log('[WizardConfirmationScreen] Creating new client...', clientData);
         
         const newClientData = {
           full_name: clientData.name.trim(),
@@ -161,7 +154,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
 
         const newClient = await createClient(newClientData);
         clientId = newClient.id;
-        console.log('[WizardConfirmationScreen] New client created with ID:', clientId);
       }
 
       if (!clientId) {
@@ -169,12 +161,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
         return;
       }
 
-      console.log('[WizardConfirmationScreen] Building booking request...', {
-        clientId,
-        selectedDate,
-        selectedSlot: selectedSlot?.id,
-        clientNotes: clientNotes.trim() || null
-      });
 
       const bookingRequest = buildBookingRequest(
         clientId,
@@ -183,11 +169,8 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
         clientNotes.trim() || null
       );
 
-      console.log('[WizardConfirmationScreen] Booking request built:', bookingRequest);
 
-      console.log('[WizardConfirmationScreen] Sending booking request...');
       const result = await createMultiServiceBooking(bookingRequest);
-      console.log('[WizardConfirmationScreen] Booking successful:', result);
 
       // Store booking data before clearing wizard state
       setConfirmedBookingData({
@@ -196,7 +179,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
         selectedSlot,
       });
       
-      console.log('[WizardConfirmationScreen] Showing success screen...');
       // Show success screen (keep wizard state until user clicks "Concluir")
       setBookingConfirmed(true);
       
@@ -212,12 +194,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
       }
       
     } catch (error) {
-      console.error('[WizardConfirmationScreen] Booking error:', error);
-      console.error('[WizardConfirmationScreen] Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       
       // Mobile uses Alert.alert for booking errors - make it prominent
       alert('Erro no Agendamento\n\nNão foi possível confirmar o agendamento. Tente novamente.');
@@ -516,17 +492,18 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 p-6 pb-8">
         <button
           onClick={() => {
-            console.log('[WizardConfirmationScreen] Concluir clicked, resetting wizard and navigating...');
             // Reset wizard state when user completes the flow
             resetWizard();
             
             // Navigate based on mode with tenant slug
             if (isClientMode()) {
               // Client mode: navigate to appointments page (meus agendamentos)
-              navigate(`/${tenantSlug}/appointments`);
+              const appointmentsPath = `/${tenantSlug}/appointments`;
+              navigate(appointmentsPath);
             } else {
               // Professional mode: navigate to professional agenda
-              navigate(`/${tenantSlug}/professional/agenda`);
+              const agendaPath = `/${tenantSlug}/professional/agenda`;
+              navigate(agendaPath);
             }
           }}
           className="w-full py-[18px] bg-green-500 text-white rounded-2xl font-semibold text-base shadow-lg hover:bg-green-600 transition-smooth"
@@ -539,7 +516,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
 
   // Show success screen if booking is confirmed (full-page overlay like mobile)
   if (bookingConfirmed) {
-    console.log('[WizardConfirmationScreen] Rendering success screen with data:', confirmedBookingData);
     return (
       <div className="fixed inset-0 z-[60] bg-gray-50">
         {renderSuccessScreen()}
@@ -549,7 +525,6 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
 
   // Check if we have the required data to show confirmation screen
   if (!selectedSlot && !bookingConfirmed) {
-    console.warn('[WizardConfirmationScreen] No selected slot available');
     return (
       <div className="h-full flex flex-col items-center justify-center p-6">
         <div className="text-center">

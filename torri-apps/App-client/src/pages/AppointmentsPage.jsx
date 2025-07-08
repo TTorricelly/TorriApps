@@ -47,7 +47,6 @@ const AppointmentsPage = () => {
       const data = await getUserAppointments();
       setAppointments(data);
     } catch (err) {
-      console.error('[AppointmentsPage] Error loading appointments:', err);
       setError('Erro ao carregar agendamentos. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -144,7 +143,6 @@ const AppointmentsPage = () => {
       await loadAppointments(); // Reload appointments
       alert('Agendamento cancelado com sucesso!');
     } catch (error) {
-      console.error('[AppointmentsPage] Error cancelling appointment:', error);
       alert('Erro ao cancelar agendamento. Tente novamente.');
     }
   };

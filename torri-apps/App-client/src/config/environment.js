@@ -51,7 +51,6 @@ export const API_BASE_URL = getApiBaseUrl();
 
 // Log configuration in development
 if (import.meta.env.DEV) {
-  console.log('🌍 Environment Configuration:', {
     environment: ENVIRONMENT,
     apiBaseUrl: API_BASE_URL,
     isDev: import.meta.env.DEV,

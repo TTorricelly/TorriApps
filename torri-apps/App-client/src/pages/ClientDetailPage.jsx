@@ -64,7 +64,6 @@ const ClientDetailPage = () => {
         
       } catch (error) {
         setError('Erro ao carregar dados do cliente')
-        console.error('Failed to load client:', error)
       } finally {
         setIsLoading(false)
         setIsLoadingAppointments(false)
@@ -91,7 +90,6 @@ const ClientDetailPage = () => {
       }
     } catch (error) {
       setError('Erro ao excluir cliente')
-      console.error('Failed to delete client:', error)
     } finally {
       setIsDeleting(false)
       setShowDeleteModal(false)
@@ -128,7 +126,6 @@ const ClientDetailPage = () => {
         minute: '2-digit'
       })
     } catch (error) {
-      console.error('Error formatting date:', error, dateString)
       return 'Data inválida'
     }
   }
@@ -158,7 +155,6 @@ const ClientDetailPage = () => {
         minute: '2-digit'
       })
     } catch (error) {
-      console.error('Error formatting appointment date:', error, appointment)
       return 'Data inválida'
     }
   }

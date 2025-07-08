@@ -41,7 +41,6 @@ const LabelSelector = ({
     } catch (error) {
       if (mounted) {
         setError('Erro ao carregar preferências. Tente novamente.');
-        console.error('Error loading labels:', error);
       }
     } finally {
       if (mounted) {
@@ -74,12 +73,10 @@ const LabelSelector = ({
   // Handle label selection
   const handleLabelToggle = (label) => {
     if (!label || !label.id) {
-      console.warn('Invalid label provided to handleLabelToggle');
       return;
     }
     
     if (typeof onSelectionChange !== 'function') {
-      console.warn('onSelectionChange is not a function');
       return;
     }
     

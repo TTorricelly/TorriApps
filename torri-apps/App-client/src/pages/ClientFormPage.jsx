@@ -110,7 +110,6 @@ const ClientFormPage = () => {
       }
     } catch (error) {
       setError('Erro ao carregar dados do cliente')
-      console.error('Failed to load client:', error)
     } finally {
       setIsLoading(false)
     }
@@ -159,7 +158,6 @@ const ClientFormPage = () => {
           }))
         }
       } catch (error) {
-        console.error('CEP lookup failed:', error)
       } finally {
         setIsLookingUpCep(false)
       }
@@ -244,7 +242,6 @@ const ClientFormPage = () => {
           // Always update labels (even if empty array) to ensure consistency
           await labelService.updateUserLabels(result.id, labelIds);
         } catch (error) {
-          console.error('Error updating client labels:', error);
           // Continue even if labels fail - client was created/updated successfully
         }
         
@@ -258,7 +255,6 @@ const ClientFormPage = () => {
       }
     } catch (error) {
       setError(isEditing ? 'Erro ao atualizar cliente' : 'Erro ao criar cliente')
-      console.error('Failed to save client:', error)
     } finally {
       setIsSaving(false)
     }

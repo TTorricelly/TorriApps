@@ -125,7 +125,6 @@ const WizardProfessionalsScreen = () => {
       setProfessionalsRequested(initialPros);
       
     } catch (err) {
-      console.error('[WizardProfessionalsScreen] Error loading configuration:', err);
       setError('Erro ao carregar configuração. Tente novamente.');
     }
   };
@@ -182,7 +181,6 @@ const WizardProfessionalsScreen = () => {
       }
       
     } catch (err) {
-      console.error('[WizardProfessionalsScreen] Error loading professionals:', err);
       setError('Erro ao carregar profissionais. Tente novamente.');
     } finally {
       setLoading(false);

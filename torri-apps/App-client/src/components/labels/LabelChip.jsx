@@ -11,7 +11,6 @@ const LabelChip = ({
 }) => {
   // Early return if label is null/undefined
   if (!label) {
-    console.warn('LabelChip: label prop is required');
     return null;
   }
 

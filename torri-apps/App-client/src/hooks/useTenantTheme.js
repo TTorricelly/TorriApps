@@ -24,7 +24,6 @@ export const useTenantTheme = () => {
         setCurrentTheme(theme);
         setIsLoading(false);
       } catch (error) {
-        console.error('Failed to load tenant theme:', error);
         setIsLoading(false);
       }
     };
@@ -50,12 +49,10 @@ export const useTenantTheme = () => {
         // Update local state
         setCurrentTheme({ ...currentTheme, ...newTheme });
         
-        console.log('🎨 Theme updated successfully:', newTheme);
       } else {
         throw new Error('Failed to save theme to server');
       }
     } catch (error) {
-      console.error('Failed to update theme:', error);
     } finally {
       setIsLoading(false);
     }
@@ -66,18 +63,13 @@ export const useTenantTheme = () => {
    * @param {string} presetKey - Key of the preset to apply
    */
   const applyPreset = async (presetKey) => {
-    console.log('🎨 applyPreset called with:', presetKey);
-    console.log('📋 Available presets:', Object.keys(presets));
     
     const preset = presets[presetKey];
     if (!preset) {
-      console.error('❌ Invalid preset key:', presetKey);
       return;
     }
 
-    console.log('✅ Found preset:', preset);
     const { name, ...themeConfig } = preset;
-    console.log('🔧 Theme config to apply:', themeConfig);
     
     await updateTheme(themeConfig);
   };
@@ -97,12 +89,10 @@ export const useTenantTheme = () => {
         const theme = await getTenantTheme(true); // Bypass cache
         setCurrentTheme(theme);
         
-        console.log('🎨 Theme reset to default');
       } else {
         throw new Error('Failed to reset theme on server');
       }
     } catch (error) {
-      console.error('Failed to reset theme:', error);
     } finally {
       setIsLoading(false);
     }

@@ -199,9 +199,7 @@ export const lookupCep = async (cep) => {
     return null;
   } catch (error) {
     if (error.name === 'AbortError') {
-      console.warn('CEP lookup timeout');
     } else {
-      console.error('Error looking up CEP:', error);
     }
     return null;
   }

@@ -23,8 +23,6 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
     return transformData(response.data);
   } catch (error) {
     if (logErrors) {
-      console.error('API Error:', error);
-      console.error('Error details:', {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -62,7 +60,6 @@ export const ensureArray = (data, entityName = 'items') => {
     if (Array.isArray(data.results)) return data.results;
   }
   
-  console.warn(`Expected array for ${entityName}, got:`, typeof data, data);
   return [];
 };
 
@@ -76,7 +73,6 @@ export const getTenantInfo = () => {
   
   // Check if we're on a custom domain (not the main domain or app/admin subdomains)
   if (hostname && hostname !== 'vervio.com.br' && hostname !== 'app.vervio.com.br' && hostname !== 'admin.vervio.com.br' && !hostname.startsWith('localhost')) {
-    console.log(`DEBUG: Detected domain-based tenant '${hostname}'`);
     return {
       method: 'domain',
       domain: hostname,
@@ -87,7 +83,6 @@ export const getTenantInfo = () => {
   // For slug-based tenants on main domain, first path segment is always the tenant slug
   const segments = path.split('/').filter(Boolean);
   if (segments.length > 0) {
-    console.log(`DEBUG: Detected slug-based tenant '${segments[0]}' from URL: ${path}`);
     return {
       method: 'slug',
       domain: null,
@@ -95,7 +90,6 @@ export const getTenantInfo = () => {
     };
   }
   
-  console.log(`DEBUG: No tenant detected from URL or domain`);
   return null;
 };
 

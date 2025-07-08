@@ -36,7 +36,6 @@ const GlobalThemeLoader = () => {
 
   // Apply theme function (simplified version of SimpleThemeChanger)
   const applyTheme = (color) => {
-    console.log('🎨 GlobalThemeLoader: Applying theme:', color);
     
     // Remove any existing theme styles
     const existingStyle = document.getElementById('simple-theme');
@@ -133,7 +132,6 @@ const GlobalThemeLoader = () => {
       metaThemeColor.setAttribute('content', color);
     }
     
-    console.log('✅ GlobalThemeLoader: Theme applied successfully');
   };
 
   // Apply saved theme on mount - try server first, then localStorage
@@ -144,20 +142,17 @@ const GlobalThemeLoader = () => {
         const serverTheme = await fetchTenantTheme();
         if (serverTheme?.primary || serverTheme?.primaryColor) {
           const themeColor = serverTheme.primary || serverTheme.primaryColor;
-          console.log('🔄 GlobalThemeLoader: Loading theme from server:', themeColor);
           applyTheme(themeColor);
           // Cache in localStorage for fast access
           localStorage.setItem('simple-theme-color', themeColor);
           return;
         }
       } catch (error) {
-        console.warn('⚠️ Server theme fetch failed:', error);
       }
       
       // Fallback to localStorage
       const saved = localStorage.getItem('simple-theme-color');
       if (saved) {
-        console.log('🔄 GlobalThemeLoader: Loading saved theme from localStorage:', saved);
         applyTheme(saved);
       }
     };

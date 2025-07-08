@@ -37,7 +37,6 @@ const SimpleThemeChanger = () => {
 
   // Function that changes colors and saves to server
   const changeTheme = async (color) => {
-    console.log('🎨 Changing theme to:', color);
     
     // Save to server first (and localStorage as fallback)
     try {
@@ -48,9 +47,7 @@ const SimpleThemeChanger = () => {
       };
       
       await saveTenantTheme(themeConfig);
-      console.log('✅ Theme saved to server successfully');
     } catch (error) {
-      console.warn('⚠️ Failed to save to server, using localStorage fallback:', error);
       localStorage.setItem('simple-theme-color', color);
     }
     
@@ -178,7 +175,6 @@ const SimpleThemeChanger = () => {
     // CRITICAL: Fix inline styles directly in the DOM
     // This handles hard-coded backgroundColor: '#ec4899' in HomePage
     const fixInlineStyles = () => {
-      console.log('🔍 Scanning for hardcoded pink elements...');
       
       // Method 1: Find elements by style attribute
       const elementsWithStyle = document.querySelectorAll('*[style]');
@@ -190,7 +186,6 @@ const SimpleThemeChanger = () => {
           // Replace the hardcoded pink with new color
           const newStyle = style.replace(/#ec4899/g, color);
           el.setAttribute('style', newStyle);
-          console.log('🔧 Fixed inline style:', el.tagName, el.className);
           fixedCount++;
         }
       });
@@ -203,7 +198,6 @@ const SimpleThemeChanger = () => {
           if (computed.backgroundColor === 'rgb(236, 72, 153)' || 
               computed.backgroundColor === '#ec4899') {
             el.style.setProperty('background-color', color, 'important');
-            console.log('🔧 Fixed header computed style:', el.tagName, el.className);
             fixedCount++;
           }
         } catch (e) {
@@ -230,15 +224,12 @@ const SimpleThemeChanger = () => {
             if (selector.includes('from-') || selector.includes('to-')) {
               // Handle gradient elements
               el.style.setProperty('background', `linear-gradient(to right, ${color}, ${darkenColor(color, 0.2)})`, 'important');
-              console.log('🎯 Fixed gradient:', selector, el.tagName);
             } else {
               el.style.setProperty('background-color', color, 'important');
-              console.log('🎯 Fixed pink class:', selector, el.tagName);
             }
             fixedCount++;
           });
         } catch (e) {
-          console.warn('Selector failed:', selector, e);
         }
       });
       
@@ -246,7 +237,6 @@ const SimpleThemeChanger = () => {
       const professionalHeader = document.querySelector('.safe-area-top.bg-gradient-to-r');
       if (professionalHeader) {
         professionalHeader.style.setProperty('background', `linear-gradient(to right, ${color}, ${darkenColor(color, 0.2)})`, 'important');
-        console.log('🎯 Fixed professional dashboard header');
         fixedCount++;
       }
       
@@ -260,12 +250,10 @@ const SimpleThemeChanger = () => {
           style.includes('background: #ec4899')
         )) {
           el.style.setProperty('background-color', color, 'important');
-          console.log('🎯 Fixed hardcoded pink:', el.tagName, style);
           fixedCount++;
         }
       });
       
-      console.log(`✅ Fixed ${fixedCount} elements`);
     };
     
     // Apply immediately
@@ -317,7 +305,6 @@ const SimpleThemeChanger = () => {
     }
     window.themeInterval = setInterval(fixInlineStyles, 2000);
     
-    console.log('✅ Theme changed successfully to:', color);
     
     // Force a repaint
     document.body.style.display = 'none';
@@ -330,7 +317,6 @@ const SimpleThemeChanger = () => {
   React.useEffect(() => {
     const saved = localStorage.getItem('simple-theme-color');
     if (saved) {
-      console.log('🔄 Loading saved theme:', saved);
       changeTheme(saved);
     }
   }, []);
@@ -339,7 +325,6 @@ const SimpleThemeChanger = () => {
   React.useMemo(() => {
     const saved = localStorage.getItem('simple-theme-color');
     if (saved) {
-      console.log('🚀 Applying theme immediately on mount:', saved);
       // Apply theme synchronously
       setTimeout(() => changeTheme(saved), 0);
     }

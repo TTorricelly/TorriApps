@@ -58,7 +58,6 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.warn('Failed to get auth token:', error);
     }
     
     return config;
@@ -75,7 +74,6 @@ apiClient.interceptors.response.use(
     if (response?.status === 401) {
       // Log 401 errors but don't auto-logout for persistent login
       // Users will only be logged out when they manually logout
-      console.warn('🔐 Unauthorized request received:', response.config?.url);
     }
     
     return Promise.reject(error);

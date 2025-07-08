@@ -14,7 +14,6 @@ export const login = async (emailOrPhone, password) => {
   // Normalize the input according to mobile app standards
   const normalizedEmailOrPhone = normalizeEmailOrPhone(emailOrPhone);
   
-  console.log('[AuthService] Login attempt:', {
     endpoint,
     original: emailOrPhone,
     normalized: normalizedEmailOrPhone,
@@ -29,7 +28,6 @@ export const login = async (emailOrPhone, password) => {
     {
       defaultValue: null,
       transformData: (data) => {
-        console.log('[AuthService] Login successful');
         return data;
       },
       logErrors: true
@@ -46,7 +44,6 @@ export const logout = async () => {
     {
       defaultValue: true,
       transformData: () => {
-        console.log('[AuthService] Logout successful');
         return true;
       },
       logErrors: false // Don't log logout errors
@@ -63,7 +60,6 @@ export const refreshToken = async () => {
     {
       defaultValue: null,
       transformData: (data) => {
-        console.log('[AuthService] Token refresh successful');
         return data;
       },
       logErrors: true

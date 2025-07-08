@@ -11,22 +11,16 @@ const ThemeDebugger = () => {
   const { currentTheme, isLoading, presets, updatePrimaryColor, applyPreset, resetTheme } = useTenantTheme();
 
   const testPreset = async (presetKey) => {
-    console.log('🧪 Testing preset:', presetKey);
     try {
       await applyPreset(presetKey);
-      console.log('✅ Test successful');
     } catch (error) {
-      console.error('❌ Test failed:', error);
     }
   };
 
   const testColor = async (color) => {
-    console.log('🧪 Testing color:', color);
     try {
       await updatePrimaryColor(color);
-      console.log('✅ Color test successful');
     } catch (error) {
-      console.error('❌ Color test failed:', error);
     }
   };
 

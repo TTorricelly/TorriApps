@@ -91,13 +91,6 @@ export const useWizardStore = create(
       // Step validation (updated for mode-specific flow)
       canProceedToStep: (step) => {
         const state = get();
-        console.log('🔍 Checking canProceedToStep:', { 
-          step, 
-          mode: state.mode, 
-          currentStep: state.currentStep,
-          selectedDate: state.selectedDate,
-          selectedServicesCount: state.selectedServices?.length || 0
-        });
         
         if (state.mode === 'client') {
           // Client mode with pre-selected services: Steps 3-6 (Date → Professionals → Time → Confirmation)
@@ -286,7 +279,6 @@ export const useWizardStore = create(
           startingStep = 2; // Client mode default (without services)
         }
         
-        console.log('🔄 Wizard reset called:', { currentMode: state.mode, resetToStep: startingStep });
         
         set({
           currentStep: startingStep,
@@ -400,8 +392,6 @@ export const useWizardStore = create(
           bookingResult: null
         });
         
-        // Log for debugging
-        console.log('🔄 Wizard initialized:', { mode, startingStep, servicesCount: (services || []).length, currentStep: startingStep });
       },
 
       // Reset wizard from specific step (used when changing earlier selections)
