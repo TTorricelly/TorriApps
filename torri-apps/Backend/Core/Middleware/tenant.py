@@ -153,13 +153,17 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 parsed = urlparse(frontend_url)
                 domain = parsed.hostname
                 
-                # Check if it's a domain-based tenant (not main vervio domains)
-                if domain and domain != 'vervio.com.br' and not domain.startswith('app.vervio.com.br') and not domain.startswith('admin.vervio.com.br') and not domain.startswith('localhost'):
-                    return {
-                        'method': 'domain',
-                        'domain': domain,
-                        'slug': None  # Will be set from database lookup
-                    }
+                if domain:
+                    # Strip app., adm., and admin. subdomains to get base domain
+                    base_domain = self._strip_subdomains(domain)
+                    
+                    # Check if it's a domain-based tenant (not main vervio domains)
+                    if base_domain and base_domain != 'vervio.com.br' and not base_domain.startswith('localhost'):
+                        return {
+                            'method': 'domain',
+                            'domain': base_domain,
+                            'slug': None  # Will be set from database lookup
+                        }
             except Exception:
                 pass
         
@@ -173,6 +177,17 @@ class TenantMiddleware(BaseHTTPMiddleware):
             }
         
         return None
+    
+    def _strip_subdomains(self, domain: str) -> str:
+        """Strip app., adm., and admin. subdomains from domain to get base domain."""
+        # List of subdomain prefixes to strip
+        subdomain_prefixes = ['app.', 'adm.', 'admin.']
+        
+        for prefix in subdomain_prefixes:
+            if domain.startswith(prefix):
+                return domain[len(prefix):]
+        
+        return domain
     
     def _extract_tenant_slug(self, path: str) -> Optional[str]:
         """Extract tenant slug from URL path."""
