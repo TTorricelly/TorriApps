@@ -74,8 +74,8 @@ export const getTenantInfo = () => {
   const hostname = window.location.hostname.toLowerCase();
   const path = window.location.pathname;
   
-  // Check if we're on a custom domain (not the main domain)
-  if (hostname && hostname !== 'vervio.com.br' && !hostname.startsWith('localhost')) {
+  // Check if we're on a custom domain (not the main domain or app/admin subdomains)
+  if (hostname && hostname !== 'vervio.com.br' && hostname !== 'app.vervio.com.br' && hostname !== 'admin.vervio.com.br' && !hostname.startsWith('localhost')) {
     console.log(`DEBUG: Detected domain-based tenant '${hostname}'`);
     return {
       method: 'domain',
