@@ -4,6 +4,7 @@
  */
 
 import { buildApiEndpoint, getTenantInfo } from '../utils/apiHelpers';
+import apiClient from '../config/api';
 
 /**
  * Fetch tenant theme configuration from server using Settings API
@@ -18,24 +19,10 @@ export const fetchTenantTheme = async () => {
     // Get theme config from settings API - theme_config is the key parameter
     const apiUrl = buildApiEndpoint('settings/theme_config');
     console.log('🔍 Fetching theme from URL:', apiUrl);
-    console.log('🌐 Full URL being called:', window.location.origin + apiUrl);
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        // No custom theme set, return null to use default
-        return null;
-      }
-      throw new Error(`Failed to fetch theme: ${response.status}`);
-    }
-
-    const data = await response.json();
+    
+    const response = await apiClient.get(apiUrl);
+    const data = response.data;
+    
     // Parse JSON string value from settings
     return data.value ? JSON.parse(data.value) : null;
   } catch (error) {
@@ -72,40 +59,26 @@ export const saveTenantTheme = async (themeConfig) => {
     console.log('📝 Theme config:', themeConfig);
     
     // Try to update existing setting first
-    let response = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ 
+    try {
+      await apiClient.put(apiUrl, { 
         value: JSON.stringify(themeConfig),
         data_type: 'string',
         description: 'Theme configuration JSON'
-      }),
-    });
-
-    // If setting doesn't exist (404), create it
-    if (response.status === 404) {
-      console.log('⚠️ Theme setting not found, creating new one...');
-      const createUrl = buildApiEndpoint('settings');
-      response = await fetch(createUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ 
+      });
+    } catch (error) {
+      // If setting doesn't exist (404), create it
+      if (error.response?.status === 404) {
+        console.log('⚠️ Theme setting not found, creating new one...');
+        const createUrl = buildApiEndpoint('settings');
+        await apiClient.post(createUrl, { 
           key: 'theme_config',
           value: JSON.stringify(themeConfig),
           data_type: 'string',
           description: 'Theme configuration JSON'
-        }),
-      });
-    }
-
-    if (!response.ok) {
-      throw new Error(`Failed to save theme: ${response.status}`);
+        });
+      } else {
+        throw error;
+      }
     }
 
     console.log('✅ Theme saved successfully');
@@ -136,17 +109,7 @@ export const saveTenantTheme = async (themeConfig) => {
  */
 export const resetTenantTheme = async () => {
   try {
-    const response = await fetch(buildApiEndpoint('settings/theme_config'), {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    if (!response.ok && response.status !== 404) {
-      throw new Error(`Failed to reset theme: ${response.status}`);
-    }
-
+    await apiClient.delete(buildApiEndpoint('settings/theme_config'));
     return true;
   } catch (error) {
     console.warn('⚠️ API not available, using fallback storage:', error.message);
@@ -176,22 +139,13 @@ export const resetTenantTheme = async () => {
  */
 export const fetchPublicTenantTheme = async (tenantId) => {
   try {
-    const response = await fetch(buildApiEndpoint('settings/theme_config/public', 'v1', { isPublic: true }), {
-      method: 'GET',
+    const response = await apiClient.get(buildApiEndpoint('settings/theme_config/public', 'v1', { isPublic: true }), {
       headers: {
-        'Content-Type': 'application/json',
         'X-Tenant-ID': tenantId,
       },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error(`Failed to fetch public theme: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = response.data;
     return data.value ? JSON.parse(data.value) : null;
   } catch (error) {
     console.warn('⚠️ Public API not available, using fallback storage:', error.message);
