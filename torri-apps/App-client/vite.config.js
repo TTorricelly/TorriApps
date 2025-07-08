@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
+      includeAssets: ['favicon.ico', 'icons/manifest-icon-192.maskable.png', 'icons/manifest-icon-512.maskable.png', 'icons/apple-icon-180.png'],
       injectRegister: 'auto',
       strategies: 'generateSW',
       devOptions: {
@@ -28,16 +28,28 @@ export default defineConfig({
         lang: 'pt-BR',
         icons: [
           {
-            src: '/icon-192x192.png',
+            src: '/icons/manifest-icon-192.maskable.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: '/icon-512x512.png',
+            src: '/icons/manifest-icon-192.maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/icons/manifest-icon-512.maskable.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/icons/manifest-icon-512.maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
