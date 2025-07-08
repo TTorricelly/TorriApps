@@ -93,9 +93,19 @@ def update_current_user_profile(
     safe_update_data = UserUpdate(
         email=user_update_data.email,
         full_name=user_update_data.full_name,
+        nickname=user_update_data.nickname,
         phone_number=user_update_data.phone_number,
         date_of_birth=user_update_data.date_of_birth,
-        gender=user_update_data.gender
+        gender=user_update_data.gender,
+        # Brazilian-specific fields
+        cpf=user_update_data.cpf,
+        address_street=user_update_data.address_street,
+        address_number=user_update_data.address_number,
+        address_complement=user_update_data.address_complement,
+        address_neighborhood=user_update_data.address_neighborhood,
+        address_city=user_update_data.address_city,
+        address_state=user_update_data.address_state,
+        address_cep=user_update_data.address_cep
         # role and is_active are intentionally omitted
     )
     

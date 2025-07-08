@@ -42,7 +42,6 @@ Each tenant needs the flexibility to map payment methods to their preferred acco
 ```sql
 CREATE TABLE payment_method_configs (
     id VARCHAR(36) PRIMARY KEY,
-    tenant_id VARCHAR(36) NOT NULL,
     payment_method payment_method_enum NOT NULL,
     account_code VARCHAR(20) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -50,9 +49,7 @@ CREATE TABLE payment_method_configs (
     updated_at TIMESTAMP DEFAULT NOW(),
     
     CONSTRAINT fk_payment_config_account 
-        FOREIGN KEY (account_code) REFERENCES accounts(code),
-    CONSTRAINT uq_tenant_payment_method 
-        UNIQUE(tenant_id, payment_method)
+        FOREIGN KEY (account_code) REFERENCES accounts(code)
 );
 ```
 
@@ -63,7 +60,6 @@ class PaymentMethodConfig(Base):
     __tablename__ = "payment_method_configs"
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id = Column(String(36), nullable=False, index=True)
     payment_method = Column(Enum(PaymentMethod), nullable=False)
     account_code = Column(String(20), ForeignKey("accounts.code"), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -231,7 +227,6 @@ payment = create_payment(amount, payment_method, account_code)
 
 ### **Performance**
 - Cache payment method configurations per tenant
-- Index on `(tenant_id, payment_method)` for fast lookups
 - Minimal impact on existing payment processing
 
 ### **Security**

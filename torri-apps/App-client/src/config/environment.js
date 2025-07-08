@@ -40,9 +40,9 @@ const getApiBaseUrl = () => {
     case 'staging':
       return 'https://api-staging.torriapps.com';
     case 'production':
-      return 'https://api.torriapps.com';
+      return 'https://torri-backend-419996576894.us-central1.run.app';
     default:
-      return 'https://api.torriapps.com';
+      return 'https://torri-backend-419996576894.us-central1.run.app';
   }
 };
 
