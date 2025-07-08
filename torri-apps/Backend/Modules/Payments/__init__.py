@@ -3,12 +3,13 @@ Payments Module
 Handles customer payment processing and transaction management.
 """
 
-from .models import Payment, PaymentItem, PaymentStatus, PaymentMethod, ItemType
+from .models import Payment, PaymentHeader, PaymentItem, PaymentStatus, PaymentMethod, ItemType
 from .services import PaymentService, create_payment_service
 from .schemas import PaymentSchema, PaymentItemSchema, CreatePaymentRequest, PaymentResponse
 
 __all__ = [
-    'Payment',
+    'Payment',  # Backward compatibility alias
+    'PaymentHeader',  # New name
     'PaymentItem', 
     'PaymentStatus',
     'PaymentMethod',

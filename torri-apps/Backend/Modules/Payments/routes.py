@@ -139,6 +139,7 @@ def create_payment_endpoint(
             tip_amount=payment_data.tip_amount,
             total_amount=payment_data.total_amount,
             payment_method=payment_data.payment_method,
+            account_id=payment_data.account_id,
             notes=payment_data.notes
         )
         

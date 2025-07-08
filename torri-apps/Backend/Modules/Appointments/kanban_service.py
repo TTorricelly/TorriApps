@@ -552,7 +552,8 @@ def create_merged_checkout_session(
 def process_appointment_payment(
     db: Session,
     payment_data: Any,  # AppointmentPaymentRequest
-    tenant_id: str
+    tenant_id: str,
+    user=None
 ) -> Dict[str, Any]:
     """
     Process payment for multiple appointment groups.
@@ -586,7 +587,7 @@ def process_appointment_payment(
     client_id = groups[0].client_id
     
     # Create payment record using PaymentService (following Dependency Injection)
-    payment_service = create_payment_service(db)
+    payment_service = create_payment_service(db, user)
     try:
         payment_record = payment_service.create_payment_from_checkout(
             client_id=client_id,
@@ -596,6 +597,7 @@ def process_appointment_payment(
             tip_amount=Decimal(str(payment_data.tip_amount)),
             total_amount=Decimal(str(payment_data.total_amount)),
             payment_method=payment_data.payment_method,
+            account_id=getattr(payment_data, 'account_id', None),
             notes=f"Checkout payment for {len(payment_data.group_ids)} appointment group(s)"
         )
         

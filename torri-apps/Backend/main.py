@@ -20,10 +20,16 @@ from Modules.Company.routes import router as company_router
 from Modules.Commissions.routes import router as commissions_router
 from Modules.Labels.routes import router as labels_router
 from Modules.Payments.routes import router as payments_router
+from Modules.Accounts.routes import router as accounts_router
+from Modules.PayablesReceivables.routes import router as payables_receivables_router
+from Modules.PaymentMethodConfigs.routes import router as payment_method_configs_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
 import Modules.Payments.models  # Import Payment models to register them
 import Modules.Labels.models  # Import Labels models to register them
+import Modules.Accounts.models  # Import Accounts models to register them
+import Modules.PayablesReceivables.models  # Import PayablesReceivables models to register them
+import Modules.PaymentMethodConfigs.models  # Import PaymentMethodConfigs models to register them
 import Modules.Services.models  # Import Services and ServiceImage models to register them
 import Modules.Tenants.models  # Import Tenant models to register them
 from Core.Utils.exception_handlers import add_exception_handlers # Import the function
@@ -94,6 +100,9 @@ app.include_router(commissions_router, prefix=f"{API_V1_PREFIX}/commissions", ta
 app.include_router(users_router, prefix=f"{API_V1_PREFIX}/users", tags=["Users Management (Tenant)"])
 app.include_router(labels_router, prefix=f"{API_V1_PREFIX}/labels", tags=["Labels Management (Tenant)"])
 app.include_router(payments_router, prefix=f"{API_V1_PREFIX}/payments", tags=["Payments Management (Tenant)"])
+app.include_router(accounts_router, prefix=f"{API_V1_PREFIX}/accounts", tags=["Accounts Management (Tenant)"])
+app.include_router(payables_receivables_router, prefix=f"{API_V1_PREFIX}/payables-receivables", tags=["Payables & Receivables Management (Tenant)"])
+app.include_router(payment_method_configs_router, prefix=f"{API_V1_PREFIX}/payment-configs", tags=["Payment Method Configuration (Tenant)"])
 # app.include_router(admin_master_router, prefix=API_V1_PREFIX, tags=["Admin Master Users (Public Admin)"]) # When ready
 
 # --- Static Files ---

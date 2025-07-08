@@ -38,11 +38,11 @@ payment_method_enum = ENUM(PaymentMethod, name='payment_method_enum', create_typ
 item_type_enum = ENUM(ItemType, name='item_type_enum', create_type=False)
 
 
-class Payment(Base):
+class PaymentHeader(Base):
     """
     Main payment record for customer transactions.
     """
-    __tablename__ = "payments"
+    __tablename__ = "payment_headers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     payment_id = Column(String(100), unique=True, nullable=False, index=True)
@@ -59,6 +59,9 @@ class Payment(Base):
     payment_status = Column(payment_status_enum, default=PaymentStatus.COMPLETED, nullable=False)
     processor_transaction_id = Column(String(255), nullable=True)  # For future payment gateway integration
     
+    # Accounting integration
+    account_id = Column(String(36), ForeignKey('accounts.id'), nullable=True, index=True)
+    
     # Notes and metadata
     notes = Column(Text, nullable=True)
     
@@ -67,7 +70,11 @@ class Payment(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Internal relationships only (no external model dependencies)
-    payment_items = relationship("PaymentItem", back_populates="payment", cascade="all, delete-orphan")
+    payment_items = relationship("PaymentItem", back_populates="payment_header", cascade="all, delete-orphan")
+
+
+# Keep Payment as an alias for backward compatibility during transition
+Payment = PaymentHeader
 
 
 class PaymentItem(Base):
@@ -77,7 +84,7 @@ class PaymentItem(Base):
     __tablename__ = "payment_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    payment_id = Column(UUID(as_uuid=True), ForeignKey('payments.id'), nullable=False)
+    payment_header_id = Column(UUID(as_uuid=True), ForeignKey('payment_headers.id'), nullable=False)
     
     # Item identification
     item_type = Column(item_type_enum, nullable=False)
@@ -93,4 +100,9 @@ class PaymentItem(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     # Internal relationships only (no external model dependencies)
-    payment = relationship("Payment", back_populates="payment_items")
+    payment_header = relationship("PaymentHeader", back_populates="payment_items")
+    
+    # Keep old relationship name for backward compatibility
+    @property
+    def payment(self):
+        return self.payment_header

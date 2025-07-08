@@ -9,8 +9,9 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.orm import Session
 
-from .models import Payment, PaymentItem, PaymentMethod, PaymentStatus, ItemType
+from .models import Payment, PaymentHeader, PaymentItem, PaymentMethod, PaymentStatus, ItemType
 from ..Appointments.models import AppointmentGroup, Appointment
+from ..PaymentMethodConfigs.services import create_payment_method_config_service
 
 
 class PaymentService:
@@ -19,8 +20,9 @@ class PaymentService:
     Follows Single Responsibility Principle - only handles payment-related operations.
     """
     
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, user=None):
         self.db = db
+        self.user = user
     
     def create_payment_from_checkout(
         self,
@@ -31,8 +33,9 @@ class PaymentService:
         tip_amount: Decimal,
         total_amount: Decimal,
         payment_method: str,
+        account_id: Optional[str] = None,
         notes: Optional[str] = None
-    ) -> Payment:
+    ) -> PaymentHeader:
         """
         Create a payment record from checkout data.
         
@@ -44,10 +47,11 @@ class PaymentService:
             tip_amount: Tip amount added
             total_amount: Final total amount
             payment_method: Payment method (cash, debit, credit, pix)
+            account_id: Account ID for accounting integration
             notes: Optional payment notes
             
         Returns:
-            Created Payment record
+            Created PaymentHeader record
             
         Raises:
             ValueError: If appointment groups are not found or validation fails
@@ -76,11 +80,26 @@ class PaymentService:
             valid_methods = [method.value for method in PaymentMethod]
             raise ValueError(f"Invalid payment method: {payment_method}. Valid methods: {valid_methods}")
         
+        # Auto-lookup account_id if not provided
+        if not account_id and self.user:
+            try:
+                config_service = create_payment_method_config_service(self.db, self.user)
+                config = config_service.get_config_for_payment_method(payment_method_enum)
+                if config and config.is_active:
+                    account_id = config.account_id
+                    print(f"INFO: Auto-resolved account_id '{account_id}' for payment method '{payment_method_enum.value}'")
+                else:
+                    print(f"WARNING: No active configuration found for payment method '{payment_method_enum.value}'. Payment will be processed without account_id.")
+                    # Note: This is a warning, not an error - payment can still be processed
+            except Exception as e:
+                print(f"WARNING: Failed to lookup account_id for payment method '{payment_method_enum.value}': {str(e)}. Payment will continue without account_id.")
+                # Continue without account_id - non-blocking to avoid payment failures
+        
         # Generate unique payment ID
         payment_id = f"pay_{int(datetime.now().timestamp())}_{len(group_ids)}"
         
         # Create payment record
-        payment = Payment(
+        payment = PaymentHeader(
             payment_id=payment_id,
             client_id=client_id,
             subtotal=subtotal,
@@ -89,6 +108,7 @@ class PaymentService:
             total_amount=total_amount,
             payment_method=payment_method_enum,
             payment_status=PaymentStatus.COMPLETED,
+            account_id=account_id,
             notes=notes
         )
         
@@ -102,14 +122,14 @@ class PaymentService:
     
     def _create_payment_items_for_groups(
         self, 
-        payment_id: UUID, 
+        payment_header_id: UUID, 
         groups: List[AppointmentGroup]
     ) -> List[PaymentItem]:
         """
         Create payment items for all appointments in the given groups.
         
         Args:
-            payment_id: ID of the payment record
+            payment_header_id: ID of the payment header record
             groups: List of appointment groups
             
         Returns:
@@ -126,7 +146,7 @@ class PaymentService:
             for appointment in appointments:
                 # Create payment item for each appointment
                 payment_item = PaymentItem(
-                    payment_id=payment_id,
+                    payment_header_id=payment_header_id,
                     item_type=ItemType.APPOINTMENT_GROUP,
                     reference_id=appointment.id,  # Reference the individual appointment
                     item_name=self._get_appointment_description(appointment),
@@ -139,6 +159,71 @@ class PaymentService:
                 self.db.add(payment_item)
         
         return payment_items
+    
+    def get_payment_method_configuration_status(self, payment_method: str) -> Dict[str, Any]:
+        """
+        Get configuration status for a payment method.
+        
+        Args:
+            payment_method: Payment method to check
+            
+        Returns:
+            Dictionary with configuration status information
+        """
+        if not self.user:
+            return {
+                "configured": False,
+                "account_id": None,
+                "account_code": None,
+                "account_name": None,
+                "error": "User context not available for configuration lookup"
+            }
+        
+        try:
+            # Validate payment method
+            payment_method_enum = PaymentMethod(payment_method.lower())
+            
+            # Lookup configuration
+            config_service = create_payment_method_config_service(self.db, self.user)
+            config = config_service.get_config_for_payment_method(payment_method_enum)
+            
+            if config and config.is_active:
+                # Get account information
+                from Modules.Accounts.models import Account
+                account = self.db.query(Account).filter(Account.id == config.account_id).first()
+                
+                return {
+                    "configured": True,
+                    "account_id": config.account_id,
+                    "account_code": config.account_code,
+                    "account_name": account.name if account else "Unknown Account",
+                    "error": None
+                }
+            else:
+                return {
+                    "configured": False,
+                    "account_id": None,
+                    "account_code": None,
+                    "account_name": None,
+                    "error": f"No active configuration found for payment method '{payment_method}'"
+                }
+                
+        except ValueError:
+            return {
+                "configured": False,
+                "account_id": None,
+                "account_code": None,
+                "account_name": None,
+                "error": f"Invalid payment method: {payment_method}"
+            }
+        except Exception as e:
+            return {
+                "configured": False,
+                "account_id": None,
+                "account_code": None,
+                "account_name": None,
+                "error": f"Failed to check configuration: {str(e)}"
+            }
     
     def _get_appointment_description(self, appointment: Appointment) -> str:
         """
@@ -173,7 +258,7 @@ class PaymentService:
         
         return f"{service_name}{professional_name}"
     
-    def get_payment_by_id(self, payment_id: UUID) -> Optional[Payment]:
+    def get_payment_by_id(self, payment_id: UUID) -> Optional[PaymentHeader]:
         """
         Get payment record by ID.
         
@@ -181,11 +266,11 @@ class PaymentService:
             payment_id: Payment ID
             
         Returns:
-            Payment record or None if not found
+            PaymentHeader record or None if not found
         """
-        return self.db.query(Payment).filter(Payment.id == payment_id).first()
+        return self.db.query(PaymentHeader).filter(PaymentHeader.id == payment_id).first()
     
-    def get_payments_by_client(self, client_id: UUID) -> List[Payment]:
+    def get_payments_by_client(self, client_id: UUID) -> List[PaymentHeader]:
         """
         Get all payments for a specific client.
         
@@ -193,11 +278,11 @@ class PaymentService:
             client_id: Client ID
             
         Returns:
-            List of Payment records
+            List of PaymentHeader records
         """
-        return self.db.query(Payment).filter(
-            Payment.client_id == client_id
-        ).order_by(Payment.created_at.desc()).all()
+        return self.db.query(PaymentHeader).filter(
+            PaymentHeader.client_id == client_id
+        ).order_by(PaymentHeader.created_at.desc()).all()
     
     def get_payment_items_by_payment(self, payment_id: UUID) -> List[PaymentItem]:
         """
@@ -210,7 +295,7 @@ class PaymentService:
             List of PaymentItem records
         """
         return self.db.query(PaymentItem).filter(
-            PaymentItem.payment_id == payment_id
+            PaymentItem.payment_header_id == payment_id
         ).all()
 
 
@@ -221,28 +306,30 @@ class PaymentFactory:
     """
     
     @staticmethod
-    def create_payment_service(db: Session) -> PaymentService:
+    def create_payment_service(db: Session, user=None) -> PaymentService:
         """
         Create a PaymentService instance.
         
         Args:
             db: Database session
+            user: Optional user for payment method config lookup
             
         Returns:
             PaymentService instance
         """
-        return PaymentService(db)
+        return PaymentService(db, user)
 
 
 # For backward compatibility and ease of use
-def create_payment_service(db: Session) -> PaymentService:
+def create_payment_service(db: Session, user=None) -> PaymentService:
     """
     Factory function to create PaymentService.
     
     Args:
         db: Database session
+        user: Optional user for payment method config lookup
         
     Returns:
         PaymentService instance
     """
-    return PaymentFactory.create_payment_service(db)
+    return PaymentFactory.create_payment_service(db, user)

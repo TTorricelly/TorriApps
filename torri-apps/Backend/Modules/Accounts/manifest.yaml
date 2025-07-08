@@ -1,0 +1,42 @@
+name: "Accounts"
+description: "Chart of Accounts management with hierarchical tree structure"
+version: "1.0.0"
+author: "TorriApps Team"
+dependencies:
+  - Core.Database
+  - Core.Auth
+  - Core.Utils
+endpoints:
+  - path: "/accounts"
+    methods: ["GET", "POST"]
+    description: "CRUD operations for accounts"
+  - path: "/accounts/{account_id}"
+    methods: ["GET", "PUT", "DELETE"]
+    description: "Account operations by ID"
+  - path: "/accounts/tree"
+    methods: ["GET"]
+    description: "Get account tree structure"
+  - path: "/accounts/roots"
+    methods: ["GET"]
+    description: "Get root accounts"
+  - path: "/accounts/code/{code}"
+    methods: ["GET"]
+    description: "Get account by code"
+  - path: "/accounts/{account_id}/children"
+    methods: ["GET"]
+    description: "Get account children"
+models:
+  - Account
+permissions:
+  - role: GESTOR
+    description: "Full access to account management"
+features:
+  - "Hierarchical chart of accounts with tree structure"
+  - "Account types: ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE, OFF_BAL"
+  - "Normal balance tracking (DEBIT/CREDIT)"
+  - "Account subtypes for specialized accounts"
+  - "POS integration support"
+  - "Multi-currency support"
+  - "Tree operations (ancestors, descendants, children)"
+  - "Validation for tree integrity"
+  - "Soft delete support"

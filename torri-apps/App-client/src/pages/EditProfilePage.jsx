@@ -77,13 +77,17 @@ const EditProfilePage = () => {
     
     setIsSaving(true);
     
-    // Clean and format Brazilian data before submission
-    const cleanedData = cleanFormData(formData);
-    
-    const updatedProfile = await updateUserProfile(cleanedData);
-    
-    // Update labels if they changed
-    if (updatedProfile) {
+    try {
+      // Clean and format Brazilian data before submission
+      const cleanedData = cleanFormData(formData);
+      
+      const updatedProfile = await updateUserProfile(cleanedData);
+      
+      if (!updatedProfile) {
+        throw new Error('Failed to update profile - no data returned');
+      }
+      
+      // Update labels if they changed
       try {
         // Check if labels actually changed using utility function
         const labelsChanged = !areLabelsEqual(user?.labels, selectedLabels);
@@ -97,16 +101,18 @@ const EditProfilePage = () => {
         console.error('Error updating labels:', error);
         alert('Perfil atualizado, mas houve erro ao salvar labels. Tente novamente.');
       }
-    }
-    
-    setIsSaving(false);
-
-    if (updatedProfile) {
+      
+      // Update the auth store with the new profile data
       setProfile(updatedProfile);
+      
+      // Navigate back to profile page
       navigate(ROUTES.PROFILE);
-    } else {
-      // Handle error case, e.g., show a notification
-      alert('Failed to update profile. Please try again.');
+      
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert(`Erro ao salvar perfil: ${error.message || 'Tente novamente.'}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 

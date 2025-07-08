@@ -501,7 +501,8 @@ def process_appointment_payment_endpoint(
         result = appointments_services.process_appointment_payment(
             db=db,
             payment_data=payment_data,
-            tenant_id="default"  # TODO: Get from auth context
+            tenant_id="default",  # TODO: Get from auth context
+            user=requesting_user
         )
         
         return result

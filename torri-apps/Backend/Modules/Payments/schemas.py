@@ -12,11 +12,22 @@ from pydantic import BaseModel, Field, validator
 from .models import PaymentMethod, PaymentStatus, ItemType
 
 
+class AccountInfoSchema(BaseModel):
+    """Schema for account information in payment responses."""
+    
+    id: str
+    code: str
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+
 class PaymentItemSchema(BaseModel):
     """Schema for payment item data."""
     
     id: UUID
-    payment_id: UUID
+    payment_header_id: UUID
     item_type: ItemType
     reference_id: Optional[UUID]
     item_name: str
@@ -24,6 +35,11 @@ class PaymentItemSchema(BaseModel):
     quantity: int
     total_amount: Decimal
     created_at: datetime
+    
+    # Keep old field name for backward compatibility
+    @property
+    def payment_id(self) -> UUID:
+        return self.payment_header_id
     
     class Config:
         from_attributes = True
@@ -42,10 +58,14 @@ class PaymentSchema(BaseModel):
     payment_method: PaymentMethod
     payment_status: PaymentStatus
     processor_transaction_id: Optional[str]
+    account_id: Optional[str] = Field(None, description="Account ID for accounting integration")
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
     payment_items: List[PaymentItemSchema] = []
+    
+    # Account information (populated if account_id is present)
+    account_info: Optional[AccountInfoSchema] = Field(None, description="Account information for accounting integration")
     
     class Config:
         from_attributes = True
@@ -61,6 +81,7 @@ class CreatePaymentRequest(BaseModel):
     tip_amount: Decimal = Field(default=Decimal('0.00'), ge=0, description="Tip amount")
     total_amount: Decimal = Field(..., gt=0, description="Total amount")
     payment_method: str = Field(..., description="Payment method (cash, debit, credit, pix)")
+    account_id: Optional[str] = Field(None, description="Account ID for accounting integration")
     notes: Optional[str] = Field(None, max_length=1000, description="Optional payment notes")
     
     @validator('payment_method')
