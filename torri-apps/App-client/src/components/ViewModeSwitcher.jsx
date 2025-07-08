@@ -1,4 +1,3 @@
-import React from 'react'
 import { Users, Briefcase, ArrowLeftRight } from '../components/icons'
 import { useViewModeStore } from '../stores/viewModeStore'
 import { useAuthStore } from '../stores/authStore'

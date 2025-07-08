@@ -103,6 +103,7 @@ const WizardDateScreen = () => {
         // TODO: Navigate to next step when implemented
         // navigate('/scheduling-wizard?step=2');
       } else {
+        // Cannot proceed to next step
       }
     }, 500);
   }, [availableDates, setSelectedDate, canProceedToStep, goToNextStep, currentStep]);

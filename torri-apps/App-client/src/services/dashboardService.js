@@ -52,6 +52,7 @@ class DashboardService {
 
       return metrics;
     } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
       throw error;
     }
   }

@@ -347,6 +347,7 @@ const CheckoutDrawer = ({
         onGroupAdd(group);
       }
     } catch (error) {
+      // Handle error silently
     }
   };
   

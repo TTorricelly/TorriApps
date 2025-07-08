@@ -4,7 +4,6 @@
  * Features: Progress indicator, step navigation, title display
  */
 
-import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 const WizardHeader = ({ 

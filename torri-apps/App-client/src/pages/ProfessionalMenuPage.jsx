@@ -11,7 +11,6 @@
  * - User Profile
  */
 
-import React from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { useNavigation } from '../shared/hooks/useNavigation';

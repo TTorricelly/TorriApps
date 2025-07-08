@@ -37,7 +37,7 @@ import { professionalsApi } from '../Services/professionals';
 import { 
   handleCpfInput, 
   handleCepInput, 
-  validateCpfChecksum, 
+  _validateCpfChecksum, 
   validateCepFormat, 
   lookupCep,
   BRAZILIAN_STATES
@@ -82,7 +82,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState([]);
-  const [showAllServices, setShowAllServices] = useState(false); // Toggle between category and global view
+  const [_showAllServices, _setShowAllServices] = useState(false); // Toggle between category and global view
   
   // Service assignment state (for per-service professional assignment)
   const [serviceAssignments, setServiceAssignments] = useState({});
@@ -436,7 +436,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   });
 
   // Get professionals for selected services
-  const getAvailableProfessionals = () => {
+  const _getAvailableProfessionals = () => {
     // Use preloaded professionals if available
     const professionals = preloadedServices?.professionals || [];
     
@@ -1246,7 +1246,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   );
 
   // Render confirmation step
-  const renderConfirmationStep = () => {
+  const _renderConfirmationStep = () => {
     const { totalDuration, totalPrice } = calculateTotals();
     
     return (
