@@ -17,6 +17,7 @@ import KanbanBoardPage from './pages/KanbanBoardPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import { useAuthStore } from './stores/authStore'
 import { useViewModeStore } from './stores/viewModeStore'
+import UpdateNotification from './components/UpdateNotification'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -106,6 +107,7 @@ function App() {
 
   return (
     <div className="h-full w-full">
+      <UpdateNotification />
       <Routes>
         <Route 
           path="/" 

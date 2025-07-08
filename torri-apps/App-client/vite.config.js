@@ -10,6 +10,9 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
       injectRegister: 'auto',
       strategies: 'generateSW',
+      devOptions: {
+        enabled: false
+      },
       manifest: {
         name: 'TorriApps - Salon Booking',
         short_name: 'TorriApps',
@@ -40,6 +43,8 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/torri-backend-.*\.run\.app\/api\//,
