@@ -37,7 +37,15 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     
-    # Root location
+    # Static assets (icons, images, etc.)
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|css|js|json)$ {
+        root /usr/share/nginx/html;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+    
+    # Root location for SPA
     location / {
         root /usr/share/nginx/html;
         index index.html;
