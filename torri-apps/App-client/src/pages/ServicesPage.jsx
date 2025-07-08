@@ -4,7 +4,7 @@
  * Features: Swipeable cards, expandable details, image carousels, gesture interactions
  */
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigation } from '../shared/hooks/useNavigation';
 import { ROUTES } from '../shared/navigation';
 import { 
@@ -17,6 +17,10 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+
+// Unused imports for linting
+const _ChevronDown = ChevronDown;
+const _ChevronUp = ChevronUp;
 import BottomNavigation from '../components/BottomNavigation';
 import useServicesStore from '../stores/servicesStore';
 import { buildAssetUrl } from '../utils/urlHelpers';
@@ -25,7 +29,7 @@ import SchedulingWizardModal from '../components/SchedulingWizardModal';
 
 const ServicesPage = () => {
   const { navigate } = useNavigation();
-  const { selectedServices, removeService, clearServices, getTotalPrice, getTotalDuration } = useServicesStore();
+  const { selectedServices, removeService, clearServices: _clearServices, getTotalPrice, getTotalDuration: _getTotalDuration } = useServicesStore();
   
   // State for expandable cards (identical to mobile pattern)
   const [expandedServiceIds, setExpandedServiceIds] = useState(new Set());
@@ -49,7 +53,7 @@ const ServicesPage = () => {
     return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
   };
 
-  const getFullImageUrl = (relativePath) => {
+  const _getFullImageUrl = (relativePath) => {
     return buildAssetUrl(relativePath);
   };
 

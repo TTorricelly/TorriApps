@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '../shared/hooks/useNavigation';
 import { ROUTES } from '../shared/navigation';
 import BottomNavigation from '../components/BottomNavigation';
@@ -27,7 +27,7 @@ const ProfilePage = () => {
     };
 
     fetchProfile();
-  }, []); // Empty dependency array - only run once on mount
+  }, [setProfile]); // Include setProfile in dependencies
 
   const handleLogout = () => {
     logout();

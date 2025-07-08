@@ -42,7 +42,7 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
  * @param {string} entityName - Name of entity for logging
  * @returns {Array} Always returns an array
  */
-export const ensureArray = (data, entityName = 'items') => {
+export const ensureArray = (data, _entityName = 'items') => {
   if (Array.isArray(data)) {
     return data;
   }

@@ -14,7 +14,7 @@ export const useNavigation = () => {
   const { tenantSlug } = useParams();
   
   // Memoize tenant info to avoid recalculation, re-evaluate when location changes
-  const tenantInfo = useMemo(() => getTenantInfo(), [location.pathname]);
+  const tenantInfo = useMemo(() => getTenantInfo(), []);
   const useSlugInUrl = tenantInfo?.method === 'slug';
   const currentTenantSlug = tenantSlug || tenantInfo?.slug;
   

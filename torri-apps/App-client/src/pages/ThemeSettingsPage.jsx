@@ -2,7 +2,7 @@
  * Theme Settings Page - Professional theme customization
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Palette, Check, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { saveTenantTheme, fetchTenantTheme } from '../api/themeApi';
@@ -113,7 +113,7 @@ const ThemeSettingsPage = () => {
     const style = document.createElement('style');
     style.id = 'theme-preview';
     
-    const lighter = lightenColor(color, 0.3);
+    const _lighter = lightenColor(color, 0.3);
     const darker = darkenColor(color, 0.2);
     
     style.textContent = `

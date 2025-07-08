@@ -27,7 +27,7 @@ export const getCategories = async () => {
 };
 
 // Legacy image fields for backward compatibility
-const LEGACY_SERVICE_IMAGE_FIELDS = ['image_url', 'liso_image_url', 'ondulado_image_url', 'cacheado_image_url', 'crespo_image_url'];
+const _LEGACY_SERVICE_IMAGE_FIELDS = ['image_url', 'liso_image_url', 'ondulado_image_url', 'cacheado_image_url', 'crespo_image_url'];
 
 /**
  * Transform service images from new images array structure to format compatible with UI components

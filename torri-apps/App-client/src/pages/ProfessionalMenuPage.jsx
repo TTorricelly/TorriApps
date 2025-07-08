@@ -38,7 +38,7 @@ import ProfessionalBottomNavigation from '../components/ProfessionalBottomNaviga
 
 const ProfessionalMenuPage = () => {
   const { navigate } = useNavigation();
-  const { logout, user } = useAuthStore();
+  const { logout, user: _user } = useAuthStore();
   const { currentMode, toggleMode } = useViewModeStore();
 
   // Menu sections with their options

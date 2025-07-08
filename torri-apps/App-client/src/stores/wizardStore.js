@@ -6,7 +6,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useViewModeStore } from './viewModeStore';
+import { useViewModeStore as _useViewModeStore } from './viewModeStore';
 import { useAuthStore } from './authStore';
 
 export const useWizardStore = create(

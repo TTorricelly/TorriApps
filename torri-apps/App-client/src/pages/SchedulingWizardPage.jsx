@@ -4,7 +4,7 @@
  * Multi-step wizard: Date → Professionals → Time Slots → Confirmation
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigation } from '../shared/hooks/useNavigation';
 import { ROUTES } from '../shared/navigation';
@@ -27,7 +27,7 @@ const SchedulingWizardPage = () => {
     initializeWizard,
     resetWizard,
     goToPreviousStep,
-    canProceedToStep
+    canProceedToStep: _canProceedToStep
   } = useWizardStore();
 
   // Initialize wizard with services from route state or services store

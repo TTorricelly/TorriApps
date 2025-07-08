@@ -31,7 +31,7 @@ export const testJWTHandling = () => {
     const decoded = jwtDecode(mockToken);
     
     // Test expiry validation
-    const isExpired = decoded.exp * 1000 <= Date.now();
+    const _isExpired = decoded.exp * 1000 <= Date.now();
     
     return true;
   } catch (error) {
@@ -76,12 +76,12 @@ export const testApiRequestFormat = () => {
   
   
   // Simulate API request payload
-  const emailPayload = {
+  const _emailPayload = {
     email_or_phone: normalizedEmail,
     password: 'test-password'
   };
   
-  const phonePayload = {
+  const _phonePayload = {
     email_or_phone: normalizedPhone,
     password: 'test-password'
   };
