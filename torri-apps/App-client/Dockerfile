@@ -37,11 +37,26 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     
-    # Static assets (icons, images, etc.)
-    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|css|js|json)$ {
+    # Specific location for icons folder
+    location /icons/ {
         root /usr/share/nginx/html;
         expires 1y;
         add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+    
+    # Static assets (css, js, etc.)
+    location ~* \.(css|js|map|woff|woff2|ttf|eot)$ {
+        root /usr/share/nginx/html;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+    
+    # Manifest files
+    location /manifest.json {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache";
         try_files \$uri =404;
     }
     
