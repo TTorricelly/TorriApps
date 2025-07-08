@@ -2,6 +2,8 @@
  * Theme utilities for managing PWA status bar and theme colors
  */
 
+import { applyTenantTheme, getTenantTheme } from './tenantTheme';
+
 /**
  * Updates the theme color for PWA status bar
  * @param {string} color - Hex color code (e.g., '#ec4899')
@@ -42,10 +44,18 @@ export const setThemeForSection = (section) => {
 };
 
 /**
+ * Initialize tenant theme on app startup
+ */
+export const initializeTenantTheme = async () => {
+  await applyTenantTheme();
+};
+
+/**
  * Resets to default theme color
  */
-export const resetTheme = () => {
-  updateThemeColor(THEME_COLORS.primary);
+export const resetTheme = async () => {
+  const tenantTheme = await getTenantTheme();
+  updateThemeColor(tenantTheme.primary);
 };
 
 /**

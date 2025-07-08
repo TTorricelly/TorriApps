@@ -48,10 +48,10 @@ const ProfessionalDashboardPage = () => {
 
   // Render welcome header
   const renderWelcomeHeader = () => (
-    <div className="safe-area-top bg-gradient-to-r from-pink-500 to-pink-600 px-6 py-6">
+    <div className="safe-area-top bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-pink-400 rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-primary-400 rounded-full flex items-center justify-center">
             <User size={24} className="text-white" />
           </div>
           <div>
@@ -60,7 +60,7 @@ const ProfessionalDashboardPage = () => {
             </h1>
           </div>
         </div>
-        <button className="p-2 bg-pink-400 rounded-full hover:bg-pink-300 transition-smooth">
+        <button className="p-2 bg-primary-400 rounded-full hover:bg-primary-300 transition-smooth">
           <Bell size={20} className="text-white" />
         </button>
       </div>

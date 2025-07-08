@@ -33,6 +33,8 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
     setCurrentStep,
     goToPreviousStep,
     resetWizard,
+    mode,
+    isClientMode,
   } = useWizardStore();
 
   const { user } = useAuthStore();
@@ -518,8 +520,14 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
             // Reset wizard state when user completes the flow
             resetWizard();
             
-            // Navigate back to professional agenda page
-            navigate(ROUTES.PROFESSIONAL.AGENDA);
+            // Navigate based on mode
+            if (isClientMode()) {
+              // Client mode: navigate to appointments page (meus agendamentos)
+              navigate(ROUTES.APPOINTMENTS);
+            } else {
+              // Professional mode: navigate to professional agenda
+              navigate(ROUTES.PROFESSIONAL.AGENDA);
+            }
           }}
           className="w-full py-[18px] bg-green-500 text-white rounded-2xl font-semibold text-base shadow-lg hover:bg-green-600 transition-smooth"
         >

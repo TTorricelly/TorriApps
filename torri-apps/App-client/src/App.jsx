@@ -18,6 +18,8 @@ import ComingSoonPage from './pages/ComingSoonPage'
 import { useAuthStore } from './stores/authStore'
 import { useViewModeStore } from './stores/viewModeStore'
 import UpdateNotification from './components/UpdateNotification'
+import GlobalThemeLoader from './components/GlobalThemeLoader'
+import { initializeTenantTheme } from './utils/themeUtils'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -89,6 +91,11 @@ function App() {
     validateStoredToken()
   }, [])
 
+  // Initialize tenant theme on app startup
+  useEffect(() => {
+    initializeTenantTheme().catch(console.error)
+  }, [])
+
   // Smart redirect based on user role and view mode
   const getDefaultRedirectPath = (tenantSlug = null) => {
     if (!isAuthenticated || !user) {
@@ -107,6 +114,7 @@ function App() {
 
   return (
     <div className="h-full w-full">
+      <GlobalThemeLoader />
       <UpdateNotification />
       <Routes>
         <Route 

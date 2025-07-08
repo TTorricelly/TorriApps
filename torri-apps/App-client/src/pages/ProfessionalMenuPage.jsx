@@ -31,10 +31,12 @@ import {
   ArrowLeft,
   ToggleLeft,
   ToggleRight,
-  LogOut
+  LogOut,
+  Paintbrush
 } from 'lucide-react';
 
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
+import SimpleThemeChanger from '../components/SimpleThemeChanger';
 
 const ProfessionalMenuPage = () => {
   const { navigate } = useNavigation();
@@ -111,6 +113,11 @@ const ProfessionalMenuPage = () => {
       icon: Settings,
       color: 'bg-gray-50 border-gray-200 text-gray-700',
       items: [
+        {
+          label: 'Personalizar Tema',
+          path: '/coming-soon',
+          icon: Paintbrush
+        },
         {
           label: 'Perfil da Empresa',
           path: '/coming-soon',
@@ -268,6 +275,9 @@ const ProfessionalMenuPage = () => {
       <div className="flex-shrink-0">
         <ProfessionalBottomNavigation />
       </div>
+
+      {/* Simple Theme Changer - Floating Button */}
+      <SimpleThemeChanger />
     </div>
   );
 };

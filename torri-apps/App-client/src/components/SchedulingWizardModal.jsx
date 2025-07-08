@@ -6,6 +6,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useWizardStore } from '../stores/wizardStore';
+import { useAuthStore } from '../stores/authStore';
+import { useViewModeStore } from '../stores/viewModeStore';
 import WizardHeader from './WizardHeader';
 import WizardClientScreen from './wizard/WizardClientScreen';
 import WizardServiceScreen from './wizard/WizardServiceScreen';
@@ -22,12 +24,22 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
     initializeWizard,
     resetWizard,
     goToPreviousStep,
-    canProceedToStep
+    canProceedToStep,
+    mode,
+    getTotalSteps,
+    getStartingStep
   } = useWizardStore();
+  
+  const { user } = useAuthStore();
+  const { currentMode } = useViewModeStore();
 
   // Initialize wizard when modal opens
   useEffect(() => {
     if (isVisible) {
+      // Determine mode based on user role and current view mode
+      const isProfessional = user?.role === 'PROFISSIONAL' || user?.role === 'ATENDENTE' || user?.role === 'GESTOR';
+      const wizardMode = isProfessional && currentMode === 'professional' ? 'professional' : 'client';
+      
       if (selectedServices?.length > 0) {
         // If services are pre-selected, skip to date selection
         const wizardServices = selectedServices.map(service => ({
@@ -39,13 +51,13 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
           max_parallel_pros: service.max_parallel_pros ?? 1,
         }));
         
-        initializeWizard(wizardServices);
+        initializeWizard(wizardServices, wizardMode);
       } else {
         // Start with empty wizard for service selection
-        initializeWizard([]);
+        initializeWizard([], wizardMode);
       }
     }
-  }, [isVisible, selectedServices, initializeWizard]);
+  }, [isVisible, selectedServices, initializeWizard, user, currentMode]);
 
   // Handle modal entrance animation
   useEffect(() => {
@@ -65,8 +77,9 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
 
   // Handle back navigation
   const handleBack = () => {
-    if (currentStep === 1) {
-      // First step - close modal and reset wizard
+    const startingStep = getStartingStep();
+    if (currentStep === startingStep) {
+      // First step for current mode - close modal and reset wizard
       handleClose();
     } else {
       // Other steps - go to previous step
@@ -102,28 +115,69 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
     }
   }, [isVisible]);
 
-  // Get step title
+  // Get step title based on mode
   const getStepTitle = (step) => {
-    switch (step) {
-      case 1:
-        return 'Selecionar cliente';
-      case 2:
-        return 'Escolher serviços';
-      case 3:
-        return 'Escolher data';
-      case 4:
-        return 'Escolher profissionais';
-      case 5:
-        return 'Escolher horário';
-      case 6:
-        return 'Confirmar agendamento';
-      default:
-        return 'Agendamento';
+    if (mode === 'client') {
+      // Client mode with pre-selected services: Steps 3-6 (Date → Professionals → Time → Confirmation)
+      if (selectedServices?.length > 0) {
+        switch (step) {
+          case 3:
+            return 'Escolher data';
+          case 4:
+            return 'Escolher profissionais';
+          case 5:
+            return 'Escolher horário';
+          case 6:
+            return 'Confirmar agendamento';
+          default:
+            return 'Agendamento';
+        }
+      } else {
+        // Client mode without services: Steps 2-6 (Services → Date → Professionals → Time → Confirmation)
+        switch (step) {
+          case 2:
+            return 'Escolher serviços';
+          case 3:
+            return 'Escolher data';
+          case 4:
+            return 'Escolher profissionais';
+          case 5:
+            return 'Escolher horário';
+          case 6:
+            return 'Confirmar agendamento';
+          default:
+            return 'Agendamento';
+        }
+      }
+    } else {
+      // Professional mode: Full flow (Steps 1-6)
+      switch (step) {
+        case 1:
+          return 'Selecionar cliente';
+        case 2:
+          return 'Escolher serviços';
+        case 3:
+          return 'Escolher data';
+        case 4:
+          return 'Escolher profissionais';
+        case 5:
+          return 'Escolher horário';
+        case 6:
+          return 'Confirmar agendamento';
+        default:
+          return 'Agendamento';
+      }
     }
   };
 
   // Render current step
   const renderCurrentStep = () => {
+    // In client mode, step 1 is not used, so we need to adjust
+    if (mode === 'client' && currentStep === 1) {
+      // Should not happen, but fallback to services
+      return <WizardServiceScreen />;
+    }
+    
     switch (currentStep) {
       case 1:
         return <WizardClientScreen />;
@@ -174,8 +228,8 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
           {/* Wizard Header */}
           <WizardHeader
             title={getStepTitle(currentStep)}
-            currentStep={currentStep}
-            totalSteps={6}
+            currentStep={mode === 'client' && selectedServices?.length > 0 ? currentStep - 2 : mode === 'client' ? currentStep - 1 : currentStep}
+            totalSteps={getTotalSteps()}
             onBack={handleBack}
           />
 

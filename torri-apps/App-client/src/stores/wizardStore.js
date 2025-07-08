@@ -6,6 +6,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useViewModeStore } from './viewModeStore';
+import { useAuthStore } from './authStore';
 
 export const useWizardStore = create(
   persist(
@@ -14,6 +16,7 @@ export const useWizardStore = create(
       currentStep: 1,
       isLoading: false,
       error: null,
+      mode: 'professional', // 'professional' or 'client'
       
       // Step 1: Client selection
       clientData: {
@@ -60,42 +63,118 @@ export const useWizardStore = create(
       isBooking: false,
       bookingResult: null,
 
-      // Step validation (updated for 6-step flow)
+      // Mode detection helpers
+      isClientMode: () => get().mode === 'client',
+      isProfessionalMode: () => get().mode === 'professional',
+      
+      // Get effective starting step based on mode and services
+      getStartingStep: () => {
+        const state = get();
+        if (state.mode === 'client') {
+          // Client mode: If services are pre-selected, skip to date selection
+          return state.selectedServices?.length > 0 ? 3 : 2;
+        }
+        return 1; // Professional mode always starts with client selection
+      },
+      
+      // Get total steps based on mode and services
+      getTotalSteps: () => {
+        const state = get();
+        if (state.mode === 'client') {
+          // Client mode: If services pre-selected, 4 steps (Date → Professionals → Time → Confirmation)
+          // If no services, 5 steps (Services → Date → Professionals → Time → Confirmation)
+          return state.selectedServices?.length > 0 ? 4 : 5;
+        }
+        return 6; // Professional mode has full 6 steps
+      },
+
+      // Step validation (updated for mode-specific flow)
       canProceedToStep: (step) => {
         const state = get();
-        switch (step) {
-          case 1:
-            return true;
-          case 2:
-            return state.clientData.id || state.clientData.name.trim();
-          case 3:
-            return (state.clientData.id || state.clientData.name.trim()) && state.selectedServices.length > 0;
-          case 4:
-            return state.selectedServices.length > 0 && state.selectedDate !== null;
-          case 5:
-            return (
-              state.selectedServices.length > 0 &&
-              state.selectedDate !== null &&
-              state.selectedProfessionals.length === state.professionalsRequested &&
-              state.selectedProfessionals.every(prof => prof !== null && prof !== undefined)
-            );
-          case 6:
-            return state.selectedSlot !== null && state.canProceedToStep(5);
-          default:
-            return false;
+        
+        if (state.mode === 'client') {
+          // Client mode with pre-selected services: Steps 3-6 (Date → Professionals → Time → Confirmation)
+          if (state.selectedServices?.length > 0) {
+            switch (step) {
+              case 3:
+                return true; // Date step
+              case 4:
+                return state.selectedDate !== null;
+              case 5:
+                return (
+                  state.selectedDate !== null &&
+                  state.selectedProfessionals.length === state.professionalsRequested &&
+                  state.selectedProfessionals.every(prof => prof !== null && prof !== undefined)
+                );
+              case 6:
+                return state.selectedSlot !== null && state.canProceedToStep(5);
+              default:
+                return false;
+            }
+          } else {
+            // Client mode without services: Steps 2-6 (Services → Date → Professionals → Time → Confirmation)
+            switch (step) {
+              case 2:
+                return true; // Services step
+              case 3:
+                return state.selectedServices.length > 0;
+              case 4:
+                return state.selectedServices.length > 0 && state.selectedDate !== null;
+              case 5:
+                return (
+                  state.selectedServices.length > 0 &&
+                  state.selectedDate !== null &&
+                  state.selectedProfessionals.length === state.professionalsRequested &&
+                  state.selectedProfessionals.every(prof => prof !== null && prof !== undefined)
+                );
+              case 6:
+                return state.selectedSlot !== null && state.canProceedToStep(5);
+              default:
+                return false;
+            }
+          }
+        } else {
+          // Professional mode: Steps 1-6 (full flow)
+          switch (step) {
+            case 1:
+              return true;
+            case 2:
+              return state.clientData.id || state.clientData.name.trim();
+            case 3:
+              return (state.clientData.id || state.clientData.name.trim()) && state.selectedServices.length > 0;
+            case 4:
+              return state.selectedServices.length > 0 && state.selectedDate !== null;
+            case 5:
+              return (
+                state.selectedServices.length > 0 &&
+                state.selectedDate !== null &&
+                state.selectedProfessionals.length === state.professionalsRequested &&
+                state.selectedProfessionals.every(prof => prof !== null && prof !== undefined)
+              );
+            case 6:
+              return state.selectedSlot !== null && state.canProceedToStep(5);
+            default:
+              return false;
+          }
         }
       },
 
       // Actions - Step Management
       setCurrentStep: (step) => set({ currentStep: step }),
       
+      setMode: (mode) => set({ mode }),
+      
       goToNextStep: () => set((state) => ({ 
-        currentStep: Math.min(state.currentStep + 1, 6) 
+        currentStep: Math.min(state.currentStep + 1, state.mode === 'client' ? 6 : 6) 
       })),
       
-      goToPreviousStep: () => set((state) => ({ 
-        currentStep: Math.max(state.currentStep - 1, 1) 
-      })),
+      goToPreviousStep: () => set((state) => {
+        let minStep = 1;
+        if (state.mode === 'client') {
+          minStep = state.selectedServices?.length > 0 ? 3 : 2;
+        }
+        return { currentStep: Math.max(state.currentStep - 1, minStep) };
+      }),
 
       // Actions - Loading & Error
       setLoading: (loading) => set({ isLoading: loading }),
@@ -192,30 +271,82 @@ export const useWizardStore = create(
       },
 
       // Reset wizard state
-      resetWizard: () => set({
-        currentStep: 1,
-        isLoading: false,
-        error: null,
-        selectedServices: [],
-        selectedDate: null,
-        availableDates: [],
-        professionalsRequested: 1,
-        maxParallelPros: 2,
-        defaultProsRequested: 1,
-        selectedProfessionals: [],
-        availableProfessionals: [],
-        availableSlots: [],
-        selectedSlot: null,
-        notes: '',
-        isBooking: false,
-        bookingResult: null
-      }),
+      resetWizard: () => {
+        const state = get();
+        const startingStep = state.mode === 'client' ? 2 : 1;
+        
+        set({
+          currentStep: startingStep,
+          isLoading: false,
+          error: null,
+          selectedServices: [],
+          selectedDate: null,
+          availableDates: [],
+          professionalsRequested: 1,
+          maxParallelPros: 2,
+          defaultProsRequested: 1,
+          selectedProfessionals: [],
+          availableProfessionals: [],
+          availableSlots: [],
+          selectedSlot: null,
+          notes: '',
+          isBooking: false,
+          bookingResult: null,
+          // Reset client data in professional mode, keep in client mode
+          clientData: state.mode === 'professional' ? {
+            id: null,
+            name: '',
+            nickname: '',
+            phone: '',
+            email: '',
+            cpf: '',
+            address_cep: '',
+            address_street: '',
+            address_number: '',
+            address_complement: '',
+            address_neighborhood: '',
+            address_city: '',
+            address_state: '',
+            isNewClient: false
+          } : state.clientData
+        });
+      },
 
-      // Initialize wizard with services
-      initializeWizard: (services) => {
+      // Initialize wizard with services and mode
+      initializeWizard: (services, mode = 'professional') => {
+        const state = get();
+        const startingStep = mode === 'client' ? 2 : 1;
+        
+        // Auto-populate client data in client mode
+        let clientData = state.clientData;
+        if (mode === 'client') {
+          // Get current user data from auth store
+          const user = useAuthStore.getState().user;
+          if (user) {
+            clientData = {
+              id: user.id,
+              name: user.name || '',
+              nickname: user.nickname || '',
+              phone: user.phone || '',
+              email: user.email || '',
+              cpf: user.cpf || '',
+              address_cep: user.address_cep || '',
+              address_street: user.address_street || '',
+              address_number: user.address_number || '',
+              address_complement: user.address_complement || '',
+              address_neighborhood: user.address_neighborhood || '',
+              address_city: user.address_city || '',
+              address_state: user.address_state || '',
+              isNewClient: false
+            };
+          }
+        }
+        
         set({
           selectedServices: services,
-          currentStep: 1,
+          currentStep: startingStep,
+          mode: mode,
+          clientData: clientData,
           selectedDate: null,
           availableDates: [],
           selectedProfessionals: [],
