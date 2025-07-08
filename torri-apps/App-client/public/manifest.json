@@ -2,6 +2,7 @@
   "name": "Miriã Maison",
   "short_name": "Miriã Maison",
   "description": "Marque agendamentos no seu lugar preferido",
+  "version": "1.0.1",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
