@@ -273,7 +273,11 @@ export const useWizardStore = create(
       // Reset wizard state
       resetWizard: () => {
         const state = get();
-        const startingStep = state.mode === 'client' ? 2 : 1;
+        // Calculate starting step before clearing state
+        let startingStep = 1; // Professional mode default
+        if (state.mode === 'client') {
+          startingStep = state.selectedServices?.length > 0 ? 3 : 2;
+        }
         
         set({
           currentStep: startingStep,
@@ -315,7 +319,11 @@ export const useWizardStore = create(
       // Initialize wizard with services and mode
       initializeWizard: (services, mode = 'professional') => {
         const state = get();
-        const startingStep = mode === 'client' ? 2 : 1;
+        // Calculate starting step based on mode and services
+        let startingStep = 1; // Professional mode default
+        if (mode === 'client') {
+          startingStep = services?.length > 0 ? 3 : 2; // Skip to date if services provided
+        }
         
         // Auto-populate client data in client mode
         let clientData = state.clientData;
