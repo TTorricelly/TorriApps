@@ -142,11 +142,12 @@ const GlobalThemeLoader = () => {
       try {
         // Try to get theme from server first
         const serverTheme = await fetchTenantTheme();
-        if (serverTheme?.primaryColor) {
-          console.log('🔄 GlobalThemeLoader: Loading theme from server:', serverTheme.primaryColor);
-          applyTheme(serverTheme.primaryColor);
+        if (serverTheme?.primary || serverTheme?.primaryColor) {
+          const themeColor = serverTheme.primary || serverTheme.primaryColor;
+          console.log('🔄 GlobalThemeLoader: Loading theme from server:', themeColor);
+          applyTheme(themeColor);
           // Cache in localStorage for fast access
-          localStorage.setItem('simple-theme-color', serverTheme.primaryColor);
+          localStorage.setItem('simple-theme-color', themeColor);
           return;
         }
       } catch (error) {

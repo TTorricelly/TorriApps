@@ -91,6 +91,13 @@ export const useWizardStore = create(
       // Step validation (updated for mode-specific flow)
       canProceedToStep: (step) => {
         const state = get();
+        console.log('🔍 Checking canProceedToStep:', { 
+          step, 
+          mode: state.mode, 
+          currentStep: state.currentStep,
+          selectedDate: state.selectedDate,
+          selectedServicesCount: state.selectedServices?.length || 0
+        });
         
         if (state.mode === 'client') {
           // Client mode with pre-selected services: Steps 3-6 (Date → Professionals → Time → Confirmation)
@@ -272,12 +279,14 @@ export const useWizardStore = create(
 
       // Reset wizard state
       resetWizard: () => {
+        // Always reset to default starting step - professional mode starts at 1, client at 2
         const state = get();
-        // Calculate starting step before clearing state
         let startingStep = 1; // Professional mode default
         if (state.mode === 'client') {
-          startingStep = state.selectedServices?.length > 0 ? 3 : 2;
+          startingStep = 2; // Client mode default (without services)
         }
+        
+        console.log('🔄 Wizard reset called:', { currentMode: state.mode, resetToStep: startingStep });
         
         set({
           currentStep: startingStep,
@@ -318,7 +327,6 @@ export const useWizardStore = create(
 
       // Initialize wizard with services and mode
       initializeWizard: (services, mode = 'professional') => {
-        const state = get();
         // Calculate starting step based on mode and services
         let startingStep = 1; // Professional mode default
         if (mode === 'client') {
@@ -326,7 +334,23 @@ export const useWizardStore = create(
         }
         
         // Auto-populate client data in client mode
-        let clientData = state.clientData;
+        let clientData = {
+          id: null,
+          name: '',
+          nickname: '',
+          phone: '',
+          email: '',
+          cpf: '',
+          address_cep: '',
+          address_street: '',
+          address_number: '',
+          address_complement: '',
+          address_neighborhood: '',
+          address_city: '',
+          address_state: '',
+          isNewClient: false
+        };
+        
         if (mode === 'client') {
           // Get current user data from auth store
           const user = useAuthStore.getState().user;
@@ -350,19 +374,34 @@ export const useWizardStore = create(
           }
         }
         
+        // Completely reset all wizard state and set new values
         set({
-          selectedServices: services,
           currentStep: startingStep,
+          isLoading: false,
+          error: null,
           mode: mode,
           clientData: clientData,
+          selectedServices: services || [],
           selectedDate: null,
           availableDates: [],
+          currentMonth: {
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1
+          },
+          professionalsRequested: 1,
+          maxParallelPros: 2,
+          defaultProsRequested: 1,
           selectedProfessionals: [],
           availableProfessionals: [],
           availableSlots: [],
           selectedSlot: null,
-          error: null
+          notes: '',
+          isBooking: false,
+          bookingResult: null
         });
+        
+        // Log for debugging
+        console.log('🔄 Wizard initialized:', { mode, startingStep, servicesCount: (services || []).length, currentStep: startingStep });
       },
 
       // Reset wizard from specific step (used when changing earlier selections)

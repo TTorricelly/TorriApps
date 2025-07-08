@@ -36,7 +36,6 @@ import {
 } from 'lucide-react';
 
 import ProfessionalBottomNavigation from '../components/ProfessionalBottomNavigation';
-import SimpleThemeChanger from '../components/SimpleThemeChanger';
 
 const ProfessionalMenuPage = () => {
   const { navigate } = useNavigation();
@@ -115,7 +114,7 @@ const ProfessionalMenuPage = () => {
       items: [
         {
           label: 'Personalizar Tema',
-          path: '/coming-soon',
+          path: '/professional/theme',
           icon: Paintbrush
         },
         {
@@ -276,8 +275,6 @@ const ProfessionalMenuPage = () => {
         <ProfessionalBottomNavigation />
       </div>
 
-      {/* Simple Theme Changer - Floating Button */}
-      <SimpleThemeChanger />
     </div>
   );
 };

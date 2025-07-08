@@ -3,8 +3,11 @@
  * Single source of truth for tenant identification logic
  */
 
-// Re-export getTenantInfo from existing implementation
-export { getTenantInfo } from '../../utils/apiHelpers';
+// Import getTenantInfo from existing implementation
+import { getTenantInfo } from '../../utils/apiHelpers';
+
+// Re-export getTenantInfo
+export { getTenantInfo };
 
 /**
  * Build API base URL with tenant awareness

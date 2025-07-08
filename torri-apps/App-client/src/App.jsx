@@ -19,6 +19,7 @@ import { useAuthStore } from './stores/authStore'
 import { useViewModeStore } from './stores/viewModeStore'
 import UpdateNotification from './components/UpdateNotification'
 import GlobalThemeLoader from './components/GlobalThemeLoader'
+import ThemeSettingsPage from './pages/ThemeSettingsPage'
 import { initializeTenantTheme } from './utils/themeUtils'
 
 // Helper function to check if user is professional
@@ -205,6 +206,16 @@ function App() {
         <Route path="/:tenantSlug/professional/menu" element={
           <RoleBasedRoute professionalOnly={true}>
             <ProfessionalMenuPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/professional/theme" element={
+          <RoleBasedRoute professionalOnly={true}>
+            <ThemeSettingsPage />
+          </RoleBasedRoute>
+        } />
+        <Route path="/:tenantSlug/professional/theme" element={
+          <RoleBasedRoute professionalOnly={true}>
+            <ThemeSettingsPage />
           </RoleBasedRoute>
         } />
         <Route path="/professional/kanban" element={

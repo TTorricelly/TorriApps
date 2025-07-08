@@ -36,12 +36,29 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
   // Initialize wizard when modal opens
   useEffect(() => {
     if (isVisible) {
+      // Don't re-initialize if we're at the confirmation step (step 6)
+      // This prevents resetting when services are cleared after booking
+      if (currentStep === 6) {
+        console.log('🚫 Skipping wizard reset - already at confirmation step');
+        return;
+      }
+      
       // Determine mode based on user role and current view mode
       const isProfessional = user?.role === 'PROFISSIONAL' || user?.role === 'ATENDENTE' || user?.role === 'GESTOR';
       const wizardMode = isProfessional && currentMode === 'professional' ? 'professional' : 'client';
       
+      // Don't re-initialize if we're already in the wizard flow (past starting step)
+      if (wizardMode === 'client' && currentStep > 3) {
+        console.log('🚫 Skipping wizard reset - already progressed past starting step:', currentStep);
+        return;
+      }
+      if (wizardMode === 'professional' && currentStep > 1) {
+        console.log('🚫 Skipping wizard reset - already progressed past starting step:', currentStep);
+        return;
+      }
+      
       if (selectedServices?.length > 0) {
-        // If services are pre-selected, skip to date selection
+        // If services are pre-selected, initialize directly with services
         const wizardServices = selectedServices.map(service => ({
           id: service.id,
           name: service.name,
@@ -51,13 +68,28 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
           max_parallel_pros: service.max_parallel_pros ?? 1,
         }));
         
+        console.log('🔄 Initializing wizard with pre-selected services:', { wizardMode, servicesCount: wizardServices.length });
         initializeWizard(wizardServices, wizardMode);
+        
+        // Log the state after initialization
+        setTimeout(() => {
+          const state = useWizardStore.getState();
+          console.log('📊 Wizard state after initialization:', {
+            currentStep: state.currentStep,
+            mode: state.mode,
+            selectedServicesCount: state.selectedServices?.length || 0,
+            selectedDate: state.selectedDate,
+            canProceedToStep4: state.canProceedToStep(4),
+            canProceedToStep5: state.canProceedToStep(5)
+          });
+        }, 100);
       } else {
-        // Start with empty wizard for service selection
+        // No services - initialize directly (will handle reset internally)
+        console.log('🔄 Initializing wizard without services:', { wizardMode });
         initializeWizard([], wizardMode);
       }
     }
-  }, [isVisible, selectedServices, initializeWizard, user, currentMode]);
+  }, [isVisible, selectedServices, initializeWizard, resetWizard, user, currentMode, currentStep]);
 
   // Handle modal entrance animation
   useEffect(() => {
@@ -172,6 +204,9 @@ const SchedulingWizardModal = ({ isVisible, onClose, selectedServices, onAppoint
 
   // Render current step
   const renderCurrentStep = () => {
+    // Debug log to see what step is actually being rendered
+    console.log('🎯 Rendering step:', { currentStep, mode, isVisible });
+    
     // In client mode, step 1 is not used, so we need to adjust
     if (mode === 'client' && currentStep === 1) {
       // Should not happen, but fallback to services

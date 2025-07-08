@@ -20,6 +20,7 @@ const WizardDateScreen = () => {
     selectedDate,
     availableDates,
     currentMonth,
+    currentStep,
     isLoading,
     error,
     setSelectedDate,
@@ -96,13 +97,24 @@ const WizardDateScreen = () => {
 
     // Auto-advance to next step after 500ms delay (identical to mobile)
     setTimeout(() => {
-      if (canProceedToStep(2)) {
+      const nextStep = currentStep + 1;
+      console.log('🔄 Date selected - attempting to advance:', { 
+        currentStep, 
+        nextStep, 
+        dateString, 
+        canProceed: canProceedToStep(nextStep) 
+      });
+      
+      if (canProceedToStep(nextStep)) {
+        console.log('✅ Advancing to next step:', nextStep);
         goToNextStep();
         // TODO: Navigate to next step when implemented
         // navigate('/scheduling-wizard?step=2');
+      } else {
+        console.log('❌ Cannot proceed to next step:', nextStep);
       }
     }, 500);
-  }, [availableDates, setSelectedDate, canProceedToStep, goToNextStep]);
+  }, [availableDates, setSelectedDate, canProceedToStep, goToNextStep, currentStep]);
 
   // Calendar tile content - add dots for availability
   const tileContent = ({ date, view }) => {

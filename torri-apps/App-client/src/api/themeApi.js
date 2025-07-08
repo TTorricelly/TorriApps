@@ -37,7 +37,8 @@ export const fetchTenantTheme = async () => {
       return storedTheme ? JSON.parse(storedTheme) : null;
     } catch (fallbackError) {
       console.warn('Fallback storage also failed:', fallbackError);
-      return localStorage.getItem('simple-theme-color') || '#ec4899';
+      const simpleTheme = localStorage.getItem('simple-theme-color');
+      return simpleTheme ? { primary: simpleTheme } : null;
     }
   }
 };
@@ -97,7 +98,7 @@ export const saveTenantTheme = async (themeConfig) => {
     } catch (fallbackError) {
       console.error('Fallback storage save failed:', fallbackError);
       // Last resort - use simple localStorage
-      localStorage.setItem('simple-theme-color', themeConfig.primaryColor);
+      localStorage.setItem('simple-theme-color', themeConfig.primary || themeConfig.primaryColor);
       return false;
     }
   }
@@ -157,7 +158,8 @@ export const fetchPublicTenantTheme = async (tenantId) => {
       return storedTheme ? JSON.parse(storedTheme) : null;
     } catch (fallbackError) {
       console.warn('Public fallback storage failed:', fallbackError);
-      return localStorage.getItem('simple-theme-color') || null;
+      const simpleTheme = localStorage.getItem('simple-theme-color');
+      return simpleTheme ? { primary: simpleTheme } : null;
     }
   }
 };

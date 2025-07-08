@@ -520,13 +520,13 @@ const WizardConfirmationScreen = ({ onAppointmentCreated }) => {
             // Reset wizard state when user completes the flow
             resetWizard();
             
-            // Navigate based on mode
+            // Navigate based on mode with tenant slug
             if (isClientMode()) {
               // Client mode: navigate to appointments page (meus agendamentos)
-              navigate(ROUTES.APPOINTMENTS);
+              navigate(`/${tenantSlug}/appointments`);
             } else {
               // Professional mode: navigate to professional agenda
-              navigate(ROUTES.PROFESSIONAL.AGENDA);
+              navigate(`/${tenantSlug}/professional/agenda`);
             }
           }}
           className="w-full py-[18px] bg-green-500 text-white rounded-2xl font-semibold text-base shadow-lg hover:bg-green-600 transition-smooth"
