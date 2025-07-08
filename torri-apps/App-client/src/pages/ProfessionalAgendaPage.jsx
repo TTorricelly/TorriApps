@@ -786,11 +786,6 @@ const ProfessionalAgendaPage = () => {
     const visibleProfessionals = isLandscape 
       ? professionalsWithAppointments 
       : (professionalsWithAppointments[currentProfessionalIndex] ? [professionalsWithAppointments[currentProfessionalIndex]] : []);
-    
-      name: p.name,
-      appointmentCount: p.appointments?.length || 0,
-      appointments: p.appointments
-    })));
 
     return (
       <div className="flex-1 overflow-auto">

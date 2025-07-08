@@ -154,12 +154,9 @@ const HomePageInner = ({ navigation }, ref) => {
           return a.name.localeCompare(b.name);
         });
         
-        // Debug: Log category data to see image URLs
+        // Process category data
         sortedData.forEach(cat => {
-            id: cat.id,
-            icon_url: cat.icon_url,
-            processed_url: getFullImageUrl(cat.icon_url)
-          });
+          cat.processed_url = getFullImageUrl(cat.icon_url);
         });
         
         setFetchedCategories(sortedData);

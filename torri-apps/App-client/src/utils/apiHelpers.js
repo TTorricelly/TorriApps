@@ -23,13 +23,7 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
     return transformData(response.data);
   } catch (error) {
     if (logErrors) {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.response?.data
-      });
+      // Error occurred
     }
     
     // For authentication errors, throw the error instead of returning default

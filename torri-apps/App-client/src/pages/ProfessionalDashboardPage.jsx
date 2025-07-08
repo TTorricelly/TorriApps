@@ -67,13 +67,6 @@ const ProfessionalDashboardPage = () => {
 
   // Render quick stats
   const renderQuickStats = () => {
-      loading,
-      dashboardData,
-      appointments: dashboardData?.appointments,
-      completed: dashboardData?.completed,
-      clients: dashboardData?.clients,
-      revenue: dashboardData?.revenue
-    });
     
     return (
       <div className="px-6 py-6">

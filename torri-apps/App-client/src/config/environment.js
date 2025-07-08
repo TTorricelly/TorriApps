@@ -51,10 +51,5 @@ export const API_BASE_URL = getApiBaseUrl();
 
 // Log configuration in development
 if (import.meta.env.DEV) {
-    environment: ENVIRONMENT,
-    apiBaseUrl: API_BASE_URL,
-    isDev: import.meta.env.DEV,
-    viteApiBaseUrl: import.meta.env.VITE_API_BASE_URL,
-    willUseProxy: !import.meta.env.VITE_API_BASE_URL
-  });
+  // Configuration loaded
 }

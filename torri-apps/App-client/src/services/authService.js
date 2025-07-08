@@ -14,12 +14,6 @@ export const login = async (emailOrPhone, password) => {
   // Normalize the input according to mobile app standards
   const normalizedEmailOrPhone = normalizeEmailOrPhone(emailOrPhone);
   
-    endpoint,
-    original: emailOrPhone,
-    normalized: normalizedEmailOrPhone,
-    hasPassword: !!password
-  });
-  
   return withApiErrorHandling(
     () => apiClient.post(endpoint, {
       email_or_phone: normalizedEmailOrPhone,

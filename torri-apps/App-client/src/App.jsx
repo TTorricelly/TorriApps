@@ -52,11 +52,6 @@ const RoleBasedRoute = ({ children, allowedRoles, professionalOnly = false }) =>
     const inProfMode = currentMode === 'professional'
     
     if (!isProf || !inProfMode) {
-        userRole: user?.role,
-        isProfessional: isProf,
-        currentMode,
-        route: 'professional-only'
-      })
       const dashboardPath = tenantSlug ? `/${tenantSlug}/dashboard` : '/dashboard'
       return <Navigate to={dashboardPath} replace />
     }
@@ -66,11 +61,6 @@ const RoleBasedRoute = ({ children, allowedRoles, professionalOnly = false }) =>
   
   // For role-based routes, check actual user roles
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Debug logging for role mismatch
-      userRole: user?.role,
-      allowedRoles,
-      user: user
-    })
     // If user role is not allowed, redirect to appropriate dashboard
     const redirectPath = isProfessionalRole(user?.role) ? 
       (tenantSlug ? `/${tenantSlug}/professional/dashboard` : "/professional/dashboard") : 

@@ -89,15 +89,6 @@ class DashboardService {
         const appointmentPrice = parseFloat(appointment.price_at_booking) || 0;
         const appointmentDateStr = appointment.appointment_date; // This should already be in YYYY-MM-DD format
         
-          id: appointment.id,
-          status: appointment.status,
-          price: appointmentPrice,
-          date: appointmentDateStr,
-          today: today,
-          isToday: appointmentDateStr === today,
-          isCompleted: appointment.status === 'COMPLETED'
-        });
-        
         // Only count completed appointments for revenue
         if (appointment.status === 'COMPLETED') {
           completedRevenue += appointmentPrice;
@@ -187,12 +178,6 @@ class DashboardService {
     const todayAppointments = appointmentGroups.filter(group => {
       const groupDate = group.date || group.appointment_date || group.schedule_date;
       const isToday = groupDate === today;
-      
-        id: group.id,
-        date: groupDate,
-        isToday: isToday,
-        status: group.status
-      });
       
       if (isToday) return true;
       
@@ -291,15 +276,7 @@ class DashboardService {
         
         // Optional: log only if appointment doesn't pass filters for debugging
         if (!(isToday && isNotCompleted && isUpcoming)) {
-            id: appointment.id,
-            date: appointmentDate,
-            time: appointmentTime,
-            status: appointment.status,
-            isToday,
-            isNotCompleted,
-            isUpcoming,
-            reason: !isToday ? 'Not today' : !isNotCompleted ? 'Completed/Cancelled' : 'Time passed'
-          });
+          // Appointment filtered out
         }
         
         return isToday && isNotCompleted && isUpcoming;
@@ -399,13 +376,6 @@ class DashboardService {
       const completedCount = todayAppointments.filter(apt => apt.status === 'COMPLETED').length;
       const uniqueClients = new Set(todayAppointments.map(apt => apt.client_id).filter(Boolean)).size;
       
-        appointmentsCount,
-        completedCount,
-        uniqueClients,
-        revenueData,
-        formattedRevenue: this.formatCurrency(revenueData.todayRevenue)
-      });
-      
       // Maybe we should also count WALK_IN appointments as revenue?
       const walkInRevenue = todayAppointments
         .filter(apt => apt.status === 'WALK_IN')
@@ -413,11 +383,6 @@ class DashboardService {
       
       const totalDayRevenue = revenueData.todayRevenue + walkInRevenue;
       const totalCompleted = completedCount + todayAppointments.filter(apt => apt.status === 'WALK_IN').length;
-      
-        walkInRevenue,
-        totalDayRevenue,
-        totalCompleted
-      });
       
       const finalStats = {
         appointments: appointmentsCount,
