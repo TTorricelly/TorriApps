@@ -141,6 +141,7 @@ const ProfessionalAgendaPage = () => {
           
           // Debug: Log appointment structure
           if (professionalSchedule?.appointments?.length > 0) {
+            // Debug: Log appointment structure - useful for development
           }
           
           // Transform appointments to match expected format

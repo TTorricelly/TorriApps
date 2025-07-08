@@ -22,6 +22,7 @@ const ThemeCustomizer = ({ isOpen, onClose }) => {
     try {
       await updatePrimaryColor(color);
     } catch (error) {
+      // Ignore theme update errors - will retry on next change
     }
   };
 
@@ -29,6 +30,7 @@ const ThemeCustomizer = ({ isOpen, onClose }) => {
     try {
       await applyPreset(presetKey);
     } catch (error) {
+      // Ignore preset application errors - will retry on next attempt
     }
   };
 

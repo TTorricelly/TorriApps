@@ -230,6 +230,7 @@ const SimpleThemeChanger = () => {
             fixedCount++;
           });
         } catch (e) {
+          // Ignore DOM manipulation errors - element might not exist
         }
       });
       

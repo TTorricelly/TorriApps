@@ -58,6 +58,7 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
+      // Ignore auth token retrieval errors - request will proceed without auth
     }
     
     return config;

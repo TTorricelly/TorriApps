@@ -148,6 +148,7 @@ const GlobalThemeLoader = () => {
           return;
         }
       } catch (error) {
+        // Ignore server theme fetch errors - fallback to localStorage
       }
       
       // Fallback to localStorage

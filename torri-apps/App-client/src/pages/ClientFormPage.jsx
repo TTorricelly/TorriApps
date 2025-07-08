@@ -158,6 +158,7 @@ const ClientFormPage = () => {
           }))
         }
       } catch (error) {
+        // Ignore CEP lookup errors - user can enter address manually
       } finally {
         setIsLookingUpCep(false)
       }

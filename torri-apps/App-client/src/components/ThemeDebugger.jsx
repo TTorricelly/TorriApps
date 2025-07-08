@@ -14,6 +14,7 @@ const ThemeDebugger = () => {
     try {
       await applyPreset(presetKey);
     } catch (error) {
+      // Ignore preset test errors - this is a debug tool
     }
   };
 
@@ -21,6 +22,7 @@ const ThemeDebugger = () => {
     try {
       await updatePrimaryColor(color);
     } catch (error) {
+      // Ignore color test errors - this is a debug tool
     }
   };
 

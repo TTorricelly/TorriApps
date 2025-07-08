@@ -100,6 +100,7 @@ export const useAuthStore = create(
                 const parsedStorage = JSON.parse(authStorage);
                 token = parsedStorage.state?.token;
               } catch (error) {
+                // Ignore JSON parsing errors
               }
             }
           }

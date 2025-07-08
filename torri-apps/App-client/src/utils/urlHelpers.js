@@ -59,6 +59,7 @@ export const buildAssetUrl = (assetPath) => {
   
   // Debug logging to see what URLs are being generated
   if (import.meta.env.DEV) {
+    // Development mode
   }
   
   // If baseUrl is empty (development with proxy), return relative URL
@@ -97,6 +98,7 @@ export const processImageUrls = (data, imageFields = ['icon_url', 'image_url', '
         processedData[field] = processedUrl;
         
         if (import.meta.env.DEV && processedData.name) {
+          // Development logging
         }
       }
     });

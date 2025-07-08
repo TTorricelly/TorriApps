@@ -72,6 +72,7 @@ export const setCachedTheme = (theme) => {
 
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
   } catch (error) {
+    // Ignore localStorage errors
   }
 };
 
@@ -83,6 +84,7 @@ export const clearThemeCache = () => {
     const cacheKey = getTenantStorageKey('theme_cache');
     localStorage.removeItem(cacheKey);
   } catch (error) {
+    // Ignore localStorage errors
   }
 };
 

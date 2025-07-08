@@ -41,6 +41,7 @@ const ThemeSettingsPage = () => {
           setCurrentTheme(themeData.primaryColor);
         }
       } catch (error) {
+        // Ignore theme loading errors
       } finally {
         setLoading(false);
       }
@@ -94,6 +95,7 @@ const ThemeSettingsPage = () => {
       applyThemePreview(color);
       
     } catch (error) {
+      // Ignore theme saving errors
     } finally {
       setSaving(false);
     }

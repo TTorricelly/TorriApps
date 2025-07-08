@@ -53,6 +53,7 @@ export const useTenantTheme = () => {
         throw new Error('Failed to save theme to server');
       }
     } catch (error) {
+      // Ignore theme save errors - will retry on next attempt
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +94,7 @@ export const useTenantTheme = () => {
         throw new Error('Failed to reset theme on server');
       }
     } catch (error) {
+      // Ignore theme reset errors - will retry on next attempt
     } finally {
       setIsLoading(false);
     }

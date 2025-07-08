@@ -199,7 +199,9 @@ export const lookupCep = async (cep) => {
     return null;
   } catch (error) {
     if (error.name === 'AbortError') {
+      // Request was aborted
     } else {
+      // Other error occurred
     }
     return null;
   }
