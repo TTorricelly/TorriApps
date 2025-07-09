@@ -235,8 +235,8 @@ export default function Sidebar() {
           {!isCollapsed && (
             <div className="flex justify-center flex-1 mb-s">
               <img 
-                src="/Reilo1.png" 
-                alt="Reilo" 
+                src="/Logo-MiriaMaison.png" 
+                alt="Miriã Maison" 
                 className="h-28 w-auto"
               />
             </div>
