@@ -336,7 +336,7 @@ const HomePageInner = ({ navigation }, ref) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 bg-white rounded-t-3xl -mt-4 px-6 py-8 min-h-0">
+      <div className="flex-1 bg-white rounded-t-3xl -mt-4 px-6 py-8 min-h-0 pb-20">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Escolha uma categoria
