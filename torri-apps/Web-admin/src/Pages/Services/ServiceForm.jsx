@@ -585,10 +585,8 @@ export default function ServiceForm() {
       const firstErrorField = Object.keys(errors)[0];
       let targetTab = 'basic';
       
-      if (['name', 'duration_minutes', 'price', 'commission_percentage', 'is_active'].includes(firstErrorField)) {
+      if (['name', 'duration_minutes', 'price', 'commission_percentage', 'is_active', 'parallelable', 'max_parallel_pros'].includes(firstErrorField)) {
         targetTab = 'basic';
-      } else if (['parallelable', 'max_parallel_pros'].includes(firstErrorField)) {
-        targetTab = 'config';
       } else if (['description'].includes(firstErrorField)) {
         targetTab = 'description';
       } else if (firstErrorField.startsWith('station_')) {
@@ -639,6 +637,15 @@ export default function ServiceForm() {
         throw new Error('Serviço salvo mas ID não encontrado');
       }
       
+      // Update the URL with the service ID for new services
+      // This allows the variations manager to work properly
+      if (!isEdit) {
+        const newUrl = ROUTES.SERVICES.EDIT(result.id);
+        window.history.replaceState({}, '', newUrl);
+        // Update the serviceId state to reflect the new service
+        // This isn't directly used in this component but helps with consistency
+      }
+      
 
       // Handle station requirements
       try {
@@ -648,7 +655,11 @@ export default function ServiceForm() {
         showAlert('Serviço salvo, mas houve erro ao salvar requisitos de estação', 'warning');
       }
       
-      navigate(ROUTES.SERVICES.LIST);
+      // Only navigate back to list if we're not in variations tab
+      // This prevents interrupting the user's workflow when adding variations
+      if (activeTab !== 'variations') {
+        navigate(ROUTES.SERVICES.LIST);
+      }
     } catch (error) {
       console.error('Erro ao salvar serviço:', error);
       if (error.response?.data?.detail) {
@@ -736,18 +747,7 @@ export default function ServiceForm() {
                 >
                   Informações Básicas
                   {/* Error indicator for basic tab */}
-                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'price', 'commission_percentage'].includes(field)) && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
-                  )}
-                </Tab>
-                <Tab
-                  value="config"
-                  onClick={() => setActiveTab('config')}
-                  className={`${activeTab === 'config' ? 'text-white' : 'text-text-secondary'} font-medium relative`}
-                >
-                  Configurações
-                  {/* Error indicator for config tab */}
-                  {Object.keys(errors).some(field => ['max_parallel_pros'].includes(field)) && (
+                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'price', 'commission_percentage', 'max_parallel_pros'].includes(field)) && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
                   )}
                 </Tab>
@@ -792,73 +792,51 @@ export default function ServiceForm() {
               <TabsBody className="mt-6">
                 {/* Tab 1: Basic Information */}
                 <TabPanel value="basic" className="p-0">
-                  <div className="space-y-6 mt-4">
-                    {/* Service Name */}
-                    <div>
-                      <Input
-                        name="name"
-                        label="Nome do Serviço"
-                        placeholder="Digite o nome do serviço"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        error={!!errors.name}
-                        className="bg-bg-primary border-bg-tertiary text-text-primary"
-                        labelProps={{ className: "text-text-secondary" }}
-                        containerProps={{ className: "text-text-primary" }}
-                        required
-                      />
-                      {errors.name && (
-                        <Typography className="text-status-error text-sm mt-1">
-                          {errors.name}
-                        </Typography>
-                      )}
-                    </div>
-
-                    {/* Service SKU */}
-                    <div>
-                      <Input
-                        name="service_sku"
-                        label="SKU do Serviço"
-                        placeholder="Digite o SKU do serviço"
-                        value={formData.service_sku}
-                        onChange={(e) => handleInputChange('service_sku', e.target.value)}
-                        error={!!errors.service_sku}
-                        className="bg-bg-primary border-bg-tertiary text-text-primary"
-                        labelProps={{ className: "text-text-secondary" }}
-                        containerProps={{ className: "text-text-primary" }}
-                      />
-                      {errors.service_sku && (
-                        <Typography className="text-status-error text-sm mt-1">
-                          {errors.service_sku}
-                        </Typography>
-                      )}
-                    </div>
-
-                    {/* Duration and Price */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
+                  <div className="space-y-5 mt-4">
+                    {/* Service Name and SKU */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
                         <Input
-                          name="duration_minutes"
-                          label="Duração (minutos)"
-                          type="number"
-                          placeholder="Ex.: 45"
-                          value={formData.duration_minutes}
-                          onChange={(e) => handleInputChange('duration_minutes', e.target.value)}
-                          error={!!errors.duration_minutes}
+                          name="name"
+                          label="Nome do Serviço"
+                          placeholder="Digite o nome do serviço"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                          error={!!errors.name}
                           className="bg-bg-primary border-bg-tertiary text-text-primary"
                           labelProps={{ className: "text-text-secondary" }}
                           containerProps={{ className: "text-text-primary" }}
-                          min="5"
-                          max="480"
                           required
                         />
-                        {errors.duration_minutes && (
+                        {errors.name && (
                           <Typography className="text-status-error text-sm mt-1">
-                            {errors.duration_minutes}
+                            {errors.name}
                           </Typography>
                         )}
                       </div>
                       
+                      <div>
+                        <Input
+                          name="service_sku"
+                          label="SKU"
+                          placeholder="Ex: SRV001"
+                          value={formData.service_sku}
+                          onChange={(e) => handleInputChange('service_sku', e.target.value)}
+                          error={!!errors.service_sku}
+                          className="bg-bg-primary border-bg-tertiary text-text-primary"
+                          labelProps={{ className: "text-text-secondary" }}
+                          containerProps={{ className: "text-text-primary" }}
+                        />
+                        {errors.service_sku && (
+                          <Typography className="text-status-error text-sm mt-1">
+                            {errors.service_sku}
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Price, Duration, Commission */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Input
                           name="price"
@@ -881,10 +859,30 @@ export default function ServiceForm() {
                           </Typography>
                         )}
                       </div>
-                    </div>
-
-                    {/* Commission and Status */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      <div>
+                        <Input
+                          name="duration_minutes"
+                          label="Duração (min)"
+                          type="number"
+                          placeholder="Ex.: 45"
+                          value={formData.duration_minutes}
+                          onChange={(e) => handleInputChange('duration_minutes', e.target.value)}
+                          error={!!errors.duration_minutes}
+                          className="bg-bg-primary border-bg-tertiary text-text-primary"
+                          labelProps={{ className: "text-text-secondary" }}
+                          containerProps={{ className: "text-text-primary" }}
+                          min="5"
+                          max="480"
+                          required
+                        />
+                        {errors.duration_minutes && (
+                          <Typography className="text-status-error text-sm mt-1">
+                            {errors.duration_minutes}
+                          </Typography>
+                        )}
+                      </div>
+                      
                       <div>
                         <Input
                           name="commission_percentage"
@@ -908,31 +906,33 @@ export default function ServiceForm() {
                           </Typography>
                         )}
                       </div>
-                      
-                      <div className="flex items-center gap-3 pt-6">
-                        <Switch
-                          checked={formData.is_active}
-                          onChange={(e) => handleInputChange('is_active', e.target.checked)}
-                          color="blue"
-                        />
-                        <Typography className="text-text-primary">
-                          Serviço Ativo
-                        </Typography>
-                      </div>
                     </div>
-                  </div>
-                </TabPanel>
 
-                {/* Tab 2: Configuration Settings */}
-                <TabPanel value="config" className="p-0">
-                  <div className="space-y-6 mt-4 px-1">
-                    <Typography variant="h6" className="text-text-primary mb-4">
-                      Configurações de Execução
-                    </Typography>
-                    
-                    {/* Parallel Execution Settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
+                    {/* Configuration Options */}
+                    <div className="bg-bg-primary p-4 rounded-lg space-y-4">
+                      <Typography variant="h6" className="text-text-primary text-sm font-medium">
+                        Configurações do Serviço
+                      </Typography>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Service Status */}
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            checked={formData.is_active}
+                            onChange={(e) => handleInputChange('is_active', e.target.checked)}
+                            color="blue"
+                          />
+                          <div>
+                            <Typography className="text-text-primary text-sm font-medium">
+                              Serviço Ativo
+                            </Typography>
+                            <Typography className="text-text-secondary text-xs">
+                              Controla se o serviço está disponível
+                            </Typography>
+                          </div>
+                        </div>
+
+                        {/* Parallelizable Service */}
                         <div className="flex items-center gap-3">
                           <Switch
                             checked={formData.parallelable}
@@ -940,60 +940,52 @@ export default function ServiceForm() {
                             color="blue"
                           />
                           <div>
-                            <Typography className="text-text-primary font-medium">
+                            <Typography className="text-text-primary text-sm font-medium">
                               Serviço Paralelizável
                             </Typography>
-                            <Typography className="text-text-secondary text-sm">
-                              Permite execução simultânea com outros serviços
+                            <Typography className="text-text-secondary text-xs">
+                              Permite execução simultânea
                             </Typography>
                           </div>
                         </div>
-                        
-                        <div className="bg-bg-primary p-4 rounded-lg">
-                          <Typography className="text-text-secondary text-sm">
-                            <strong>Paralelizável:</strong> Quando ativado, este serviço pode ser executado 
-                            simultaneamente com outros serviços paralelos, otimizando o tempo de atendimento 
-                            e aumentando a eficiência do salão.
-                          </Typography>
-                        </div>
                       </div>
                       
-                      <div>
-                        <Input
-                          name="max_parallel_pros"
-                          label="Máximo de Profissionais Simultâneos"
-                          type="number"
-                          placeholder="Ex.: 2"
-                          value={formData.max_parallel_pros}
-                          onChange={(e) => handleInputChange('max_parallel_pros', e.target.value)}
-                          error={!!errors.max_parallel_pros}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                          min="1"
-                          max="10"
-                          disabled={!formData.parallelable}
-                        />
-                        {errors.max_parallel_pros && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.max_parallel_pros}
-                          </Typography>
-                        )}
-                        {!formData.parallelable ? (
-                          <Typography className="text-text-tertiary text-sm mt-1">
-                            Disponível apenas para serviços paralelizáveis
-                          </Typography>
-                        ) : (
-                          <Typography className="text-text-secondary text-sm mt-1">
-                            Número máximo de profissionais que podem executar este serviço simultaneamente
-                          </Typography>
-                        )}
-                      </div>
+                      {/* Max Parallel Professionals */}
+                      {formData.parallelable && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Input
+                              name="max_parallel_pros"
+                              label="Máx. Profissionais Simultâneos"
+                              type="number"
+                              placeholder="Ex.: 2"
+                              value={formData.max_parallel_pros}
+                              onChange={(e) => handleInputChange('max_parallel_pros', e.target.value)}
+                              error={!!errors.max_parallel_pros}
+                              className="bg-bg-secondary border-bg-tertiary text-text-primary"
+                              labelProps={{ className: "text-text-secondary" }}
+                              containerProps={{ className: "text-text-primary" }}
+                              min="1"
+                              max="10"
+                            />
+                            {errors.max_parallel_pros && (
+                              <Typography className="text-status-error text-sm mt-1">
+                                {errors.max_parallel_pros}
+                              </Typography>
+                            )}
+                          </div>
+                          <div className="flex items-end">
+                            <Typography className="text-text-secondary text-xs">
+                              Número máximo de profissionais que podem executar este serviço simultaneamente
+                            </Typography>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabPanel>
 
-                {/* Tab 3: Images */}
+                {/* Tab 2: Images */}
                 <TabPanel value="images" className="p-0">
                   <div className="mt-4 px-1">
                     {serviceId ? (

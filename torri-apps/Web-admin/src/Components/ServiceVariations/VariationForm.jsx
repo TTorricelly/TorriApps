@@ -20,7 +20,8 @@ const VariationForm = ({
   onSubmit, 
   initialData = null, 
   title = 'Formulário',
-  isGroup = false 
+  isGroup = false,
+  serviceData = null
 }) => {
   // Form state
   const [formData, setFormData] = useState({
@@ -28,30 +29,78 @@ const VariationForm = ({
     price_delta: '',
     duration_delta: '',
   });
+  const [finalPrice, setFinalPrice] = useState('');
+  const [finalDuration, setFinalDuration] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+
+  // Helper functions for price and duration calculations
+  const getBasePrice = () => parseFloat(serviceData?.price || 0);
+  const getBaseDuration = () => parseInt(serviceData?.duration_minutes || 0);
+  
+  const calculateFinalPrice = (delta) => {
+    const basePrice = getBasePrice();
+    const deltaValue = parseFloat(delta || 0);
+    return basePrice + deltaValue;
+  };
+  
+  const calculatePriceDelta = (finalPrice) => {
+    const basePrice = getBasePrice();
+    const finalPriceValue = parseFloat(finalPrice || 0);
+    return finalPriceValue - basePrice;
+  };
+  
+  const calculateFinalDuration = (delta) => {
+    const baseDuration = getBaseDuration();
+    const deltaValue = parseInt(delta || 0);
+    return baseDuration + deltaValue;
+  };
+  
+  const calculateDurationDelta = (finalDuration) => {
+    const baseDuration = getBaseDuration();
+    const finalDurationValue = parseInt(finalDuration || 0);
+    return finalDurationValue - baseDuration;
+  };
 
   // Initialize form data when dialog opens or initialData changes
   useEffect(() => {
     if (open) {
       if (initialData) {
+        const priceDelta = initialData.price_delta?.toString() || '';
+        const durationDelta = initialData.duration_delta?.toString() || '';
+        
         setFormData({
           name: initialData.name || '',
-          price_delta: initialData.price_delta?.toString() || '',
-          duration_delta: initialData.duration_delta?.toString() || '',
+          price_delta: priceDelta,
+          duration_delta: durationDelta,
         });
+        
+        // Calculate final values based on deltas
+        if (priceDelta && serviceData) {
+          setFinalPrice(calculateFinalPrice(priceDelta).toString());
+        } else {
+          setFinalPrice('');
+        }
+        
+        if (durationDelta && serviceData) {
+          setFinalDuration(calculateFinalDuration(durationDelta).toString());
+        } else {
+          setFinalDuration('');
+        }
       } else {
         setFormData({
           name: '',
           price_delta: '',
           duration_delta: '',
         });
+        setFinalPrice('');
+        setFinalDuration('');
       }
       setErrors({});
       setAlert({ show: false, message: '', type: 'success' });
     }
-  }, [open, initialData]);
+  }, [open, initialData, serviceData]);
 
   const showAlert = (message, type = 'success') => {
     setAlert({ show: true, message, type });
@@ -104,6 +153,74 @@ const VariationForm = ({
     }
   };
 
+  // Handle input changes for final price (calculates delta)
+  const handleFinalPriceChange = (value) => {
+    setFinalPrice(value);
+    
+    if (value && serviceData) {
+      const delta = calculatePriceDelta(value);
+      setFormData(prev => ({ ...prev, price_delta: delta.toString() }));
+    } else {
+      setFormData(prev => ({ ...prev, price_delta: '' }));
+    }
+    
+    // Clear error when user starts typing
+    if (errors.price_delta) {
+      setErrors(prev => ({ ...prev, price_delta: null }));
+    }
+  };
+
+  // Handle input changes for price delta (calculates final price)
+  const handlePriceDeltaChange = (value) => {
+    setFormData(prev => ({ ...prev, price_delta: value }));
+    
+    if (value && serviceData) {
+      const finalPriceValue = calculateFinalPrice(value);
+      setFinalPrice(finalPriceValue.toString());
+    } else {
+      setFinalPrice('');
+    }
+    
+    // Clear error when user starts typing
+    if (errors.price_delta) {
+      setErrors(prev => ({ ...prev, price_delta: null }));
+    }
+  };
+
+  // Handle input changes for final duration (calculates delta)
+  const handleFinalDurationChange = (value) => {
+    setFinalDuration(value);
+    
+    if (value && serviceData) {
+      const delta = calculateDurationDelta(value);
+      setFormData(prev => ({ ...prev, duration_delta: delta.toString() }));
+    } else {
+      setFormData(prev => ({ ...prev, duration_delta: '' }));
+    }
+    
+    // Clear error when user starts typing
+    if (errors.duration_delta) {
+      setErrors(prev => ({ ...prev, duration_delta: null }));
+    }
+  };
+
+  // Handle input changes for duration delta (calculates final duration)
+  const handleDurationDeltaChange = (value) => {
+    setFormData(prev => ({ ...prev, duration_delta: value }));
+    
+    if (value && serviceData) {
+      const finalDurationValue = calculateFinalDuration(value);
+      setFinalDuration(finalDurationValue.toString());
+    } else {
+      setFinalDuration('');
+    }
+    
+    // Clear error when user starts typing
+    if (errors.duration_delta) {
+      setErrors(prev => ({ ...prev, duration_delta: null }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -132,6 +249,8 @@ const VariationForm = ({
         price_delta: '',
         duration_delta: '',
       });
+      setFinalPrice('');
+      setFinalDuration('');
       
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -147,6 +266,8 @@ const VariationForm = ({
       price_delta: '',
       duration_delta: '',
     });
+    setFinalPrice('');
+    setFinalDuration('');
     setErrors({});
     setAlert({ show: false, message: '', type: 'success' });
     onClose();
@@ -212,7 +333,136 @@ const VariationForm = ({
           </div>
 
           {/* Variation-specific fields */}
-          {!isGroup && (
+          {!isGroup && serviceData && (
+            <>
+              {/* Price Fields */}
+              <div className="space-y-4">
+                <Typography variant="h6" className="text-text-primary">
+                  Preço da Variação
+                </Typography>
+                <div className="bg-bg-primary p-3 rounded-lg">
+                  <Typography className="text-text-secondary text-sm mb-2">
+                    Preço base do serviço: {formatPrice(getBasePrice())}
+                  </Typography>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Final Price Field */}
+                  <div>
+                    <Input
+                      name="final_price"
+                      label="Preço Final (R$)"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 90.00"
+                      value={finalPrice}
+                      onChange={(e) => handleFinalPriceChange(e.target.value)}
+                      error={!!errors.price_delta}
+                      className="bg-bg-primary border-bg-tertiary text-text-primary"
+                      labelProps={{ className: "text-text-secondary" }}
+                      containerProps={{ className: "text-text-primary" }}
+                    />
+                    {finalPrice && !errors.price_delta && (
+                      <Typography className="text-text-secondary text-sm mt-1">
+                        Preço final: {formatPrice(finalPrice)}
+                      </Typography>
+                    )}
+                  </div>
+                  
+                  {/* Price Delta Field */}
+                  <div>
+                    <Input
+                      name="price_delta"
+                      label="Alteração de Preço (R$)"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 10.00 ou -5.00"
+                      value={formData.price_delta}
+                      onChange={(e) => handlePriceDeltaChange(e.target.value)}
+                      error={!!errors.price_delta}
+                      className="bg-bg-primary border-bg-tertiary text-text-primary"
+                      labelProps={{ className: "text-text-secondary" }}
+                      containerProps={{ className: "text-text-primary" }}
+                      required
+                    />
+                    {formData.price_delta && !errors.price_delta && (
+                      <Typography className="text-text-secondary text-sm mt-1">
+                        Alteração: {formatPrice(formData.price_delta)}
+                      </Typography>
+                    )}
+                  </div>
+                </div>
+                {errors.price_delta && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.price_delta}
+                  </Typography>
+                )}
+              </div>
+
+              {/* Duration Fields */}
+              <div className="space-y-4">
+                <Typography variant="h6" className="text-text-primary">
+                  Duração da Variação
+                </Typography>
+                <div className="bg-bg-primary p-3 rounded-lg">
+                  <Typography className="text-text-secondary text-sm mb-2">
+                    Duração base do serviço: {formatDuration(getBaseDuration())}
+                  </Typography>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Final Duration Field */}
+                  <div>
+                    <Input
+                      name="final_duration"
+                      label="Duração Final (min)"
+                      type="number"
+                      placeholder="Ex: 60"
+                      value={finalDuration}
+                      onChange={(e) => handleFinalDurationChange(e.target.value)}
+                      error={!!errors.duration_delta}
+                      className="bg-bg-primary border-bg-tertiary text-text-primary"
+                      labelProps={{ className: "text-text-secondary" }}
+                      containerProps={{ className: "text-text-primary" }}
+                    />
+                    {finalDuration && !errors.duration_delta && (
+                      <Typography className="text-text-secondary text-sm mt-1">
+                        Duração final: {formatDuration(finalDuration)}
+                      </Typography>
+                    )}
+                  </div>
+                  
+                  {/* Duration Delta Field */}
+                  <div>
+                    <Input
+                      name="duration_delta"
+                      label="Alteração de Duração (min)"
+                      type="number"
+                      placeholder="Ex: 15 ou -10"
+                      value={formData.duration_delta}
+                      onChange={(e) => handleDurationDeltaChange(e.target.value)}
+                      error={!!errors.duration_delta}
+                      className="bg-bg-primary border-bg-tertiary text-text-primary"
+                      labelProps={{ className: "text-text-secondary" }}
+                      containerProps={{ className: "text-text-primary" }}
+                      required
+                    />
+                    {formData.duration_delta && !errors.duration_delta && (
+                      <Typography className="text-text-secondary text-sm mt-1">
+                        Alteração: {formatDuration(formData.duration_delta)}
+                      </Typography>
+                    )}
+                  </div>
+                </div>
+                {errors.duration_delta && (
+                  <Typography className="text-status-error text-sm mt-1">
+                    {errors.duration_delta}
+                  </Typography>
+                )}
+              </div>
+            </>
+          )}
+          
+          {/* Fallback for when no serviceData is available */}
+          {!isGroup && !serviceData && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Price Delta Field */}
@@ -270,20 +520,27 @@ const VariationForm = ({
                   )}
                 </div>
               </div>
-
+            </>
+          )}
+          
+          {!isGroup && serviceData && (
+            <>
               {/* Help text */}
               <div className="bg-bg-primary p-4 rounded-lg">
                 <div className="flex items-start gap-2">
                   <InformationCircleIcon className="h-5 w-5 text-accent-primary mt-0.5" />
                   <div>
                     <Typography className="text-text-primary text-sm font-medium mb-1">
-                      Como funciona:
+                      Como usar:
                     </Typography>
                     <Typography className="text-text-secondary text-sm">
-                      • <strong>Preço:</strong> Use valores positivos para aumentar o preço (ex: 10.00) ou negativos para reduzir (ex: -5.00)
+                      • <strong>Preço Final:</strong> Digite o preço total que o cliente pagará por esta variação
                     </Typography>
                     <Typography className="text-text-secondary text-sm">
-                      • <strong>Duração:</strong> Use valores positivos para aumentar o tempo (ex: 15) ou negativos para reduzir (ex: -10)
+                      • <strong>Alteração:</strong> Ou digite quanto aumentar/diminuir do preço base (+ ou -)
+                    </Typography>
+                    <Typography className="text-text-secondary text-sm">
+                      • <strong>Sincronização:</strong> Os campos são sincronizados automaticamente
                     </Typography>
                   </div>
                 </div>

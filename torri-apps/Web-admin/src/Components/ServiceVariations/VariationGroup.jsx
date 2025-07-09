@@ -117,7 +117,11 @@ const VariationGroup = ({
   
   // Drag and drop sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -599,6 +603,7 @@ const VariationGroup = ({
         initialData={editingVariation}
         title={editingVariation ? 'Editar Variação' : 'Criar Variação'}
         isGroup={false}
+        serviceData={serviceData}
       />
 
       {/* Delete Variation Confirmation Dialog */}

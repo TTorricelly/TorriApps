@@ -39,7 +39,6 @@ const VariationItem = ({
   dragHandleProps = {},
   ...props
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: variation.name || '',
@@ -187,63 +186,83 @@ const VariationItem = ({
 
   return (
     <Card 
-      className={`bg-bg-primary border transition-all duration-200 ${
-        isHovered ? 'border-accent-primary/50 shadow-md' : 'border-bg-tertiary'
+      className={`bg-bg-primary border border-bg-tertiary transition-all duration-200 ${
+        isDragging ? 'shadow-lg border-accent-primary scale-105 opacity-75' : ''
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <CardBody className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <Typography variant="h6" className="text-text-primary">
-                {variation.name}
-              </Typography>
-              
-              {/* Status badges */}
-              <div className="flex items-center gap-2">
-                {parseFloat(variation.price_delta || 0) !== 0 && (
-                  <Chip
-                    value={formatDelta(variation.price_delta, 'price')}
-                    size="sm"
-                    className={`${getDeltaColor(variation.price_delta)} bg-transparent border`}
-                    icon={getDeltaIcon(variation.price_delta)}
-                  />
-                )}
-                {parseInt(variation.duration_delta || 0) !== 0 && (
-                  <Chip
-                    value={formatDelta(variation.duration_delta, 'duration')}
-                    size="sm"
-                    className={`${getDeltaColor(variation.duration_delta)} bg-transparent border`}
-                    icon={getDeltaIcon(variation.duration_delta)}
-                  />
-                )}
+          <div className="flex items-center gap-3 flex-1">
+            {/* Selection checkbox */}
+            {!isReadOnly && onSelect && (
+              <Checkbox
+                checked={isSelected}
+                onChange={(e) => onSelect(e.target.checked)}
+                className="text-accent-primary"
+              />
+            )}
+            
+            {/* Drag handle */}
+            {!isReadOnly && (
+              <div 
+                {...dragHandleProps}
+                className="cursor-grab active:cursor-grabbing p-1 text-text-secondary hover:text-text-primary transition-colors"
+                title="Arrastar para reordenar"
+              >
+                <Bars3Icon className="h-4 w-4" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <CurrencyDollarIcon className="h-4 w-4 text-text-secondary" />
-                <div>
-                  <Typography variant="small" className="text-text-secondary">
-                    Preço Final
-                  </Typography>
-                  <Typography variant="small" className="text-text-primary font-semibold">
-                    {formatPrice(calculateFinalPrice())}
-                  </Typography>
+            )}
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Typography variant="h6" className="text-text-primary">
+                  {variation.name}
+                </Typography>
+              
+                {/* Status badges */}
+                <div className="flex items-center gap-2">
+                  {parseFloat(variation.price_delta || 0) !== 0 && (
+                    <Chip
+                      value={formatDelta(variation.price_delta, 'price')}
+                      size="sm"
+                      className={`${getDeltaColor(variation.price_delta)} bg-transparent border`}
+                      icon={getDeltaIcon(variation.price_delta)}
+                    />
+                  )}
+                  {parseInt(variation.duration_delta || 0) !== 0 && (
+                    <Chip
+                      value={formatDelta(variation.duration_delta, 'duration')}
+                      size="sm"
+                      className={`${getDeltaColor(variation.duration_delta)} bg-transparent border`}
+                      icon={getDeltaIcon(variation.duration_delta)}
+                    />
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <ClockIcon className="h-4 w-4 text-text-secondary" />
-                <div>
-                  <Typography variant="small" className="text-text-secondary">
-                    Duração Final
-                  </Typography>
-                  <Typography variant="small" className="text-text-primary font-semibold">
-                    {formatDuration(calculateFinalDuration())}
-                  </Typography>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <CurrencyDollarIcon className="h-4 w-4 text-text-secondary" />
+                  <div>
+                    <Typography variant="small" className="text-text-secondary">
+                      Preço Final
+                    </Typography>
+                    <Typography variant="small" className="text-text-primary font-semibold">
+                      {formatPrice(calculateFinalPrice())}
+                    </Typography>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <ClockIcon className="h-4 w-4 text-text-secondary" />
+                  <div>
+                    <Typography variant="small" className="text-text-secondary">
+                      Duração Final
+                    </Typography>
+                    <Typography variant="small" className="text-text-primary font-semibold">
+                      {formatDuration(calculateFinalDuration())}
+                    </Typography>
+                  </div>
                 </div>
               </div>
             </div>
@@ -282,36 +301,6 @@ const VariationItem = ({
           )}
         </div>
 
-        {/* Detailed view on hover or error messages */}
-        {(isHovered && !isEditing) && (
-          <div className="mt-4 pt-4 border-t border-bg-tertiary">
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <Typography variant="small" className="text-text-secondary mb-1">
-                  Alteração de Preço
-                </Typography>
-                <div className={`flex items-center gap-1 ${getDeltaColor(variation.price_delta)}`}>
-                  {getDeltaIcon(variation.price_delta)}
-                  <span className="font-semibold">
-                    {formatDelta(variation.price_delta, 'price')}
-                  </span>
-                </div>
-              </div>
-              
-              <div>
-                <Typography variant="small" className="text-text-secondary mb-1">
-                  Alteração de Duração
-                </Typography>
-                <div className={`flex items-center gap-1 ${getDeltaColor(variation.duration_delta)}`}>
-                  {getDeltaIcon(variation.duration_delta)}
-                  <span className="font-semibold">
-                    {formatDelta(variation.duration_delta, 'duration')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         
         {/* Error messages for editing */}
         {isEditing && Object.keys(errors).length > 0 && (
