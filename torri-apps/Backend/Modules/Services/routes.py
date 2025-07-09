@@ -14,15 +14,25 @@ from Config.Settings import settings
 from . import services as services_logic # Alias to avoid name collision
 from .schemas import (
     CategorySchema, CategoryCreate, CategoryUpdate,
-    ServiceSchema, ServiceCreate, ServiceUpdate, ServiceWithProfessionalsResponse
+    ServiceSchema, ServiceCreate, ServiceUpdate, ServiceWithProfessionalsResponse,
+    ServiceVariationGroupSchema, ServiceVariationGroupCreate, ServiceVariationGroupUpdate, ServiceVariationGroupWithVariationsSchema,
+    ServiceVariationSchema, ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationWithGroupSchema,
+    ServiceWithVariationsResponse,
+    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse
 )
-from .models import Category, Service # For type hinting service responses
+from .models import Category, Service, ServiceVariationGroup, ServiceVariation # For type hinting service responses
 
 # Router for Service Categories
 categories_router = APIRouter()
 
 # Router for Services
 services_router = APIRouter()
+
+# Router for Service Variation Groups
+variation_groups_router = APIRouter()
+
+# Router for Service Variations
+variations_router = APIRouter()
 
 
 # --- Category Endpoints ---
@@ -314,3 +324,240 @@ async def upload_service_images_endpoint(
         db.commit()
     
     return db_service
+
+
+# --- Service Variation Group Endpoints ---
+
+@variation_groups_router.post(
+    "",
+    response_model=ServiceVariationGroupSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new service variation group."
+)
+def create_variation_group_endpoint(
+    group_data: ServiceVariationGroupCreate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    return services_logic.create_service_variation_group(db=db, group_data=group_data)
+
+
+@variation_groups_router.get(
+    "",
+    response_model=List[ServiceVariationGroupWithVariationsSchema],
+    summary="List variation groups for a specific service."
+)
+def list_variation_groups_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    service_id: UUID = Query(..., description="ID of the service to get variation groups for.")
+):
+    return services_logic.get_service_variation_groups_by_service(db=db, service_id=service_id)
+
+
+@variation_groups_router.get(
+    "/{group_id}",
+    response_model=ServiceVariationGroupWithVariationsSchema,
+    summary="Get a specific variation group by ID."
+)
+def get_variation_group_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    group_id: UUID = Path(..., description="ID of the variation group to retrieve.")
+):
+    db_group = services_logic.get_service_variation_group_by_id(db=db, group_id=group_id)
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation group not found.")
+    return db_group
+
+
+@variation_groups_router.put(
+    "/{group_id}",
+    response_model=ServiceVariationGroupSchema,
+    summary="Update a variation group by ID."
+)
+def update_variation_group_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    group_id: UUID = Path(..., description="ID of the variation group to update."),
+    group_data: ServiceVariationGroupUpdate = Body(...)
+):
+    db_group = services_logic.get_service_variation_group_by_id(db=db, group_id=group_id)
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation group not found.")
+    
+    return services_logic.update_service_variation_group(db=db, db_group=db_group, group_data=group_data)
+
+
+@variation_groups_router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a variation group by ID."
+)
+def delete_variation_group_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    group_id: UUID = Path(..., description="ID of the variation group to delete.")
+):
+    success = services_logic.delete_service_variation_group(db=db, group_id=group_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation group not found.")
+    return None
+
+
+# --- Service Variation Endpoints ---
+
+@variations_router.post(
+    "",
+    response_model=ServiceVariationSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new service variation."
+)
+def create_variation_endpoint(
+    variation_data: ServiceVariationCreate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    return services_logic.create_service_variation(db=db, variation_data=variation_data)
+
+
+@variations_router.get(
+    "",
+    response_model=List[ServiceVariationSchema],
+    summary="List variations for a specific group."
+)
+def list_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    group_id: UUID = Query(..., description="ID of the variation group to get variations for.")
+):
+    return services_logic.get_service_variations_by_group(db=db, group_id=group_id)
+
+
+@variations_router.get(
+    "/{variation_id}",
+    response_model=ServiceVariationWithGroupSchema,
+    summary="Get a specific variation by ID."
+)
+def get_variation_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    variation_id: UUID = Path(..., description="ID of the variation to retrieve.")
+):
+    db_variation = services_logic.get_service_variation_by_id(db=db, variation_id=variation_id)
+    if not db_variation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation not found.")
+    return db_variation
+
+
+@variations_router.put(
+    "/{variation_id}",
+    response_model=ServiceVariationSchema,
+    summary="Update a variation by ID."
+)
+def update_variation_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    variation_id: UUID = Path(..., description="ID of the variation to update."),
+    variation_data: ServiceVariationUpdate = Body(...)
+):
+    db_variation = services_logic.get_service_variation_by_id(db=db, variation_id=variation_id)
+    if not db_variation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation not found.")
+    
+    return services_logic.update_service_variation(db=db, db_variation=db_variation, variation_data=variation_data)
+
+
+@variations_router.delete(
+    "/{variation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a variation by ID."
+)
+def delete_variation_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    variation_id: UUID = Path(..., description="ID of the variation to delete.")
+):
+    success = services_logic.delete_service_variation(db=db, variation_id=variation_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variation not found.")
+    return None
+
+
+# --- Extended Service Endpoints ---
+
+@services_router.get(
+    "/{service_id}/variations",
+    response_model=ServiceWithVariationsResponse,
+    summary="Get a service with all its variation groups and variations."
+)
+def get_service_with_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    service_id: UUID = Path(..., description="ID of the service to retrieve with variations.")
+):
+    db_service = services_logic.get_service_with_variations(db=db, service_id=service_id)
+    if not db_service:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found.")
+    return db_service
+
+
+@variation_groups_router.get(
+    "/service/{service_id}/full",
+    response_model=List[ServiceVariationGroupWithVariationsSchema],
+    summary="Get all variation groups with variations for a service in one request."
+)
+def get_service_variation_groups_with_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+    service_id: UUID = Path(..., description="ID of the service to retrieve variation groups for.")
+):
+    """
+    Optimized endpoint that returns all variation groups with their variations in a single request.
+    This solves the N+1 query problem where the frontend would make separate requests for each group's variations.
+    """
+    return services_logic.get_service_variation_groups_with_variations(db=db, service_id=service_id)
+
+
+# --- Batch Operations and Reordering Endpoints ---
+
+@variations_router.put(
+    "/reorder",
+    status_code=status.HTTP_200_OK,
+    summary="Reorder variations within a group."
+)
+def reorder_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    reorder_data: VariationReorderRequest = Body(...)
+):
+    success = services_logic.reorder_variations(db=db, reorder_data=reorder_data)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to reorder variations.")
+    return {"message": "Variations reordered successfully"}
+
+
+@variations_router.put(
+    "/batch-update",
+    response_model=BatchOperationResponse,
+    summary="Update multiple variations at once."
+)
+def batch_update_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    batch_data: BatchVariationUpdate = Body(...)
+):
+    return services_logic.batch_update_variations(db=db, batch_data=batch_data)
+
+
+@variations_router.delete(
+    "/batch-delete",
+    response_model=BatchOperationResponse,
+    summary="Delete multiple variations at once."
+)
+def batch_delete_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    batch_data: BatchVariationDelete = Body(...)
+):
+    return services_logic.batch_delete_variations(db=db, batch_data=batch_data)

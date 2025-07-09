@@ -5,8 +5,13 @@ from sqlalchemy import select, delete, update, func, text # func for count, text
 
 from fastapi import HTTPException, status
 
-from .models import Category, Service, service_professionals_association
-from .schemas import CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdate, CategorySchema, ServiceSchema
+from .models import Category, Service, ServiceVariationGroup, ServiceVariation, service_professionals_association
+from .schemas import (
+    CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdate, CategorySchema, ServiceSchema,
+    ServiceVariationGroupCreate, ServiceVariationGroupUpdate, ServiceVariationGroupSchema, ServiceVariationGroupWithVariationsSchema,
+    ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationSchema, ServiceVariationWithGroupSchema,
+    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse
+)
 from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
 from Core.Utils.file_handler import file_handler
@@ -266,3 +271,371 @@ def delete_service(db: Session, service_id: UUID) -> bool:
     db.delete(db_service)
     db.commit()
     return True
+
+
+# --- Service Variation Group Services ---
+
+def create_service_variation_group(db: Session, group_data: ServiceVariationGroupCreate) -> ServiceVariationGroup:
+    """Create a new service variation group following DDD principles."""
+    # Validate that the service exists
+    service = get_service_with_details_by_id(db, group_data.service_id)
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Service with ID {group_data.service_id} not found."
+        )
+    
+    # Check for unique group name within the service
+    stmt_check_unique = select(ServiceVariationGroup).where(
+        ServiceVariationGroup.service_id == group_data.service_id,
+        ServiceVariationGroup.name == group_data.name
+    )
+    existing_group = db.execute(stmt_check_unique).scalars().first()
+    if existing_group:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A variation group with the name '{group_data.name}' already exists for this service."
+        )
+    
+    # Create the variation group entity
+    group_dict = group_data.model_dump()
+    db_group = ServiceVariationGroup(**group_dict)
+    
+    db.add(db_group)
+    db.commit()
+    return db_group
+
+
+def get_service_variation_group_by_id(db: Session, group_id: UUID) -> ServiceVariationGroup | None:
+    """Get service variation group by ID with domain validation."""
+    stmt = select(ServiceVariationGroup).where(ServiceVariationGroup.id == group_id).options(
+        selectinload(ServiceVariationGroup.variations)
+    )
+    return db.execute(stmt).scalars().first()
+
+
+def get_service_variation_groups_by_service(db: Session, service_id: UUID) -> List[ServiceVariationGroup]:
+    """Get all variation groups for a specific service."""
+    stmt = select(ServiceVariationGroup).where(
+        ServiceVariationGroup.service_id == service_id
+    ).options(
+        selectinload(ServiceVariationGroup.variations)
+    ).order_by(ServiceVariationGroup.name)
+    
+    return list(db.execute(stmt).scalars().all())
+
+
+def update_service_variation_group(db: Session, db_group: ServiceVariationGroup, group_data: ServiceVariationGroupUpdate) -> ServiceVariationGroup:
+    """Update service variation group following domain rules."""
+    update_dict = group_data.model_dump(exclude_unset=True)
+    
+    # Check for unique name if name is being changed
+    if 'name' in update_dict and update_dict['name'] != db_group.name:
+        stmt_check_unique = select(ServiceVariationGroup).where(
+            ServiceVariationGroup.service_id == db_group.service_id,
+            ServiceVariationGroup.name == update_dict['name'],
+            ServiceVariationGroup.id != db_group.id
+        )
+        existing_group = db.execute(stmt_check_unique).scalars().first()
+        if existing_group:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Another variation group with the name '{update_dict['name']}' already exists for this service."
+            )
+    
+    # Apply updates
+    for field, value in update_dict.items():
+        setattr(db_group, field, value)
+    
+    db.commit()
+    return db_group
+
+
+def delete_service_variation_group(db: Session, group_id: UUID) -> bool:
+    """Delete service variation group and all its variations."""
+    db_group = get_service_variation_group_by_id(db, group_id)
+    if not db_group:
+        return False
+    
+    # Check if group has variations
+    if db_group.variations:
+        variations_count = len(db_group.variations)
+        variations_text = "variação" if variations_count == 1 else "variações"
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Não é possível excluir o grupo '{db_group.name}' pois ele possui {variations_count} {variations_text} associada(s). Por favor, remova as variações primeiro."
+        )
+    
+    db.delete(db_group)
+    db.commit()
+    return True
+
+
+# --- Service Variation Services ---
+
+def create_service_variation(db: Session, variation_data: ServiceVariationCreate) -> ServiceVariation:
+    """Create a new service variation following DDD principles."""
+    # Validate that the variation group exists
+    group = get_service_variation_group_by_id(db, variation_data.service_variation_group_id)
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Variation group with ID {variation_data.service_variation_group_id} not found."
+        )
+    
+    # Check for unique variation name within the group
+    stmt_check_unique = select(ServiceVariation).where(
+        ServiceVariation.service_variation_group_id == variation_data.service_variation_group_id,
+        ServiceVariation.name == variation_data.name
+    )
+    existing_variation = db.execute(stmt_check_unique).scalars().first()
+    if existing_variation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A variation with the name '{variation_data.name}' already exists in this group."
+        )
+    
+    # Auto-assign display_order if not provided
+    variation_dict = variation_data.model_dump()
+    if variation_dict.get('display_order', 0) == 0:
+        # Get the next display_order value for this group
+        stmt_max_order = select(func.coalesce(func.max(ServiceVariation.display_order), -1)).where(
+            ServiceVariation.service_variation_group_id == variation_data.service_variation_group_id
+        )
+        max_order = db.execute(stmt_max_order).scalar()
+        variation_dict['display_order'] = max_order + 1
+    
+    # Create the variation entity
+    db_variation = ServiceVariation(**variation_dict)
+    
+    db.add(db_variation)
+    db.commit()
+    return db_variation
+
+
+def get_service_variation_by_id(db: Session, variation_id: UUID) -> ServiceVariation | None:
+    """Get service variation by ID with domain validation."""
+    stmt = select(ServiceVariation).where(ServiceVariation.id == variation_id).options(
+        joinedload(ServiceVariation.group)
+    )
+    return db.execute(stmt).scalars().first()
+
+
+def get_service_variations_by_group(db: Session, group_id: UUID) -> List[ServiceVariation]:
+    """Get all variations for a specific group."""
+    stmt = select(ServiceVariation).where(
+        ServiceVariation.service_variation_group_id == group_id
+    ).order_by(ServiceVariation.name)
+    
+    return list(db.execute(stmt).scalars().all())
+
+
+def update_service_variation(db: Session, db_variation: ServiceVariation, variation_data: ServiceVariationUpdate) -> ServiceVariation:
+    """Update service variation following domain rules."""
+    update_dict = variation_data.model_dump(exclude_unset=True)
+    
+    # Check for unique name if name is being changed
+    if 'name' in update_dict and update_dict['name'] != db_variation.name:
+        stmt_check_unique = select(ServiceVariation).where(
+            ServiceVariation.service_variation_group_id == db_variation.service_variation_group_id,
+            ServiceVariation.name == update_dict['name'],
+            ServiceVariation.id != db_variation.id
+        )
+        existing_variation = db.execute(stmt_check_unique).scalars().first()
+        if existing_variation:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Another variation with the name '{update_dict['name']}' already exists in this group."
+            )
+    
+    # Apply updates
+    for field, value in update_dict.items():
+        setattr(db_variation, field, value)
+    
+    db.commit()
+    return db_variation
+
+
+def delete_service_variation(db: Session, variation_id: UUID) -> bool:
+    """Delete service variation."""
+    db_variation = get_service_variation_by_id(db, variation_id)
+    if not db_variation:
+        return False
+    
+    db.delete(db_variation)
+    db.commit()
+    return True
+
+
+# --- Domain Services for Business Logic ---
+
+def calculate_service_price_with_variations(base_price: float, variations: List[ServiceVariation]) -> float:
+    """Calculate total service price including variations (Domain Service)."""
+    total_price = base_price
+    for variation in variations:
+        total_price += float(variation.price_delta)
+    return max(0, total_price)  # Ensure price doesn't go negative
+
+
+def calculate_service_duration_with_variations(base_duration: int, variations: List[ServiceVariation]) -> int:
+    """Calculate total service duration including variations (Domain Service)."""
+    total_duration = base_duration
+    for variation in variations:
+        total_duration += variation.duration_delta
+    return max(0, total_duration)  # Ensure duration doesn't go negative
+
+
+def get_service_with_variations(db: Session, service_id: UUID) -> Service | None:
+    """Get service with all variation groups and variations loaded."""
+    stmt = select(Service).where(Service.id == service_id).options(
+        joinedload(Service.category),
+        selectinload(Service.images),
+        selectinload(Service.variation_groups).selectinload(ServiceVariationGroup.variations)
+    )
+    service = db.execute(stmt).scalars().first()
+    if service:
+        _process_service_images_urls(service)
+    return service
+
+
+def get_service_variation_groups_with_variations(db: Session, service_id: UUID) -> List[ServiceVariationGroup]:
+    """
+    Get all variation groups with their variations for a service in one optimized query.
+    This solves the N+1 query problem by loading everything in a single database round-trip.
+    """
+    stmt = select(ServiceVariationGroup).where(
+        ServiceVariationGroup.service_id == service_id
+    ).options(
+        selectinload(ServiceVariationGroup.variations)
+    ).order_by(ServiceVariationGroup.name)
+    
+    groups = db.execute(stmt).scalars().all()
+    return groups
+
+
+# --- Batch Operations and Reordering ---
+
+def reorder_variations(db: Session, reorder_data: VariationReorderRequest) -> bool:
+    """Reorder variations within their groups."""
+    try:
+        # Validate all variations exist and belong to the same group
+        variation_ids = [item.variation_id for item in reorder_data.variations]
+        stmt = select(ServiceVariation).where(ServiceVariation.id.in_(variation_ids))
+        variations = db.execute(stmt).scalars().all()
+        
+        if len(variations) != len(variation_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Some variations not found"
+            )
+        
+        # Check all variations belong to the same group
+        group_ids = {v.service_variation_group_id for v in variations}
+        if len(group_ids) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="All variations must belong to the same group"
+            )
+        
+        # Update display orders
+        for item in reorder_data.variations:
+            stmt_update = update(ServiceVariation).where(
+                ServiceVariation.id == item.variation_id
+            ).values(display_order=item.display_order)
+            db.execute(stmt_update)
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reorder variations: {str(e)}"
+        )
+
+
+def batch_update_variations(db: Session, batch_data: BatchVariationUpdate) -> BatchOperationResponse:
+    """Update multiple variations at once."""
+    success_count = 0
+    failed_count = 0
+    errors = []
+    
+    try:
+        # Get all variations to update
+        stmt = select(ServiceVariation).where(ServiceVariation.id.in_(batch_data.variation_ids))
+        variations = db.execute(stmt).scalars().all()
+        
+        # Prepare update data (only include non-None fields)
+        update_data = {k: v for k, v in batch_data.updates.model_dump().items() if v is not None}
+        
+        if not update_data:
+            return BatchOperationResponse(
+                success_count=0,
+                failed_count=len(batch_data.variation_ids),
+                errors=["No fields to update provided"]
+            )
+        
+        for variation in variations:
+            try:
+                # Apply updates
+                for field, value in update_data.items():
+                    setattr(variation, field, value)
+                success_count += 1
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Failed to update variation {variation.id}: {str(e)}")
+        
+        if success_count > 0:
+            db.commit()
+        
+        return BatchOperationResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            errors=errors
+        )
+        
+    except Exception as e:
+        db.rollback()
+        return BatchOperationResponse(
+            success_count=0,
+            failed_count=len(batch_data.variation_ids),
+            errors=[f"Batch update failed: {str(e)}"]
+        )
+
+
+def batch_delete_variations(db: Session, batch_data: BatchVariationDelete) -> BatchOperationResponse:
+    """Delete multiple variations at once."""
+    success_count = 0
+    failed_count = 0
+    errors = []
+    
+    try:
+        # Get all variations to delete
+        stmt = select(ServiceVariation).where(ServiceVariation.id.in_(batch_data.variation_ids))
+        variations = db.execute(stmt).scalars().all()
+        
+        for variation in variations:
+            try:
+                db.delete(variation)
+                success_count += 1
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Failed to delete variation {variation.id}: {str(e)}")
+        
+        if success_count > 0:
+            db.commit()
+        
+        return BatchOperationResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            errors=errors
+        )
+        
+    except Exception as e:
+        db.rollback()
+        return BatchOperationResponse(
+            success_count=0,
+            failed_count=len(batch_data.variation_ids),
+            errors=[f"Batch delete failed: {str(e)}"]
+        )

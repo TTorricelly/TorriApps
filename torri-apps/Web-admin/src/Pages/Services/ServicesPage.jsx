@@ -27,7 +27,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { categoriesApi } from '../../Services/categories';
-import { servicesApi } from '../../Services/services';
+import { servicesApi, serviceVariationGroupsApi } from '../../Services/services';
 import { htmlToPreviewText } from '../../Utils/textUtils';
 import { getAssetUrl } from '../../Utils/config';
 
@@ -46,6 +46,7 @@ export default function ServicesPage() {
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, service: null });
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+  const [variationCounts, setVariationCounts] = useState({});
 
   // Load categories on component mount
   useEffect(() => {
@@ -112,11 +113,40 @@ export default function ServicesPage() {
       }));
       
       setServices(servicesWithFullUrls);
+      
+      // Load variation counts for all services
+      loadVariationCounts(servicesWithFullUrls);
     } catch (error) {
       console.error(`[ServicesPage] Error loading services for category ${selectedCategoryId}:`, error);
       showAlert('Erro ao carregar serviços', 'error');
     } finally {
       setIsLoadingServices(false);
+    }
+  };
+
+  const loadVariationCounts = async (services) => {
+    try {
+      const counts = {};
+      
+      // Load variation counts for each service
+      await Promise.all(
+        services.map(async (service) => {
+          try {
+            const variationGroups = await serviceVariationGroupsApi.getByServiceId(service.id);
+            const totalVariations = variationGroups.reduce((sum, group) => {
+              return sum + (group.variations ? group.variations.length : 0);
+            }, 0);
+            counts[service.id] = totalVariations;
+          } catch (error) {
+            console.error(`Error loading variations for service ${service.id}:`, error);
+            counts[service.id] = 0;
+          }
+        })
+      );
+      
+      setVariationCounts(counts);
+    } catch (error) {
+      console.error('Error loading variation counts:', error);
     }
   };
 
@@ -168,7 +198,7 @@ export default function ServicesPage() {
     try {
       await servicesApi.delete(deleteDialog.service.id);
       showAlert('Serviço excluído com sucesso!', 'success');
-      loadServices(); // Reload services list
+      loadServices(); // Reload services list and variation counts
     } catch (error) {
       console.error('Erro ao excluir serviço:', error);
       const message = error.response?.data?.detail || 'Falha ao excluir serviço';
@@ -327,6 +357,7 @@ export default function ServicesPage() {
                     <th className="text-left p-4 text-text-primary font-semibold">Duração (min)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Comissão (%)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Preço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Variações</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Paralelo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Status</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
@@ -400,6 +431,21 @@ export default function ServicesPage() {
                         <Typography className="text-text-primary font-medium">
                           {formatPrice(service.price)}
                         </Typography>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            color={variationCounts[service.id] > 0 ? "blue" : "gray"}
+                            className="text-xs w-fit"
+                          >
+                            {variationCounts[service.id] || 0}
+                          </Badge>
+                          {variationCounts[service.id] > 0 && (
+                            <Typography className="text-text-secondary text-xs">
+                              variações
+                            </Typography>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col gap-1">

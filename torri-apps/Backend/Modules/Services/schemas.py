@@ -158,3 +158,120 @@ class ServiceWithImagesResponse(ServiceSchema):
     
     class Config:
         from_attributes = True
+
+
+# --- Service Variation Schemas ---
+
+class ServiceVariationGroupBase(BaseModel):
+    """Base schema for service variation group."""
+    name: str = Field(..., min_length=1, max_length=100, example="Hair Length")
+
+class ServiceVariationGroupCreate(ServiceVariationGroupBase):
+    """Schema for creating a new service variation group."""
+    service_id: UUID = Field(..., description="ID of the service this group belongs to")
+
+class ServiceVariationGroupUpdate(BaseModel):
+    """Schema for updating service variation group."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100, example="Hair Length Options")
+
+class ServiceVariationGroupSchema(ServiceVariationGroupBase):
+    """Schema for service variation group response."""
+    id: UUID
+    service_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ServiceVariationBase(BaseModel):
+    """Base schema for service variation."""
+    name: str = Field(..., min_length=1, max_length=100, example="Long Hair")
+    price_delta: condecimal(max_digits=10, decimal_places=2) = Field(default=Decimal("0.00"), example=Decimal("5.00"), description="Price adjustment (can be positive or negative)")
+    duration_delta: int = Field(default=0, example=15, description="Duration adjustment in minutes (can be positive or negative)")
+    display_order: int = Field(default=0, ge=0, example=0, description="Display order for sorting variations")
+
+class ServiceVariationCreate(ServiceVariationBase):
+    """Schema for creating a new service variation."""
+    service_variation_group_id: UUID = Field(..., description="ID of the variation group this variation belongs to")
+
+class ServiceVariationUpdate(BaseModel):
+    """Schema for updating service variation."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100, example="Extra Long Hair")
+    price_delta: Optional[condecimal(max_digits=10, decimal_places=2)] = Field(None, example=Decimal("7.50"))
+    duration_delta: Optional[int] = Field(None, example=20)
+    display_order: Optional[int] = Field(None, ge=0, example=1, description="Display order for sorting variations")
+
+class ServiceVariationSchema(ServiceVariationBase):
+    """Schema for service variation response."""
+    id: UUID
+    service_variation_group_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# --- Nested Response Schemas ---
+
+class ServiceVariationGroupWithVariationsSchema(ServiceVariationGroupSchema):
+    """Service variation group schema with nested variations."""
+    variations: List[ServiceVariationSchema] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True
+
+class ServiceVariationWithGroupSchema(ServiceVariationSchema):
+    """Service variation schema with nested group information."""
+    group: ServiceVariationGroupSchema
+    
+    class Config:
+        from_attributes = True
+
+
+# --- Batch Operation Schemas ---
+
+class VariationReorderItem(BaseModel):
+    """Schema for a single variation reorder item."""
+    variation_id: UUID = Field(..., description="ID of the variation to reorder")
+    display_order: int = Field(..., ge=0, description="New display order for the variation")
+
+class VariationReorderRequest(BaseModel):
+    """Schema for reordering variations within a group."""
+    variations: List[VariationReorderItem] = Field(..., description="List of variations with their new order")
+
+class BatchVariationUpdate(BaseModel):
+    """Schema for batch updating multiple variations."""
+    variation_ids: List[UUID] = Field(..., description="List of variation IDs to update")
+    updates: ServiceVariationUpdate = Field(..., description="Fields to update for all selected variations")
+
+class BatchVariationDelete(BaseModel):
+    """Schema for batch deleting multiple variations."""
+    variation_ids: List[UUID] = Field(..., description="List of variation IDs to delete")
+
+class BatchOperationResponse(BaseModel):
+    """Schema for batch operation response."""
+    success_count: int = Field(..., description="Number of successful operations")
+    failed_count: int = Field(..., description="Number of failed operations")
+    errors: List[str] = Field(default_factory=list, description="List of error messages for failed operations")
+
+
+# --- Extended Service Schemas ---
+
+class ServiceWithVariationsResponse(ServiceSchema):
+    """Service response schema that includes variation groups and variations."""
+    variation_groups: List[ServiceVariationGroupWithVariationsSchema] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True
+
+class ServiceCompleteResponse(ServiceSchema):
+    """Complete service response schema with images, professionals, and variations."""
+    professionals: List[UserBaseMinimal] = Field(default_factory=list)
+    images: List[ServiceImageSchema] = Field(default_factory=list)
+    variation_groups: List[ServiceVariationGroupWithVariationsSchema] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True

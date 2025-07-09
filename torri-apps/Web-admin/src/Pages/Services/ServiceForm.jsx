@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useNavigation } from '../../shared/hooks/useNavigation';
 import { ROUTES } from '../../shared/navigation';
@@ -36,6 +36,7 @@ import { servicesApi } from '../../Services/services';
 import { stationTypesApi, serviceStationRequirementsApi } from '../../Services/stations';
 import { getAssetUrl } from '../../Utils/config';
 import ServiceImageUpload from '../../Components/ServiceImageUpload';
+import { ServiceVariationManager } from '../../Components/ServiceVariations';
 
 // Rich Text Editor (simple implementation)
 const RichTextEditor = ({ value, onChange, placeholder, error }) => {
@@ -465,9 +466,6 @@ export default function ServiceForm() {
       }
     }
     
-    if (!formData.description || formData.description.replace(/<[^>]*>/g, '').trim().length < 10) {
-      newErrors.description = 'Descrição obrigatória (mínimo 10 caracteres)';
-    }
     
     if (formData.description && formData.description.length > 5000) {
       newErrors.description = 'Descrição muito longa (máximo 5000 caracteres)';
@@ -493,6 +491,12 @@ export default function ServiceForm() {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
   };
+
+  // Memoized callback for variations change to prevent infinite re-renders
+  const handleVariationsChange = useCallback((variations) => {
+    // Handle variations change if needed
+    console.log('Service variations updated:', variations);
+  }, []);
   
 
   const handleStationRequirementAdd = (stationTypeId) => {
@@ -775,6 +779,13 @@ export default function ServiceForm() {
                   {Object.keys(errors).some(field => field.startsWith('station_')) && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
                   )}
+                </Tab>
+                <Tab
+                  value="variations"
+                  onClick={() => setActiveTab('variations')}
+                  className={`${activeTab === 'variations' ? 'text-white' : 'text-text-secondary'} font-medium relative`}
+                >
+                  Variações
                 </Tab>
               </TabsHeader>
 
@@ -1146,6 +1157,18 @@ export default function ServiceForm() {
                         )}
                       </div>
                     )}
+                  </div>
+                </TabPanel>
+
+                {/* Tab 6: Variations */}
+                <TabPanel value="variations" className="p-0">
+                  <div className="mt-4 px-1">
+                    <ServiceVariationManager
+                      serviceId={serviceId}
+                      serviceData={formData}
+                      onVariationsChange={handleVariationsChange}
+                      isReadOnly={false}
+                    />
                   </div>
                 </TabPanel>
               </TabsBody>

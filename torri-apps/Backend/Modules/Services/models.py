@@ -82,6 +82,9 @@ class Service(Base):
     
     # Service images relationship
     images = relationship("ServiceImage", back_populates="service", cascade="all, delete-orphan", order_by="ServiceImage.display_order")
+    
+    # Service variations relationship
+    variation_groups = relationship("ServiceVariationGroup", back_populates="service", cascade="all, delete-orphan", order_by="ServiceVariationGroup.name")
 
     def __repr__(self):
         return f"<Service(id={self.id}, name='{self.name}')>"
@@ -183,3 +186,94 @@ class ServiceImageLabel(Base):
     
     def __repr__(self):
         return f"<ServiceImageLabel(image_id={self.image_id}, label_id={self.label_id})>"
+
+
+class ServiceVariationGroup(Base):
+    """
+    Service Variation Group entity for grouping related service variations.
+    
+    Represents a group of variations that can be applied to a service
+    (e.g., "Hair Length", "Add-ons", "Styling Options").
+    
+    Attributes:
+        id: Unique identifier (UUID)
+        name: Name of the variation group
+        service_id: Reference to the service this group belongs to
+        created_at: When the group was created
+        updated_at: When the group was last updated
+    """
+    __tablename__ = "service_variation_groups"
+    
+    # Primary key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    
+    # Core fields
+    name = Column(String(100), nullable=False)
+    
+    # Foreign keys
+    service_id = Column(UUID(as_uuid=True), ForeignKey("services.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Audit fields
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    service = relationship("Service", back_populates="variation_groups")
+    variations = relationship("ServiceVariation", back_populates="group", cascade="all, delete-orphan", order_by="ServiceVariation.display_order")
+    
+    # Constraints and indexes
+    __table_args__ = (
+        UniqueConstraint('service_id', 'name', name='uq_service_variation_group_name'),
+        Index('idx_service_variation_groups_service_id', 'service_id'),
+    )
+    
+    def __repr__(self):
+        return f"<ServiceVariationGroup(id={self.id}, name='{self.name}', service_id={self.service_id})>"
+
+
+class ServiceVariation(Base):
+    """
+    Service Variation entity for individual service variations.
+    
+    Represents a specific variation option within a variation group
+    (e.g., "Long Hair (+15 min, +$5)", "Blow Dry (+20 min, +$10)").
+    
+    Attributes:
+        id: Unique identifier (UUID)
+        name: Name of the variation
+        price_delta: Price adjustment (can be positive or negative)
+        duration_delta: Duration adjustment in minutes (can be positive or negative)
+        service_variation_group_id: Reference to the variation group
+        created_at: When the variation was created
+        updated_at: When the variation was last updated
+    """
+    __tablename__ = "service_variations"
+    
+    # Primary key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    
+    # Core fields
+    name = Column(String(100), nullable=False)
+    price_delta = Column(Numeric(10, 2), nullable=False, default=0)
+    duration_delta = Column(Integer, nullable=False, default=0)
+    display_order = Column(Integer, nullable=False, default=0)
+    
+    # Foreign keys
+    service_variation_group_id = Column(UUID(as_uuid=True), ForeignKey("service_variation_groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Audit fields
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    group = relationship("ServiceVariationGroup", back_populates="variations")
+    
+    # Constraints and indexes
+    __table_args__ = (
+        UniqueConstraint('service_variation_group_id', 'name', name='uq_service_variation_name'),
+        Index('idx_service_variations_group_id', 'service_variation_group_id'),
+        Index('idx_service_variations_order', 'service_variation_group_id', 'display_order'),
+    )
+    
+    def __repr__(self):
+        return f"<ServiceVariation(id={self.id}, name='{self.name}', price_delta={self.price_delta}, duration_delta={self.duration_delta})>"

@@ -37,7 +37,7 @@ import { professionalsApi } from '../Services/professionals';
 import { 
   handleCpfInput, 
   handleCepInput, 
-  _validateCpfChecksum, 
+  validateCpfChecksum, 
   validateCepFormat, 
   lookupCep,
   BRAZILIAN_STATES

@@ -170,10 +170,8 @@ const CheckoutDrawer = ({
       const session = await createMergedCheckoutSession(groupIds);
       setCheckoutSession(session);
       
-      // If no services left, close checkout
-      if (!session.services || session.services.length === 0) {
-        onClose();
-      }
+      // Note: Removed auto-close when no services remain
+      // User can manually close the modal or add more services
       
     } catch (error) {
       setPaymentError('Erro ao remover serviço. Tente novamente.');
@@ -189,14 +187,18 @@ const CheckoutDrawer = ({
     const currentX = useRef(0);
     
     // Touch/Mouse handlers for swipe gesture
-    const handleStart = (clientX) => {
+    const handleStart = (clientX, event) => {
+      event.preventDefault();
+      event.stopPropagation();
       startX.current = clientX;
       currentX.current = clientX;
     };
 
-    const handleMove = (clientX) => {
+    const handleMove = (clientX, event) => {
       if (startX.current === 0) return;
       
+      event.preventDefault();
+      event.stopPropagation();
       currentX.current = clientX;
       const diff = clientX - startX.current;
       
@@ -206,7 +208,9 @@ const CheckoutDrawer = ({
       }
     };
 
-    const handleEnd = () => {
+    const handleEnd = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const diff = currentX.current - startX.current;
       
       if (diff < -80) {
@@ -239,13 +243,13 @@ const CheckoutDrawer = ({
           ref={cardRef}
           className={`relative bg-white transition-transform duration-200 ${isRemoving ? 'opacity-0 -translate-x-full' : ''}`}
           style={{ transform: `translateX(${swipeOffset}px)` }}
-          onTouchStart={(e) => handleStart(e.touches[0].clientX)}
-          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
-          onTouchEnd={handleEnd}
-          onMouseDown={(e) => handleStart(e.clientX)}
-          onMouseMove={(e) => e.buttons === 1 && handleMove(e.clientX)}
-          onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
+          onTouchStart={(e) => handleStart(e.touches[0].clientX, e)}
+          onTouchMove={(e) => handleMove(e.touches[0].clientX, e)}
+          onTouchEnd={(e) => handleEnd(e)}
+          onMouseDown={(e) => handleStart(e.clientX, e)}
+          onMouseMove={(e) => e.buttons === 1 && handleMove(e.clientX, e)}
+          onMouseUp={(e) => handleEnd(e)}
+          onMouseLeave={(e) => handleEnd(e)}
         >
           <div className="flex items-center justify-between p-3">
             <div className="flex-1">
@@ -547,7 +551,7 @@ const CheckoutDrawer = ({
   
   return (
     <div 
-      className={`fixed inset-0 bg-white shadow-xl z-40 transform transition-transform ${
+      className={`fixed inset-0 bg-white shadow-xl z-50 transform transition-transform ${
         isMinimized ? 'translate-y-full' : 'translate-y-0'
       } ${className}`}
       ref={drawerRef}

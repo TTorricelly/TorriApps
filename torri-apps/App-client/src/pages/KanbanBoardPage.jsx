@@ -218,6 +218,9 @@ const KanbanBoardPage = () => {
         setCheckoutGroups([item]);
         setCheckoutDrawerOpen(true);
         setCheckoutMinimized(false);
+        // Close action menu to prevent interference
+        setSelectedCard(null);
+        setShowActionMenu(false);
       }
       
       // Update the status
@@ -303,6 +306,9 @@ const KanbanBoardPage = () => {
     setCheckoutGroups([group]);
     setCheckoutDrawerOpen(true);
     setCheckoutMinimized(false);
+    // Close action menu to prevent interference
+    setSelectedCard(null);
+    setShowActionMenu(false);
   };
   
   // Close checkout drawer

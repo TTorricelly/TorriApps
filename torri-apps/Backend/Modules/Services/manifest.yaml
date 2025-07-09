@@ -8,6 +8,8 @@ description: |
 entities:
   - Category                      # Represents a category for services
   - Service                       # Represents a specific service offered
+  - ServiceVariationGroup         # Represents a group of variations for a service
+  - ServiceVariation              # Represents a specific variation within a group
   - service_professionals_association # Association table linking services to professionals
 key_endpoints:
   categories: # Prefixed with /categories
@@ -23,6 +25,19 @@ key_endpoints:
     - PUT /{service_id}           # Update a service
     - DELETE /{service_id}        # Delete a service
     - POST /{service_id}/images   # Upload images for a service
+    - GET /{service_id}/variations # Get service with all variations
+  variation-groups: # Prefixed with /variation-groups
+    - POST /                      # Create a new service variation group
+    - GET /                       # List variation groups for a service
+    - GET /{group_id}             # Get a specific variation group
+    - PUT /{group_id}             # Update a variation group
+    - DELETE /{group_id}          # Delete a variation group
+  variations: # Prefixed with /variations
+    - POST /                      # Create a new service variation
+    - GET /                       # List variations for a group
+    - GET /{variation_id}         # Get a specific variation
+    - PUT /{variation_id}         # Update a variation
+    - DELETE /{variation_id}      # Delete a variation
 dependencies:
   - fastapi
   - sqlalchemy
