@@ -53,6 +53,9 @@ class Service(Base):
     parallelable = Column(Boolean, nullable=False, default=False)  # Can run concurrently with other services
     max_parallel_pros = Column(Integer, nullable=False, default=1)  # Max professionals that can work simultaneously
     
+    # Price evaluation field
+    price_subject_to_evaluation = Column(Boolean, nullable=False, default=False)  # Price requires evaluation
+    
     # Note: Image fields removed - now handled by ServiceImage model with flexible labeling
     # Old fields: image, image_liso, image_ondulado, image_cacheado, image_crespo
 
@@ -257,6 +260,9 @@ class ServiceVariation(Base):
     price_delta = Column(Numeric(10, 2), nullable=False, default=0)
     duration_delta = Column(Integer, nullable=False, default=0)
     display_order = Column(Integer, nullable=False, default=0)
+    
+    # Price evaluation field
+    price_subject_to_evaluation = Column(Boolean, nullable=False, default=False)  # Price requires evaluation
     
     # Foreign keys
     service_variation_group_id = Column(UUID(as_uuid=True), ForeignKey("service_variation_groups.id", ondelete="CASCADE"), nullable=False, index=True)

@@ -18,6 +18,7 @@ import {
   DialogBody,
   DialogFooter,
   Alert,
+  Chip,
 } from '@material-tailwind/react';
 import { 
   PlusIcon, 
@@ -357,6 +358,7 @@ export default function ServicesPage() {
                     <th className="text-left p-4 text-text-primary font-semibold">Duração (min)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Comissão (%)</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Preço</th>
+                    <th className="text-left p-4 text-text-primary font-semibold">Sujeito a Avaliação</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Variações</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Paralelo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Status</th>
@@ -431,6 +433,14 @@ export default function ServicesPage() {
                         <Typography className="text-text-primary font-medium">
                           {formatPrice(service.price)}
                         </Typography>
+                      </td>
+                      <td className="p-4">
+                        <Chip
+                          variant="ghost"
+                          color={service.price_subject_to_evaluation ? "amber" : "gray"}
+                          size="sm"
+                          value={service.price_subject_to_evaluation ? "Sim" : "Não"}
+                        />
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">

@@ -218,6 +218,16 @@ const VariationItem = ({
                 <Typography variant="h6" className="text-text-primary">
                   {variation.name}
                 </Typography>
+                {/* Price subject to evaluation indicator */}
+                {variation.price_subject_to_evaluation && (
+                  <Chip
+                    variant="ghost"
+                    color="amber"
+                    size="sm"
+                    value="Avaliação"
+                    className="ml-1"
+                  />
+                )}
               
                 {/* Status badges */}
                 <div className="flex items-center gap-2">

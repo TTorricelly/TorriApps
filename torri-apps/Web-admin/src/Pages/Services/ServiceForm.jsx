@@ -296,6 +296,7 @@ export default function ServiceForm() {
     is_active: true,
     parallelable: false,
     max_parallel_pros: 1,
+    price_subject_to_evaluation: false,
     category_id: categoryIdFromUrl || '',
   });
   
@@ -392,6 +393,7 @@ export default function ServiceForm() {
         is_active: serviceData.is_active ?? true,
         parallelable: serviceData.parallelable ?? false,
         max_parallel_pros: serviceData.max_parallel_pros ?? 1,
+        price_subject_to_evaluation: serviceData.price_subject_to_evaluation ?? false,
         category_id: serviceData.category_id || '',
       };
       
@@ -613,6 +615,7 @@ export default function ServiceForm() {
         is_active: formData.is_active,
         parallelable: formData.parallelable,
         max_parallel_pros: parseInt(formData.max_parallel_pros),
+        price_subject_to_evaluation: formData.price_subject_to_evaluation,
         category_id: formData.category_id,
         professional_ids: [], // Can be extended later
       };
@@ -747,7 +750,7 @@ export default function ServiceForm() {
                 >
                   Informações Básicas
                   {/* Error indicator for basic tab */}
-                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'price', 'commission_percentage', 'max_parallel_pros'].includes(field)) && (
+                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'price', 'commission_percentage', 'max_parallel_pros', 'price_subject_to_evaluation'].includes(field)) && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
                   )}
                 </Tab>
@@ -905,6 +908,25 @@ export default function ServiceForm() {
                             {errors.commission_percentage}
                           </Typography>
                         )}
+                      </div>
+                    </div>
+
+                    {/* Price Subject to Evaluation */}
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={formData.price_subject_to_evaluation || false}
+                          onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
+                          color="blue"
+                        />
+                        <div>
+                          <Typography className="text-text-primary text-sm font-medium">
+                            Preço sujeito a avaliação
+                          </Typography>
+                          <Typography className="text-text-secondary text-xs">
+                            Marque se o preço final depende de avaliação prévia
+                          </Typography>
+                        </div>
                       </div>
                     </div>
 

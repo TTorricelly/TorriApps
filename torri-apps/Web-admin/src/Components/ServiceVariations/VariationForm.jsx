@@ -9,6 +9,7 @@ import {
   Input,
   Spinner,
   Alert,
+  Switch,
 } from '@material-tailwind/react';
 import { 
   InformationCircleIcon,
@@ -28,6 +29,7 @@ const VariationForm = ({
     name: '',
     price_delta: '',
     duration_delta: '',
+    price_subject_to_evaluation: false,
   });
   const [finalPrice, setFinalPrice] = useState('');
   const [finalDuration, setFinalDuration] = useState('');
@@ -74,6 +76,7 @@ const VariationForm = ({
           name: initialData.name || '',
           price_delta: priceDelta,
           duration_delta: durationDelta,
+          price_subject_to_evaluation: initialData.price_subject_to_evaluation ?? false,
         });
         
         // Calculate final values based on deltas
@@ -93,6 +96,7 @@ const VariationForm = ({
           name: '',
           price_delta: '',
           duration_delta: '',
+          price_subject_to_evaluation: false,
         });
         setFinalPrice('');
         setFinalDuration('');
@@ -239,6 +243,7 @@ const VariationForm = ({
       if (!isGroup) {
         submitData.price_delta = parseFloat(formData.price_delta);
         submitData.duration_delta = parseInt(formData.duration_delta);
+        submitData.price_subject_to_evaluation = formData.price_subject_to_evaluation;
       }
       
       await onSubmit(submitData);
@@ -248,6 +253,7 @@ const VariationForm = ({
         name: '',
         price_delta: '',
         duration_delta: '',
+        price_subject_to_evaluation: false,
       });
       setFinalPrice('');
       setFinalDuration('');
@@ -265,6 +271,7 @@ const VariationForm = ({
       name: '',
       price_delta: '',
       duration_delta: '',
+      price_subject_to_evaluation: false,
     });
     setFinalPrice('');
     setFinalDuration('');
@@ -457,6 +464,25 @@ const VariationForm = ({
                     {errors.duration_delta}
                   </Typography>
                 )}
+              </div>
+
+              {/* Price Subject to Evaluation Toggle */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={formData.price_subject_to_evaluation || false}
+                    onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
+                    color="blue"
+                  />
+                  <div>
+                    <Typography className="text-text-primary text-sm font-medium">
+                      Preço sujeito a avaliação
+                    </Typography>
+                    <Typography className="text-text-secondary text-xs">
+                      Marque se o preço desta variação depende de avaliação
+                    </Typography>
+                  </div>
+                </div>
               </div>
             </>
           )}

@@ -52,6 +52,8 @@ class ServiceBase(BaseModel):
     # Parallel service execution fields
     parallelable: bool = Field(default=False, example=False, description="True if service can run concurrently with other services")
     max_parallel_pros: int = Field(default=1, gt=0, example=1, description="Maximum number of professionals that can work simultaneously")
+    # Price evaluation field
+    price_subject_to_evaluation: bool = Field(default=False, example=False, description="True if service price requires evaluation")
     category_id: UUID
 
 class ServiceCreate(ServiceBase):
@@ -69,6 +71,8 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     # Parallel service execution fields
     parallelable: Optional[bool] = Field(None, description="True if service can run concurrently with other services")
     max_parallel_pros: Optional[int] = Field(None, gt=0, description="Maximum number of professionals that can work simultaneously")
+    # Price evaluation field
+    price_subject_to_evaluation: Optional[bool] = Field(None, description="True if service price requires evaluation")
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change
@@ -191,6 +195,8 @@ class ServiceVariationBase(BaseModel):
     price_delta: condecimal(max_digits=10, decimal_places=2) = Field(default=Decimal("0.00"), example=Decimal("5.00"), description="Price adjustment (can be positive or negative)")
     duration_delta: int = Field(default=0, example=15, description="Duration adjustment in minutes (can be positive or negative)")
     display_order: int = Field(default=0, ge=0, example=0, description="Display order for sorting variations")
+    # Price evaluation field
+    price_subject_to_evaluation: bool = Field(default=False, example=False, description="True if variation price requires evaluation")
 
 class ServiceVariationCreate(ServiceVariationBase):
     """Schema for creating a new service variation."""
@@ -202,6 +208,8 @@ class ServiceVariationUpdate(BaseModel):
     price_delta: Optional[condecimal(max_digits=10, decimal_places=2)] = Field(None, example=Decimal("7.50"))
     duration_delta: Optional[int] = Field(None, example=20)
     display_order: Optional[int] = Field(None, ge=0, example=1, description="Display order for sorting variations")
+    # Price evaluation field
+    price_subject_to_evaluation: Optional[bool] = Field(None, description="True if variation price requires evaluation")
 
 class ServiceVariationSchema(ServiceVariationBase):
     """Schema for service variation response."""
