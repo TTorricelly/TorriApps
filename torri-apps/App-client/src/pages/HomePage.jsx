@@ -495,10 +495,7 @@ const HomePageInner = ({ navigation }, ref) => {
                   {/* Service Card Header - Always Visible */}
                   <div className="p-4">
                     <div className="flex items-start justify-between">
-                      <div 
-                        className="flex-1 cursor-pointer"
-                        onClick={() => handleToggleServiceExpansion(service.id)}
-                      >
+                      <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">
                           {service.name}
                         </h3>
@@ -511,18 +508,7 @@ const HomePageInner = ({ navigation }, ref) => {
                               {formatDuration(service.duration_minutes)}
                             </span>
                           </div>
-                          
-                          {/* Expand hint */}
-                          <div className="flex items-center space-x-1 text-gray-400">
-                            <Eye size={14} />
-                            <span className="text-xs">Ver detalhes</span>
-                          </div>
                         </div>
-                        {!isExpanded && service.description && (
-                          <p className="text-gray-600 text-sm line-clamp-2">
-                            {service.description.replace(/<[^>]*>/g, '').substring(0, 100)}...
-                          </p>
-                        )}
                       </div>
                       
                       <button
@@ -542,56 +528,69 @@ const HomePageInner = ({ navigation }, ref) => {
                     </div>
                   </div>
 
-                  {/* Expandable Content */}
+                  {/* Service Images Carousel - Always Visible */}
+                  {serviceImages.length > 0 && (
+                    <div className="px-4 pb-4">
+                      <div className="flex space-x-3 overflow-x-auto pb-2">
+                        {serviceImages.map((image, index) => {
+                          const imageKey = `${service.id}-${index}`;
+                          const isLoading = imageLoadingStates[imageKey];
+                          const hasError = imageErrors[imageKey];
+                          
+                          return (
+                            <div key={index} className="flex-shrink-0 relative">
+                              {/* Loading placeholder */}
+                              {isLoading && (
+                                <div className="absolute inset-0 w-24 h-24 rounded-lg bg-gray-200 flex items-center justify-center">
+                                  <Loader2 size={16} className="spinner text-gray-400" />
+                                </div>
+                              )}
+                              
+                              {/* Error placeholder */}
+                              {hasError && (
+                                <div className="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                                  <Eye size={16} className="text-gray-400" />
+                                </div>
+                              )}
+                              
+                              {/* Image */}
+                              {!hasError && (
+                                <img
+                                  src={image.src}
+                                  alt={image.caption}
+                                  className={`w-24 h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity ${
+                                    isLoading ? 'opacity-0' : 'opacity-100'
+                                  }`}
+                                  onClick={() => handleImagePress(image.src)}
+                                  onLoadStart={() => handleImageLoadStart(imageKey)}
+                                  onLoad={() => handleImageLoad(imageKey)}
+                                  onError={() => handleImageError(imageKey)}
+                                />
+                              )}
+                              
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Click to see description */}
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => handleToggleServiceExpansion(service.id)}
+                      className="w-full flex items-center justify-center space-x-2 py-2 text-gray-600 hover:text-gray-800 transition-smooth"
+                    >
+                      <Eye size={16} />
+                      <span className="text-sm">
+                        {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Expandable Description Content */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 p-4">
-                      {/* Service Images Carousel */}
-                      {serviceImages.length > 0 && (
-                        <div className="mb-4">
-                          <div className="flex space-x-3 overflow-x-auto pb-2">
-                            {serviceImages.map((image, index) => {
-                              const imageKey = `${service.id}-${index}`;
-                              const isLoading = imageLoadingStates[imageKey];
-                              const hasError = imageErrors[imageKey];
-                              
-                              return (
-                                <div key={index} className="flex-shrink-0 relative">
-                                  {/* Loading placeholder */}
-                                  {isLoading && (
-                                    <div className="absolute inset-0 w-24 h-24 rounded-lg bg-gray-200 flex items-center justify-center">
-                                      <Loader2 size={16} className="spinner text-gray-400" />
-                                    </div>
-                                  )}
-                                  
-                                  {/* Error placeholder */}
-                                  {hasError && (
-                                    <div className="w-24 h-24 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
-                                      <Eye size={16} className="text-gray-400" />
-                                    </div>
-                                  )}
-                                  
-                                  {/* Image */}
-                                  {!hasError && (
-                                    <img
-                                      src={image.src}
-                                      alt={image.caption}
-                                      className={`w-24 h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity ${
-                                        isLoading ? 'opacity-0' : 'opacity-100'
-                                      }`}
-                                      onClick={() => handleImagePress(image.src)}
-                                      onLoadStart={() => handleImageLoadStart(imageKey)}
-                                      onLoad={() => handleImageLoad(imageKey)}
-                                      onError={() => handleImageError(imageKey)}
-                                    />
-                                  )}
-                                  
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Service Description */}
                       {service.description && (
                         <div className="mb-4">

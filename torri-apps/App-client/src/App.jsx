@@ -21,6 +21,7 @@ import UpdateNotification from './components/UpdateNotification'
 import GlobalThemeLoader from './components/GlobalThemeLoader'
 import ThemeSettingsPage from './pages/ThemeSettingsPage'
 import { initializeTenantTheme } from './utils/themeUtils'
+import MobileVersionChecker from './utils/versionCheck'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -78,6 +79,17 @@ function App() {
   // Validate token on app startup
   useEffect(() => {
     validateStoredToken()
+  }, [])
+
+  // Initialize mobile version checker
+  useEffect(() => {
+    const mobileVersionChecker = new MobileVersionChecker();
+    mobileVersionChecker.startVersionCheck();
+
+    // Cleanup on unmount
+    return () => {
+      mobileVersionChecker.stopVersionCheck();
+    };
   }, [])
 
   // Initialize tenant theme on app startup

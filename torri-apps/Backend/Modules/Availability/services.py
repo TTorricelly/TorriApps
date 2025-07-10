@@ -213,11 +213,12 @@ def create_break(
     professional_user_id: UUID
     # tenant_id: UUID parameter removed
 ) -> ProfessionalBreak:
-    if not _is_break_within_availability(db, professional_user_id, break_data.day_of_week, break_data.start_time, break_data.end_time):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Break time must be within an existing availability slot for that day."
-        )
+    # Removed availability window validation - breaks can be set independently of availability slots
+    # if not _is_break_within_availability(db, professional_user_id, break_data.day_of_week, break_data.start_time, break_data.end_time):
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Break time must be within an existing availability slot for that day."
+    #     )
 
     if _check_break_overlap(db, professional_user_id, break_data.day_of_week, break_data.start_time, break_data.end_time):
         raise HTTPException(

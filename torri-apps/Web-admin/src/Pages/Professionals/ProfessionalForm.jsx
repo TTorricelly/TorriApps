@@ -542,7 +542,8 @@ const AvailabilityTab = ({ professionalId, showAlert }) => {
       setHasLoadError(false);
     } catch (error) {
       console.error('Erro ao salvar disponibilidade:', error);
-      showAlert('Erro ao salvar disponibilidade', 'error');
+      const errorMessage = error.response?.data?.detail || 'Erro ao salvar disponibilidade';
+      showAlert(errorMessage, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -764,7 +765,8 @@ const BlockedPeriodsTab = ({ professionalId, showAlert }) => {
       loadBlockedPeriods();
     } catch (error) {
       console.error('Erro ao criar período bloqueado:', error);
-      showAlert('Erro ao criar período bloqueado', 'error');
+      const errorMessage = error.response?.data?.detail || 'Erro ao criar período bloqueado';
+      showAlert(errorMessage, 'error');
     }
   };
 
@@ -1010,7 +1012,8 @@ const RecurringBreaksTab = ({ professionalId, showAlert }) => {
       loadBreaks();
     } catch (error) {
       console.error('Erro ao criar pausa:', error);
-      showAlert('Erro ao criar pausa', 'error');
+      const errorMessage = error.response?.data?.detail || 'Erro ao criar pausa';
+      showAlert(errorMessage, 'error');
     }
   };
 

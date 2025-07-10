@@ -1,6 +1,6 @@
 {
   "name": "torri-pwa-client",
-  "version": "1.0.0",
+  "version": "0.0.3",
   "description": "TorriApps PWA Client - Installable salon booking app",
   "type": "module",
   "scripts": {

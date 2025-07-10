@@ -15,12 +15,17 @@ The AI agent should respond to these types of requests:
 
 ### Step 1: Read Current Version
 ```bash
-# Read current version from package.json
+# Read current version from Web-admin package.json (source of truth)
 CURRENT_VERSION=$(node -p "require('./Web-admin/package.json').version")
-echo "Current version: $CURRENT_VERSION"
+echo "Web-admin current version: $CURRENT_VERSION"
+
+# Read App-client version for comparison
+APP_CLIENT_VERSION=$(node -p "require('./App-client/package.json').version")
+echo "App-client current version: $APP_CLIENT_VERSION"
 ```
 
-**File to read**: `/Users/thiagotorricelly/Projects/TorriApps/torri-apps/Web-admin/package.json`
+**Primary source**: `/Users/thiagotorricelly/Projects/TorriApps/torri-apps/Web-admin/package.json`
+**Secondary source**: `/Users/thiagotorricelly/Projects/TorriApps/torri-apps/App-client/package.json`
 **Look for**: `"version": "X.Y.Z"`
 
 ### Step 2: Determine New Version
@@ -28,9 +33,16 @@ Based on the request type:
 
 **For "increase version" or "patch":**
 ```bash
+# Update Web-admin version (primary)
 cd Web-admin/
 NEW_VERSION=$(npm version patch --no-git-tag-version)
-echo "New version: $NEW_VERSION"
+echo "Web-admin new version: $NEW_VERSION"
+
+# Update App-client version to match
+cd ../App-client/
+npm version $NEW_VERSION --no-git-tag-version
+echo "App-client updated to: $NEW_VERSION"
+cd ..
 ```
 
 **For "minor version":**
@@ -56,11 +68,15 @@ echo "New version: $NEW_VERSION"
 
 ### Step 3: Update Environment Files
 
-**Update .env.local for development:**
+**Update .env.local for both frontend apps:**
 ```bash
 # File: Web-admin/.env.local
 echo "# Local development environment variables" > Web-admin/.env.local
 echo "VITE_APP_VERSION=$NEW_VERSION" >> Web-admin/.env.local
+
+# File: App-client/.env.local
+echo "# Local development environment variables" > App-client/.env.local
+echo "VITE_APP_VERSION=$NEW_VERSION" >> App-client/.env.local
 ```
 
 **Update .env.example:**
@@ -194,7 +210,9 @@ echo "  Previous: $CURRENT_VERSION"
 echo "  Current:  $NEW_VERSION"
 echo "  Files updated:"
 echo "    - Web-admin/package.json"
+echo "    - App-client/package.json"
 echo "    - Web-admin/.env.local"
+echo "    - App-client/.env.local"
 echo "    - Backend environment variables"
 ```
 
