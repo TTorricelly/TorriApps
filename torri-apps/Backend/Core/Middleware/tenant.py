@@ -84,6 +84,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/api/v1/tenants",  # Tenant management endpoints
+            "/api/v1/version",  # Version endpoint for frontend update checking
+            "/api/v1/health-with-version",  # Health check with version info
             "/uploads",  # Static files
         ]
         

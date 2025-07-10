@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom'; 
 import { ThemeProvider } from '@material-tailwind/react';
 import { getTenantInfo } from './Utils/apiHelpers';
+import VersionChecker from './Utils/versionCheck';
 
 import { MainLayout, AuthLayout, RequireAuth } from './Components'; 
 import {
@@ -39,6 +40,17 @@ function App() {
   // Check if we're using domain-based tenant detection
   const tenantInfo = getTenantInfo();
   const isDomainBased = tenantInfo?.method === 'domain';
+
+  // Initialize version checker
+  useEffect(() => {
+    const versionChecker = new VersionChecker();
+    versionChecker.startVersionCheck();
+
+    // Cleanup on unmount
+    return () => {
+      versionChecker.stopVersionCheck();
+    };
+  }, []);
   
   // Shared route definitions
   const sharedRoutes = (

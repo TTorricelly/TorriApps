@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização Disponível</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        p {
+            margin: 0 0 30px 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        
+        .button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .auto-refresh {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🚀</div>
+        <h1>Nova Versão Disponível!</h1>
+        <p>
+            Uma nova versão do sistema foi lançada com melhorias e novas funcionalidades. 
+            Para garantir a melhor experiência, recomendamos atualizar agora.
+        </p>
+        <button class="button" onclick="refreshApp()">
+            Atualizar Agora
+        </button>
+        <div class="auto-refresh">
+            A página será atualizada automaticamente em <span id="countdown">30</span> segundos
+        </div>
+    </div>
+
+    <script>
+        let countdown = 30;
+        const countdownElement = document.getElementById('countdown');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                refreshApp();
+            }
+        }, 1000);
+        
+        function refreshApp() {
+            clearInterval(timer);
+            
+            // Clear service worker cache
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    registrations.forEach(registration => registration.unregister());
+                });
+            }
+            
+            // Clear browser cache
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            
+            // Redirect to main app with cache busting while preserving tenant context
+            const currentUrl = new URL(window.location.href);
+            // Remove the update notification from the path if present
+            if (currentUrl.pathname.includes('/update-notification.html')) {
+                currentUrl.pathname = currentUrl.pathname.replace('/update-notification.html', '/');
+            }
+            currentUrl.searchParams.set('v', Date.now().toString());
+            window.location.href = currentUrl.toString();
+        }
+    </script>
+</body>
+</html>

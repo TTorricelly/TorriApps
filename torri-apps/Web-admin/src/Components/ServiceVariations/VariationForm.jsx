@@ -298,14 +298,14 @@ const VariationForm = ({
       open={open} 
       handler={onClose}
       className="bg-bg-secondary border-bg-tertiary"
-      size="md"
+      size="sm"
     >
       <form onSubmit={handleSubmit}>
         <DialogHeader className="text-text-primary">
           {title}
         </DialogHeader>
         
-        <DialogBody className="space-y-4">
+        <DialogBody className="space-y-3 py-4">
           {/* Alert Component */}
           {alert.show && (
             <Alert
@@ -343,13 +343,13 @@ const VariationForm = ({
           {!isGroup && serviceData && (
             <>
               {/* Price Fields */}
-              <div className="space-y-4">
-                <Typography variant="h6" className="text-text-primary">
-                  Preço da Variação
-                </Typography>
-                <div className="bg-bg-primary p-3 rounded-lg">
-                  <Typography className="text-text-secondary text-sm mb-2">
-                    Preço base do serviço: {formatPrice(getBasePrice())}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Typography variant="h6" className="text-text-primary text-sm font-semibold">
+                    Preço da Variação
+                  </Typography>
+                  <Typography className="text-text-secondary text-xs">
+                    Base: {formatPrice(getBasePrice())}
                   </Typography>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -406,13 +406,13 @@ const VariationForm = ({
               </div>
 
               {/* Duration Fields */}
-              <div className="space-y-4">
-                <Typography variant="h6" className="text-text-primary">
-                  Duração da Variação
-                </Typography>
-                <div className="bg-bg-primary p-3 rounded-lg">
-                  <Typography className="text-text-secondary text-sm mb-2">
-                    Duração base do serviço: {formatDuration(getBaseDuration())}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Typography variant="h6" className="text-text-primary text-sm font-semibold">
+                    Duração da Variação
+                  </Typography>
+                  <Typography className="text-text-secondary text-xs">
+                    Base: {formatDuration(getBaseDuration())}
                   </Typography>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -467,21 +467,16 @@ const VariationForm = ({
               </div>
 
               {/* Price Subject to Evaluation Toggle */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={formData.price_subject_to_evaluation || false}
-                    onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
-                    color="blue"
-                  />
-                  <div>
-                    <Typography className="text-text-primary text-sm font-medium">
-                      Preço sujeito a avaliação
-                    </Typography>
-                    <Typography className="text-text-secondary text-xs">
-                      Marque se o preço desta variação depende de avaliação
-                    </Typography>
-                  </div>
+              <div className="flex items-center gap-3 py-2">
+                <Switch
+                  checked={formData.price_subject_to_evaluation || false}
+                  onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
+                  color="blue"
+                />
+                <div>
+                  <Typography className="text-text-primary text-sm font-medium">
+                    Preço sujeito a avaliação
+                  </Typography>
                 </div>
               </div>
             </>
@@ -490,6 +485,11 @@ const VariationForm = ({
           {/* Fallback for when no serviceData is available */}
           {!isGroup && !serviceData && (
             <>
+              <div className="space-y-3">
+                <Typography variant="h6" className="text-text-primary text-sm font-semibold">
+                  Configurações da Variação
+                </Typography>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Price Delta Field */}
                 <div>
@@ -546,36 +546,25 @@ const VariationForm = ({
                   )}
                 </div>
               </div>
-            </>
-          )}
-          
-          {!isGroup && serviceData && (
-            <>
-              {/* Help text */}
-              <div className="bg-bg-primary p-4 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <InformationCircleIcon className="h-5 w-5 text-accent-primary mt-0.5" />
-                  <div>
-                    <Typography className="text-text-primary text-sm font-medium mb-1">
-                      Como usar:
-                    </Typography>
-                    <Typography className="text-text-secondary text-sm">
-                      • <strong>Preço Final:</strong> Digite o preço total que o cliente pagará por esta variação
-                    </Typography>
-                    <Typography className="text-text-secondary text-sm">
-                      • <strong>Alteração:</strong> Ou digite quanto aumentar/diminuir do preço base (+ ou -)
-                    </Typography>
-                    <Typography className="text-text-secondary text-sm">
-                      • <strong>Sincronização:</strong> Os campos são sincronizados automaticamente
-                    </Typography>
-                  </div>
+              
+              {/* Price Subject to Evaluation Toggle for fallback */}
+              <div className="flex items-center gap-3 py-2">
+                <Switch
+                  checked={formData.price_subject_to_evaluation || false}
+                  onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
+                  color="blue"
+                />
+                <div>
+                  <Typography className="text-text-primary text-sm font-medium">
+                    Preço sujeito a avaliação
+                  </Typography>
                 </div>
               </div>
             </>
           )}
         </DialogBody>
         
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex gap-2 py-3">
           <Button
             variant="outlined"
             onClick={handleCancel}

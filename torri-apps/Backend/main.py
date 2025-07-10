@@ -23,6 +23,7 @@ from Modules.Payments.routes import router as payments_router
 from Modules.Accounts.routes import router as accounts_router
 from Modules.PayablesReceivables.routes import router as payables_receivables_router
 from Modules.PaymentMethodConfigs.routes import router as payment_method_configs_router
+from Core.version_endpoint import router as version_router
 import Modules.Professionals  # Import module to register models
 import Modules.Company.models  # Import Company models to register them
 import Modules.Payments.models  # Import Payment models to register them
@@ -41,7 +42,7 @@ from Core.Middleware.tenant import TenantMiddleware
 
 app = FastAPI(
     title="Torri Apps Multi-Tenant Backend",
-    version="0.1.0",
+    version="0.1.1",
     description="Backend para o sistema de agendamento de salões/barbearias multi-tenant.",
     # You can customize OpenAPI paths if needed, e.g.:
     # openapi_url="/api/v1/openapi.json",
@@ -84,6 +85,7 @@ API_V1_PREFIX = "/api/v1"
 
 # Public routes (no tenant context required)
 app.include_router(tenants_router, prefix=API_V1_PREFIX, tags=["Tenant Management"])
+app.include_router(version_router, prefix=API_V1_PREFIX, tags=["Version Management"])
 
 # Tenant routes (clean paths - middleware handles tenant identification and path rewriting)
 app.include_router(auth_router, prefix=f"{API_V1_PREFIX}/auth", tags=["Authentication (Tenant)"])
