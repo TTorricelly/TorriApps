@@ -137,6 +137,20 @@ export default function ServiceImageUpload({ serviceId, onImagesChange }) {
   };
   
   /**
+   * Generate a system-managed filename
+   */
+  const generateFilename = (originalFile) => {
+    // Get file extension
+    const extension = originalFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+    
+    // Generate unique filename: service_[serviceId]_[timestamp]_[random].[ext]
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    
+    return `service_${serviceId}_${timestamp}_${random}.${extension}`;
+  };
+
+  /**
    * Upload a single file
    */
   const uploadFile = useCallback(async (file) => {
@@ -152,15 +166,13 @@ export default function ServiceImageUpload({ serviceId, onImagesChange }) {
       return;
     }
     
-    // Validate filename
-    const filename = file.name;
-    const safenamePattern = /^[a-zA-Z0-9\._-]+$/;
-    if (!safenamePattern.test(filename)) {
-      showAlert('Nome do arquivo contém caracteres inválidos', 'error');
-      return;
-    }
+    // Generate system-managed filename
+    const systemFilename = generateFilename(file);
     
-    const fileId = `${file.name}-${Date.now()}`;
+    // Create new file with system-generated name
+    const managedFile = new File([file], systemFilename, { type: file.type });
+    
+    const fileId = `${systemFilename}-${Date.now()}`;
     setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
     
     try {
@@ -172,7 +184,7 @@ export default function ServiceImageUpload({ serviceId, onImagesChange }) {
         }));
       }, 200);
       
-      const result = await serviceImagesApi.uploadImage(serviceId, file, {
+      const result = await serviceImagesApi.uploadImage(serviceId, managedFile, {
         isPrimary: images.length === 0 // First image is primary by default
       });
       
