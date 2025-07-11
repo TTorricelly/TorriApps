@@ -644,20 +644,6 @@ const HomePageInner = ({ navigation }, ref) => {
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() => toggleService(service)}
-                        className={`w-12 h-6 rounded-full transition-smooth flex-shrink-0 relative ${
-                          isSelected
-                            ? 'bg-pink-500'
-                            : 'bg-gray-300'
-                        }`}
-                      >
-                        <div
-                          className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform transform ${
-                            isSelected ? 'translate-x-6' : 'translate-x-0.5'
-                          } absolute top-0.5`}
-                        />
-                      </button>
                     </div>
                   </div>
 
@@ -708,9 +694,10 @@ const HomePageInner = ({ navigation }, ref) => {
                     </div>
                   )}
 
-                  {/* Service Variations - Below Images */}
-                  {variations.length > 0 && (
-                    <div className="px-4 pb-4">
+                  {/* Service Selection - Always Show Radio Buttons */}
+                  <div className="px-4 pb-4">
+                    {variations.length > 0 ? (
+                      // Service with actual variations
                       <ServiceVariations
                         variationGroups={variations}
                         selectedVariations={selectedVariations}
@@ -720,8 +707,39 @@ const HomePageInner = ({ navigation }, ref) => {
                         basePrice={parseFloat(service.price)}
                         baseDuration={service.duration_minutes || 0}
                       />
-                    </div>
-                  )}
+                    ) : (
+                      // Service without variations - show base service option
+                      <ServiceVariations
+                        variationGroups={[{
+                          id: 'base',
+                          name: 'Base Service',
+                          service_id: service.id,
+                          variations: [{
+                            id: 'base',
+                            name: service.name,
+                            price_delta: 0,
+                            duration_delta: 0,
+                            display_order: 0,
+                            price_subject_to_evaluation: false,
+                            service_variation_group_id: 'base'
+                          }]
+                        }]}
+                        selectedVariations={isSelected ? { 'base': { id: 'base' } } : {}}
+                        onVariationSelect={(groupId, variation) => {
+                          // Handle base service selection
+                          if (!isSelected) {
+                            toggleService(service);
+                          } else {
+                            toggleService(service);
+                          }
+                        }}
+                        size="small"
+                        showGroupNames={false}
+                        basePrice={parseFloat(service.price)}
+                        baseDuration={service.duration_minutes || 0}
+                      />
+                    )}
+                  </div>
 
                   {/* Click to see description */}
                   <div className="px-4 pb-4">
