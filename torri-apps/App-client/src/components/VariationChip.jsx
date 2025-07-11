@@ -57,47 +57,49 @@ const VariationChip = ({
   };
 
   return (
-    <button
-      onClick={handleClick}
+    <label
       className={`
-        w-full flex items-center justify-between rounded-xl font-medium border-2
-        transition-all duration-300 ease-out
-        hover:scale-[1.02] active:scale-[0.98]
-        touch-manipulation cursor-pointer
-        ${displayText.length > 40 ? 'max-w-[280px]' : 'max-w-[240px]'}
-        ${sizeClasses[size]}
+        flex items-center w-full p-3 rounded-lg border cursor-pointer
+        transition-all duration-200 ease-in-out
+        hover:bg-gray-50 active:bg-gray-100
+        touch-manipulation
+        ${isSelected ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white'}
         ${className}
       `}
-      style={{ 
-        backgroundColor,
-        color: textColor,
-        borderColor,
-        boxShadow: shadow
-      }}
-      aria-label={`Select variation: ${displayText}`}
-      role="radio"
-      aria-checked={isSelected}
     >
-      <div className="flex-1 text-left">
-        <span 
-          className={`${displayText.length > 40 ? 'whitespace-normal break-words leading-tight' : 'whitespace-nowrap'} font-medium`} 
-          title={displayText}
-        >
-          {variation.name}
-        </span>
-        <div className="text-xs font-bold mt-1 opacity-90">
-          {basePrice !== null ? `R$ ${(parseFloat(basePrice) + parseFloat(variation.price_delta || 0)).toFixed(2).replace('.', ',')}` : ''}
+      {/* Radio Button */}
+      <div className="flex-shrink-0 mr-3">
+        <div className={`
+          w-5 h-5 rounded-full border-2 flex items-center justify-center
+          ${isSelected ? 'border-pink-500 bg-pink-500' : 'border-gray-300 bg-white'}
+        `}>
+          {isSelected && (
+            <div className="w-2 h-2 rounded-full bg-white"></div>
+          )}
         </div>
       </div>
       
-      {isSelected && (
-        <div className="ml-2 flex-shrink-0">
-          <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-pink-500"></div>
-          </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-gray-900 leading-tight">
+          {variation.name}
         </div>
-      )}
-    </button>
+        {basePrice !== null && (
+          <div className="text-sm font-semibold text-pink-600 mt-0.5">
+            R$ {(parseFloat(basePrice) + parseFloat(variation.price_delta || 0)).toFixed(2).replace('.', ',')}
+          </div>
+        )}
+      </div>
+      
+      {/* Hidden Radio Input */}
+      <input
+        type="radio"
+        className="sr-only"
+        checked={isSelected}
+        onChange={handleClick}
+        aria-label={`Select variation: ${variation.name}`}
+      />
+    </label>
   );
 };
 
