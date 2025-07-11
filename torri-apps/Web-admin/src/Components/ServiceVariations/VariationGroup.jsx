@@ -94,6 +94,7 @@ const VariationGroup = ({
   group, 
   serviceData, 
   onUpdate, 
+  onEdit,
   onDelete, 
   onVariationsChange,
   isReadOnly = false 
@@ -424,9 +425,20 @@ const VariationGroup = ({
             </Button>
             
             <div>
-              <Typography variant="h6" className="text-text-primary">
-                {group.name}
-              </Typography>
+              <div className="flex items-center gap-2">
+                <Typography variant="h6" className="text-text-primary">
+                  {group.name}
+                </Typography>
+                {group.multiple_choice && (
+                  <Badge
+                    size="sm"
+                    className="bg-blue-500 text-white text-xs px-2 py-1"
+                    variant="filled"
+                  >
+                    Múltipla escolha
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-4 mt-1">
                 <Typography variant="small" className="text-text-secondary">
                   {variations.length} variações
@@ -502,7 +514,7 @@ const VariationGroup = ({
                   </MenuHandler>
                   <MenuList className="bg-bg-secondary border-bg-tertiary">
                     <MenuItem 
-                      onClick={() => onUpdate && onUpdate(group)}
+                      onClick={() => onEdit && onEdit()}
                       className="text-text-primary hover:bg-bg-primary flex items-center gap-2"
                     >
                       <PencilIcon className="h-4 w-4" />

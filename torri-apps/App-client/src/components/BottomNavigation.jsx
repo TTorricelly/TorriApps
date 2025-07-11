@@ -13,7 +13,7 @@ import { BOTTOM_NAV_CONFIG } from '../shared/navigation';
 const BottomNavigation = () => {
   const location = useLocation();
   const { navigate, buildRoute, isActive } = useNavigation();
-  const { selectedServices } = useServicesStore();
+  const { selectedServices, getExpandedServicesCount } = useServicesStore();
 
   // Icon mapping
   const iconMap = {
@@ -28,7 +28,7 @@ const BottomNavigation = () => {
     ...item,
     icon: iconMap[item.key] || User,
     isActive: isActive(item.route),
-    badge: item.key === 'services' && selectedServices.length > 0 ? selectedServices.length : null
+    badge: item.key === 'services' && selectedServices.length > 0 ? getExpandedServicesCount() : null
   }));
 
   const handleNavigation = (route) => {

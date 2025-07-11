@@ -307,6 +307,7 @@ const ServiceVariationManager = ({
                 group={group}
                 serviceData={serviceData}
                 onUpdate={(groupData) => handleUpdateGroup(group.id, groupData)}
+                onEdit={() => setEditingGroup(group)}
                 onDelete={() => setDeleteDialog({ open: true, group })}
                 onVariationsChange={(variations) => handleVariationsChange(group.id, variations)}
                 isReadOnly={isReadOnly}

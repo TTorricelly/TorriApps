@@ -38,9 +38,11 @@ const ServicesPage = () => {
     getTotalPrice, 
     getTotalDuration: _getTotalDuration,
     setServiceVariation,
+    toggleServiceVariation,
     getServiceVariations,
     getServiceFinalPrice,
-    getServiceFinalDuration
+    getServiceFinalDuration,
+    getExpandedServicesCount
   } = useServicesStore();
   
   // State for expandable cards (identical to mobile pattern)
@@ -100,6 +102,10 @@ const ServicesPage = () => {
   // Handle variation selection
   const handleVariationSelect = (serviceId, groupId, variation) => {
     setServiceVariation(serviceId, groupId, variation);
+  };
+
+  const handleVariationToggle = (serviceId, groupId, variation) => {
+    toggleServiceVariation(serviceId, groupId, variation);
   };
 
   // Load variations for a service
@@ -209,7 +215,7 @@ const ServicesPage = () => {
           {/* Total Price Display */}
           <div className="flex justify-between items-center mb-4">
             <span className="text-gray-700 font-medium">
-              Total ({selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}):
+              Total ({getExpandedServicesCount()} {getExpandedServicesCount() === 1 ? 'serviço' : 'serviços'}):
             </span>
             <span className="text-xl font-bold text-pink-600">
               {formatPrice(getTotalPrice())}
@@ -370,7 +376,8 @@ const SwipeableServiceCard = ({
                   <ServiceVariations
                     variationGroups={variations}
                     selectedVariations={selectedVariations}
-                    onVariationSelect={(groupId, variation) => onVariationSelect(service.id, groupId, variation)}
+                    onVariationSelect={(groupId, variation) => handleVariationSelect(service.id, groupId, variation)}
+                    onVariationToggle={(groupId, variation) => handleVariationToggle(service.id, groupId, variation)}
                     size="small"
                     basePrice={parseFloat(service.price)}
                     baseDuration={service.duration_minutes || 0}

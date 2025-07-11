@@ -169,6 +169,7 @@ class ServiceWithImagesResponse(ServiceSchema):
 class ServiceVariationGroupBase(BaseModel):
     """Base schema for service variation group."""
     name: str = Field(..., min_length=1, max_length=100, example="Hair Length")
+    multiple_choice: bool = Field(default=False, example=False, description="Whether multiple variations can be selected from this group")
 
 class ServiceVariationGroupCreate(ServiceVariationGroupBase):
     """Schema for creating a new service variation group."""
@@ -177,6 +178,7 @@ class ServiceVariationGroupCreate(ServiceVariationGroupBase):
 class ServiceVariationGroupUpdate(BaseModel):
     """Schema for updating service variation group."""
     name: Optional[str] = Field(None, min_length=1, max_length=100, example="Hair Length Options")
+    multiple_choice: Optional[bool] = Field(None, description="Whether multiple variations can be selected from this group")
 
 class ServiceVariationGroupSchema(ServiceVariationGroupBase):
     """Schema for service variation group response."""

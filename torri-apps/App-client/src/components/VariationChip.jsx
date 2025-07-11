@@ -14,7 +14,8 @@ const VariationChip = ({
   size = 'medium',
   className = '',
   basePrice = null,
-  baseDuration = 0
+  baseDuration = 0,
+  isMultipleChoice = false
 }) => {
   // Early return if variation is null/undefined
   if (!variation) {
@@ -122,13 +123,13 @@ const VariationChip = ({
         )}
       </div>
       
-      {/* Hidden Radio Input */}
+      {/* Hidden Radio/Checkbox Input */}
       <input
-        type="radio"
+        type={isMultipleChoice ? "checkbox" : "radio"}
         className="sr-only"
         checked={isSelected}
         onChange={handleClick}
-        aria-label={`Select variation: ${variation.name}`}
+        aria-label={`${isMultipleChoice ? 'Toggle' : 'Select'} variation: ${variation.name}`}
       />
     </label>
   );
@@ -141,6 +142,7 @@ const VariationChip = ({
 export const VariationGroup = ({ 
   group, 
   selectedVariationId,
+  selectedVariationIds = [],
   onVariationSelect,
   size = 'medium',
   className = '',
@@ -152,12 +154,29 @@ export const VariationGroup = ({
     return null;
   }
 
+  const isMultipleChoice = group.multiple_choice || false;
+
+  const getIsSelected = (variation) => {
+    if (isMultipleChoice) {
+      return selectedVariationIds.includes(variation.id);
+    } else {
+      return selectedVariationId === variation.id;
+    }
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
       {/* Group Label */}
       {showGroupName && (
-        <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-          {group.name}
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            {group.name}
+          </div>
+          {isMultipleChoice && (
+            <div className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              Múltipla escolha
+            </div>
+          )}
         </div>
       )}
       
@@ -167,11 +186,12 @@ export const VariationGroup = ({
           <VariationChip
             key={variation.id}
             variation={variation}
-            isSelected={selectedVariationId === variation.id}
+            isSelected={getIsSelected(variation)}
             onSelect={onVariationSelect}
             size={size}
             basePrice={basePrice}
             baseDuration={baseDuration}
+            isMultipleChoice={isMultipleChoice}
           />
         ))}
       </div>
@@ -187,6 +207,7 @@ export const ServiceVariations = ({
   variationGroups = [],
   selectedVariations = {},
   onVariationSelect,
+  onVariationToggle,
   size = 'medium',
   className = '',
   showGroupNames = true,
@@ -197,10 +218,29 @@ export const ServiceVariations = ({
     return null;
   }
 
-  const handleVariationSelect = (groupId, variation) => {
-    if (onVariationSelect) {
-      onVariationSelect(groupId, variation);
+  const handleVariationSelect = (groupId, variation, group) => {
+    if (group.multiple_choice) {
+      // Use toggle for multiple choice groups
+      if (onVariationToggle) {
+        onVariationToggle(groupId, variation);
+      }
+    } else {
+      // Use select for single choice groups
+      if (onVariationSelect) {
+        onVariationSelect(groupId, variation);
+      }
     }
+  };
+
+  const getSelectedVariationIds = (groupId, group) => {
+    const selection = selectedVariations[groupId];
+    if (!selection) return [];
+    
+    if (group.multiple_choice && Array.isArray(selection)) {
+      return selection.map(v => v.id);
+    }
+    
+    return [];
   };
 
   return (
@@ -209,8 +249,9 @@ export const ServiceVariations = ({
         <VariationGroup
           key={group.id}
           group={group}
-          selectedVariationId={selectedVariations[group.id]?.id}
-          onVariationSelect={(variation) => handleVariationSelect(group.id, variation)}
+          selectedVariationId={!group.multiple_choice ? selectedVariations[group.id]?.id : undefined}
+          selectedVariationIds={group.multiple_choice ? getSelectedVariationIds(group.id, group) : []}
+          onVariationSelect={(variation) => handleVariationSelect(group.id, variation, group)}
           size={size}
           showGroupName={showGroupNames}
           basePrice={basePrice}

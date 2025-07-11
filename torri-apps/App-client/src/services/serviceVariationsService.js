@@ -35,6 +35,7 @@ export const getServiceVariations = async (serviceId) => {
     const transformed = data.map(group => ({
       id: group.id,
       name: group.name,
+      multiple_choice: group.multiple_choice || false,
       service_id: group.service_id,
       variations: (group.variations || []).map(variation => ({
         id: variation.id,
@@ -72,13 +73,22 @@ export const hasServiceVariations = async (serviceId) => {
 /**
  * Helper function to calculate final price with variation
  * @param {number} basePrice - Base service price
- * @param {Object} selectedVariations - Object with variation group ID as key and variation as value
+ * @param {Object} selectedVariations - Object with variation group ID as key and variation(s) as value
  * @returns {number} Final price including variation deltas
  */
 export const calculateFinalPrice = (basePrice, selectedVariations = {}) => {
   const base = parseFloat(basePrice || 0);
+  
   const variationDeltas = Object.values(selectedVariations)
-    .map(variation => parseFloat(variation?.price_delta || 0))
+    .filter(variationOrArray => variationOrArray != null) // Filter out null/undefined values
+    .flatMap(variationOrArray => {
+      // Handle both single variation and array of variations
+      if (Array.isArray(variationOrArray)) {
+        return variationOrArray.map(variation => parseFloat(variation?.price_delta || 0));
+      } else {
+        return [parseFloat(variationOrArray?.price_delta || 0)];
+      }
+    })
     .reduce((sum, delta) => sum + delta, 0);
   
   return base + variationDeltas;
@@ -87,13 +97,21 @@ export const calculateFinalPrice = (basePrice, selectedVariations = {}) => {
 /**
  * Helper function to calculate final duration with variation
  * @param {number} baseDuration - Base service duration in minutes
- * @param {Object} selectedVariations - Object with variation group ID as key and variation as value
+ * @param {Object} selectedVariations - Object with variation group ID as key and variation(s) as value
  * @returns {number} Final duration including variation deltas
  */
 export const calculateFinalDuration = (baseDuration, selectedVariations = {}) => {
   const base = parseInt(baseDuration || 0);
   const variationDeltas = Object.values(selectedVariations)
-    .map(variation => parseInt(variation?.duration_delta || 0))
+    .filter(variationOrArray => variationOrArray != null) // Filter out null/undefined values
+    .flatMap(variationOrArray => {
+      // Handle both single variation and array of variations
+      if (Array.isArray(variationOrArray)) {
+        return variationOrArray.map(variation => parseInt(variation?.duration_delta || 0));
+      } else {
+        return [parseInt(variationOrArray?.duration_delta || 0)];
+      }
+    })
     .reduce((sum, delta) => sum + delta, 0);
   
   return Math.max(0, base + variationDeltas); // Ensure duration is never negative

@@ -30,6 +30,7 @@ const VariationForm = ({
     price_delta: '',
     duration_delta: '',
     price_subject_to_evaluation: false,
+    multiple_choice: false,
   });
   const [finalPrice, setFinalPrice] = useState('');
   const [finalDuration, setFinalDuration] = useState('');
@@ -77,6 +78,7 @@ const VariationForm = ({
           price_delta: priceDelta,
           duration_delta: durationDelta,
           price_subject_to_evaluation: initialData.price_subject_to_evaluation ?? false,
+          multiple_choice: initialData.multiple_choice ?? false,
         });
         
         // Calculate final values based on deltas
@@ -97,6 +99,7 @@ const VariationForm = ({
           price_delta: '',
           duration_delta: '',
           price_subject_to_evaluation: false,
+          multiple_choice: false,
         });
         setFinalPrice('');
         setFinalDuration('');
@@ -240,7 +243,9 @@ const VariationForm = ({
         name: formData.name.trim(),
       };
       
-      if (!isGroup) {
+      if (isGroup) {
+        submitData.multiple_choice = formData.multiple_choice;
+      } else {
         submitData.price_delta = parseFloat(formData.price_delta);
         submitData.duration_delta = parseInt(formData.duration_delta);
         submitData.price_subject_to_evaluation = formData.price_subject_to_evaluation;
@@ -254,6 +259,7 @@ const VariationForm = ({
         price_delta: '',
         duration_delta: '',
         price_subject_to_evaluation: false,
+        multiple_choice: false,
       });
       setFinalPrice('');
       setFinalDuration('');
@@ -272,6 +278,7 @@ const VariationForm = ({
       price_delta: '',
       duration_delta: '',
       price_subject_to_evaluation: false,
+      multiple_choice: false,
     });
     setFinalPrice('');
     setFinalDuration('');
@@ -338,6 +345,25 @@ const VariationForm = ({
               </Typography>
             )}
           </div>
+
+          {/* Group-specific fields */}
+          {isGroup && (
+            <div className="flex items-center gap-3 py-2">
+              <Switch
+                checked={formData.multiple_choice || false}
+                onChange={(e) => handleInputChange('multiple_choice', e.target.checked)}
+                color="blue"
+              />
+              <div>
+                <Typography className="text-text-primary text-sm font-medium">
+                  Permitir múltipla escolha
+                </Typography>
+                <Typography className="text-text-secondary text-xs">
+                  Permite que o cliente selecione mais de uma variação deste grupo
+                </Typography>
+              </div>
+            </div>
+          )}
 
           {/* Variation-specific fields */}
           {!isGroup && serviceData && (

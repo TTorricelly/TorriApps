@@ -201,6 +201,7 @@ class ServiceVariationGroup(Base):
     Attributes:
         id: Unique identifier (UUID)
         name: Name of the variation group
+        multiple_choice: Whether multiple variations can be selected from this group
         service_id: Reference to the service this group belongs to
         created_at: When the group was created
         updated_at: When the group was last updated
@@ -212,6 +213,7 @@ class ServiceVariationGroup(Base):
     
     # Core fields
     name = Column(String(100), nullable=False)
+    multiple_choice = Column(Boolean, nullable=False, default=False)
     
     # Foreign keys
     service_id = Column(UUID(as_uuid=True), ForeignKey("services.id", ondelete="CASCADE"), nullable=False, index=True)

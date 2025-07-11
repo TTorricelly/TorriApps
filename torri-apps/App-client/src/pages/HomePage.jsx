@@ -114,16 +114,20 @@ const HomePageInner = ({ navigation }, ref) => {
     clearServices, 
     getTotalPrice,
     setServiceVariation,
+    toggleServiceVariation,
     getServiceVariations,
-    getServiceFinalPrice
+    getServiceFinalPrice,
+    getExpandedServicesCount
   } = useServicesStore((state) => ({
     selectedServices: state.selectedServices,
     toggleService: state.toggleService,
     clearServices: state.clearServices,
     getTotalPrice: state.getTotalPrice,
     setServiceVariation: state.setServiceVariation,
+    toggleServiceVariation: state.toggleServiceVariation,
     getServiceVariations: state.getServiceVariations,
     getServiceFinalPrice: state.getServiceFinalPrice,
+    getExpandedServicesCount: state.getExpandedServicesCount,
   }));
 
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -392,6 +396,20 @@ const HomePageInner = ({ navigation }, ref) => {
     }
   };
 
+  // Handle variation toggle for multiple choice groups
+  const handleVariationToggle = (serviceId, groupId, variation) => {
+    const service = fetchedServices.find(s => s.id === serviceId);
+    const isServiceSelected = selectedServices.some(s => s.id === serviceId);
+    
+    // Toggle the variation
+    toggleServiceVariation(serviceId, groupId, variation);
+    
+    // Auto-add service to cart if not already selected and we're adding a variation
+    if (service && !isServiceSelected) {
+      toggleService(service);
+    }
+  };
+
   // Helper function to generate variation preview text
   const getVariationPreview = (variations) => {
     if (!variations || !Array.isArray(variations) || variations.length === 0) return null;
@@ -528,7 +546,7 @@ const HomePageInner = ({ navigation }, ref) => {
       <div className="fixed left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-bottom z-50" style={{ bottom: '64px' }}>
         <div className="flex justify-between items-center mb-3">
           <span className="text-gray-700">
-            Total ({selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}):
+            Total ({getExpandedServicesCount()} {getExpandedServicesCount() === 1 ? 'serviço' : 'serviços'}):
           </span>
           <span className="text-xl font-bold text-pink-600">
             {formatPrice(getTotalPrice())}
@@ -541,7 +559,7 @@ const HomePageInner = ({ navigation }, ref) => {
           }}
           className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-pink-600 transition-smooth"
         >
-          Continuar ({selectedServices.length})
+          Continuar ({getExpandedServicesCount()})
         </button>
       </div>
     );
@@ -683,6 +701,7 @@ const HomePageInner = ({ navigation }, ref) => {
                         variationGroups={variations}
                         selectedVariations={selectedVariations}
                         onVariationSelect={(groupId, variation) => handleVariationSelect(service.id, groupId, variation)}
+                        onVariationToggle={(groupId, variation) => handleVariationToggle(service.id, groupId, variation)}
                         size="small"
                         showGroupNames={false}
                         basePrice={parseFloat(service.price)}
@@ -707,13 +726,10 @@ const HomePageInner = ({ navigation }, ref) => {
                         }]}
                         selectedVariations={isSelected ? { 'base': { id: 'base' } } : {}}
                         onVariationSelect={(groupId, variation) => {
-                          // Handle base service selection
-                          if (!isSelected) {
-                            toggleService(service);
-                          } else {
-                            toggleService(service);
-                          }
+                          // Handle base service selection - toggle on/off
+                          toggleService(service);
                         }}
+                        onVariationToggle={() => {}} // Not used for base services
                         size="small"
                         showGroupNames={false}
                         basePrice={parseFloat(service.price)}
