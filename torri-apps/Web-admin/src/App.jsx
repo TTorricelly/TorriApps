@@ -41,15 +41,17 @@ function App() {
   const tenantInfo = getTenantInfo();
   const isDomainBased = tenantInfo?.method === 'domain';
 
-  // Initialize version checker
+  // Initialize version checker (use global singleton)
   useEffect(() => {
-    const versionChecker = new VersionChecker();
-    versionChecker.startVersionCheck();
+    // Use the global instance instead of creating a new one
+    if (window.versionChecker) {
+      window.versionChecker.startVersionCheck();
 
-    // Cleanup on unmount
-    return () => {
-      versionChecker.stopVersionCheck();
-    };
+      // Cleanup on unmount
+      return () => {
+        window.versionChecker.stopVersionCheck();
+      };
+    }
   }, []);
   
   // Shared route definitions

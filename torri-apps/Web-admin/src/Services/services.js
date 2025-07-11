@@ -1,11 +1,12 @@
 import { api } from '../api/client';
 import { createCrudApi, withApiErrorHandling, buildApiEndpoint, transformEntityWithImages } from '../Utils/apiHelpers';
 
-// Create base CRUD operations
+// Create base CRUD operations with error throwing for better error handling
 const baseCrudApi = createCrudApi({
   endpoint: 'services',
   imageFields: [], // No legacy image fields - using ServiceImage system
-  entityName: 'services'
+  entityName: 'services',
+  throwOnError: true // Enable error throwing for detailed error handling
 });
 
 // Services API service functions

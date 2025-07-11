@@ -168,6 +168,11 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
         )
 
     service_dict = service_data.model_dump(exclude={'professional_ids'})
+    
+    # Convert empty string SKU to NULL for unique constraint handling
+    if 'service_sku' in service_dict and service_dict['service_sku'] == '':
+        service_dict['service_sku'] = None
+    
     # PostgreSQL with UUID(as_uuid=True) expects UUID objects, not strings
     db_service = Service(**service_dict)
 
@@ -234,6 +239,10 @@ def get_all_services(
 
 def update_service(db: Session, db_service: Service, service_data: ServiceUpdate) -> Service:
     update_dict = service_data.model_dump(exclude_unset=True, exclude={'professional_ids'})
+    
+    # Convert empty string SKU to NULL for unique constraint handling
+    if 'service_sku' in update_dict and update_dict['service_sku'] == '':
+        update_dict['service_sku'] = None
     
     # PostgreSQL UUID fields expect UUID objects, not strings
 

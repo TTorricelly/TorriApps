@@ -30,6 +30,8 @@ import { buildAssetUrl } from '../utils/urlHelpers';
 import { generateAvailableDates, formatDateForDisplay as formatDateUtil } from '../utils/dateUtils';
 import { getProfessionalsForService } from '../services/professionalService';
 import { buildServiceImages, getPrimaryServiceImage, hasServiceImages } from '../utils/imageUtils';
+import { getServiceVariations as fetchServiceVariations } from '../services/serviceVariationsService.js';
+import { ServiceVariations } from '../components/VariationChip';
 
 // Helper functions (identical to mobile)
 const formatDuration = (minutes) => {
@@ -94,6 +96,9 @@ const HomePageInner = ({ navigation }, ref) => {
   // Image loading and error state management
   const [imageLoadingStates, setImageLoadingStates] = useState({});
   const [imageErrors, setImageErrors] = useState({});
+  
+  // Service variations state
+  const [serviceVariations, setServiceVariations] = useState({}); // { serviceId: [variationGroups] }
 
   // Auth and services store integration (identical to mobile)
   const { user, isAuthenticated, setProfile, logout: storeLogout } = useAuthStore((state) => ({
@@ -103,11 +108,22 @@ const HomePageInner = ({ navigation }, ref) => {
     logout: state.logout,
   }));
 
-  const { selectedServices, toggleService, clearServices, getTotalPrice } = useServicesStore((state) => ({
+  const { 
+    selectedServices, 
+    toggleService, 
+    clearServices, 
+    getTotalPrice,
+    setServiceVariation,
+    getServiceVariations,
+    getServiceFinalPrice
+  } = useServicesStore((state) => ({
     selectedServices: state.selectedServices,
     toggleService: state.toggleService,
     clearServices: state.clearServices,
     getTotalPrice: state.getTotalPrice,
+    setServiceVariation: state.setServiceVariation,
+    getServiceVariations: state.getServiceVariations,
+    getServiceFinalPrice: state.getServiceFinalPrice,
   }));
 
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -129,7 +145,15 @@ const HomePageInner = ({ navigation }, ref) => {
           const rawProfileData = await getUserProfile();
           setProfile(rawProfileData);
         } catch (error) {
-          alert("Não foi possível carregar os detalhes do seu perfil.");
+          console.error('Profile loading error:', error);
+          console.error('Error details:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            url: window.location.href,
+            tenantInfo: error.tenantInfo
+          });
+          alert(`Não foi possível carregar os detalhes do seu perfil. Erro: ${error.message}`);
         } finally {
           setIsProfileLoading(false);
         }
@@ -185,16 +209,34 @@ const HomePageInner = ({ navigation }, ref) => {
     }
   }, [location.pathname]);
 
+  // Load variations for a service
+  const loadServiceVariations = async (serviceId) => {
+    try {
+      const variations = await fetchServiceVariations(serviceId);
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: variations || []
+      }));
+    } catch (err) {
+      // Silently fail - variations are optional
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: []
+      }));
+    }
+  };
+
   // Load services function (identical to mobile)
   const loadServicesForCategory = async (categoryId) => {
     if (!categoryId) return;
     setIsLoadingServices(true);
     setServiceError(null);
     setFetchedServices([]);
+    setServiceVariations({}); // Clear variations when loading new category
     try {
       const data = await getServicesByCategory(categoryId);
       if (Array.isArray(data)) {
-        setFetchedServices(data.map((service) => ({
+        const services = data.map((service) => ({
           id: service.id,
           name: service.name,
           duration_minutes: service.duration_minutes,
@@ -212,7 +254,14 @@ const HomePageInner = ({ navigation }, ref) => {
           // Add parallel execution fields from mobile
           parallelable: service.parallelable,
           max_parallel_pros: service.max_parallel_pros,
-        })));
+        }));
+        
+        setFetchedServices(services);
+        
+        // Load variations for each service
+        services.forEach(service => {
+          loadServiceVariations(service.id);
+        });
       } else {
         setFetchedServices([]);
       }
@@ -234,6 +283,7 @@ const HomePageInner = ({ navigation }, ref) => {
       setIsLoadingServices(false);
     }
   }, [selectedCategory]);
+
 
   // Helper function for scrolling (adapted for web)
   const scrollToTop = (scrollRef) => {
@@ -318,6 +368,73 @@ const HomePageInner = ({ navigation }, ref) => {
   const handleImageLoadStart = (imageKey) => {
     setImageLoadingStates(prev => ({ ...prev, [imageKey]: true }));
     setImageErrors(prev => ({ ...prev, [imageKey]: false }));
+  };
+
+  // Handle variation selection
+  const handleVariationSelect = (serviceId, groupId, variation) => {
+    const service = fetchedServices.find(s => s.id === serviceId);
+    const isServiceSelected = selectedServices.some(s => s.id === serviceId);
+    const currentSelectedVariations = getServiceVariations(serviceId);
+    const isVariationCurrentlySelected = currentSelectedVariations[groupId]?.id === variation.id;
+    
+    if (isVariationCurrentlySelected) {
+      // If clicking on already selected variation, deselect it and remove service from cart
+      setServiceVariation(serviceId, groupId, null);
+      if (service && isServiceSelected) {
+        toggleService(service);
+      }
+    } else {
+      // Select the variation and auto-add service to cart if not already selected
+      setServiceVariation(serviceId, groupId, variation);
+      if (service && !isServiceSelected) {
+        toggleService(service);
+      }
+    }
+  };
+
+  // Helper function to generate variation preview text
+  const getVariationPreview = (variations) => {
+    if (!variations || !Array.isArray(variations) || variations.length === 0) return null;
+    
+    const allVariations = variations.flatMap(group => group.variations || []);
+    if (allVariations.length === 0) return null;
+    
+    // Show first few variation names
+    const preview = allVariations
+      .slice(0, 3)
+      .map(v => v.name)
+      .join(', ');
+    
+    const totalCount = allVariations.length;
+    if (totalCount > 3) {
+      return `${preview} +${totalCount - 3} mais`;
+    }
+    
+    return preview;
+  };
+
+  // Helper function to calculate price range for services with variations
+  const getPriceRange = (basePrice, variations) => {
+    if (!variations || !Array.isArray(variations) || variations.length === 0) return null;
+    
+    const allVariations = variations.flatMap(group => group.variations || []);
+    if (allVariations.length === 0) return null;
+    
+    const priceDeltas = allVariations.map(v => parseFloat(v.price_delta || 0));
+    
+    // If no price deltas or all are zero, no range needed
+    if (priceDeltas.every(delta => delta === 0)) return null;
+    
+    const minDelta = Math.min(...priceDeltas);
+    const maxDelta = Math.max(...priceDeltas);
+    
+    const base = parseFloat(basePrice || 0);
+    const minPrice = base + minDelta;
+    const maxPrice = base + maxDelta;
+    
+    if (minPrice === maxPrice) return null; // No range if same price
+    
+    return { minPrice, maxPrice };
   };
 
   // Categories screen render
@@ -478,6 +595,7 @@ const HomePageInner = ({ navigation }, ref) => {
           </div>
         )}
 
+
         {/* Services List */}
         {!isLoadingServices && !serviceError && (
           <div className={`space-y-4 ${selectedServices.length > 0 ? 'pb-40' : 'pb-24'}`}>
@@ -485,6 +603,11 @@ const HomePageInner = ({ navigation }, ref) => {
               const isSelected = selectedServices.some(s => s.id === service.id);
               const isExpanded = isServiceExpanded(service.id);
               const serviceImages = buildServiceImages(service);
+              const variations = serviceVariations[service.id] || [];
+              const selectedVariations = getServiceVariations(service.id);
+              // Always calculate final price with variations, whether selected or not
+              const finalPrice = getServiceFinalPrice(service) || parseFloat(service.price);
+              const priceRange = getPriceRange(service.price, variations);
               
               return (
                 <div
@@ -499,10 +622,34 @@ const HomePageInner = ({ navigation }, ref) => {
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">
                           {service.name}
                         </h3>
+                        
+                        {/* Service Variations - Always Interactive */}
+                        {variations.length > 0 && (
+                          <div className="mb-3">
+                            <ServiceVariations
+                              variationGroups={variations}
+                              selectedVariations={selectedVariations}
+                              onVariationSelect={(groupId, variation) => handleVariationSelect(service.id, groupId, variation)}
+                              size="small"
+                              showGroupNames={false}
+                              basePrice={parseFloat(service.price)}
+                            />
+                          </div>
+                        )}
+                        
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-4">
                             <span className="text-pink-600 font-bold">
-                              {formatPrice(service.price)}
+                              {Object.keys(selectedVariations).length > 0 ? (
+                                // Show calculated price when variations are selected
+                                formatPrice(finalPrice)
+                              ) : priceRange ? (
+                                // Show price range when no variations selected but variations exist
+                                `${formatPrice(priceRange.minPrice)} - ${formatPrice(priceRange.maxPrice)}`
+                              ) : (
+                                // Show base price when no variations
+                                formatPrice(service.price)
+                              )}
                             </span>
                             <span className="text-gray-500 text-sm">
                               {formatDuration(service.duration_minutes)}

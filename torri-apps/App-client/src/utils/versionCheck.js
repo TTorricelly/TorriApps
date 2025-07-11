@@ -8,15 +8,24 @@ class MobileVersionChecker {
     this.currentVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
     this.isChecking = false;
     this.hasCheckedThisSession = false;
+    this.hasShownNotification = false;
+    this.acknowledgedVersion = localStorage.getItem('acknowledged_version');
   }
 
   // Start version checking for mobile PWA
   startVersionCheck() {
-    // Check immediately on app open
-    this.checkVersion();
+    // Mobile apps should NOT show version update notifications
+    // Updates are handled silently by the PWA service worker
+    console.log('Mobile version checker: Disabled - using PWA service worker for silent updates');
     
-    // Check when app comes back to foreground
-    this.setupMobileLifecycleChecking();
+    // Clean up any existing update tracking
+    localStorage.removeItem('mobile_app_updating');
+    localStorage.removeItem('mobile_update_timestamp');
+    localStorage.removeItem('mobile_updating_to_version');
+    localStorage.removeItem('acknowledged_version');
+    
+    // Do not start any version checking for mobile
+    return;
   }
 
   // Mobile-specific event handling
@@ -44,6 +53,45 @@ class MobileVersionChecker {
     });
   }
 
+  // Clear acknowledged versions that are older than current version
+  clearOldAcknowledgedVersions() {
+    const acknowledgedVersion = localStorage.getItem('acknowledged_version');
+    
+    // If acknowledged version is the same as current version, keep it
+    // This prevents showing update notifications for the same version
+    if (acknowledgedVersion === this.currentVersion) {
+      this.acknowledgedVersion = acknowledgedVersion;
+      console.log('Mobile: User has already acknowledged current version:', this.currentVersion);
+      return;
+    }
+    
+    // If acknowledged version is different or empty, clear it
+    if (acknowledgedVersion && acknowledgedVersion !== this.currentVersion) {
+      localStorage.removeItem('acknowledged_version');
+      this.acknowledgedVersion = null;
+      console.log('Mobile: Cleared old acknowledged version:', acknowledgedVersion);
+    }
+  }
+
+  // Check if user has already acknowledged this version update
+  hasUserAcknowledgedUpdate(version) {
+    // If user has already seen notification for this version, don't show again
+    if (this.hasShownNotification) {
+      return true;
+    }
+    
+    // Check if user has acknowledged this specific version
+    const acknowledgedVersion = localStorage.getItem('acknowledged_version');
+    return acknowledgedVersion === version;
+  }
+
+  // Mark version as acknowledged by user
+  acknowledgeVersion(version) {
+    localStorage.setItem('acknowledged_version', version);
+    this.acknowledgedVersion = version;
+    this.hasShownNotification = true;
+  }
+
   // Stop version checking
   stopVersionCheck() {
     // Remove event listeners
@@ -55,183 +103,48 @@ class MobileVersionChecker {
 
   // Check for new version
   async checkVersion() {
-    if (this.isChecking) return;
-    
-    try {
-      this.isChecking = true;
-      
-      // Method 1: Check via API endpoint (public route - no tenant context needed)
-      const versionEndpoint = buildApiEndpoint('version', 'v1', { isPublic: true });
-      const response = await fetch(versionEndpoint, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      if (response.ok) {
-        const { version } = await response.json();
-        if (version !== this.currentVersion) {
-          this.handleVersionUpdate(version);
-        }
-      }
-    } catch (error) {
-      console.warn('Version check failed:', error);
-      // Mobile fallback: Check if main HTML changed
-      await this.checkAssetVersion();
-    } finally {
-      this.isChecking = false;
-    }
+    // Mobile apps should not perform manual version checks
+    // All updates are handled silently by PWA service worker
+    console.log('Mobile version check: Skipped - using PWA service worker for silent updates');
+    return;
   }
 
   // Alternative method: Check if main asset changed
   async checkAssetVersion() {
-    try {
-      // Try to fetch the main HTML file with cache-busting
-      const response = await fetch('/index.html', {
-        method: 'HEAD',
-        cache: 'no-cache'
-      });
-      
-      const lastModified = response.headers.get('last-modified');
-      const storedModified = localStorage.getItem('app_last_modified');
-      
-      if (storedModified && lastModified !== storedModified) {
-        this.handleVersionUpdate('updated');
-      }
-      
-      if (lastModified) {
-        localStorage.setItem('app_last_modified', lastModified);
-      }
-    } catch (error) {
-      console.warn('Could not check asset version:', error);
-    }
+    // Mobile apps should not perform asset version checks
+    // All updates are handled silently by PWA service worker
+    console.log('Mobile asset version check: Skipped - using PWA service worker for silent updates');
+    return;
   }
 
   // Handle version update detection
   handleVersionUpdate(newVersion) {
-    // Show mobile-optimized update notification
-    this.showMobileUpdateNotification(newVersion);
+    // Mobile apps should never show update notifications
+    // All updates are handled silently by PWA service worker
+    console.log(`Mobile: Version ${newVersion} detected but notifications disabled - using silent PWA updates`);
+    return;
   }
 
   // Show mobile-friendly update notification
   showMobileUpdateNotification(newVersion) {
-    // Create mobile-optimized notification
-    const notification = document.createElement('div');
-    notification.id = 'mobile-version-update-notification';
-    notification.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 16px;
-        z-index: 10000;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      ">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="font-size: 24px;">🚀</div>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
-              Nova versão disponível!
-            </div>
-            <div style="font-size: 14px; opacity: 0.9;">
-              Toque para atualizar e ver as novidades
-            </div>
-          </div>
-          <button 
-            onclick="window.mobileVersionChecker.refreshApp()" 
-            style="
-              background: rgba(255,255,255,0.2);
-              border: 1px solid rgba(255,255,255,0.3);
-              color: white;
-              padding: 12px 20px;
-              border-radius: 6px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 600;
-            "
-          >
-            Atualizar
-          </button>
-        </div>
-      </div>
-    `;
+    // Mobile apps should never show update notifications
+    // All updates are handled silently by PWA service worker
+    console.log(`Mobile: Update notification for version ${newVersion} suppressed - using silent PWA updates`);
+    return;
+  }
 
-    // Remove existing notification
-    const existing = document.getElementById('mobile-version-update-notification');
-    if (existing) {
-      existing.remove();
-    }
-
-    // Add new notification
-    document.body.appendChild(notification);
-
-    // Auto-refresh after 60 seconds if user doesn't tap (longer for mobile)
-    setTimeout(() => {
-      if (document.getElementById('mobile-version-update-notification')) {
-        this.refreshApp();
-      }
-    }, 60000);
+  // Dismiss update notification (user chooses not to update now)
+  dismissUpdate(version) {
+    // Mobile apps don't show notifications, so nothing to dismiss
+    console.log(`Mobile: Dismiss update called for version ${version} but notifications are disabled`);
+    return;
   }
 
   // Refresh the mobile app
-  async refreshApp() {
-    try {
-      // Clear all caches asynchronously
-      const cachePromises = [];
-      
-      // Clear service workers (important for PWAs)
-      if ('serviceWorker' in navigator) {
-        cachePromises.push(
-          navigator.serviceWorker.getRegistrations().then(registrations => {
-            return Promise.all(registrations.map(registration => registration.unregister()));
-          })
-        );
-      }
-
-      // Clear browser cache
-      if ('caches' in window) {
-        cachePromises.push(
-          caches.keys().then(names => {
-            return Promise.all(names.map(name => caches.delete(name)));
-          })
-        );
-      }
-
-      // Wait for all cache clearing operations to complete
-      await Promise.all(cachePromises);
-
-      // Clear mobile-specific cache keys
-      const cacheKeys = [
-        'app_last_modified',
-        'cached_services',
-        'cached_appointments',
-        'api_cache_',
-        'theme_cache_',
-        'offline_data_'
-      ];
-      
-      cacheKeys.forEach(key => {
-        Object.keys(localStorage).forEach(storageKey => {
-          if (storageKey.includes(key)) {
-            localStorage.removeItem(storageKey);
-          }
-        });
-      });
-
-    } catch (error) {
-      console.warn('Some caches could not be cleared:', error);
-    }
-
-    // Mobile-friendly reload with cache bypass
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('v', Date.now().toString());
-    currentUrl.searchParams.set('mobile_refresh', '1');
-    window.location.href = currentUrl.toString();
+  async refreshApp(version = null) {
+    // Mobile apps don't use manual refresh - PWA service worker handles updates
+    console.log(`Mobile: Refresh app called for version ${version} but using PWA service worker for silent updates`);
+    return;
   }
 }
 

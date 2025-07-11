@@ -4,7 +4,7 @@
  * Features: Swipeable cards, expandable details, image carousels, gesture interactions
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigation } from '../shared/hooks/useNavigation';
 import { ROUTES } from '../shared/navigation';
 import { 
@@ -26,10 +26,22 @@ import useServicesStore from '../stores/servicesStore';
 import { buildAssetUrl } from '../utils/urlHelpers';
 import { buildServiceImages } from '../utils/imageUtils';
 import SchedulingWizardModal from '../components/SchedulingWizardModal';
+import { ServiceVariations } from '../components/VariationChip';
+import { getServiceVariations } from '../services/serviceVariationsService';
 
 const ServicesPage = () => {
   const { navigate } = useNavigation();
-  const { selectedServices, removeService, clearServices: _clearServices, getTotalPrice, getTotalDuration: _getTotalDuration } = useServicesStore();
+  const { 
+    selectedServices, 
+    removeService, 
+    clearServices: _clearServices, 
+    getTotalPrice, 
+    getTotalDuration: _getTotalDuration,
+    setServiceVariation,
+    getServiceVariations,
+    getServiceFinalPrice,
+    getServiceFinalDuration
+  } = useServicesStore();
   
   // State for expandable cards (identical to mobile pattern)
   const [expandedServiceIds, setExpandedServiceIds] = useState(new Set());
@@ -38,6 +50,9 @@ const ServicesPage = () => {
   
   // State for scheduling wizard modal
   const [wizardModalVisible, setWizardModalVisible] = useState(false);
+  
+  // Service variations state
+  const [serviceVariations, setServiceVariations] = useState({}); // { serviceId: [variationGroups] }
 
   // Helper functions (identical to mobile)
   const formatDuration = (minutes) => {
@@ -81,6 +96,37 @@ const ServicesPage = () => {
     setSelectedImageForModal(imageUrl);
     setImageModalVisible(true);
   };
+
+  // Handle variation selection
+  const handleVariationSelect = (serviceId, groupId, variation) => {
+    setServiceVariation(serviceId, groupId, variation);
+  };
+
+  // Load variations for a service
+  const loadServiceVariations = async (serviceId) => {
+    try {
+      const variations = await getServiceVariations(serviceId);
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: variations
+      }));
+    } catch (err) {
+      // Silently fail - variations are optional
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: []
+      }));
+    }
+  };
+
+  // Load variations for selected services
+  useEffect(() => {
+    selectedServices.forEach(service => {
+      if (!serviceVariations[service.id]) {
+        loadServiceVariations(service.id);
+      }
+    });
+  }, [selectedServices]);
 
   return (
     <div className="h-full flex flex-col">
@@ -127,6 +173,10 @@ const ServicesPage = () => {
                 {selectedServices.map((service) => {
                   const isExpanded = isServiceExpanded(service.id);
                   const serviceImages = buildServiceImages(service);
+                  const variations = serviceVariations[service.id] || [];
+                  const selectedVariations = getServiceVariations(service.id);
+                  const finalPrice = getServiceFinalPrice(service);
+                  const finalDuration = getServiceFinalDuration(service);
                   
                   return (
                     <SwipeableServiceCard
@@ -139,6 +189,11 @@ const ServicesPage = () => {
                       serviceImages={serviceImages}
                       formatDuration={formatDuration}
                       formatPrice={formatPrice}
+                      variations={variations}
+                      selectedVariations={selectedVariations}
+                      onVariationSelect={handleVariationSelect}
+                      finalPrice={finalPrice}
+                      finalDuration={finalDuration}
                     />
                   );
                 })}
@@ -226,7 +281,12 @@ const SwipeableServiceCard = ({
   onImagePress, 
   serviceImages,
   formatDuration,
-  formatPrice 
+  formatPrice,
+  variations = [],
+  selectedVariations = {},
+  onVariationSelect,
+  finalPrice,
+  finalDuration
 }) => {
   const [isRemoving, setIsRemoving] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -303,13 +363,27 @@ const SwipeableServiceCard = ({
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 {service.name}
               </h3>
+              
+              {/* Service Variations - Show below service name */}
+              {variations.length > 0 && (
+                <div className="mb-3">
+                  <ServiceVariations
+                    variationGroups={variations}
+                    selectedVariations={selectedVariations}
+                    onVariationSelect={(groupId, variation) => onVariationSelect(service.id, groupId, variation)}
+                    size="small"
+                    basePrice={parseFloat(service.price)}
+                  />
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <span className="text-pink-600 font-bold">
-                    {formatPrice(service.price)}
+                    {formatPrice(finalPrice || service.price)}
                   </span>
                   <span className="text-gray-500 text-sm">
-                    {formatDuration(service.duration_minutes)}
+                    {formatDuration(finalDuration || service.duration_minutes)}
                   </span>
                 </div>
                 

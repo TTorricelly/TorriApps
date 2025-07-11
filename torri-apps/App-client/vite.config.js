@@ -13,6 +13,7 @@ export default defineConfig({
       devOptions: {
         enabled: false
       },
+      selfDestroying: false,
       manifest: {
         name: 'TorriApps - Salon Booking',
         short_name: 'TorriApps',
@@ -57,6 +58,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        disableDevLogs: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/torri-backend-.*\.run\.app\/api\//,

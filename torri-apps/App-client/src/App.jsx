@@ -21,7 +21,6 @@ import UpdateNotification from './components/UpdateNotification'
 import GlobalThemeLoader from './components/GlobalThemeLoader'
 import ThemeSettingsPage from './pages/ThemeSettingsPage'
 import { initializeTenantTheme } from './utils/themeUtils'
-import MobileVersionChecker from './utils/versionCheck'
 
 // Helper function to check if user is professional
 const isProfessionalRole = (role) => {
@@ -81,16 +80,8 @@ function App() {
     validateStoredToken()
   }, [])
 
-  // Initialize mobile version checker
-  useEffect(() => {
-    const mobileVersionChecker = new MobileVersionChecker();
-    mobileVersionChecker.startVersionCheck();
-
-    // Cleanup on unmount
-    return () => {
-      mobileVersionChecker.stopVersionCheck();
-    };
-  }, [])
+  // Mobile version checking is now handled by PWA service worker in UpdateNotification component
+  // No need for manual version checking in mobile app
 
   // Initialize tenant theme on app startup
   useEffect(() => {

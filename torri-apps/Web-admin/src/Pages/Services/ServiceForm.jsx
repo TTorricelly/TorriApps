@@ -37,6 +37,8 @@ import { stationTypesApi, serviceStationRequirementsApi } from '../../Services/s
 import { getAssetUrl } from '../../Utils/config';
 import ServiceImageUpload from '../../Components/ServiceImageUpload';
 import { ServiceVariationManager } from '../../Components/ServiceVariations';
+import { handleServiceFormError, getErrorMessage } from '../../Utils/errorMessages';
+import { ValidationErrorSummary } from '../../Components/ErrorDisplay';
 
 // Rich Text Editor (simple implementation)
 const RichTextEditor = ({ value, onChange, placeholder, error }) => {
@@ -309,6 +311,7 @@ export default function ServiceForm() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [cancelDialog, setCancelDialog] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
+  const [validationErrors, setValidationErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
   
   // Station requirements state
@@ -361,7 +364,8 @@ export default function ServiceForm() {
       setStationTypes(data);
     } catch (error) {
       console.error('Erro ao carregar tipos de estação:', error);
-      showAlert('Erro ao carregar tipos de estação', 'error');
+      const errorMessage = getErrorMessage(error);
+      showAlert(errorMessage, 'error');
     } finally {
       setIsLoadingStations(false);
     }
@@ -373,7 +377,8 @@ export default function ServiceForm() {
       setStationRequirements(data);
     } catch (error) {
       console.error('Erro ao carregar requisitos de estação:', error);
-      showAlert('Erro ao carregar requisitos de estação', 'error');
+      const errorMessage = getErrorMessage(error);
+      showAlert(errorMessage, 'error');
     }
   };
   
@@ -415,7 +420,8 @@ export default function ServiceForm() {
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Erro ao carregar serviço:', error);
-      showAlert('Erro ao carregar dados do serviço', 'error');
+      const errorMessage = getErrorMessage(error);
+      showAlert(errorMessage, 'error');
       navigate(ROUTES.SERVICES.LIST);
     } finally {
       setIsLoading(false);
@@ -434,7 +440,8 @@ export default function ServiceForm() {
       }
     } catch (error) {
       console.error('Erro ao carregar categoria:', error);
-      showAlert('Erro ao carregar categoria', 'error');
+      const errorMessage = getErrorMessage(error);
+      showAlert(errorMessage, 'error');
       navigate(ROUTES.SERVICES.LIST);
     }
   };
@@ -665,11 +672,8 @@ export default function ServiceForm() {
       }
     } catch (error) {
       console.error('Erro ao salvar serviço:', error);
-      if (error.response?.data?.detail) {
-        showAlert(`Erro ao salvar serviço: ${error.response.data.detail}`, 'error');
-      } else {
-        showAlert('Falha ao salvar serviço', 'error');
-      }
+      const parsedError = handleServiceFormError(error, setErrors, showAlert);
+      setValidationErrors(parsedError.fieldErrors);
     } finally {
       setIsSaving(false);
     }
@@ -734,6 +738,14 @@ export default function ServiceForm() {
         </CardHeader>
 
         <CardBody className="bg-bg-secondary">
+          {/* Validation Error Summary */}
+          <ValidationErrorSummary
+            errors={validationErrors}
+            show={Object.keys(validationErrors).length > 0}
+            onClose={() => setValidationErrors({})}
+            message="Por favor, corrija os seguintes erros antes de salvar:"
+          />
+          
           <form onSubmit={handleSubmit}>
             {/* Tab Navigation */}
             <Tabs value={activeTab} orientation="horizontal" className="w-full">

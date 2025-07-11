@@ -23,12 +23,26 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
     return transformData(response.data);
   } catch (error) {
     if (logErrors) {
-      // Error occurred
+      console.error('API call error:', {
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        stack: error.stack
+      });
     }
     
     // For authentication errors, throw the error instead of returning default
     if (error.response?.status === 404 || error.response?.status === 401 || error.response?.status === 422) {
-      throw new Error(error.response?.data?.detail || error.response?.data?.message || `HTTP ${error.response?.status}: ${error.response?.statusText}`);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || `HTTP ${error.response?.status}: ${error.response?.statusText}`;
+      throw new Error(errorMessage);
+    }
+    
+    // For network errors or other issues, also throw with context
+    if (!error.response) {
+      throw new Error(`Network error: ${error.message}`);
     }
     
     // Return default value for other errors
@@ -65,8 +79,27 @@ export const getTenantInfo = () => {
   const hostname = window.location.hostname.toLowerCase();
   const path = window.location.pathname;
   
+  // Check if we're on localhost (development)
+  if (hostname.startsWith('localhost') || hostname === '127.0.0.1') {
+    // For development, check if there's a slug in the path
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length > 0 && segments[0] !== 'api') {
+      return {
+        method: 'slug',
+        domain: null,
+        slug: segments[0]
+      };
+    }
+    // If no slug, use default tenant for localhost
+    return {
+      method: 'slug',
+      domain: null,
+      slug: 'test-salon' // Default tenant for development
+    };
+  }
+  
   // Check if we're on a custom domain (not the main domain or app/admin subdomains)
-  if (hostname && hostname !== 'vervio.com.br' && hostname !== 'app.vervio.com.br' && hostname !== 'admin.vervio.com.br' && !hostname.startsWith('localhost')) {
+  if (hostname && hostname !== 'vervio.com.br' && hostname !== 'app.vervio.com.br' && hostname !== 'admin.vervio.com.br') {
     return {
       method: 'domain',
       domain: hostname,
@@ -76,7 +109,7 @@ export const getTenantInfo = () => {
   
   // For slug-based tenants on main domain, first path segment is always the tenant slug
   const segments = path.split('/').filter(Boolean);
-  if (segments.length > 0) {
+  if (segments.length > 0 && segments[0] !== 'api') {
     return {
       method: 'slug',
       domain: null,
@@ -127,8 +160,17 @@ export const buildApiEndpoint = (endpoint, version = 'v1', options = {}) => {
     }
   }
   
-  // Fallback for when no tenant is detected
-  throw new Error('Tenant context is required for API calls');
+  // Fallback for when no tenant is detected - provide detailed error info
+  const errorInfo = {
+    hostname,
+    path,
+    url: window.location.href,
+    tenantInfo,
+    endpoint: cleanEndpoint
+  };
+  
+  console.error('Tenant context detection failed:', errorInfo);
+  throw new Error(`Tenant context is required for API calls. URL: ${window.location.href}, Path: ${path}, Hostname: ${hostname}`);
 };
 
 /**

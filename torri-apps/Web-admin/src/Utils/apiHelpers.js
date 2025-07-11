@@ -15,7 +15,8 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
   const {
     defaultValue = null,
     transformData = (data) => data,
-    logErrors = true
+    logErrors = true,
+    throwOnError = false
   } = options;
 
   try {
@@ -24,6 +25,16 @@ export const withApiErrorHandling = async (apiCall, options = {}) => {
   } catch (error) {
     if (logErrors) {
       console.error('API Error:', error);
+      
+      // Log more detailed information for validation errors
+      if (error.response?.status === 422 && error.response?.data?.detail) {
+        console.error('Validation Error Details:', error.response.data.detail);
+      }
+    }
+    
+    // Re-throw error if requested (for components that need to handle specific errors)
+    if (throwOnError) {
+      throw error;
     }
     
     // Return default value on error
@@ -153,7 +164,8 @@ export const createCrudApi = (config) => {
   const {
     endpoint,
     imageFields = [],
-    entityName = 'item'
+    entityName = 'item',
+    throwOnError = false
   } = config;
 
   const apiEndpoint = buildApiEndpoint(endpoint);
@@ -190,7 +202,8 @@ export const createCrudApi = (config) => {
         () => import('../api/client').then(({ api }) => api.post(apiEndpoint, data)),
         {
           defaultValue: null,
-          transformData: (data) => transformEntityWithImages(data, imageFields)
+          transformData: (data) => transformEntityWithImages(data, imageFields),
+          throwOnError
         }
       );
     },
@@ -201,7 +214,8 @@ export const createCrudApi = (config) => {
         () => import('../api/client').then(({ api }) => api.put(`${apiEndpoint}/${id}`, data)),
         {
           defaultValue: null,
-          transformData: (data) => transformEntityWithImages(data, imageFields)
+          transformData: (data) => transformEntityWithImages(data, imageFields),
+          throwOnError
         }
       );
     },

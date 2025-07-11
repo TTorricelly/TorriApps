@@ -4,16 +4,17 @@ import { RefreshCw, X } from 'lucide-react';
 export default function UpdateNotification() {
   const [showUpdate, setShowUpdate] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState(false);
 
   useEffect(() => {
     // Register service worker update listener
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // New service worker has taken control
+        // New service worker has taken control - reload silently
         window.location.reload();
       });
 
-      // Check for updates periodically
+      // Check for updates on app lifecycle events (mobile-friendly)
       const checkForUpdates = () => {
         navigator.serviceWorker.getRegistration().then(registration => {
           if (registration) {
@@ -22,19 +23,44 @@ export default function UpdateNotification() {
         });
       };
 
-      // Check for updates every 30 seconds
-      const updateInterval = setInterval(checkForUpdates, 30000);
+      // Mobile-optimized update checking
+      const handleVisibilityChange = () => {
+        if (!document.hidden && !pendingUpdate) {
+          // App became visible, check for updates silently
+          checkForUpdates();
+        }
+      };
+
+      const handleFocus = () => {
+        if (!pendingUpdate) {
+          checkForUpdates();
+        }
+      };
+
+      // Listen for app lifecycle events instead of polling
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', handleFocus);
 
       // Listen for waiting service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SKIP_WAITING') {
-          setShowUpdate(true);
+          setPendingUpdate(true);
+          // Auto-update silently after a short delay (mobile behavior)
+          setTimeout(() => {
+            handleUpdateSilently();
+          }, 2000);
         }
       });
 
-      return () => clearInterval(updateInterval);
+      // Initial check on mount
+      checkForUpdates();
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('focus', handleFocus);
+      };
     }
-  }, []);
+  }, [pendingUpdate]);
 
   const handleUpdate = () => {
     setIsUpdating(true);
@@ -54,9 +80,39 @@ export default function UpdateNotification() {
     }
   };
 
+  const handleUpdateSilently = () => {
+    // Silent update for mobile - no UI feedback
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(registration => {
+        if (registration && registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+          // Force reload if no waiting service worker
+          window.location.reload();
+        }
+      });
+    } else {
+      // Fallback for browsers without service worker
+      window.location.reload();
+    }
+  };
+
   const handleDismiss = () => {
     setShowUpdate(false);
   };
+
+  // For mobile apps, updates should be completely silent
+  // Check multiple ways to detect if this is a mobile app environment
+  const isDev = import.meta.env.DEV;
+  const isPWA = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isInAppBrowser = window.navigator.standalone === true; // iOS home screen app
+  
+  // Hide notifications for mobile/PWA users completely (even in dev mode for mobile)
+  if (isPWA || isMobile || isInAppBrowser) {
+    console.log('UpdateNotification: Disabled for mobile/PWA environment');
+    return null;
+  }
 
   if (!showUpdate) return null;
 
