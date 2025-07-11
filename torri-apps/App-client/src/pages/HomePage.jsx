@@ -623,20 +623,6 @@ const HomePageInner = ({ navigation }, ref) => {
                           {service.name}
                         </h3>
                         
-                        {/* Service Variations - Always Interactive */}
-                        {variations.length > 0 && (
-                          <div className="mb-3">
-                            <ServiceVariations
-                              variationGroups={variations}
-                              selectedVariations={selectedVariations}
-                              onVariationSelect={(groupId, variation) => handleVariationSelect(service.id, groupId, variation)}
-                              size="small"
-                              showGroupNames={false}
-                              basePrice={parseFloat(service.price)}
-                            />
-                          </div>
-                        )}
-                        
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-4">
                             <span className="text-pink-600 font-bold">
@@ -719,6 +705,21 @@ const HomePageInner = ({ navigation }, ref) => {
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Service Variations - Below Images */}
+                  {variations.length > 0 && (
+                    <div className="px-4 pb-4">
+                      <ServiceVariations
+                        variationGroups={variations}
+                        selectedVariations={selectedVariations}
+                        onVariationSelect={(groupId, variation) => handleVariationSelect(service.id, groupId, variation)}
+                        size="small"
+                        showGroupNames={false}
+                        basePrice={parseFloat(service.price)}
+                        baseDuration={service.duration_minutes || 0}
+                      />
                     </div>
                   )}
 

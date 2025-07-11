@@ -373,6 +373,7 @@ const SwipeableServiceCard = ({
                     onVariationSelect={(groupId, variation) => onVariationSelect(service.id, groupId, variation)}
                     size="small"
                     basePrice={parseFloat(service.price)}
+                    baseDuration={service.duration_minutes || 0}
                   />
                 </div>
               )}

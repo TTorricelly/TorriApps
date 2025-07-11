@@ -5,6 +5,7 @@
  */
 
 import { getVariationDisplayText } from '../services/serviceVariationsService';
+import { Check } from 'lucide-react';
 
 const VariationChip = ({ 
   variation, 
@@ -12,7 +13,8 @@ const VariationChip = ({
   onSelect,
   size = 'medium',
   className = '',
-  basePrice = null
+  basePrice = null,
+  baseDuration = 0
 }) => {
   // Early return if variation is null/undefined
   if (!variation) {
@@ -59,34 +61,63 @@ const VariationChip = ({
   return (
     <label
       className={`
-        flex items-center w-full p-3 rounded-lg border cursor-pointer
+        flex items-start w-full p-4 rounded-lg cursor-pointer
         transition-all duration-200 ease-in-out
-        hover:bg-gray-50 active:bg-gray-100
+        hover:bg-gray-100 active:bg-gray-200
         touch-manipulation
-        ${isSelected ? 'border-pink-500 bg-pink-50' : 'border-gray-200 bg-white'}
+        ${isSelected ? 'bg-pink-50 border border-pink-200' : 'bg-gray-50 border border-gray-100'}
         ${className}
       `}
     >
-      {/* Radio Button */}
-      <div className="flex-shrink-0 mr-3">
+      {/* Rounded Ball Checkmark */}
+      <div className="flex-shrink-0 mr-4 mt-1">
         <div className={`
-          w-5 h-5 rounded-full border-2 flex items-center justify-center
-          ${isSelected ? 'border-pink-500 bg-pink-500' : 'border-gray-300 bg-white'}
+          w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200
+          ${isSelected 
+            ? 'border-pink-500 bg-pink-500 shadow-lg' 
+            : 'border-gray-300 bg-white hover:border-gray-400'
+          }
         `}>
           {isSelected && (
-            <div className="w-2 h-2 rounded-full bg-white"></div>
+            <Check size={12} className="text-white stroke-[3]" />
           )}
         </div>
       </div>
       
-      {/* Content */}
+      {/* Content Area */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-900 leading-tight">
-          {variation.name}
+        <div className="flex items-center justify-between">
+          {/* Variation Name */}
+          <div className="font-medium text-gray-900 leading-tight pr-2">
+            {variation.name}
+          </div>
+          
+          {/* Price */}
+          {basePrice !== null && (
+            <div className="font-bold text-pink-600 text-lg flex-shrink-0">
+              R$ {(parseFloat(basePrice) + parseFloat(variation.price_delta || 0)).toFixed(2).replace('.', ',')}
+            </div>
+          )}
         </div>
-        {basePrice !== null && (
-          <div className="text-sm font-semibold text-pink-600 mt-0.5">
-            R$ {(parseFloat(basePrice) + parseFloat(variation.price_delta || 0)).toFixed(2).replace('.', ',')}
+        
+        {/* Duration Info */}
+        {baseDuration > 0 && (
+          <div className="text-sm text-gray-500 mt-1">
+            {(() => {
+              const totalMinutes = baseDuration + (variation.duration_delta || 0);
+              const hours = Math.floor(totalMinutes / 60);
+              const minutes = totalMinutes % 60;
+              
+              if (totalMinutes <= 0) return "0min";
+              
+              if (hours > 0 && minutes > 0) {
+                return `${hours}h ${minutes}min`;
+              } else if (hours > 0) {
+                return `${hours}h`;
+              } else {
+                return `${minutes}min`;
+              }
+            })()}
           </div>
         )}
       </div>
@@ -114,7 +145,8 @@ export const VariationGroup = ({
   size = 'medium',
   className = '',
   showGroupName = true,
-  basePrice = null
+  basePrice = null,
+  baseDuration = 0
 }) => {
   if (!group || !Array.isArray(group.variations) || group.variations.length === 0) {
     return null;
@@ -139,6 +171,7 @@ export const VariationGroup = ({
             onSelect={onVariationSelect}
             size={size}
             basePrice={basePrice}
+            baseDuration={baseDuration}
           />
         ))}
       </div>
@@ -157,7 +190,8 @@ export const ServiceVariations = ({
   size = 'medium',
   className = '',
   showGroupNames = true,
-  basePrice = null
+  basePrice = null,
+  baseDuration = 0
 }) => {
   if (!Array.isArray(variationGroups) || variationGroups.length === 0) {
     return null;
@@ -180,6 +214,7 @@ export const ServiceVariations = ({
           size={size}
           showGroupName={showGroupNames}
           basePrice={basePrice}
+          baseDuration={baseDuration}
         />
       ))}
     </div>
