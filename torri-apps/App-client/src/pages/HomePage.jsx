@@ -623,25 +623,6 @@ const HomePageInner = ({ navigation }, ref) => {
                           {service.name}
                         </h3>
                         
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-4">
-                            <span className="text-pink-600 font-bold">
-                              {Object.keys(selectedVariations).length > 0 ? (
-                                // Show calculated price when variations are selected
-                                formatPrice(finalPrice)
-                              ) : priceRange ? (
-                                // Show price range when no variations selected but variations exist
-                                `${formatPrice(priceRange.minPrice)} - ${formatPrice(priceRange.maxPrice)}`
-                              ) : (
-                                // Show base price when no variations
-                                formatPrice(service.price)
-                              )}
-                            </span>
-                            <span className="text-gray-500 text-sm">
-                              {formatDuration(service.duration_minutes)}
-                            </span>
-                          </div>
-                        </div>
                       </div>
                       
                     </div>
