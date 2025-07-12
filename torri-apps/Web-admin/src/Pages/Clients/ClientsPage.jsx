@@ -44,27 +44,19 @@ function ClientsPage() { // Renamed component and removed default export from he
   const [statusFilter, setStatusFilter] = useState('');
   const [availableLabels, setAvailableLabels] = useState([]);
   const [selectedLabelFilters, setSelectedLabelFilters] = useState([]);
+  const [visitDateFilter, setVisitDateFilter] = useState(''); // New: visit date filter
   const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, client: null }); // Added deleteDialog state
 
-  // Load labels on component mount (but not clients)
+  // Load labels and clients on component mount
   useEffect(() => {
     loadAvailableLabels();
+    loadAllClients(); // Load all clients on mount
   }, []);
 
-
-  // Add search effect with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadClients(searchQuery);
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  const loadClients = async (searchQuery = '') => {
+  const loadAllClients = async () => {
     // Prevent duplicate calls
     if (isLoading) {
       console.log('⏳ Already loading clients, skipping duplicate call');
@@ -73,10 +65,10 @@ function ClientsPage() { // Renamed component and removed default export from he
     
     try {
       setIsLoading(true);
-      console.log('🔍 Loading clients from API...', { searchQuery });
+      console.log('🔍 Loading all clients from API...');
       
-      // Only search if there's a query, otherwise show empty results
-      const data = searchQuery ? await clientsApi.searchClients(searchQuery) : [];
+      // Load all clients by default
+      const data = await clientsApi.getAllClients();
       
       console.log('📋 Received clients data:', data);
       console.log(`📊 Total clients found: ${data?.length || 0}`);
@@ -119,7 +111,7 @@ function ClientsPage() { // Renamed component and removed default export from he
     try {
       await clientsApi.deleteClient(deleteDialog.client.id);
       showAlert('Cliente excluído com sucesso!', 'success');
-      loadClients(); // Reload clients list
+      loadAllClients(); // Reload clients list
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
       const message = error.response?.data?.detail || 'Falha ao excluir cliente';
@@ -130,9 +122,16 @@ function ClientsPage() { // Renamed component and removed default export from he
   };
 
 
-  // Filter clients based on status and labels (search is now server-side)
+  // Filter clients based on search, status, labels and visit date (all client-side now)
   const filteredClients = useMemo(() => {
     let filtered = clients;
+
+    // Apply search filter (client-side)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(client => 
+        clientNameMatchesSearch(client, searchQuery.trim())
+      );
+    }
 
     // Apply status filter
     if (statusFilter) {
@@ -150,8 +149,22 @@ function ClientsPage() { // Renamed component and removed default export from he
       });
     }
 
+    // Apply visit date filter
+    // TODO: This requires backend enhancement to include last_visit_date in client data
+    // For now, this filter is available in the UI but doesn't function
+    // Backend needs to be enhanced to include last appointment date in user responses
+    if (visitDateFilter) {
+      console.warn('Visit date filtering requires backend enhancement. Filter selected but not applied:', visitDateFilter);
+      // Placeholder logic - remove when backend is ready:
+      // const cutoffDate = new Date();
+      // cutoffDate.setDate(cutoffDate.getDate() - parseInt(visitDateFilter));
+      // filtered = filtered.filter(client => {
+      //   return client.last_visit_date ? new Date(client.last_visit_date) < cutoffDate : visitDateFilter === 'never';
+      // });
+    }
+
     return filtered;
-  }, [clients, statusFilter, selectedLabelFilters]);
+  }, [clients, searchQuery, statusFilter, selectedLabelFilters, visitDateFilter]);
 
   const showAlert = (message, type) => {
     setAlert({ show: true, message, type });
@@ -193,7 +206,7 @@ function ClientsPage() { // Renamed component and removed default export from he
 
   const handleBulkComplete = () => {
     setSelectedClientIds([]);
-    loadClients(); // Reload to get updated data
+    loadAllClients(); // Reload to get updated data
     showAlert('Labels atualizados em lote com sucesso!', 'success');
   };
 
@@ -344,27 +357,52 @@ function ClientsPage() { // Renamed component and removed default export from he
                 ))}
               </select>
             </div>
+
+            {/* Visit Date Filter */}
+            <div className="min-w-[200px] relative">
+              <label className="block text-sm font-medium text-text-secondary mb-1">Última visita</label>
+              <select
+                value={visitDateFilter}
+                onChange={(e) => setVisitDateFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-bg-primary border border-bg-tertiary text-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary"
+                title="Requer implementação backend"
+              >
+                <option value="">Todos os períodos</option>
+                <option value="30">Não visitam há 30+ dias</option>
+                <option value="60">Não visitam há 60+ dias</option>
+                <option value="90">Não visitam há 90+ dias</option>
+                <option value="never">Nunca visitaram</option>
+              </select>
+              {visitDateFilter && (
+                <div className="text-xs text-amber-600 mt-1">
+                  ⚠️ Filtro requer implementação backend
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
 
         <CardBody className="bg-bg-secondary">
           {filteredClients.length === 0 ? (
             <div className="text-center py-12">
-              {!searchQuery ? (
+              {clients.length === 0 ? (
                 <div>
-                  <MagnifyingGlassIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
+                  <UserIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
                   <Typography className="text-text-secondary mb-2">
-                    Digite para pesquisar clientes
+                    Nenhum cliente cadastrado
                   </Typography>
                   <Typography className="text-text-tertiary text-sm">
-                    Use o campo de busca acima para encontrar clientes por nome, email ou CPF
+                    Clique em "Novo Cliente" para cadastrar o primeiro cliente
                   </Typography>
                 </div>
               ) : (
                 <div>
-                  <UserIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
+                  <MagnifyingGlassIcon className="h-16 w-16 mx-auto text-text-tertiary mb-4" />
                   <Typography className="text-text-secondary mb-4">
                     Nenhum cliente encontrado com os filtros aplicados
+                  </Typography>
+                  <Typography className="text-text-tertiary text-sm">
+                    Ajuste os filtros ou termo de busca para ver mais resultados
                   </Typography>
                 </div>
               )}
