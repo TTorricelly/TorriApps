@@ -323,5 +323,20 @@ export const professionalsApi = {
       console.error('Error fetching professionals for service:', serviceId, error);
       return [];
     }
+  },
+
+  // Update display order for multiple professionals
+  updateOrder: async (professionalsOrder) => {
+    const endpoint = buildApiEndpoint('professionals/reorder');
+    
+    return withApiErrorHandling(
+      () => api.put(endpoint, {
+        professionals: professionalsOrder
+      }),
+      {
+        defaultValue: [],
+        transformData: (data) => data
+      }
+    );
   }
 };

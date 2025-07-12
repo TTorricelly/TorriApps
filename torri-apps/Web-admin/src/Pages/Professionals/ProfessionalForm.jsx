@@ -329,6 +329,52 @@ const BasicDataTab = ({
             )}
           </div>
 
+          {/* Phone Number and Display Order */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input
+                name="phone_number"
+                label="Telefone"
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={formData.phone_number}
+                onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                error={!!errors.phone_number}
+                className="bg-bg-primary border-bg-tertiary text-text-primary"
+                labelProps={{ className: "text-text-secondary" }}
+                containerProps={{ className: "text-text-primary" }}
+              />
+              {errors.phone_number && (
+                <Typography className="text-status-error text-sm mt-1">
+                  {errors.phone_number}
+                </Typography>
+              )}
+            </div>
+            
+            <div>
+              <Input
+                name="display_order"
+                label="Ordem de Exibição"
+                type="number"
+                placeholder="1"
+                value={formData.display_order}
+                onChange={(e) => handleInputChange('display_order', parseInt(e.target.value) || 999)}
+                error={!!errors.display_order}
+                className="bg-bg-primary border-bg-tertiary text-text-primary"
+                labelProps={{ className: "text-text-secondary" }}
+                containerProps={{ className: "text-text-primary" }}
+              />
+              {errors.display_order && (
+                <Typography className="text-status-error text-sm mt-1">
+                  {errors.display_order}
+                </Typography>
+              )}
+              <Typography className="text-text-tertiary text-xs mt-1">
+                Números menores aparecem primeiro
+              </Typography>
+            </div>
+          </div>
+
           {/* Role and Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1187,7 +1233,9 @@ export default function ProfessionalForm() {
     full_name: '',
     email: '',
     password: '',
+    phone_number: '',
     is_active: true,
+    display_order: 999,
   });
   
   // UI state
