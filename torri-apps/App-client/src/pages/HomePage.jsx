@@ -698,16 +698,6 @@ const HomePageInner = ({ navigation }, ref) => {
                               {priceInfo.price}
                             </span>
                           </div>
-                          
-                          {/* Right side: Evaluation Badge */}
-                          {priceInfo.isSubjectToEvaluation && (
-                            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5 flex-shrink-0">
-                              <div className="w-1 h-1 bg-amber-400 rounded-full mr-1"></div>
-                              <span className="text-xs font-medium text-amber-700 whitespace-nowrap">
-                                Sujeito a avaliação
-                              </span>
-                            </div>
-                          )}
                         </div>
                         
                       </div>

@@ -434,7 +434,7 @@ def get_service_variations_by_group(db: Session, group_id: UUID) -> List[Service
     """Get all variations for a specific group."""
     stmt = select(ServiceVariation).where(
         ServiceVariation.service_variation_group_id == group_id
-    ).order_by(ServiceVariation.name)
+    ).order_by(ServiceVariation.display_order, ServiceVariation.name)
     
     return list(db.execute(stmt).scalars().all())
 

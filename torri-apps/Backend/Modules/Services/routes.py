@@ -434,6 +434,52 @@ def list_variations_endpoint(
     return services_logic.get_service_variations_by_group(db=db, group_id=group_id)
 
 
+# --- Batch Operations and Reordering Endpoints ---
+
+@variations_router.put(
+    "/reorder",
+    status_code=status.HTTP_200_OK,
+    summary="Reorder variations within a group."
+)
+def reorder_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    reorder_data: VariationReorderRequest = Body(...)
+):
+    success = services_logic.reorder_variations(db=db, reorder_data=reorder_data)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to reorder variations.")
+    return {"message": "Variations reordered successfully"}
+
+
+@variations_router.put(
+    "/batch-update",
+    response_model=BatchOperationResponse,
+    summary="Update multiple variations at once."
+)
+def batch_update_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    batch_data: BatchVariationUpdate = Body(...)
+):
+    return services_logic.batch_update_variations(db=db, batch_data=batch_data)
+
+
+@variations_router.delete(
+    "/batch-delete",
+    response_model=BatchOperationResponse,
+    summary="Delete multiple variations at once."
+)
+def batch_delete_variations_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    batch_data: BatchVariationDelete = Body(...)
+):
+    return services_logic.batch_delete_variations(db=db, batch_data=batch_data)
+
+
+# --- Individual Variation Endpoints ---
+
 @variations_router.get(
     "/{variation_id}",
     response_model=ServiceVariationWithGroupSchema,
@@ -517,47 +563,3 @@ def get_service_variation_groups_with_variations_endpoint(
     This solves the N+1 query problem where the frontend would make separate requests for each group's variations.
     """
     return services_logic.get_service_variation_groups_with_variations(db=db, service_id=service_id)
-
-
-# --- Batch Operations and Reordering Endpoints ---
-
-@variations_router.put(
-    "/reorder",
-    status_code=status.HTTP_200_OK,
-    summary="Reorder variations within a group."
-)
-def reorder_variations_endpoint(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
-    reorder_data: VariationReorderRequest = Body(...)
-):
-    success = services_logic.reorder_variations(db=db, reorder_data=reorder_data)
-    if not success:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to reorder variations.")
-    return {"message": "Variations reordered successfully"}
-
-
-@variations_router.put(
-    "/batch-update",
-    response_model=BatchOperationResponse,
-    summary="Update multiple variations at once."
-)
-def batch_update_variations_endpoint(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
-    batch_data: BatchVariationUpdate = Body(...)
-):
-    return services_logic.batch_update_variations(db=db, batch_data=batch_data)
-
-
-@variations_router.delete(
-    "/batch-delete",
-    response_model=BatchOperationResponse,
-    summary="Delete multiple variations at once."
-)
-def batch_delete_variations_endpoint(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
-    batch_data: BatchVariationDelete = Body(...)
-):
-    return services_logic.batch_delete_variations(db=db, batch_data=batch_data)

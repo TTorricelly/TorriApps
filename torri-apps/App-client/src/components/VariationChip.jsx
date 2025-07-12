@@ -131,10 +131,10 @@ const VariationChip = ({
         {/* Price Evaluation Badge */}
         {variation.price_subject_to_evaluation && (
           <div className="flex items-center mt-1.5">
-            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
-              <div className="w-1 h-1 bg-amber-400 rounded-full mr-1"></div>
-              <span className="text-xs font-medium text-amber-700">
-                Sujeito a avaliação
+            <div className="flex items-center bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">
+              <div className="w-1 h-1 bg-green-400 rounded-full mr-1"></div>
+              <span className="text-[10px] font-medium text-green-700">
+                Valor definido na avaliação • Agende já
               </span>
             </div>
           </div>
