@@ -36,6 +36,7 @@ function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [visitDateFilter, setVisitDateFilter] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, user: null });
@@ -45,16 +46,16 @@ function UsersPage() {
     loadUsers();
   }, []);
 
-  // Search when query or role filter changes (with debounce)
+  // Search when query or filter changes (with debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadUsers(searchQuery, roleFilter);
+      loadUsers(searchQuery, roleFilter, visitDateFilter);
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchQuery, roleFilter]);
+  }, [searchQuery, roleFilter, visitDateFilter]);
 
-  const loadUsers = async (search = '', role = '') => {
+  const loadUsers = async (search = '', role = '', visitDate = '') => {
     // Prevent duplicate calls
     if (isLoading) {
       console.log('⏳ Already loading users, skipping duplicate call');
@@ -63,12 +64,24 @@ function UsersPage() {
     
     try {
       setIsLoading(true);
-      console.log('🔍 Loading users from API...', { search, role });
+      console.log('🔍 Loading users from API...', { search, role, visitDate });
       
-      // Use search API if there's a search query or role filter, otherwise get all
-      const userData = (search || role) 
-        ? await usersApi.searchUsers(search, role)
-        : await usersApi.getAllUsers();
+      // Build query parameters
+      const params = {};
+      if (search) params.search = search;
+      if (role) params.role = role;
+      
+      // Handle visit date filtering
+      if (visitDate) {
+        if (visitDate === 'never') {
+          params.never_visited = true;
+        } else {
+          params.last_visit_days = parseInt(visitDate);
+        }
+      }
+      
+      // Use search API with parameters
+      const userData = await usersApi.searchUsersWithParams(params);
         
       console.log('📋 Received users data:', userData);
       console.log(`📊 Total users found: ${userData?.length || 0}`);
@@ -226,6 +239,31 @@ function UsersPage() {
                 <Option value="inactive" className="text-white hover:bg-bg-tertiary">Inativo</Option>
               </Select>
             </div>
+            <div className="w-full md:w-48 relative z-10">
+              <Select 
+                label="Filtrar por visita"
+                value={visitDateFilter}
+                onChange={(value) => setVisitDateFilter(value)}
+                className="bg-bg-primary"
+                menuProps={{ 
+                  className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
+                  style: { 
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    zIndex: 9999
+                  }
+                }}
+              >
+                <Option value="" className="text-white hover:bg-bg-tertiary">Todas as visitas</Option>
+                <Option value="30" className="text-white hover:bg-bg-tertiary">Não visitam há 30+ dias</Option>
+                <Option value="60" className="text-white hover:bg-bg-tertiary">Não visitam há 60+ dias</Option>
+                <Option value="90" className="text-white hover:bg-bg-tertiary">Não visitam há 90+ dias</Option>
+                <Option value="never" className="text-white hover:bg-bg-tertiary">Nunca visitaram</Option>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
@@ -337,7 +375,7 @@ function UsersPage() {
 
           {!isLoading && filteredUsers.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12">
-              {(searchQuery || roleFilter || statusFilter) && (
+              {(searchQuery || roleFilter || statusFilter || visitDateFilter) && (
                 <>
                   <UserIcon className="h-12 w-12 text-blue-gray-300 mb-4" />
                   <Typography color="blue-gray" className="text-center">
