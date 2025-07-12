@@ -56,10 +56,8 @@ class VersionChecker {
     // Clear old acknowledged versions that don't match current version
     this.clearOldAcknowledgedVersions();
     
-    // Only check immediately if we're not coming from an update
-    if (!isUpdating) {
-      this.checkVersion();
-    }
+    // Don't check immediately on startup to prevent frequent checking
+    // The interval will handle the first check after 12 hours
     
     // Timer-based checking every 12 hours
     this.intervalId = setInterval(() => {
@@ -71,19 +69,12 @@ class VersionChecker {
   clearOldAcknowledgedVersions() {
     const acknowledgedVersion = localStorage.getItem('acknowledged_version');
     
-    // If acknowledged version is the same as current version, keep it
-    // This prevents showing update notifications for the same version
-    if (acknowledgedVersion === this.currentVersion) {
+    // If acknowledged version exists, keep it regardless of current version
+    // This ensures dismissed notifications stay dismissed
+    if (acknowledgedVersion) {
       this.acknowledgedVersion = acknowledgedVersion;
-      console.log('User has already acknowledged current version:', this.currentVersion);
+      console.log('Keeping acknowledged version:', acknowledgedVersion);
       return;
-    }
-    
-    // If acknowledged version is different or empty, clear it
-    if (acknowledgedVersion && acknowledgedVersion !== this.currentVersion) {
-      localStorage.removeItem('acknowledged_version');
-      this.acknowledgedVersion = null;
-      console.log('Cleared old acknowledged version:', acknowledgedVersion);
     }
   }
 

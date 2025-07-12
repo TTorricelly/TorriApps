@@ -48,6 +48,28 @@ const formatPrice = (priceStr) => {
   return `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
 };
 
+const formatPriceWithEvaluation = (priceStr, isSubjectToEvaluation = false, hasVariations = false) => {
+  if (priceStr === undefined || priceStr === null) return { price: 'R$ -', prefix: null };
+  const priceNum = parseFloat(priceStr);
+  if (isNaN(priceNum)) return { price: 'R$ -', prefix: null };
+  
+  const formattedPrice = `R$ ${priceNum.toFixed(2).replace('.', ',')}`;
+  
+  if (isSubjectToEvaluation) {
+    return {
+      price: formattedPrice,
+      prefix: 'A partir de',
+      isSubjectToEvaluation: true
+    };
+  }
+  
+  return {
+    price: formattedPrice,
+    prefix: null,
+    isSubjectToEvaluation: false
+  };
+};
+
 const getFullImageUrl = (relativePath) => {
   return buildAssetUrl(relativePath);
 };
@@ -258,6 +280,8 @@ const HomePageInner = ({ navigation }, ref) => {
           // Add parallel execution fields from mobile
           parallelable: service.parallelable,
           max_parallel_pros: service.max_parallel_pros,
+          // Add price evaluation field
+          price_subject_to_evaluation: service.price_subject_to_evaluation || false,
         }));
         
         setFetchedServices(services);
@@ -378,13 +402,19 @@ const HomePageInner = ({ navigation }, ref) => {
   const handleVariationSelect = (serviceId, groupId, variation) => {
     const service = fetchedServices.find(s => s.id === serviceId);
     const isServiceSelected = selectedServices.some(s => s.id === serviceId);
-    const currentSelectedVariations = getServiceVariations(serviceId);
-    const isVariationCurrentlySelected = currentSelectedVariations[groupId]?.id === variation.id;
     
-    if (isVariationCurrentlySelected) {
-      // If clicking on already selected variation, deselect it and remove service from cart
+    if (variation === null) {
+      // If variation is null, we're deselecting
+      // Check if there are any other variations selected for this service BEFORE removing this one
+      const currentVariations = getServiceVariations(serviceId);
+      const remainingVariations = { ...currentVariations };
+      delete remainingVariations[groupId]; // Simulate removing this variation
+      const hasOtherVariations = Object.keys(remainingVariations).length > 0;
+      
       setServiceVariation(serviceId, groupId, null);
-      if (service && isServiceSelected) {
+      
+      // Only remove service from cart if no other variations will remain selected
+      if (service && isServiceSelected && !hasOtherVariations) {
         toggleService(service);
       }
     } else {
@@ -627,6 +657,20 @@ const HomePageInner = ({ navigation }, ref) => {
               const finalPrice = getServiceFinalPrice(service) || parseFloat(service.price);
               const priceRange = getPriceRange(service.price, variations);
               
+              // Check if service or any of its variations have price subject to evaluation
+              const serviceSubjectToEvaluation = service.price_subject_to_evaluation;
+              const hasVariationsSubjectToEvaluation = variations.some(group => 
+                group.variations?.some(v => v.price_subject_to_evaluation)
+              );
+              const isAnySubjectToEvaluation = serviceSubjectToEvaluation || hasVariationsSubjectToEvaluation;
+              
+              // Get formatted price information
+              const priceInfo = formatPriceWithEvaluation(
+                service.price, 
+                isAnySubjectToEvaluation, 
+                variations.length > 0
+              );
+              
               return (
                 <div
                   key={service.id}
@@ -637,9 +681,34 @@ const HomePageInner = ({ navigation }, ref) => {
                   <div className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
                           {service.name}
                         </h3>
+                        
+                        {/* Price Information with Evaluation Status */}
+                        <div className="flex items-center justify-between">
+                          {/* Left side: Price */}
+                          <div className="flex items-center space-x-1">
+                            {priceInfo.prefix && (
+                              <span className="text-xs text-gray-500">
+                                {priceInfo.prefix}
+                              </span>
+                            )}
+                            <span className="text-sm font-bold text-pink-600">
+                              {priceInfo.price}
+                            </span>
+                          </div>
+                          
+                          {/* Right side: Evaluation Badge */}
+                          {priceInfo.isSubjectToEvaluation && (
+                            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                              <div className="w-1 h-1 bg-amber-400 rounded-full mr-1"></div>
+                              <span className="text-xs font-medium text-amber-700 whitespace-nowrap">
+                                Sujeito a avaliação
+                              </span>
+                            </div>
+                          )}
+                        </div>
                         
                       </div>
                       
@@ -720,14 +789,19 @@ const HomePageInner = ({ navigation }, ref) => {
                             price_delta: 0,
                             duration_delta: 0,
                             display_order: 0,
-                            price_subject_to_evaluation: false,
+                            price_subject_to_evaluation: service.price_subject_to_evaluation || false,
                             service_variation_group_id: 'base'
                           }]
                         }]}
                         selectedVariations={isSelected ? { 'base': { id: 'base' } } : {}}
                         onVariationSelect={(groupId, variation) => {
                           // Handle base service selection - toggle on/off
-                          toggleService(service);
+                          // If variation is null, we're unselecting, otherwise selecting
+                          if (variation === null && isSelected) {
+                            toggleService(service); // Unselect
+                          } else if (variation !== null && !isSelected) {
+                            toggleService(service); // Select
+                          }
                         }}
                         onVariationToggle={() => {}} // Not used for base services
                         size="small"
@@ -779,7 +853,26 @@ const HomePageInner = ({ navigation }, ref) => {
 
                       {/* Add Service Button */}
                       <button
-                        onClick={() => toggleService(service)}
+                        onClick={() => {
+                          if (isSelected) {
+                            // Remove service
+                            toggleService(service);
+                          } else {
+                            // Add service
+                            toggleService(service);
+                            // For services with variations, automatically select the first variation of each required group
+                            const serviceVariations = variations;
+                            if (serviceVariations.length > 0) {
+                              serviceVariations.forEach(group => {
+                                if (group.variations && group.variations.length > 0) {
+                                  // Auto-select first variation in each group
+                                  const firstVariation = group.variations[0];
+                                  setServiceVariation(service.id, group.id, firstVariation);
+                                }
+                              });
+                            }
+                          }
+                        }}
                         className={`w-full py-3 px-4 rounded-xl font-semibold transition-smooth ${
                           isSelected
                             ? 'bg-red-500 hover:bg-red-600 text-white'

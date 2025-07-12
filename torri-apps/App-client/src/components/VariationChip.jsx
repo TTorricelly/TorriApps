@@ -24,9 +24,9 @@ const VariationChip = ({
 
   // Size variants for mobile-friendly touch targets (iOS HIG compliant)
   const sizeClasses = {
-    small: 'px-4 py-3 text-sm min-h-[48px]',
-    medium: 'px-5 py-3.5 text-sm min-h-[52px]',
-    large: 'px-6 py-4 text-base min-h-[56px]'
+    small: 'px-4 py-2.5 text-xs min-h-[44px]',
+    medium: 'px-4 py-3 text-xs min-h-[48px]',
+    large: 'px-5 py-3.5 text-sm min-h-[52px]'
   };
 
   // Enhanced color scheme for better mobile UX
@@ -55,14 +55,20 @@ const VariationChip = ({
     e.preventDefault();
     e.stopPropagation();
     if (onSelect) {
-      onSelect(variation);
+      if (!isMultipleChoice && isSelected) {
+        // For single choice radio buttons, pass null to unselect
+        onSelect(null);
+      } else {
+        onSelect(variation);
+      }
     }
   };
 
   return (
     <label
+      onClick={handleClick}
       className={`
-        flex items-start w-full p-4 rounded-lg cursor-pointer
+        flex items-start w-full p-3 rounded-lg cursor-pointer
         transition-all duration-200 ease-in-out
         hover:bg-gray-100 active:bg-gray-200
         touch-manipulation
@@ -71,16 +77,16 @@ const VariationChip = ({
       `}
     >
       {/* Rounded Ball Checkmark */}
-      <div className="flex-shrink-0 mr-4 mt-1">
+      <div className="flex-shrink-0 mr-3 mt-0.5">
         <div className={`
-          w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200
+          w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200
           ${isSelected 
             ? 'border-pink-500 bg-pink-500 shadow-lg' 
             : 'border-gray-300 bg-white hover:border-gray-400'
           }
         `}>
           {isSelected && (
-            <Check size={12} className="text-white stroke-[3]" />
+            <Check size={10} className="text-white stroke-[3]" />
           )}
         </div>
       </div>
@@ -89,13 +95,13 @@ const VariationChip = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           {/* Variation Name */}
-          <div className="font-medium text-gray-900 leading-tight pr-2">
+          <div className="font-medium text-gray-900 leading-tight pr-2 text-sm">
             {variation.name}
           </div>
           
           {/* Price */}
           {basePrice !== null && (
-            <div className="font-bold text-pink-600 text-lg flex-shrink-0">
+            <div className="font-bold text-pink-600 text-sm flex-shrink-0">
               R$ {(parseFloat(basePrice) + parseFloat(variation.price_delta || 0)).toFixed(2).replace('.', ',')}
             </div>
           )}
@@ -103,7 +109,7 @@ const VariationChip = ({
         
         {/* Duration Info */}
         {baseDuration > 0 && (
-          <div className="text-sm text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 mt-1">
             {(() => {
               const totalMinutes = baseDuration + (variation.duration_delta || 0);
               const hours = Math.floor(totalMinutes / 60);
@@ -119,6 +125,18 @@ const VariationChip = ({
                 return `${minutes}min`;
               }
             })()}
+          </div>
+        )}
+        
+        {/* Price Evaluation Badge */}
+        {variation.price_subject_to_evaluation && (
+          <div className="flex items-center mt-1.5">
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">
+              <div className="w-1 h-1 bg-amber-400 rounded-full mr-1"></div>
+              <span className="text-xs font-medium text-amber-700">
+                Sujeito a avaliação
+              </span>
+            </div>
           </div>
         )}
       </div>

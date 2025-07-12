@@ -96,15 +96,34 @@ const useServicesStore = create((set, get) => ({
   }),
   
   // Variation management
-  setServiceVariation: (serviceId, groupId, variation, isMultipleChoice = false) => set((state) => ({
-    serviceVariations: {
-      ...state.serviceVariations,
-      [serviceId]: {
-        ...state.serviceVariations[serviceId],
-        [groupId]: isMultipleChoice ? [variation] : variation
+  setServiceVariation: (serviceId, groupId, variation, isMultipleChoice = false) => set((state) => {
+    const newServiceVariations = { ...state.serviceVariations };
+    
+    if (variation === null) {
+      // Remove the variation selection completely
+      if (newServiceVariations[serviceId]) {
+        const serviceVars = { ...newServiceVariations[serviceId] };
+        delete serviceVars[groupId];
+        
+        // If no variations left for this service, remove the service entry
+        if (Object.keys(serviceVars).length === 0) {
+          delete newServiceVariations[serviceId];
+        } else {
+          newServiceVariations[serviceId] = serviceVars;
+        }
       }
+    } else {
+      // Set the variation selection
+      newServiceVariations[serviceId] = {
+        ...newServiceVariations[serviceId],
+        [groupId]: isMultipleChoice ? [variation] : variation
+      };
     }
-  })),
+    
+    return {
+      serviceVariations: newServiceVariations
+    };
+  }),
 
   // Toggle variation for multiple choice groups
   toggleServiceVariation: (serviceId, groupId, variation) => set((state) => {
