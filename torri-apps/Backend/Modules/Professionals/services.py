@@ -55,7 +55,8 @@ def _add_photo_url_to_professional(professional: User, db: Session = None, base_
         is_active=professional.is_active,
         role=professional.role.value,
         services_offered=services_offered,
-        photo_url=photo_url
+        photo_url=photo_url,
+        display_order=professional.display_order or 999
     )
     return professional_data
 
@@ -72,7 +73,7 @@ def get_professional_by_id(db: Session, professional_id: UUID) -> Optional[Profe
 def get_professionals(db: Session, skip: int = 0, limit: int = 100) -> List[Professional]:
     professionals = db.query(User).filter( # Changed UserTenant to User
         User.role == UserRole.PROFISSIONAL # Changed UserTenant to User
-    ).offset(skip).limit(limit).all()
+    ).order_by(User.display_order, User.full_name).offset(skip).limit(limit).all()
     return [_add_photo_url_to_professional(prof, db) for prof in professionals]
 
 def get_professionals_for_service(db: Session, service_id: str, skip: int = 0, limit: int = 100) -> List[Professional]:
@@ -86,7 +87,7 @@ def get_professionals_for_service(db: Session, service_id: str, skip: int = 0, l
     ).filter(
         User.role == UserRole.PROFISSIONAL,
         service_professionals_association.c.service_id == service_id
-    ).offset(skip).limit(limit).all()
+    ).order_by(User.display_order, User.full_name).offset(skip).limit(limit).all()
     
     return [_add_photo_url_to_professional(prof, db) for prof in professionals]
 
@@ -113,7 +114,8 @@ def create_professional(db: Session, professional_data: ProfessionalCreate) -> P
         role=UserRole.PROFISSIONAL,
         full_name=professional_data.full_name,
         phone_number=normalized_phone,
-        is_active=professional_data.is_active
+        is_active=professional_data.is_active,
+        display_order=professional_data.display_order
         # tenant_id removed
     )
     
@@ -366,3 +368,23 @@ def delete_break(db: Session, professional_id: UUID, break_id: UUID) -> bool:
     db.delete(db_break)
     db.commit()
     return True
+
+# Display order management
+def update_professionals_order(db: Session, order_data) -> List[Professional]:
+    """Update display order for multiple professionals."""
+    from .routes import BulkOrderUpdate  # Import here to avoid circular import
+    
+    # Update each professional's display order
+    for prof_order in order_data.professionals:
+        db_professional = db.query(User).filter(
+            User.id == str(prof_order.professional_id),
+            User.role == UserRole.PROFISSIONAL
+        ).first()
+        
+        if db_professional:
+            db_professional.display_order = prof_order.display_order
+    
+    db.commit()
+    
+    # Return updated list of all professionals ordered by display_order
+    return get_professionals(db)

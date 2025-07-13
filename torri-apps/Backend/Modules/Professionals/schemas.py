@@ -35,6 +35,7 @@ class ProfessionalBase(BaseModel):
     email: str
     phone_number: Optional[str] = None
     is_active: bool = True
+    display_order: Optional[int] = 999
 
 class ProfessionalCreate(ProfessionalBase):
     password: str
@@ -46,6 +47,7 @@ class ProfessionalUpdate(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     is_active: Optional[bool] = None
+    display_order: Optional[int] = None
 
 class Professional(ProfessionalBase):
     id: UUID
@@ -53,6 +55,7 @@ class Professional(ProfessionalBase):
     phone_number: Optional[str] = None
     services_offered: List[ServiceBasic] = []
     photo_url: Optional[str] = None  # Full URL to the photo file
+    display_order: Optional[int] = 999
     
     class Config:
         from_attributes = True

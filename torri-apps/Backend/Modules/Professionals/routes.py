@@ -17,6 +17,7 @@ from .schemas import (
     Break, BreakCreate, BreakUpdate,
     ServiceBasic, ServiceAssociationUpdate
 )
+from pydantic import BaseModel
 from . import services as professional_services
 
 router = APIRouter(tags=["Professionals"])
@@ -287,3 +288,21 @@ def delete_break(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pausa não encontrada"
         )
+
+# Display order management
+class ProfessionalOrderUpdate(BaseModel):
+    professional_id: UUID
+    display_order: int
+
+class BulkOrderUpdate(BaseModel):
+    professionals: List[ProfessionalOrderUpdate]
+
+@router.put("/reorder", response_model=List[Professional])
+def update_professionals_order(
+    order_data: BulkOrderUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    """Update display order for multiple professionals."""
+    professionals = professional_services.update_professionals_order(db, order_data)
+    return professionals

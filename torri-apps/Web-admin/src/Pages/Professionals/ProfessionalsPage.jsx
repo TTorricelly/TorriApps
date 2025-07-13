@@ -24,14 +24,17 @@ import {
   PencilIcon, 
   TrashIcon,
   MagnifyingGlassIcon,
-  UserIcon
+  UserIcon,
+  Bars3Icon,
+  ArrowUpIcon,
+  ArrowDownIcon
 } from '@heroicons/react/24/outline';
 
 import { professionalsApi } from '../../Services/professionals';
 import { servicesApi } from '../../Services/services';
 
 // Optimized Professional Row Component with memoization
-const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, getServiceTags, getInitials }) => {
+const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, onMoveUp, onMoveDown, getServiceTags, getInitials, canMoveUp, canMoveDown }) => {
   const [imageError, setImageError] = useState(false);
   
   const handleRowClick = useCallback(() => {
@@ -47,6 +50,16 @@ const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, get
     e.stopPropagation();
     onDelete(professional);
   }, [onDelete, professional]);
+
+  const handleMoveUp = useCallback((e) => {
+    e.stopPropagation();
+    onMoveUp(professional.id);
+  }, [onMoveUp, professional.id]);
+
+  const handleMoveDown = useCallback((e) => {
+    e.stopPropagation();
+    onMoveDown(professional.id);
+  }, [onMoveDown, professional.id]);
   
   const serviceTags = useMemo(() => getServiceTags(professional), [getServiceTags, professional]);
   const initials = useMemo(() => getInitials(professional.full_name), [getInitials, professional.full_name]);
@@ -58,6 +71,33 @@ const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, get
       }`}
       onClick={handleRowClick}
     >
+      <td className="p-4 text-center">
+        <Typography className="text-text-primary font-medium">
+          {professional.display_order || index + 1}
+        </Typography>
+      </td>
+      <td className="p-4">
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="text"
+            className={`p-1 ${canMoveUp ? 'text-accent-primary hover:bg-accent-primary/10' : 'text-text-tertiary cursor-not-allowed'}`}
+            onClick={handleMoveUp}
+            disabled={!canMoveUp}
+          >
+            <ArrowUpIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="text"
+            className={`p-1 ${canMoveDown ? 'text-accent-primary hover:bg-accent-primary/10' : 'text-text-tertiary cursor-not-allowed'}`}
+            onClick={handleMoveDown}
+            disabled={!canMoveDown}
+          >
+            <ArrowDownIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
       <td className="p-4">
         <div className="w-10 h-10">
           {professional.photo_url && !imageError ? (
@@ -258,6 +298,68 @@ export default function ProfessionalsPage() {
     }
   };
 
+  const handleMoveProfessionalUp = useCallback(async (professionalId) => {
+    const currentIndex = professionals.findIndex(p => p.id === professionalId);
+    if (currentIndex <= 0) return;
+
+    const updatedProfessionals = [...professionals];
+    const currentProf = updatedProfessionals[currentIndex];
+    const prevProf = updatedProfessionals[currentIndex - 1];
+
+    // Swap display orders
+    const tempOrder = currentProf.display_order;
+    currentProf.display_order = prevProf.display_order;
+    prevProf.display_order = tempOrder;
+
+    // Update local state immediately for better UX
+    setProfessionals(updatedProfessionals);
+
+    try {
+      // Update on server
+      await professionalsApi.updateOrder([
+        { professional_id: currentProf.id, display_order: currentProf.display_order },
+        { professional_id: prevProf.id, display_order: prevProf.display_order }
+      ]);
+      showAlert('Ordem atualizada com sucesso!', 'success');
+    } catch (error) {
+      console.error('Error updating order:', error);
+      showAlert('Erro ao atualizar ordem', 'error');
+      // Reload data to sync with server
+      loadProfessionals();
+    }
+  }, [professionals, loadProfessionals]);
+
+  const handleMoveProfessionalDown = useCallback(async (professionalId) => {
+    const currentIndex = professionals.findIndex(p => p.id === professionalId);
+    if (currentIndex >= professionals.length - 1) return;
+
+    const updatedProfessionals = [...professionals];
+    const currentProf = updatedProfessionals[currentIndex];
+    const nextProf = updatedProfessionals[currentIndex + 1];
+
+    // Swap display orders
+    const tempOrder = currentProf.display_order;
+    currentProf.display_order = nextProf.display_order;
+    nextProf.display_order = tempOrder;
+
+    // Update local state immediately for better UX
+    setProfessionals(updatedProfessionals);
+
+    try {
+      // Update on server
+      await professionalsApi.updateOrder([
+        { professional_id: currentProf.id, display_order: currentProf.display_order },
+        { professional_id: nextProf.id, display_order: nextProf.display_order }
+      ]);
+      showAlert('Ordem atualizada com sucesso!', 'success');
+    } catch (error) {
+      console.error('Error updating order:', error);
+      showAlert('Erro ao atualizar ordem', 'error');
+      // Reload data to sync with server
+      loadProfessionals();
+    }
+  }, [professionals, loadProfessionals]);
+
   const getServiceTags = useCallback((professional) => {
     return professional.services_offered || [];
   }, []);
@@ -407,6 +509,8 @@ export default function ProfessionalsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bg-tertiary">
+                    <th className="text-center p-4 text-text-primary font-semibold">Ordem</th>
+                    <th className="text-center p-4 text-text-primary font-semibold">Reordenar</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Foto</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">E-mail</th>
@@ -423,6 +527,10 @@ export default function ProfessionalsPage() {
                       index={index}
                       onEdit={handleEditProfessional}
                       onDelete={handleDeleteProfessional}
+                      onMoveUp={handleMoveProfessionalUp}
+                      onMoveDown={handleMoveProfessionalDown}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < filteredProfessionals.length - 1}
                       getServiceTags={getServiceTags}
                       getInitials={getInitials}
                     />

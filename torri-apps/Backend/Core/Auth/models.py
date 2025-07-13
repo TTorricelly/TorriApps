@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date, DateTime, Table
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Date, DateTime, Table, Integer
 from sqlalchemy import Enum as SAEnum # Changed alias for consistency
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship # Added for relationships
@@ -31,6 +31,9 @@ class User(Base):
     
     # Photo fields for professionals
     photo_path = Column(String(500), nullable=True)  # Path to uploaded photo file
+    
+    # Display order for professionals (lower numbers appear first)
+    display_order = Column(Integer, nullable=True, default=999)  # Default high value for new professionals
     
     # CPF field for Brazilian clients
     cpf = Column(String(14), nullable=True, index=True)  # Format: 123.456.789-10
