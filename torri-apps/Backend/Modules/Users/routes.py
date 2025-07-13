@@ -190,11 +190,20 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
                 )
             ).filter(Appointment.client_id.is_(None))
         elif last_visit_days is not None:
-            # Filter users who haven't visited in X+ days using LEFT JOIN
+            # Filter users who haven't visited in X+ days (excluding users who never visited)
             cutoff_date = date.today() - timedelta(days=last_visit_days)
             
-            # Use LEFT JOIN to find users with no recent completed appointments
-            query = query.outerjoin(
+            # First, get users who have visited at least once (have at least one completed appointment)
+            users_who_have_visited = db.query(User.id).join(
+                Appointment,
+                and_(
+                    User.id == Appointment.client_id,
+                    Appointment.status == AppointmentStatus.COMPLETED
+                )
+            ).distinct().subquery()
+            
+            # Then filter for users who have visited but not recently
+            query = query.filter(User.id.in_(users_who_have_visited)).outerjoin(
                 Appointment,
                 and_(
                     User.id == Appointment.client_id,
