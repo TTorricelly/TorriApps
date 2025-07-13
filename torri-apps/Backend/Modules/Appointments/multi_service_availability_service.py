@@ -135,7 +135,6 @@ class MultiServiceAvailabilityService:
         # 5. Rank and filter results
         ranked_slots = self._rank_and_filter_slots(all_itineraries)
         
-        
         return MultiServiceAvailabilityResponse(
             date=request.date,
             available_slots=ranked_slots[:20]  # Return top 20 options
@@ -321,9 +320,9 @@ class MultiServiceAvailabilityService:
         max_parallel_pros = min(req.max_parallel_pros for req in service_requirements)
         
         
-        # Generate professional combinations
-        if professionals_requested == 1 or max_parallel_pros == 1:
-            # Single professional combinations
+        # Generate professional combinations based on user request
+        if professionals_requested == 1:
+            # Single professional combinations - only when user specifically requests 1
             for professional in eligible_professionals:
                 if self._professional_can_handle_all_services(professional, service_requirements):
                     # Get required stations
@@ -337,12 +336,9 @@ class MultiServiceAvailabilityService:
                             stations=available_stations,
                             execution_type="sequential"
                         ))
-        
-        # Multi-professional execution when single professional approach fails
-        # Trigger when no single professional can handle all services, regardless of parallel capability
-        # But only if we're not specifically requesting 3+ professionals
-        if len(resource_combinations) == 0 and len(service_requirements) > 1 and professionals_requested < 3:
-            # Try both sequential and parallel execution with different professionals
+        elif professionals_requested >= 2:
+            # Multi-professional execution when user requests 2+ professionals
+            # Try to find combinations that can handle all services together
             for prof_pair in combinations(eligible_professionals, 2):
                 if self._professional_pair_can_handle_services(prof_pair, service_requirements):
                     station_requirements = self._get_combined_station_requirements(service_requirements)
@@ -363,42 +359,24 @@ class MultiServiceAvailabilityService:
                             stations=available_stations,
                             execution_type=execution_type
                         ))
-        
-        # Multi-professional combinations (3+ professionals) for parallel execution
-        three_plus_professional_combinations_added = False
-        if professionals_requested >= 3 and can_parallel and max_parallel_pros >= 3:
             
-            # Try combinations of exactly professionals_requested size
-            for prof_combination in combinations(eligible_professionals, professionals_requested):
-                
-                if self._professional_combination_can_handle_services(prof_combination, service_requirements):
-                    station_requirements = self._get_combined_station_requirements(service_requirements)
-                    available_stations = self._get_available_stations(station_requirements)
-                    
-                    if available_stations:
-                        resource_combinations.append(ResourceCombination(
-                            services=[req.service for req in service_requirements],
-                            professionals=list(prof_combination),
-                            stations=available_stations,
-                            execution_type="parallel"
-                        ))
-                        three_plus_professional_combinations_added = True
+            # If no valid 2-professional combinations found but user requested 2,
+            # and some single professional can handle all services, create that as fallback
+            if len(resource_combinations) == 0:
+                for professional in eligible_professionals:
+                    if self._professional_can_handle_all_services(professional, service_requirements):
+                        station_requirements = self._get_combined_station_requirements(service_requirements)
+                        available_stations = self._get_available_stations(station_requirements)
+                        
+                        if available_stations:
+                            resource_combinations.append(ResourceCombination(
+                                services=[req.service for req in service_requirements],
+                                professionals=[professional],
+                                stations=available_stations,
+                                execution_type="sequential"
+                            ))
+                            break  # Only add one fallback combination
         
-        # Only generate 2-professional combinations if 3+ professionals weren't requested or none were found
-        if not three_plus_professional_combinations_added and professionals_requested == 2 and can_parallel and max_parallel_pros >= 2:
-            # Two professional combinations for parallel execution
-            for prof_pair in combinations(eligible_professionals, 2):
-                if self._professional_pair_can_handle_services(prof_pair, service_requirements):
-                    station_requirements = self._get_combined_station_requirements(service_requirements)
-                    available_stations = self._get_available_stations(station_requirements)
-                    
-                    if available_stations:
-                        resource_combinations.append(ResourceCombination(
-                            services=[req.service for req in service_requirements],
-                            professionals=list(prof_pair),
-                            stations=available_stations,
-                            execution_type="parallel"
-                        ))
         
         return resource_combinations
     
@@ -685,10 +663,8 @@ class MultiServiceAvailabilityService:
         Build mixed execution itinerary for services with both parallel and sequential components.
         
         Strategy:
-        1. Group services by parallelizable vs sequential
-        2. Execute parallelizable services in parallel where possible
-        3. Execute sequential services sequentially
-        4. Optimize the overall execution plan
+        - Use sequential execution since not all services can be parallelized
+        - If multiple professionals, distribute services based on specializations
         
         Args:
             combination: Resource combination to schedule
@@ -697,18 +673,150 @@ class MultiServiceAvailabilityService:
         Returns:
             List of available time slots for mixed execution
         """
-        # Separate services by parallelability
-        parallel_services = [s for s in combination.services if s.parallelable]
-        sequential_services = [s for s in combination.services if not s.parallelable]
-        
-        # For mixed scenarios, we'll use a simplified approach:
-        # Execute as sequential with multiple professionals for efficiency
-        if len(combination.professionals) >= 2:
-            # Use parallel-style scheduling but respect sequential constraints
-            return self._build_parallel_itinerary(combination, target_date)
+        if len(combination.professionals) > 1:
+            # Multiple professionals: need to create smart sequential assignment
+            return self._build_multi_professional_sequential_itinerary(combination, target_date)
         else:
-            # Fall back to sequential execution
+            # Single professional: use standard sequential execution
             return self._build_sequential_itinerary(combination, target_date)
+    
+    def _build_multi_professional_sequential_itinerary(
+        self,
+        combination: ResourceCombination,
+        target_date: date
+    ) -> List[WizardTimeSlot]:
+        """
+        Build sequential itinerary with multiple professionals, distributing services based on specializations.
+        
+        Args:
+            combination: Resource combination with multiple professionals
+            target_date: Target date for scheduling
+            
+        Returns:
+            List of available time slots with proper service distribution
+        """
+        # Assign services to professionals based on their capabilities
+        service_assignments = self._distribute_services_by_specialization(
+            combination.services, 
+            combination.professionals
+        )
+        
+        if not service_assignments:
+            return []
+        
+        # Find common availability for all assigned professionals
+        professional_availabilities = {}
+        for professional in combination.professionals:
+            availability = get_daily_time_slots_for_professional(
+                self.db,
+                professional.id,
+                target_date
+            )
+            professional_availabilities[professional.id] = availability.slots
+        
+        # Calculate total duration needed
+        total_duration = sum(service.duration_minutes for service in combination.services)
+        
+        # Find consecutive slots that can accommodate total duration
+        # For now, use the first professional's availability as baseline
+        primary_professional = combination.professionals[0]
+        primary_slots = professional_availabilities[primary_professional.id]
+        
+        consecutive_slots = self._find_consecutive_slots(primary_slots, total_duration)
+        
+        # Create wizard time slots with proper service assignments
+        wizard_slots = []
+        for slot_start_time, slot_end_time in consecutive_slots:
+            services_in_slot = []
+            current_start_time = slot_start_time
+            
+            # Assign services sequentially according to the distribution
+            for service, assigned_professional in service_assignments:
+                # Assign station
+                station = None
+                for station_req in service.station_requirements:
+                    station_type_code = station_req.station_type.code
+                    available_stations = combination.stations.get(station_type_code, [])
+                    if available_stations:
+                        station = available_stations[0]
+                        break
+                
+                services_in_slot.append(ServiceInSlot(
+                    service_id=service.id,
+                    service_name=service.name,
+                    professional_id=assigned_professional.id,
+                    professional_name=assigned_professional.full_name or assigned_professional.email,
+                    station_id=station.id if station else None,
+                    station_name=station.label if station else None,
+                    duration_minutes=service.duration_minutes,
+                    price=service.price
+                ))
+                
+                # Move to next service start time
+                current_start_time = calculate_end_time(current_start_time, service.duration_minutes)
+            
+            if services_in_slot:
+                total_price = sum(service.price for service in services_in_slot)
+                
+                # Generate unique ID for this slot
+                slot_id = self._generate_slot_id(
+                    target_date,
+                    slot_start_time,
+                    [s.service_id for s in services_in_slot],
+                    "mixed"
+                )
+                
+                wizard_slots.append(WizardTimeSlot(
+                    id=slot_id,
+                    start_time=slot_start_time,
+                    end_time=slot_end_time,
+                    total_duration_minutes=total_duration,
+                    total_price=total_price,
+                    execution_type="mixed",
+                    services=services_in_slot
+                ))
+        
+        return wizard_slots
+    
+    def _distribute_services_by_specialization(
+        self,
+        services: List[Service],
+        professionals: List[User]
+    ) -> List[Tuple[Service, User]]:
+        """
+        Distribute services among professionals based on their specializations.
+        
+        Args:
+            services: List of services to distribute
+            professionals: List of available professionals
+            
+        Returns:
+            List of (service, professional) assignments
+        """
+        assignments = []
+        
+        for service in services:
+            # Find the best professional for this service
+            best_professional = None
+            
+            # Check which professionals can do this service
+            capable_professionals = []
+            for professional in professionals:
+                prof_service_ids = {s.id for s in professional.services_offered}
+                if service.id in prof_service_ids:
+                    capable_professionals.append(professional)
+            
+            if capable_professionals:
+                # For now, use the first capable professional
+                # In the future, this could be more sophisticated (load balancing, etc.)
+                best_professional = capable_professionals[0]
+                assignments.append((service, best_professional))
+            else:
+                # No professional can handle this service - this shouldn't happen
+                # if the resource combination was generated correctly
+                return []
+        
+        return assignments
     
     def _find_simultaneous_availability(
         self,
@@ -1255,6 +1363,7 @@ class MultiServiceAvailabilityService:
         # Generate MD5 hash
         hash_object = hashlib.md5(id_string.encode())
         return hash_object.hexdigest()[:16]  # Use first 16 characters
+    
     
     def _calculate_time_difference(self, start_time: time, end_time: time) -> int:
         """

@@ -732,6 +732,7 @@ def get_multi_service_availability_endpoint(
     )
 
 
+
 @router.post(
     "/wizard/book",
     response_model=MultiServiceBookingResponse,
