@@ -108,21 +108,10 @@ const WizardProfessionalsScreen = () => {
 
   const loadConfiguration = async () => {
     try {
-      // Calculate maximum professionals based on services
-      const maxPros = Math.min(
-        ...selectedServices.map((service) => service.max_parallel_pros || 1)
-      );
-      setMaxParallelPros(maxPros);
-      
-      // Set initial professionals requested
-      let initialPros;
-      if (selectedServices.length === 1) {
-        initialPros = 1;
-      } else {
-        initialPros = Math.min(defaultProsRequested || 1, maxPros);
-      }
-      
-      setProfessionalsRequested(initialPros);
+      // Start with basic configuration - detailed calculation happens in loadAvailableProfessionals
+      // after we know which professionals are available
+      setMaxParallelPros(1);
+      setProfessionalsRequested(1);
       
     } catch (err) {
       setError('Erro ao carregar configuração. Tente novamente.');
@@ -140,9 +129,12 @@ const WizardProfessionalsScreen = () => {
       const professionals = await getAvailableProfessionals(serviceIds, selectedDate);
       setAvailableProfessionals(professionals);
 
-      // Calculate optimal professionals needed FIRST
-      const optimalProfessionalsNeeded = calculateOptimalProfessionalsNeeded(selectedServices, professionals);
-      setProfessionalsRequested(optimalProfessionalsNeeded);
+      // Calculate comprehensive professional requirements
+      const requirements = calculateProfessionalRequirements(selectedServices, professionals);
+      
+      // Update state based on requirements
+      setMaxParallelPros(requirements.maximum);
+      setProfessionalsRequested(requirements.minimum);
 
       // Auto-select professionals based on service exclusivity
       if (professionals.length === 1) {
@@ -166,8 +158,12 @@ const WizardProfessionalsScreen = () => {
         });
         
         if (autoSelectedProfessionals.length > 0) {
-          const requiredCount = Math.max(autoSelectedProfessionals.length, optimalProfessionalsNeeded);
-          setProfessionalsRequested(requiredCount);
+          const requiredCount = Math.max(autoSelectedProfessionals.length, requirements.minimum);
+          // Update state if auto-selection requires more than calculated minimum
+          if (requiredCount > requirements.minimum) {
+            setProfessionalsRequested(requiredCount);
+            setMaxParallelPros(Math.max(requiredCount, requirements.maximum));
+          }
           
           const selectedArray = [...autoSelectedProfessionals];
           while (selectedArray.length < requiredCount) {
@@ -175,7 +171,7 @@ const WizardProfessionalsScreen = () => {
           }
           setSelectedProfessionals(selectedArray);
         } else {
-          setProfessionalsRequested(optimalProfessionalsNeeded);
+          // Use the calculated requirements (already set above)
           setSelectedProfessionals([]);
         }
       }
@@ -191,63 +187,146 @@ const WizardProfessionalsScreen = () => {
   // ALGORITHMIC PROFESSIONAL SELECTION LOGIC
   // ==========================================
 
-  const calculateOptimalProfessionalsNeeded = (services, professionals) => {
-    if (services.length === 0 || professionals.length === 0) return 1;
-    if (services.length === 1) return 1;
+  // Calculate minimum professionals needed to cover all services
+  const calculateMinimumCoverage = (services, professionals) => {
+    // Use greedy algorithm to find minimum set cover
+    const uncoveredServices = new Set(services.map(s => s.id));
+    let professionalsUsed = 0;
     
-    // Check if any single professional can handle ALL services
-    const professionalsWhoCanHandleAll = professionals.filter((prof) => {
-      return services.every((service) => 
-        prof.services_offered?.includes(service.id)
-      );
-    });
-    
-    if (professionalsWhoCanHandleAll.length > 0) {
-      return 1;
-    }
-    
-    // Enhanced analysis: consider optimal vs minimum scenarios
-    const serviceToProfs = new Map();
-    services.forEach((service) => {
-      const capableProfIds = new Set();
-      professionals.forEach((prof) => {
-        if (prof.services_offered?.includes(service.id)) {
-          capableProfIds.add(prof.id);
+    while (uncoveredServices.size > 0 && professionalsUsed < professionals.length) {
+      // Find professional who can cover the most uncovered services
+      let bestProfessional = null;
+      let maxCoverage = 0;
+      
+      for (const prof of professionals) {
+        const coverage = services.filter(service => 
+          uncoveredServices.has(service.id) && 
+          prof.services_offered?.includes(service.id)
+        ).length;
+        
+        if (coverage > maxCoverage) {
+          maxCoverage = coverage;
+          bestProfessional = prof;
+        }
+      }
+      
+      if (!bestProfessional || maxCoverage === 0) {
+        break; // No professional can cover remaining services
+      }
+      
+      // Remove covered services
+      services.forEach(service => {
+        if (bestProfessional.services_offered?.includes(service.id)) {
+          uncoveredServices.delete(service.id);
         }
       });
-      serviceToProfs.set(service.id, capableProfIds);
-    });
+      
+      professionalsUsed++;
+    }
     
-    // Check zero overlap (minimum requirement)
-    const serviceIds = Array.from(serviceToProfs.keys());
-    let foundZeroOverlap = false;
+    return professionalsUsed;
+  };
+
+  // Detect services that might have idle time windows for optimization
+  const detectIdleTimeOptimization = (services, professionals) => {
+    // For now, we'll detect potential idle time opportunities based on:
+    // 1. Long duration services (>60 minutes) - might have processing pauses
+    // 2. Sequential services with significant duration differences
+    // 3. Services that historically benefit from multi-professional optimization
     
-    for (let i = 0; i < serviceIds.length; i++) {
-      for (let j = i + 1; j < serviceIds.length; j++) {
-        const profsForServiceA = serviceToProfs.get(serviceIds[i]) || new Set();
-        const profsForServiceB = serviceToProfs.get(serviceIds[j]) || new Set();
-        const intersection = new Set([...profsForServiceA].filter(x => profsForServiceB.has(x)));
-        
-        if (intersection.size === 0) {
-          foundZeroOverlap = true;
-        }
+    const longDurationServices = services.filter(service => 
+      service.duration_minutes && service.duration_minutes > 60 && service.parallelable !== true
+    );
+    
+    // If we have long sequential services, there might be idle time optimization potential
+    const hasIdleTimeOpportunity = longDurationServices.length > 0 && services.length > 1;
+    
+    return {
+      hasOpportunity: hasIdleTimeOpportunity,
+      longDurationServices,
+      potentialBenefit: hasIdleTimeOpportunity ? 1 : 0 // One extra professional for idle time optimization
+    };
+  };
+
+  // Calculate professional requirements considering both coverage and parallelization
+  const calculateProfessionalRequirements = (services, professionals) => {
+    if (services.length === 0 || professionals.length === 0) {
+      return { minimum: 1, maximum: 1, reason: 'no-services' };
+    }
+    
+    if (services.length === 1) {
+      return { minimum: 1, maximum: 1, reason: 'single-service' };
+    }
+    
+    // Step 1: Calculate minimum coverage needed (mandatory)
+    const minimumCoverage = calculateMinimumCoverage(services, professionals);
+    
+    // Step 2: Identify parallelizable services and their limits
+    const parallelizableServices = services.filter(service => service.parallelable === true);
+    const sequentialServices = services.filter(service => service.parallelable !== true);
+    
+    // Step 3: Check for idle time optimization opportunities
+    const idleTimeAnalysis = detectIdleTimeOptimization(services, professionals);
+    
+    // Step 4: Calculate parallelization benefit
+    let parallelizationMax = 0;
+    if (parallelizableServices.length > 0) {
+      // For parallelizable services, find the maximum additional professionals that could be useful
+      const parallelLimits = parallelizableServices.map(service => service.max_parallel_pros || 1);
+      parallelizationMax = Math.min(...parallelLimits);
+    }
+    
+    // Step 5: Determine the maximum useful professionals
+    let maximum;
+    if (parallelizableServices.length === 0) {
+      // All services are sequential - check for idle time optimization
+      if (idleTimeAnalysis.hasOpportunity) {
+        maximum = Math.min(minimumCoverage + idleTimeAnalysis.potentialBenefit, professionals.length);
+      } else {
+        maximum = Math.min(minimumCoverage + 1, professionals.length); // Allow one extra for choice
+      }
+    } else if (sequentialServices.length === 0) {
+      // All services are parallelizable - use parallelization limits
+      maximum = Math.min(parallelizationMax, professionals.length);
+    } else {
+      // Mixed scenario - coverage + parallelization benefit + idle time optimization
+      const mixedMax = minimumCoverage + (parallelizationMax - 1) + idleTimeAnalysis.potentialBenefit;
+      maximum = Math.min(mixedMax, professionals.length);
+    }
+    
+    // Step 6: Determine the reason for the requirement
+    let reason;
+    if (minimumCoverage > 1) {
+      if (parallelizableServices.length > 0) {
+        reason = 'coverage-and-parallel';
+      } else if (idleTimeAnalysis.hasOpportunity) {
+        reason = 'coverage-and-idle-optimization';
+      } else {
+        reason = 'coverage-only';
+      }
+    } else {
+      if (parallelizableServices.length > 0) {
+        reason = 'parallel-choice';
+      } else if (idleTimeAnalysis.hasOpportunity) {
+        reason = 'idle-time-optimization';
+      } else {
+        reason = 'single-sufficient';
       }
     }
     
-    // Smart defaults based on service patterns
-    if (services.length >= 3) {
-      const maxProfessionalsNeeded = Math.min(services.length, professionals.length);
-      const allServicesHaveOptions = Array.from(serviceToProfs.values()).every(profSet => profSet.size >= 1);
-      if (allServicesHaveOptions && maxProfessionalsNeeded >= 3) {
-        return maxProfessionalsNeeded;
-      }
-    }
-    
-    if (foundZeroOverlap) {
-      return Math.min(2, professionals.length);
-    }
-    
-    return Math.min(2, professionals.length);
+    return { 
+      minimum: minimumCoverage, 
+      maximum: Math.max(maximum, minimumCoverage), 
+      reason,
+      parallelizableCount: parallelizableServices.length,
+      sequentialCount: sequentialServices.length,
+      idleTimeAnalysis
+    };
+  };
+
+  const calculateOptimalProfessionalsNeeded = (services, professionals) => {
+    const requirements = calculateProfessionalRequirements(services, professionals);
+    return requirements.minimum;
   };
 
   // Core algorithm to determine professional state
@@ -561,10 +640,9 @@ const WizardProfessionalsScreen = () => {
   // Render functions (matching mobile implementation exactly)
   const renderProfessionalAvatar = (professional, size = 40) => {
     const hasError = imageErrors[professional.id];
-    // CORRECT FIELD: photo_path (matching mobile implementation)
-    const photoPath = professional.photo_path || professional.photo_url; // fallback for legacy support
-    const fullPhotoUrl = photoPath ? buildAssetUrl(photoPath) : null;
-    const hasValidPhoto = fullPhotoUrl && !hasError;
+    // NEW FIELD: photo_url (now processed by backend with full Google Cloud Storage URL)
+    const photoUrl = professional.photo_url || professional.photo_path; // fallback for legacy support
+    const hasValidPhoto = photoUrl && !hasError;
     
     if (!hasValidPhoto) {
       // Fallback to initials like mobile does
@@ -581,7 +659,7 @@ const WizardProfessionalsScreen = () => {
     
     return (
       <img
-        src={fullPhotoUrl}
+        src={photoUrl}
         alt={professional.full_name || professional.email}
         className="rounded-full object-cover"
         style={{ width: size, height: size }}
@@ -644,6 +722,43 @@ const WizardProfessionalsScreen = () => {
     </div>
   );
 
+  // Get description text based on current professional requirements
+  const getProfessionalCountDescription = () => {
+    if (selectedServices.length === 0 || availableProfessionals.length === 0) {
+      return 'Carregando...';
+    }
+    
+    const requirements = calculateProfessionalRequirements(selectedServices, availableProfessionals);
+    
+    switch (requirements.reason) {
+      case 'single-service':
+      case 'single-sufficient':
+        return maxParallelPros > 1 
+          ? `Você pode escolher de 1 a ${maxParallelPros} profissionais`
+          : 'Apenas 1 profissional disponível';
+          
+      case 'coverage-only':
+        return `${requirements.minimum} profissionais necessários para cobertura dos serviços`;
+        
+      case 'parallel-choice':
+        return `Você pode escolher de ${requirements.minimum} a ${requirements.maximum} profissionais`;
+        
+      case 'coverage-and-parallel':
+        return `${requirements.minimum} profissionais necessários + opções paralelas (máximo ${requirements.maximum})`;
+        
+      case 'idle-time-optimization':
+        return `Adicionar 1 profissional extra para otimizar tempo ocioso (${requirements.maximum} máximo)`;
+        
+      case 'coverage-and-idle-optimization':
+        return `${requirements.minimum} profissionais necessários + otimização de tempo ocioso (máximo ${requirements.maximum})`;
+        
+      default:
+        return maxParallelPros > 1 
+          ? `Você pode escolher de 1 a ${maxParallelPros} profissionais`
+          : 'Apenas 1 profissional disponível';
+    }
+  };
+
   // Render professional count selector
   const renderProfessionalCountSelector = () => {
     const canChangeCount = maxParallelPros > 1;
@@ -658,10 +773,7 @@ const WizardProfessionalsScreen = () => {
             <div>
               <h3 className="font-medium text-gray-900">Quantos profissionais?</h3>
               <p className="text-sm text-gray-500">
-                {canChangeCount 
-                  ? `Escolha de 1 a ${maxParallelPros} profissionais`
-                  : 'Apenas 1 profissional disponível'
-                }
+                {getProfessionalCountDescription()}
               </p>
             </div>
           </div>
@@ -920,7 +1032,7 @@ const WizardProfessionalsScreen = () => {
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {canContinue ? 'Continuar' : `Selecione ${professionalsRequested} profissional${professionalsRequested > 1 ? 'is' : ''}`}
+          {canContinue ? 'Continuar' : `Escolha ${professionalsRequested} profissional${professionalsRequested > 1 ? 'is' : ''} para continuar`}
         </button>
       </div>
     );

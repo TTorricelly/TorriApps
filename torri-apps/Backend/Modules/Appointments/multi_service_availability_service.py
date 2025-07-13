@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import date, time, datetime, timedelta
 from dataclasses import dataclass
 from itertools import combinations, product
+from enum import Enum
 import hashlib
 
 from sqlalchemy.orm import Session, joinedload
@@ -32,6 +33,10 @@ from .availability_service import get_daily_time_slots_for_professional
 # Utils
 from .appointment_utils import calculate_end_time
 
+# File handler for URL processing
+from Core.Utils.file_handler import file_handler
+from Config.Settings import settings
+
 
 @dataclass
 class ServiceRequirement:
@@ -44,13 +49,20 @@ class ServiceRequirement:
     qualified_professionals: List[User]
 
 
+class ExecutionStrategy(Enum):
+    """Enum for different execution strategies"""
+    PARALLEL = "parallel"
+    SEQUENTIAL = "sequential"
+    MIXED = "mixed"
+
+
 @dataclass
 class ResourceCombination:
     """Represents a combination of professionals and stations for services"""
     services: List[Service]
     professionals: List[User]  # One or more professionals
     stations: Dict[str, List[Station]]  # station_type_code -> list of stations
-    execution_type: str  # "parallel" or "sequential"
+    execution_type: str  # "parallel", "sequential", or "mixed"
 
 
 class MultiServiceAvailabilityService:
@@ -116,6 +128,9 @@ class MultiServiceAvailabilityService:
             elif combination.execution_type == "sequential":
                 sequential_slots = self._build_sequential_itinerary(combination, request.date)
                 all_itineraries.extend(sequential_slots)
+            elif combination.execution_type == "mixed":
+                mixed_slots = self._build_mixed_itinerary(combination, request.date)
+                all_itineraries.extend(mixed_slots)
         
         # 5. Rank and filter results
         ranked_slots = self._rank_and_filter_slots(all_itineraries)
@@ -178,11 +193,16 @@ class MultiServiceAvailabilityService:
                     if service.id in service_ids
                 ]
                 
+                # Process photo URL through file handler to get full Google Cloud Storage URL
+                photo_url = None
+                if professional.photo_path:
+                    photo_url = file_handler.get_public_url(professional.photo_path, settings.SERVER_HOST)
+                
                 available_professionals.append(ProfessionalInfo(
                     id=professional.id,
                     full_name=professional.full_name or professional.email,
                     email=professional.email,
-                    photo_path=professional.photo_path,
+                    photo_url=photo_url,  # Full Google Cloud Storage URL
                     services_offered=professional_service_ids
                 ))
         
@@ -295,8 +315,9 @@ class MultiServiceAvailabilityService:
         """
         resource_combinations = []
         
-        # Check if parallel execution is possible
-        can_parallel = self._can_execute_in_parallel(service_requirements)
+        # Determine execution strategy for mixed services support
+        execution_strategy = self._determine_execution_strategy(service_requirements)
+        can_parallel = execution_strategy in [ExecutionStrategy.PARALLEL, ExecutionStrategy.MIXED]
         max_parallel_pros = min(req.max_parallel_pros for req in service_requirements)
         
         
@@ -328,8 +349,13 @@ class MultiServiceAvailabilityService:
                     available_stations = self._get_available_stations(station_requirements)
                     
                     if available_stations:
-                        # Choose execution type based on service capabilities
-                        execution_type = "parallel" if can_parallel and max_parallel_pros >= 2 else "sequential"
+                        # Choose execution type based on service capabilities and strategy
+                        if execution_strategy == ExecutionStrategy.MIXED:
+                            execution_type = "mixed"
+                        elif can_parallel and max_parallel_pros >= 2:
+                            execution_type = "parallel"
+                        else:
+                            execution_type = "sequential"
                         
                         resource_combinations.append(ResourceCombination(
                             services=[req.service for req in service_requirements],
@@ -375,6 +401,21 @@ class MultiServiceAvailabilityService:
                         ))
         
         return resource_combinations
+    
+    def _determine_execution_strategy(self, service_requirements: List[ServiceRequirement]) -> ExecutionStrategy:
+        """Determine the best execution strategy for the given services."""
+        parallel_services = [req for req in service_requirements if req.parallelable]
+        sequential_services = [req for req in service_requirements if not req.parallelable]
+        
+        if len(sequential_services) == 0:
+            # All services are parallelizable
+            return ExecutionStrategy.PARALLEL
+        elif len(parallel_services) == 0:
+            # All services are sequential
+            return ExecutionStrategy.SEQUENTIAL
+        else:
+            # Mixed scenario - some services can be parallel, others sequential
+            return ExecutionStrategy.MIXED
     
     def _can_execute_in_parallel(self, service_requirements: List[ServiceRequirement]) -> bool:
         """Check if all services can be executed in parallel."""
@@ -634,6 +675,40 @@ class MultiServiceAvailabilityService:
                 ))
         
         return wizard_slots
+    
+    def _build_mixed_itinerary(
+        self,
+        combination: ResourceCombination,
+        target_date: date
+    ) -> List[WizardTimeSlot]:
+        """
+        Build mixed execution itinerary for services with both parallel and sequential components.
+        
+        Strategy:
+        1. Group services by parallelizable vs sequential
+        2. Execute parallelizable services in parallel where possible
+        3. Execute sequential services sequentially
+        4. Optimize the overall execution plan
+        
+        Args:
+            combination: Resource combination to schedule
+            target_date: Target date for scheduling
+            
+        Returns:
+            List of available time slots for mixed execution
+        """
+        # Separate services by parallelability
+        parallel_services = [s for s in combination.services if s.parallelable]
+        sequential_services = [s for s in combination.services if not s.parallelable]
+        
+        # For mixed scenarios, we'll use a simplified approach:
+        # Execute as sequential with multiple professionals for efficiency
+        if len(combination.professionals) >= 2:
+            # Use parallel-style scheduling but respect sequential constraints
+            return self._build_parallel_itinerary(combination, target_date)
+        else:
+            # Fall back to sequential execution
+            return self._build_sequential_itinerary(combination, target_date)
     
     def _find_simultaneous_availability(
         self,

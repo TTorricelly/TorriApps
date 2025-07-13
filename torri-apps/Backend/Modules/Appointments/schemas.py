@@ -232,7 +232,7 @@ class ProfessionalInfo(BaseModel):
     id: UUID
     full_name: str
     email: str
-    photo_path: Optional[str] = None
+    photo_url: Optional[str] = None  # Full URL to professional photo (processed by file_handler)
     services_offered: List[UUID]  # List of service IDs this professional can handle
 
     class Config:
