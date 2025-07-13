@@ -302,30 +302,33 @@ export default function ProfessionalsPage() {
     const currentIndex = professionals.findIndex(p => p.id === professionalId);
     if (currentIndex <= 0) return;
 
+    // Create a copy of professionals array for local update
     const updatedProfessionals = [...professionals];
-    const currentProf = updatedProfessionals[currentIndex];
-    const prevProf = updatedProfessionals[currentIndex - 1];
-
-    // Swap display orders
-    const tempOrder = currentProf.display_order;
-    currentProf.display_order = prevProf.display_order;
-    prevProf.display_order = tempOrder;
+    
+    // Move the professional up by swapping positions
+    [updatedProfessionals[currentIndex], updatedProfessionals[currentIndex - 1]] = 
+    [updatedProfessionals[currentIndex - 1], updatedProfessionals[currentIndex]];
 
     // Update local state immediately for better UX
     setProfessionals(updatedProfessionals);
 
     try {
-      // Update on server
-      await professionalsApi.updateOrder([
-        { professional_id: currentProf.id, display_order: currentProf.display_order },
-        { professional_id: prevProf.id, display_order: prevProf.display_order }
-      ]);
+      // Reassign display_order values based on new positions to ensure uniqueness
+      const orderUpdates = updatedProfessionals.map((prof, index) => ({
+        professional_id: prof.id,
+        display_order: index + 1
+      }));
+
+      // Update on server with new sequential ordering
+      await professionalsApi.updateOrder(orderUpdates);
       showAlert('Ordem atualizada com sucesso!', 'success');
+      // Reload data to sync with server and show correct ordering
+      await loadProfessionals();
     } catch (error) {
       console.error('Error updating order:', error);
       showAlert('Erro ao atualizar ordem', 'error');
       // Reload data to sync with server
-      loadProfessionals();
+      await loadProfessionals();
     }
   }, [professionals, loadProfessionals]);
 
@@ -333,30 +336,33 @@ export default function ProfessionalsPage() {
     const currentIndex = professionals.findIndex(p => p.id === professionalId);
     if (currentIndex >= professionals.length - 1) return;
 
+    // Create a copy of professionals array for local update
     const updatedProfessionals = [...professionals];
-    const currentProf = updatedProfessionals[currentIndex];
-    const nextProf = updatedProfessionals[currentIndex + 1];
-
-    // Swap display orders
-    const tempOrder = currentProf.display_order;
-    currentProf.display_order = nextProf.display_order;
-    nextProf.display_order = tempOrder;
+    
+    // Move the professional down by swapping positions
+    [updatedProfessionals[currentIndex], updatedProfessionals[currentIndex + 1]] = 
+    [updatedProfessionals[currentIndex + 1], updatedProfessionals[currentIndex]];
 
     // Update local state immediately for better UX
     setProfessionals(updatedProfessionals);
 
     try {
-      // Update on server
-      await professionalsApi.updateOrder([
-        { professional_id: currentProf.id, display_order: currentProf.display_order },
-        { professional_id: nextProf.id, display_order: nextProf.display_order }
-      ]);
+      // Reassign display_order values based on new positions to ensure uniqueness
+      const orderUpdates = updatedProfessionals.map((prof, index) => ({
+        professional_id: prof.id,
+        display_order: index + 1
+      }));
+
+      // Update on server with new sequential ordering
+      await professionalsApi.updateOrder(orderUpdates);
       showAlert('Ordem atualizada com sucesso!', 'success');
+      // Reload data to sync with server and show correct ordering
+      await loadProfessionals();
     } catch (error) {
       console.error('Error updating order:', error);
       showAlert('Erro ao atualizar ordem', 'error');
       // Reload data to sync with server
-      loadProfessionals();
+      await loadProfessionals();
     }
   }, [professionals, loadProfessionals]);
 
