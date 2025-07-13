@@ -19,8 +19,8 @@ export async function loginRequest(credentials) {
     password: credentials.password
   };
   
-  // Using public login endpoint (no tenant context needed)
-  const response = await api.post(buildApiEndpoint("auth/login", "v1", { isPublic: true }), loginPayload);
+  // Using tenant-aware login endpoint
+  const response = await api.post(buildApiEndpoint("auth/login"), loginPayload);
   return response.data; // Axios automatically wraps the response in a data object
 }
 

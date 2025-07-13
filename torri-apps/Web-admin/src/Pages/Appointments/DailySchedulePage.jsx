@@ -846,15 +846,12 @@ const DailySchedulePage = () => {
                     <div key={prof.id} className="p-xs sm:p-s border-r border-b border-bg-tertiary text-center">
                        <div className="flex flex-col items-center gap-xs">
                         {prof.photoUrl ? (
-                          <img src={prof.photoUrl} alt={prof.name} className="h-7 w-7 sm:h-8 md:h-10 md:w-10 rounded-full object-cover" />
+                          <img src={prof.photoUrl} alt={prof.name} className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full object-cover" title={prof.name} />
                         ) : (
-                          <div className="h-7 w-7 sm:h-8 md:h-10 md:w-10 rounded-full bg-accent-secondary flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-accent-secondary flex items-center justify-center text-white font-semibold text-xs sm:text-sm" title={prof.name}>
                             {prof.name.substring(0,1).toUpperCase()}{(prof.name.includes(' ') ? prof.name.split(' ')[1].substring(0,1).toUpperCase() : prof.name.substring(1,2).toUpperCase())}
                           </div>
                         )}
-                        <Typography variant="small" className="font-semibold text-text-primary text-xs sm:text-small truncate max-w-[80px] sm:max-w-[120px] md:max-w-[150px]" title={prof.name}>
-                          {prof.name}
-                        </Typography>
                       </div>
                     </div>
                   ))}

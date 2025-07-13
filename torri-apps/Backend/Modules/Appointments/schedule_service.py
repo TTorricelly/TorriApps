@@ -23,6 +23,9 @@ from Modules.Availability.constants import AvailabilityBlockType
 from Core.Auth.constants import UserRole
 from Config.Settings import settings
 
+# File handler for proper URL generation
+from Core.Utils.file_handler import file_handler
+
 
 def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleResponseSchema: # tenant_id parameter removed
     """
@@ -35,7 +38,7 @@ def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleRe
         # UserTenant.tenant_id == str(tenant_id), # Filter removed
         User.is_active == True, # Changed UserTenant to User
         User.role == UserRole.PROFISSIONAL # Ensure only professionals are included. Changed UserTenant to User
-    ).order_by(User.full_name) # Optional: order professionals by name. Changed UserTenant to User
+    ).order_by(User.display_order, User.full_name) # Order by display_order first, then name as fallback
 
     active_professionals = db.execute(stmt_professionals).scalars().all()
 
@@ -110,25 +113,15 @@ def get_daily_schedule_data(db: Session, schedule_date: date) -> DailyScheduleRe
                         )
                     )
 
+        # Use file handler to generate proper URL (handles both local and Google Cloud Storage)
         photo_url_to_send = None
         if prof.photo_path:
             server_host_url = str(settings.SERVER_HOST)
             if not server_host_url.startswith("http://") and not server_host_url.startswith("https://"):
                 server_host_url = f"http://{server_host_url}"
             server_host_url = server_host_url.rstrip('/')
-
-            base_url_path_prefix = "/uploads" # Corrected base path as per main.py static mount
-
-            processed_path_segment = prof.photo_path.lstrip('/')
-
-            if processed_path_segment.startswith('public/uploads/'):
-                processed_path_segment = processed_path_segment[len('public/uploads/'):]
-            elif processed_path_segment.startswith('uploads/'): # Handles cases where 'public/' might be missing but 'uploads/' is present
-                processed_path_segment = processed_path_segment[len('uploads/'):]
-
-            processed_path_segment = processed_path_segment.lstrip('/')
-
-            photo_url_to_send = f"{server_host_url}{base_url_path_prefix}/{processed_path_segment}"
+            
+            photo_url_to_send = file_handler.get_public_url(prof.photo_path, server_host_url)
 
         professionals_schedule_list.append(
             ProfessionalScheduleSchema(

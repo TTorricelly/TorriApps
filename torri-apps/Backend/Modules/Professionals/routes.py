@@ -39,6 +39,24 @@ def list_professionals(
         professionals = professional_services.get_professionals(db, skip=skip, limit=limit)
     return professionals
 
+# Display order management - MUST be before /{professional_id} routes
+class ProfessionalOrderUpdate(BaseModel):
+    professional_id: UUID
+    display_order: int
+
+class BulkOrderUpdate(BaseModel):
+    professionals: List[ProfessionalOrderUpdate]
+
+@router.put("/reorder", response_model=List[Professional])
+def update_professionals_order(
+    order_data: BulkOrderUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    """Update display order for multiple professionals."""
+    professionals = professional_services.update_professionals_order(db, order_data)
+    return professionals
+
 @router.post("", response_model=Professional, status_code=status.HTTP_201_CREATED)
 def create_professional(
     professional_data: ProfessionalCreate,
@@ -289,20 +307,4 @@ def delete_break(
             detail="Pausa não encontrada"
         )
 
-# Display order management
-class ProfessionalOrderUpdate(BaseModel):
-    professional_id: UUID
-    display_order: int
-
-class BulkOrderUpdate(BaseModel):
-    professionals: List[ProfessionalOrderUpdate]
-
-@router.put("/reorder", response_model=List[Professional])
-def update_professionals_order(
-    order_data: BulkOrderUpdate,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
-):
-    """Update display order for multiple professionals."""
-    professionals = professional_services.update_professionals_order(db, order_data)
-    return professionals
+# This section is now moved to before the {professional_id} routes

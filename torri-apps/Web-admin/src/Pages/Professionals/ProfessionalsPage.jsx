@@ -302,24 +302,23 @@ export default function ProfessionalsPage() {
     const currentIndex = professionals.findIndex(p => p.id === professionalId);
     if (currentIndex <= 0) return;
 
+    // Create a copy and swap positions
     const updatedProfessionals = [...professionals];
-    const currentProf = updatedProfessionals[currentIndex];
-    const prevProf = updatedProfessionals[currentIndex - 1];
+    [updatedProfessionals[currentIndex], updatedProfessionals[currentIndex - 1]] = 
+    [updatedProfessionals[currentIndex - 1], updatedProfessionals[currentIndex]];
 
-    // Swap display orders
-    const tempOrder = currentProf.display_order;
-    currentProf.display_order = prevProf.display_order;
-    prevProf.display_order = tempOrder;
+    // Assign sequential display_order values based on new positions
+    const orderUpdates = updatedProfessionals.map((prof, index) => {
+      prof.display_order = index + 1;
+      return { professional_id: prof.id, display_order: prof.display_order };
+    });
 
     // Update local state immediately for better UX
     setProfessionals(updatedProfessionals);
 
     try {
-      // Update on server
-      await professionalsApi.updateOrder([
-        { professional_id: currentProf.id, display_order: currentProf.display_order },
-        { professional_id: prevProf.id, display_order: prevProf.display_order }
-      ]);
+      // Update all professionals with their new order
+      await professionalsApi.updateOrder(orderUpdates);
       showAlert('Ordem atualizada com sucesso!', 'success');
     } catch (error) {
       console.error('Error updating order:', error);
@@ -333,24 +332,23 @@ export default function ProfessionalsPage() {
     const currentIndex = professionals.findIndex(p => p.id === professionalId);
     if (currentIndex >= professionals.length - 1) return;
 
+    // Create a copy and swap positions
     const updatedProfessionals = [...professionals];
-    const currentProf = updatedProfessionals[currentIndex];
-    const nextProf = updatedProfessionals[currentIndex + 1];
+    [updatedProfessionals[currentIndex], updatedProfessionals[currentIndex + 1]] = 
+    [updatedProfessionals[currentIndex + 1], updatedProfessionals[currentIndex]];
 
-    // Swap display orders
-    const tempOrder = currentProf.display_order;
-    currentProf.display_order = nextProf.display_order;
-    nextProf.display_order = tempOrder;
+    // Assign sequential display_order values based on new positions
+    const orderUpdates = updatedProfessionals.map((prof, index) => {
+      prof.display_order = index + 1;
+      return { professional_id: prof.id, display_order: prof.display_order };
+    });
 
     // Update local state immediately for better UX
     setProfessionals(updatedProfessionals);
 
     try {
-      // Update on server
-      await professionalsApi.updateOrder([
-        { professional_id: currentProf.id, display_order: currentProf.display_order },
-        { professional_id: nextProf.id, display_order: nextProf.display_order }
-      ]);
+      // Update all professionals with their new order
+      await professionalsApi.updateOrder(orderUpdates);
       showAlert('Ordem atualizada com sucesso!', 'success');
     } catch (error) {
       console.error('Error updating order:', error);

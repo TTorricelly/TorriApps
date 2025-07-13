@@ -1293,7 +1293,9 @@ export default function ProfessionalForm() {
         full_name: data.full_name || '',
         email: data.email || '',
         password: '', // Never load password
+        phone_number: data.phone_number || '',
         is_active: data.is_active ?? true,
+        display_order: data.display_order ?? 999,
       };
       
       setFormData(loadedFormData);
@@ -1372,7 +1374,9 @@ export default function ProfessionalForm() {
       const professionalData = {
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
+        phone_number: formData.phone_number?.trim() || null,
         is_active: formData.is_active,
+        display_order: formData.display_order,
       };
       
       // Add password only for new professionals
