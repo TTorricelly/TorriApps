@@ -12,169 +12,17 @@ import {
   Input,
   Badge,
   Spinner,
-  Dialog,
-  DialogHeader,
-  DialogBody,
-  DialogFooter,
   Alert,
-  Avatar,
 } from '@material-tailwind/react';
 import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon,
-  MagnifyingGlassIcon,
-  UserIcon,
-  Bars3Icon,
-  ArrowUpIcon,
-  ArrowDownIcon
+  PlusIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
 import { professionalsApi } from '../../Services/professionals';
 import { servicesApi } from '../../Services/services';
-
-// Optimized Professional Row Component with memoization
-const ProfessionalRow = React.memo(({ professional, index, onEdit, onDelete, onMoveUp, onMoveDown, getServiceTags, getInitials, canMoveUp, canMoveDown }) => {
-  const [imageError, setImageError] = useState(false);
-  
-  const handleRowClick = useCallback(() => {
-    onEdit(professional.id);
-  }, [onEdit, professional.id]);
-  
-  const handleEdit = useCallback((e) => {
-    e.stopPropagation();
-    onEdit(professional.id);
-  }, [onEdit, professional.id]);
-  
-  const handleDelete = useCallback((e) => {
-    e.stopPropagation();
-    onDelete(professional);
-  }, [onDelete, professional]);
-
-  const handleMoveUp = useCallback((e) => {
-    e.stopPropagation();
-    onMoveUp(professional.id);
-  }, [onMoveUp, professional.id]);
-
-  const handleMoveDown = useCallback((e) => {
-    e.stopPropagation();
-    onMoveDown(professional.id);
-  }, [onMoveDown, professional.id]);
-  
-  const serviceTags = useMemo(() => getServiceTags(professional), [getServiceTags, professional]);
-  const initials = useMemo(() => getInitials(professional.full_name), [getInitials, professional.full_name]);
-  
-  return (
-    <tr 
-      className={`border-b border-bg-tertiary hover:bg-bg-primary/50 cursor-pointer ${
-        index % 2 === 0 ? 'bg-bg-primary/20' : 'bg-bg-secondary'
-      }`}
-      onClick={handleRowClick}
-    >
-      <td className="p-4 text-center">
-        <Typography className="text-text-primary font-medium">
-          {professional.display_order || index + 1}
-        </Typography>
-      </td>
-      <td className="p-4">
-        <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant="text"
-            className={`p-1 ${canMoveUp ? 'text-accent-primary hover:bg-accent-primary/10' : 'text-text-tertiary cursor-not-allowed'}`}
-            onClick={handleMoveUp}
-            disabled={!canMoveUp}
-          >
-            <ArrowUpIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="text"
-            className={`p-1 ${canMoveDown ? 'text-accent-primary hover:bg-accent-primary/10' : 'text-text-tertiary cursor-not-allowed'}`}
-            onClick={handleMoveDown}
-            disabled={!canMoveDown}
-          >
-            <ArrowDownIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-      <td className="p-4">
-        <div className="w-10 h-10">
-          {professional.photo_url && !imageError ? (
-            <Avatar
-              src={professional.photo_url}
-              alt={professional.full_name}
-              className="w-10 h-10"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-10 h-10 bg-bg-tertiary rounded-full flex items-center justify-center">
-              <Typography className="text-text-secondary text-sm font-medium">
-                {initials}
-              </Typography>
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="p-4">
-        <Typography className="text-text-primary font-medium">
-          {professional.full_name || 'Nome não informado'}
-        </Typography>
-      </td>
-      <td className="p-4">
-        <Typography className="text-text-primary">
-          {professional.email}
-        </Typography>
-      </td>
-      <td className="p-4">
-        <div className="flex flex-wrap gap-1">
-          {serviceTags.length > 0 ? (
-            serviceTags.map((service, idx) => (
-              <span 
-                key={service.id || idx} 
-                className="inline-block px-2 py-1 text-xs bg-accent-primary/10 text-accent-primary rounded-md border border-accent-primary/20"
-              >
-                {service.name}
-              </span>
-            ))
-          ) : (
-            <Typography className="text-text-tertiary text-sm">
-              Nenhum serviço
-            </Typography>
-          )}
-        </div>
-      </td>
-      <td className="p-4">
-        <Badge 
-          color={professional.is_active ? "green" : "orange"}
-          className="text-xs"
-        >
-          {professional.is_active ? "Ativo" : "Inativo"}
-        </Badge>
-      </td>
-      <td className="p-4">
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outlined"
-            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-2"
-            onClick={handleEdit}
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outlined"
-            className="border-status-error text-status-error hover:bg-status-error/10 p-2"
-            onClick={handleDelete}
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  );
-});
+import { categoriesApi } from '../../Services/categories';
+import ProfessionalCard from './components/ProfessionalCard';
 
 export default function ProfessionalsPage() {
   const { navigate } = useNavigation();
@@ -182,11 +30,11 @@ export default function ProfessionalsPage() {
   // State management
   const [professionals, setProfessionals] = useState([]);
   const [allServices, setAllServices] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [serviceFilter, setServiceFilter] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, professional: null });
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
 
   // Load data on component mount
@@ -197,7 +45,8 @@ export default function ProfessionalsPage() {
       try {
         await Promise.all([
           loadProfessionals(),
-          loadAllServices()
+          loadAllServices(),
+          loadAllCategories()
         ]);
       } catch (error) {
         if (error.name !== 'AbortError') {
@@ -234,6 +83,15 @@ export default function ProfessionalsPage() {
       setAllServices(data);
     } catch (error) {
       console.error('Erro ao carregar serviços:', error);
+    }
+  }, []);
+
+  const loadAllCategories = useCallback(async () => {
+    try {
+      const data = await categoriesApi.getAll();
+      setAllCategories(data);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
     }
   }, []);
 
@@ -280,23 +138,6 @@ export default function ProfessionalsPage() {
     navigate(ROUTES.PROFESSIONALS.EDIT(professionalId));
   }, [navigate]);
 
-  const handleDeleteProfessional = useCallback((professional) => {
-    setDeleteDialog({ open: true, professional });
-  }, []);
-
-  const confirmDeleteProfessional = async () => {
-    try {
-      await professionalsApi.delete(deleteDialog.professional.id);
-      showAlert('Profissional excluído com sucesso!', 'success');
-      loadProfessionals(); // Reload professionals list
-    } catch (error) {
-      console.error('Erro ao excluir profissional:', error);
-      const message = error.response?.data?.detail || 'Falha ao excluir profissional';
-      showAlert(message, 'error');
-    } finally {
-      setDeleteDialog({ open: false, professional: null });
-    }
-  };
 
   const handleMoveProfessionalUp = useCallback(async (professionalId) => {
     const currentIndex = professionals.findIndex(p => p.id === professionalId);
@@ -357,10 +198,6 @@ export default function ProfessionalsPage() {
       loadProfessionals();
     }
   }, [professionals, loadProfessionals]);
-
-  const getServiceTags = useCallback((professional) => {
-    return professional.services_offered || [];
-  }, []);
 
   const getInitials = useCallback((fullName) => {
     if (!fullName) return '?';
@@ -503,72 +340,27 @@ export default function ProfessionalsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-bg-tertiary">
-                    <th className="text-center p-4 text-text-primary font-semibold">Ordem</th>
-                    <th className="text-center p-4 text-text-primary font-semibold">Reordenar</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Foto</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Nome Completo</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">E-mail</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Serviços</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Status</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProfessionals.map((professional, index) => (
-                    <ProfessionalRow
-                      key={professional.id}
-                      professional={professional}
-                      index={index}
-                      onEdit={handleEditProfessional}
-                      onDelete={handleDeleteProfessional}
-                      onMoveUp={handleMoveProfessionalUp}
-                      onMoveDown={handleMoveProfessionalDown}
-                      canMoveUp={index > 0}
-                      canMoveDown={index < filteredProfessionals.length - 1}
-                      getServiceTags={getServiceTags}
-                      getInitials={getInitials}
-                    />
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredProfessionals.map((professional, index) => (
+                <ProfessionalCard
+                  key={professional.id}
+                  professional={professional}
+                  index={index}
+                  allCategories={allCategories}
+                  allServices={allServices}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < filteredProfessionals.length - 1}
+                  onEdit={handleEditProfessional}
+                  onMoveUp={handleMoveProfessionalUp}
+                  onMoveDown={handleMoveProfessionalDown}
+                  getInitials={getInitials}
+                />
+              ))}
             </div>
           )}
         </CardBody>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialog.open}
-        handler={() => setDeleteDialog({ open: false, professional: null })}
-        className="bg-bg-secondary border-bg-tertiary"
-      >
-        <DialogHeader className="text-text-primary">
-          Confirmar Exclusão
-        </DialogHeader>
-        <DialogBody className="text-text-primary">
-          Tem certeza que deseja excluir o profissional "{deleteDialog.professional?.full_name || deleteDialog.professional?.email}"? 
-          Esta ação não pode ser desfeita.
-        </DialogBody>
-        <DialogFooter className="flex gap-2">
-          <Button
-            variant="outlined"
-            onClick={() => setDeleteDialog({ open: false, professional: null })}
-            className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={confirmDeleteProfessional}
-            className="bg-status-error hover:bg-status-error/90"
-          >
-            Confirmar Exclusão
-          </Button>
-        </DialogFooter>
-      </Dialog>
     </div>
   );
 }

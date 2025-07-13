@@ -38,143 +38,63 @@ import {
 
 import { professionalsApi } from '../../Services/professionals';
 import { servicesApi } from '../../Services/services';
+import { categoriesApi } from '../../Services/categories';
+import CategorySection from './components/CategorySection';
 
-// Service Tag Selector Component
-const ServiceTagSelector = ({ services, selectedServices, onServicesChange, showAlert }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+// Service Categories Selector Component - similar to ProfessionalCard view
+const ServiceCategoriesSelector = ({ services, categories, selectedServices, onServicesChange }) => {
+  // Group services by category
+  const servicesByCategory = useMemo(() => {
+    const groupedServices = {};
+    
+    // Initialize all categories
+    categories.forEach(category => {
+      groupedServices[category.id] = {
+        category,
+        allServices: [],
+        professionalServices: []
+      };
+    });
+    
+    // Group all services by category
+    services.forEach(service => {
+      if (groupedServices[service.category_id]) {
+        groupedServices[service.category_id].allServices.push(service);
+      }
+    });
+    
+    // Add selected services to their respective categories
+    const selectedServiceIds = new Set(selectedServices);
+    
+    services.forEach(service => {
+      if (selectedServiceIds.has(service.id) && groupedServices[service.category_id]) {
+        groupedServices[service.category_id].professionalServices.push(service);
+      }
+    });
+    
+    // Return all categories that have services (not just selected ones)
+    return Object.values(groupedServices).filter(group => 
+      group.allServices.length > 0
+    );
+  }, [categories, services, selectedServices]);
 
-  // Filter services based on search term and exclude already selected ones
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const notSelected = !selectedServices.includes(service.id);
-    return matchesSearch && notSelected;
-  });
-
-  const handleAddService = (serviceId) => {
-    if (!selectedServices.includes(serviceId)) {
+  const handleServiceToggle = (serviceId) => {
+    if (selectedServices.includes(serviceId)) {
+      onServicesChange(selectedServices.filter(id => id !== serviceId));
+    } else {
       onServicesChange([...selectedServices, serviceId]);
     }
-    setSearchTerm('');
-    setIsDropdownOpen(false);
   };
 
-  const handleRemoveService = (serviceId) => {
-    onServicesChange(selectedServices.filter(id => id !== serviceId));
-  };
-
-  const getServiceById = (serviceId) => {
-    return services.find(service => service.id === serviceId);
-  };
+  const createClickableCategory = (group) => ({
+    ...group,
+    onServiceClick: handleServiceToggle
+  });
 
   return (
-    <div className="space-y-3">
-      {/* Selected Services Tags */}
-      {selectedServices.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedServices.map((serviceId) => {
-            const service = getServiceById(serviceId);
-            return service ? (
-              <div
-                key={serviceId}
-                className="flex items-center gap-2 bg-accent-primary/20 text-accent-primary px-3 py-1.5 rounded-full text-sm font-medium border border-accent-primary/30"
-              >
-                <span>{service.name}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveService(serviceId)}
-                  className="hover:bg-accent-primary/30 rounded-full p-0.5 transition-colors"
-                >
-                  <XMarkIcon className="h-3 w-3" />
-                </button>
-              </div>
-            ) : null;
-          })}
-        </div>
-      )}
-
-      {/* Search Input */}
-      <div className="relative">
-        <Input
-          label="Pesquisar e adicionar serviços"
-          placeholder="Digite o nome do serviço..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsDropdownOpen(true);
-          }}
-          onFocus={() => setIsDropdownOpen(true)}
-          className="bg-bg-primary border-bg-tertiary text-text-primary"
-          labelProps={{ className: "text-text-secondary" }}
-          containerProps={{ className: "text-text-primary" }}
-          icon={
-            <div className="flex items-center gap-2">
-              {selectedServices.length > 0 && (
-                <div className="bg-accent-primary/20 text-accent-primary px-2 py-0.5 rounded text-xs font-medium">
-                  {selectedServices.length}
-                </div>
-              )}
-              <div className="text-text-tertiary">
-                {isDropdownOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsDropdownOpen(false)}
-                  >
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsDropdownOpen(true)}
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          }
-        />
-
-        {/* Dropdown with filtered services */}
-        {isDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-            {filteredServices.length > 0 ? (
-              <div className="p-1">
-                {filteredServices.map((service) => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => handleAddService(service.id)}
-                    className="w-full text-left px-3 py-2 text-text-primary hover:bg-bg-tertiary rounded transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{service.name}</span>
-                      <PlusIcon className="h-4 w-4 text-accent-primary" />
-                    </div>
-                    {service.category && (
-                      <span className="text-text-secondary text-sm">{service.category.name}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-4 text-center">
-                <Typography className="text-text-secondary text-sm">
-                  {searchTerm 
-                    ? 'Nenhum serviço encontrado com esse nome'
-                    : selectedServices.length === services.length
-                      ? 'Todos os serviços já foram selecionados'
-                      : 'Digite para pesquisar serviços'
-                  }
-                </Typography>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-4">
       {/* Summary */}
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-sm p-3 bg-bg-primary rounded-lg border border-bg-tertiary">
         <Typography className="text-text-secondary">
           {selectedServices.length > 0 
             ? `${selectedServices.length} serviço${selectedServices.length > 1 ? 's' : ''} selecionado${selectedServices.length > 1 ? 's' : ''}`
@@ -192,13 +112,32 @@ const ServiceTagSelector = ({ services, selectedServices, onServicesChange, show
         )}
       </div>
 
-      {/* Click outside to close dropdown */}
-      {isDropdownOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsDropdownOpen(false)}
-        />
-      )}
+      {/* Services by Category */}
+      <div className="border border-bg-tertiary rounded-lg p-4 bg-bg-primary">
+        <Typography variant="h6" className="text-text-primary mb-4">
+          Selecione os serviços que este profissional pode realizar
+        </Typography>
+        
+        {servicesByCategory.length > 0 ? (
+          servicesByCategory.map((group) => (
+            <CategorySection
+              key={group.category.id}
+              category={group.category}
+              allServicesInCategory={group.allServices}
+              professionalServices={group.professionalServices}
+              showAllServices={true}
+              onServiceClick={handleServiceToggle}
+              isInteractive={true}
+            />
+          ))
+        ) : (
+          <div className="text-center py-6">
+            <Typography className="text-text-tertiary text-sm">
+              Nenhuma categoria ou serviço cadastrado
+            </Typography>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -212,6 +151,7 @@ const BasicDataTab = ({
   photoPreview, 
   handlePhotoRemove,
   allServices,
+  allCategories,
   selectedServices,
   setSelectedServices,
   showAlert,
@@ -375,29 +315,16 @@ const BasicDataTab = ({
             </div>
           </div>
 
-          {/* Role and Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Typography className="text-text-secondary text-sm mb-2">
-                Função/Role
-              </Typography>
-              <div className="bg-bg-primary border border-bg-tertiary rounded-lg p-3">
-                <Typography className="text-text-primary">
-                  PROFISSIONAL
-                </Typography>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 pt-6">
-              <Switch
-                checked={formData.is_active}
-                onChange={(e) => handleInputChange('is_active', e.target.checked)}
-                color="blue"
-              />
-              <Typography className="text-text-primary">
-                Ativo
-              </Typography>
-            </div>
+          {/* Status */}
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={formData.is_active}
+              onChange={(e) => handleInputChange('is_active', e.target.checked)}
+              color="blue"
+            />
+            <Typography className="text-text-primary">
+              Ativo
+            </Typography>
           </div>
         </div>
       </div>
@@ -467,11 +394,11 @@ const BasicDataTab = ({
           Serviços Associados
         </Typography>
         
-        <ServiceTagSelector
+        <ServiceCategoriesSelector
           services={allServices}
+          categories={allCategories}
           selectedServices={selectedServices}
           onServicesChange={setSelectedServices}
-          showAlert={showAlert}
         />
         
               </div>
@@ -1241,6 +1168,7 @@ export default function ProfessionalForm() {
   // UI state
   const [activeTab, setActiveTab] = useState('basic');
   const [allServices, setAllServices] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -1254,6 +1182,7 @@ export default function ProfessionalForm() {
   // Load data on component mount
   useEffect(() => {
     loadAllServices();
+    loadAllCategories();
     if (isEdit) {
       loadProfessional();
     }
@@ -1281,6 +1210,15 @@ export default function ProfessionalForm() {
       setAllServices(data);
     } catch (error) {
       console.error('Erro ao carregar serviços:', error);
+    }
+  };
+  
+  const loadAllCategories = async () => {
+    try {
+      const data = await categoriesApi.getAll();
+      setAllCategories(data);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
     }
   };
   
@@ -1567,6 +1505,7 @@ export default function ProfessionalForm() {
                     photoPreview={photoPreview}
                     handlePhotoRemove={handlePhotoRemove}
                     allServices={allServices}
+                    allCategories={allCategories}
                     selectedServices={selectedServices}
                     setSelectedServices={setSelectedServices}
                     showAlert={showAlert}
