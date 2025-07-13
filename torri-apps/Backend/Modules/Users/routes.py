@@ -146,6 +146,13 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
     
     Only completed appointments (COMPLETED status) are considered as actual visits.
     """
+    # Input validation for visit date parameters
+    if last_visit_days is not None and last_visit_days <= 0:
+        raise HTTPException(status_code=400, detail="last_visit_days must be positive")
+    if last_visit_days is not None and never_visited is True:
+        raise HTTPException(status_code=400, detail="Cannot use both last_visit_days and never_visited")
+    if last_visit_days is not None and last_visit_days > 3650:  # ~10 years max
+        raise HTTPException(status_code=400, detail="last_visit_days cannot exceed 3650 days")
     # Start with base query including labels
     query = db.query(User).options(joinedload(User.labels))
     
@@ -171,27 +178,36 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
             User.phone_number.ilike(search_filter)
         )
     
-    # Apply visit date filtering
-    if never_visited is True:
-        # Filter users who have never had a completed appointment
-        subquery = db.query(Appointment.client_id).filter(
-            Appointment.status == AppointmentStatus.COMPLETED
-        ).distinct()
-        query = query.filter(~User.id.in_(subquery))
-    elif last_visit_days is not None:
-        # Filter users who haven't visited in X+ days
-        cutoff_date = date.today() - timedelta(days=last_visit_days)
-        
-        # Subquery to get users with recent completed appointments
-        recent_visits_subquery = db.query(Appointment.client_id).filter(
-            and_(
-                Appointment.status == AppointmentStatus.COMPLETED,
-                Appointment.appointment_date > cutoff_date
-            )
-        ).distinct()
-        
-        # Get users who either have no appointments or haven't visited recently
-        query = query.filter(~User.id.in_(recent_visits_subquery))
+    # Apply visit date filtering using efficient LEFT JOIN approach
+    try:
+        if never_visited is True:
+            # Filter users who have never had a completed appointment using LEFT JOIN
+            query = query.outerjoin(
+                Appointment, 
+                and_(
+                    User.id == Appointment.client_id, 
+                    Appointment.status == AppointmentStatus.COMPLETED
+                )
+            ).filter(Appointment.client_id.is_(None))
+        elif last_visit_days is not None:
+            # Filter users who haven't visited in X+ days using LEFT JOIN
+            cutoff_date = date.today() - timedelta(days=last_visit_days)
+            
+            # Use LEFT JOIN to find users with no recent completed appointments
+            query = query.outerjoin(
+                Appointment,
+                and_(
+                    User.id == Appointment.client_id,
+                    Appointment.status == AppointmentStatus.COMPLETED,
+                    Appointment.appointment_date > cutoff_date
+                )
+            ).filter(Appointment.client_id.is_(None))
+    except Exception as e:
+        # Handle database errors during complex filtering
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Database error during visit date filtering: {str(e)}"
+        )
     
     users = query.offset(skip).limit(limit).all()
     return users

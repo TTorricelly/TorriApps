@@ -71,12 +71,18 @@ function UsersPage() {
       if (search) params.search = search;
       if (role) params.role = role;
       
-      // Handle visit date filtering
+      // Handle visit date filtering with validation
       if (visitDate) {
         if (visitDate === 'never') {
           params.never_visited = true;
         } else {
-          params.last_visit_days = parseInt(visitDate);
+          const parsedDays = parseInt(visitDate);
+          if (isNaN(parsedDays)) {
+            console.error('Invalid visit date filter value:', visitDate);
+            showAlert('Valor de filtro de visita inválido', 'error');
+            return;
+          }
+          params.last_visit_days = parsedDays;
         }
       }
       
