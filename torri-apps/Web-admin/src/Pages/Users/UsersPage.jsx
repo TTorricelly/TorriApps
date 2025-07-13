@@ -49,7 +49,10 @@ function UsersPage() {
   // Search when query or filter changes (with debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadUsers(searchQuery, roleFilter, visitDateFilter);
+      // Only search if query is empty or has 3+ characters to improve performance
+      if (searchQuery === '' || searchQuery.length >= 3) {
+        loadUsers(searchQuery, roleFilter, visitDateFilter);
+      }
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
