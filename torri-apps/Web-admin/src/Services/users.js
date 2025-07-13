@@ -40,6 +40,22 @@ export const usersApi = {
     );
   },
 
+  // Search users with flexible parameters (for advanced filtering)
+  searchUsersWithParams: async (params = {}) => {
+    const endpoint = buildApiEndpoint('users');
+    const requestParams = { limit: 10000, ...params };
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint, { params: requestParams }),
+      {
+        defaultValue: [],
+        transformData: (data) => {
+          return Array.isArray(data) ? data : [];
+        }
+      }
+    );
+  },
+
   // Get user by ID
   getUserById: async (userId) => {
     const endpoint = buildApiEndpoint(`users/${userId}`);

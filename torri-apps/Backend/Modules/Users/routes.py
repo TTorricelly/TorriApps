@@ -1,8 +1,10 @@
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 from uuid import UUID
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query, Path # Added Response, Query, and Path
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, and_, or_, distinct
 from pydantic import BaseModel
 
 # Schemas
@@ -17,6 +19,9 @@ from Core.Auth.dependencies import get_current_user_from_db, require_role
 from Core.Auth.constants import UserRole
 from Core.Auth.models import User # For type hinting current_user. Updated import
 from Modules.Labels.models import Label, user_labels_association
+# Appointment models for visit date filtering
+from Modules.Appointments.models import Appointment
+from Modules.Appointments.constants import AppointmentStatus
 
 class BulkLabelUpdateRequest(BaseModel):
     label_ids: List[UUID]
@@ -128,11 +133,26 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
     limit: int = 100,
     role: str = Query(None, description="Filter users by role (e.g., CLIENTE)"),
     search: str = Query(None, description="Search users by name, nickname, email, or phone"),
-    label_ids: List[UUID] = Query(None, description="Filter users by label IDs")
+    label_ids: List[UUID] = Query(None, description="Filter users by label IDs"),
+    last_visit_days: Optional[int] = Query(None, description="Filter clients who haven't visited in X+ days (e.g., 30, 60, 90)"),
+    never_visited: Optional[bool] = Query(None, description="Filter clients who never had completed appointments")
 ):
     """
-    Retrieve all users, optionally filtered by role, search term, and labels.
+    Retrieve all users, optionally filtered by role, search term, labels, and visit history.
+    
+    Visit date filtering:
+    - last_visit_days: Filter clients who haven't visited in X+ days (e.g., 30, 60, 90)
+    - never_visited: Filter clients who never had completed appointments
+    
+    Only completed appointments (COMPLETED status) are considered as actual visits.
     """
+    # Input validation for visit date parameters
+    if last_visit_days is not None and last_visit_days <= 0:
+        raise HTTPException(status_code=400, detail="last_visit_days must be positive")
+    if last_visit_days is not None and never_visited is True:
+        raise HTTPException(status_code=400, detail="Cannot use both last_visit_days and never_visited")
+    if last_visit_days is not None and last_visit_days > 3650:  # ~10 years max
+        raise HTTPException(status_code=400, detail="last_visit_days cannot exceed 3650 days")
     # Start with base query including labels
     query = db.query(User).options(joinedload(User.labels))
     
@@ -156,6 +176,37 @@ def read_users_in_tenant( # Function name might be misleading now, consider rena
             User.nickname.ilike(search_filter) |
             User.email.ilike(search_filter) |
             User.phone_number.ilike(search_filter)
+        )
+    
+    # Apply visit date filtering using efficient LEFT JOIN approach
+    try:
+        if never_visited is True:
+            # Filter users who have never had a completed appointment using LEFT JOIN
+            query = query.outerjoin(
+                Appointment, 
+                and_(
+                    User.id == Appointment.client_id, 
+                    Appointment.status == AppointmentStatus.COMPLETED
+                )
+            ).filter(Appointment.client_id.is_(None))
+        elif last_visit_days is not None:
+            # Filter users who haven't visited in X+ days using LEFT JOIN
+            cutoff_date = date.today() - timedelta(days=last_visit_days)
+            
+            # Use LEFT JOIN to find users with no recent completed appointments
+            query = query.outerjoin(
+                Appointment,
+                and_(
+                    User.id == Appointment.client_id,
+                    Appointment.status == AppointmentStatus.COMPLETED,
+                    Appointment.appointment_date > cutoff_date
+                )
+            ).filter(Appointment.client_id.is_(None))
+    except Exception as e:
+        # Handle database errors during complex filtering
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Database error during visit date filtering: {str(e)}"
         )
     
     users = query.offset(skip).limit(limit).all()
