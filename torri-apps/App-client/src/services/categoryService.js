@@ -98,7 +98,12 @@ export const getServicesByCategory = async (categoryId) => {
   
   return withApiErrorHandling(
     async () => {
-      const response = await apiClient.get(endpoint, { params: { category_id: categoryId } });
+      const response = await apiClient.get(endpoint, { 
+        params: { 
+          category_id: categoryId,
+          order_by: 'display_order'
+        } 
+      });
       
       // Fetch images for each service using public API
       const servicesWithImages = await Promise.all(

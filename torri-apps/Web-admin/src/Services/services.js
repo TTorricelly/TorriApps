@@ -15,6 +15,8 @@ export const servicesApi = {
   // Override getAll to support category filtering
   getAll: async (categoryId = null) => {
     const params = categoryId ? { category_id: categoryId } : {};
+    // Add ordering by display_order
+    params.order_by = 'display_order';
     const endpoint = buildApiEndpoint('services');
     
     return withApiErrorHandling(
@@ -46,6 +48,19 @@ export const servicesApi = {
           if (!data) return null;
           return transformEntityWithImages(data, []);
         }
+      }
+    );
+  },
+
+  // Reorder services
+  reorder: async (reorderData) => {
+    const endpoint = buildApiEndpoint('services/reorder');
+    
+    return withApiErrorHandling(
+      () => api.put(endpoint, { services: reorderData }),
+      {
+        defaultValue: false,
+        transformData: () => true
       }
     );
   },

@@ -22,9 +22,9 @@ import {
 } from '@material-tailwind/react';
 import { 
   PlusIcon, 
-  PencilIcon, 
-  TrashIcon,
-  MagnifyingGlassIcon 
+  MagnifyingGlassIcon,
+  ArrowUpIcon,
+  ArrowDownIcon
 } from '@heroicons/react/24/outline';
 
 import { categoriesApi } from '../../Services/categories';
@@ -45,7 +45,6 @@ export default function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, service: null });
   const [alert, setAlert] = useState({ show: false, message: '', type: 'success' });
   const [variationCounts, setVariationCounts] = useState({});
 
@@ -191,21 +190,59 @@ export default function ServicesPage() {
     navigate(ROUTES.SERVICES.EDIT(serviceId));
   };
 
-  const handleDeleteService = async (service) => {
-    setDeleteDialog({ open: true, service });
+  const handleMoveServiceUp = async (serviceIndex) => {
+    if (serviceIndex === 0) return; // Can't move first item up
+
+    try {
+      // Create new array with swapped items
+      const newServices = [...services];
+      [newServices[serviceIndex], newServices[serviceIndex - 1]] = [newServices[serviceIndex - 1], newServices[serviceIndex]];
+      
+      // Update display_order for all services
+      const reorderData = newServices.map((service, index) => ({
+        service_id: service.id,
+        display_order: index + 1
+      }));
+
+      // Optimistic update
+      setServices(newServices);
+
+      // Send to backend
+      await servicesApi.reorder(reorderData);
+      showAlert('Ordem dos serviços atualizada com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao reordenar serviços:', error);
+      showAlert('Erro ao reordenar serviços', 'error');
+      // Reload services to reset state
+      loadServices();
+    }
   };
 
-  const confirmDeleteService = async () => {
+  const handleMoveServiceDown = async (serviceIndex) => {
+    if (serviceIndex === services.length - 1) return; // Can't move last item down
+
     try {
-      await servicesApi.delete(deleteDialog.service.id);
-      showAlert('Serviço excluído com sucesso!', 'success');
-      loadServices(); // Reload services list and variation counts
+      // Create new array with swapped items
+      const newServices = [...services];
+      [newServices[serviceIndex], newServices[serviceIndex + 1]] = [newServices[serviceIndex + 1], newServices[serviceIndex]];
+      
+      // Update display_order for all services
+      const reorderData = newServices.map((service, index) => ({
+        service_id: service.id,
+        display_order: index + 1
+      }));
+
+      // Optimistic update
+      setServices(newServices);
+
+      // Send to backend
+      await servicesApi.reorder(reorderData);
+      showAlert('Ordem dos serviços atualizada com sucesso!', 'success');
     } catch (error) {
-      console.error('Erro ao excluir serviço:', error);
-      const message = error.response?.data?.detail || 'Falha ao excluir serviço';
-      showAlert(message, 'error');
-    } finally {
-      setDeleteDialog({ open: false, service: null });
+      console.error('Erro ao reordenar serviços:', error);
+      showAlert('Erro ao reordenar serviços', 'error');
+      // Reload services to reset state
+      loadServices();
     }
   };
 
@@ -353,6 +390,7 @@ export default function ServicesPage() {
                 <thead>
                   <tr className="border-b border-bg-tertiary">
                     <th className="text-left p-4 text-text-primary font-semibold">Imagem</th>
+                    <th className="text-left p-4 text-text-primary font-semibold w-24">Ordem</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Nome do Serviço</th>
                     <th className="text-left p-4 text-text-primary font-semibold">SKU</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Duração (min)</th>
@@ -362,7 +400,6 @@ export default function ServicesPage() {
                     <th className="text-left p-4 text-text-primary font-semibold">Variações</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Paralelo</th>
                     <th className="text-left p-4 text-text-primary font-semibold">Status</th>
-                    <th className="text-left p-4 text-text-primary font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,6 +442,28 @@ export default function ServicesPage() {
                         </div>
                       </td>
                       <td className="p-4">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-1"
+                            onClick={() => handleMoveServiceUp(index)}
+                            disabled={index === 0}
+                          >
+                            <ArrowUpIcon className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-1"
+                            onClick={() => handleMoveServiceDown(index)}
+                            disabled={index === filteredServices.length - 1}
+                          >
+                            <ArrowDownIcon className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                      <td className="p-4">
                         <Typography className="text-text-primary font-medium">
                           {service.name}
                         </Typography>
@@ -443,19 +502,12 @@ export default function ServicesPage() {
                         />
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            color={variationCounts[service.id] > 0 ? "blue" : "gray"}
-                            className="text-xs w-fit"
-                          >
-                            {variationCounts[service.id] || 0}
-                          </Badge>
-                          {variationCounts[service.id] > 0 && (
-                            <Typography className="text-text-secondary text-xs">
-                              variações
-                            </Typography>
-                          )}
-                        </div>
+                        <Badge 
+                          color={variationCounts[service.id] > 0 ? "blue" : "gray"}
+                          className="text-xs w-fit"
+                        >
+                          {variationCounts[service.id] || 0}
+                        </Badge>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col gap-1">
@@ -480,26 +532,6 @@ export default function ServicesPage() {
                           {service.is_active ? "Ativo" : "Inativo"}
                         </Badge>
                       </td>
-                      <td className="p-4">
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="border-accent-primary text-accent-primary hover:bg-accent-primary/10 p-2"
-                            onClick={() => handleEditService(service.id)}
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="border-status-error text-status-error hover:bg-status-error/10 p-2"
-                            onClick={() => handleDeleteService(service)}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -509,35 +541,6 @@ export default function ServicesPage() {
         </CardBody>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialog.open}
-        handler={() => setDeleteDialog({ open: false, service: null })}
-        className="bg-bg-secondary border-bg-tertiary"
-      >
-        <DialogHeader className="text-text-primary">
-          Confirmar Exclusão
-        </DialogHeader>
-        <DialogBody className="text-text-primary">
-          Tem certeza que deseja excluir o serviço "{deleteDialog.service?.name}"? 
-          Esta ação não pode ser desfeita.
-        </DialogBody>
-        <DialogFooter className="flex gap-2">
-          <Button
-            variant="outlined"
-            onClick={() => setDeleteDialog({ open: false, service: null })}
-            className="border-bg-tertiary text-text-primary hover:bg-bg-primary"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={confirmDeleteService}
-            className="bg-status-error hover:bg-status-error/90"
-          >
-            Confirmar Exclusão
-          </Button>
-        </DialogFooter>
-      </Dialog>
     </div>
   );
 }

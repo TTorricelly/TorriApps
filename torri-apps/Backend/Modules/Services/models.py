@@ -56,6 +56,9 @@ class Service(Base):
     # Price evaluation field
     price_subject_to_evaluation = Column(Boolean, nullable=False, default=False)  # Price requires evaluation
     
+    # Display order for sorting services
+    display_order = Column(Integer, nullable=False, default=0, index=True)
+    
     # Note: Image fields removed - now handled by ServiceImage model with flexible labeling
     # Old fields: image, image_liso, image_ondulado, image_cacheado, image_crespo
 

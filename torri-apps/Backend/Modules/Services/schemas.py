@@ -54,6 +54,8 @@ class ServiceBase(BaseModel):
     max_parallel_pros: int = Field(default=1, gt=0, example=1, description="Maximum number of professionals that can work simultaneously")
     # Price evaluation field
     price_subject_to_evaluation: bool = Field(default=False, example=False, description="True if service price requires evaluation")
+    # Display order field
+    display_order: int = Field(default=0, ge=0, example=0, description="Display order for sorting services")
     category_id: UUID
 
 class ServiceCreate(ServiceBase):
@@ -73,6 +75,8 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     max_parallel_pros: Optional[int] = Field(None, gt=0, description="Maximum number of professionals that can work simultaneously")
     # Price evaluation field
     price_subject_to_evaluation: Optional[bool] = Field(None, description="True if service price requires evaluation")
+    # Display order field
+    display_order: Optional[int] = Field(None, ge=0, description="Display order for sorting services")
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change
@@ -285,3 +289,15 @@ class ServiceCompleteResponse(ServiceSchema):
     
     class Config:
         from_attributes = True
+
+
+# --- Service Reorder Schemas ---
+
+class ServiceReorderItem(BaseModel):
+    """Schema for a single service reorder item."""
+    service_id: UUID = Field(..., description="ID of the service to reorder")
+    display_order: int = Field(..., ge=0, description="New display order for the service")
+
+class ServiceReorderRequest(BaseModel):
+    """Schema for reordering services."""
+    services: List[ServiceReorderItem] = Field(..., description="List of services with their new order")

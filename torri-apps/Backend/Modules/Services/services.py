@@ -10,7 +10,8 @@ from .schemas import (
     CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdate, CategorySchema, ServiceSchema,
     ServiceVariationGroupCreate, ServiceVariationGroupUpdate, ServiceVariationGroupSchema, ServiceVariationGroupWithVariationsSchema,
     ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationSchema, ServiceVariationWithGroupSchema,
-    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse
+    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse,
+    ServiceReorderRequest
 )
 from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
@@ -173,6 +174,13 @@ def create_service(db: Session, service_data: ServiceCreate) -> Service: # tenan
     if 'service_sku' in service_dict and service_dict['service_sku'] == '':
         service_dict['service_sku'] = None
     
+    # Auto-assign display_order if not provided
+    if service_dict.get('display_order', 0) == 0:
+        # Get the next display_order value
+        stmt_max_order = select(func.coalesce(func.max(Service.display_order), -1))
+        max_order = db.execute(stmt_max_order).scalar()
+        service_dict['display_order'] = max_order + 1
+    
     # PostgreSQL with UUID(as_uuid=True) expects UUID objects, not strings
     db_service = Service(**service_dict)
 
@@ -211,7 +219,7 @@ def get_services( # Renamed from get_services_by_tenant
     if category_id:
         stmt = stmt.where(Service.category_id == category_id) # PostgreSQL UUID comparison
 
-    stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
+    stmt = stmt.order_by(Service.display_order, Service.name).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
 
 def get_all_services(
@@ -227,7 +235,7 @@ def get_all_services(
     if category_id:
         stmt = stmt.where(Service.category_id == category_id) # PostgreSQL UUID comparison
 
-    stmt = stmt.order_by(Service.name).offset(skip).limit(limit)
+    stmt = stmt.order_by(Service.display_order, Service.name).offset(skip).limit(limit)
     # Ensure the return is a list of Service model instances
     services_list = list(db.execute(stmt).scalars().all())
     
@@ -647,4 +655,38 @@ def batch_delete_variations(db: Session, batch_data: BatchVariationDelete) -> Ba
             success_count=0,
             failed_count=len(batch_data.variation_ids),
             errors=[f"Batch delete failed: {str(e)}"]
+        )
+
+
+# --- Service Reordering ---
+
+def reorder_services(db: Session, reorder_data: ServiceReorderRequest) -> bool:
+    """Reorder services by updating their display_order."""
+    try:
+        # Validate all services exist
+        service_ids = [item.service_id for item in reorder_data.services]
+        stmt = select(Service).where(Service.id.in_(service_ids))
+        services = db.execute(stmt).scalars().all()
+        
+        if len(services) != len(service_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Some services not found"
+            )
+        
+        # Update display orders
+        for item in reorder_data.services:
+            stmt_update = update(Service).where(
+                Service.id == item.service_id
+            ).values(display_order=item.display_order)
+            db.execute(stmt_update)
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reorder services: {str(e)}"
         )

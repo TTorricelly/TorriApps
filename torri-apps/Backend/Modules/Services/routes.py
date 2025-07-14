@@ -18,7 +18,8 @@ from .schemas import (
     ServiceVariationGroupSchema, ServiceVariationGroupCreate, ServiceVariationGroupUpdate, ServiceVariationGroupWithVariationsSchema,
     ServiceVariationSchema, ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationWithGroupSchema,
     ServiceWithVariationsResponse,
-    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse
+    VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse,
+    ServiceReorderRequest
 )
 from .models import Category, Service, ServiceVariationGroup, ServiceVariation # For type hinting service responses
 
@@ -192,6 +193,30 @@ def list_services_endpoint(
     return services_logic.get_all_services(
         db=db, category_id=category_id, skip=skip, limit=limit
     )
+
+@services_router.put(
+    "/reorder",
+    status_code=status.HTTP_200_OK,
+    summary="Reorder services by updating their display_order."
+)
+async def reorder_services_endpoint(
+    reorder_data: ServiceReorderRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    """
+    Reorder services by updating their display_order values.
+    
+    This endpoint allows managers to change the order in which services appear
+    in lists and menus by updating the display_order field for multiple services.
+    """
+    success = services_logic.reorder_services(db=db, reorder_data=reorder_data)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reorder services"
+        )
+    return {"message": "Services reordered successfully"}
 
 @services_router.get(
     "/{service_id}",
