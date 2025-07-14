@@ -68,9 +68,6 @@ class Service(Base):
     finishing_time = Column(Integer, nullable=True)
     transition_time = Column(Integer, nullable=True)
     
-    # Processing behavior fields
-    allows_parallel_during_processing = Column(Boolean, nullable=False, default=False)
-    can_be_done_during_processing = Column(Boolean, nullable=False, default=False)
     
     # Note: Image fields removed - now handled by ServiceImage model with flexible labeling
     # Old fields: image, image_liso, image_ondulado, image_cacheado, image_crespo

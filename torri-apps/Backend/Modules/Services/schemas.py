@@ -63,9 +63,6 @@ class ServiceBase(BaseModel):
     processing_time: Optional[int] = Field(None, ge=0, le=600, example=30, description="Processing time where client waits (minutes)")
     finishing_time: Optional[int] = Field(None, ge=0, le=180, example=15, description="Final steps after processing (minutes)")
     transition_time: Optional[int] = Field(None, ge=0, le=60, example=5, description="Setup/cleanup time between services (minutes)")
-    # Processing behavior fields
-    allows_parallel_during_processing: bool = Field(default=False, example=False, description="Other services can run during this service's processing time")
-    can_be_done_during_processing: bool = Field(default=False, example=False, description="This service can run during another's processing time")
     category_id: UUID
     
     @field_validator('processing_time', 'finishing_time')
@@ -107,9 +104,6 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     processing_time: Optional[int] = Field(None, ge=0, le=600, description="Processing time where client waits (minutes)")
     finishing_time: Optional[int] = Field(None, ge=0, le=180, description="Final steps after processing (minutes)")
     transition_time: Optional[int] = Field(None, ge=0, le=60, description="Setup/cleanup time between services (minutes)")
-    # Processing behavior fields
-    allows_parallel_during_processing: Optional[bool] = Field(None, description="Other services can run during this service's processing time")
-    can_be_done_during_processing: Optional[bool] = Field(None, description="This service can run during another's processing time")
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change

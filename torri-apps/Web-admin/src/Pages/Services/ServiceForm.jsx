@@ -293,6 +293,8 @@ export default function ServiceForm() {
     service_sku: '',
     description: '',
     duration_minutes: '',
+    processing_time: '',
+    finishing_time: '',
     commission_percentage: '',
     price: '',
     is_active: true,
@@ -393,6 +395,8 @@ export default function ServiceForm() {
         service_sku: serviceData.service_sku || '',
         description: serviceData.description || '',
         duration_minutes: serviceData.duration_minutes?.toString() || '',
+        processing_time: serviceData.processing_time?.toString() || '',
+        finishing_time: serviceData.finishing_time?.toString() || '',
         commission_percentage: serviceData.commission_percentage?.toString() || '',
         price: serviceData.price?.toString() || '',
         is_active: serviceData.is_active ?? true,
@@ -456,6 +460,22 @@ export default function ServiceForm() {
     const duration = parseInt(formData.duration_minutes);
     if (!duration || duration < 5 || duration > 480) {
       newErrors.duration_minutes = 'Valor deve estar entre 5 e 480';
+    }
+    
+    // Processing time is optional but must be valid if provided
+    if (formData.processing_time) {
+      const processingTime = parseInt(formData.processing_time);
+      if (isNaN(processingTime) || processingTime < 0 || processingTime > 480) {
+        newErrors.processing_time = 'Valor deve estar entre 0 e 480';
+      }
+    }
+    
+    // Finishing time is optional but must be valid if provided
+    if (formData.finishing_time) {
+      const finishingTime = parseInt(formData.finishing_time);
+      if (isNaN(finishingTime) || finishingTime < 0 || finishingTime > 480) {
+        newErrors.finishing_time = 'Valor deve estar entre 0 e 480';
+      }
     }
     
     const commission = parseFloat(formData.commission_percentage);
@@ -594,7 +614,7 @@ export default function ServiceForm() {
       const firstErrorField = Object.keys(errors)[0];
       let targetTab = 'basic';
       
-      if (['name', 'duration_minutes', 'price', 'commission_percentage', 'is_active', 'parallelable', 'max_parallel_pros'].includes(firstErrorField)) {
+      if (['name', 'duration_minutes', 'processing_time', 'finishing_time', 'price', 'commission_percentage', 'is_active', 'parallelable', 'max_parallel_pros'].includes(firstErrorField)) {
         targetTab = 'basic';
       } else if (['description'].includes(firstErrorField)) {
         targetTab = 'description';
@@ -617,6 +637,8 @@ export default function ServiceForm() {
         service_sku: formData.service_sku,
         description: formData.description,
         duration_minutes: parseInt(formData.duration_minutes),
+        processing_time: formData.processing_time ? parseInt(formData.processing_time) : null,
+        finishing_time: formData.finishing_time ? parseInt(formData.finishing_time) : null,
         commission_percentage: parseFloat(formData.commission_percentage),
         price: parseFloat(formData.price),
         is_active: formData.is_active,
@@ -762,7 +784,7 @@ export default function ServiceForm() {
                 >
                   Informações Básicas
                   {/* Error indicator for basic tab */}
-                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'price', 'commission_percentage', 'max_parallel_pros', 'price_subject_to_evaluation'].includes(field)) && (
+                  {Object.keys(errors).some(field => ['name', 'duration_minutes', 'processing_time', 'finishing_time', 'price', 'commission_percentage', 'max_parallel_pros', 'price_subject_to_evaluation'].includes(field)) && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-status-error rounded-full"></span>
                   )}
                 </Tab>
@@ -807,150 +829,275 @@ export default function ServiceForm() {
               <TabsBody className="mt-6">
                 {/* Tab 1: Basic Information */}
                 <TabPanel value="basic" className="p-0">
-                  <div className="space-y-5 mt-4">
-                    {/* Service Name and SKU */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <Input
-                          name="name"
-                          label="Nome do Serviço"
-                          placeholder="Digite o nome do serviço"
-                          value={formData.name}
-                          onChange={(e) => handleInputChange('name', e.target.value)}
-                          error={!!errors.name}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                          required
-                        />
-                        {errors.name && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.name}
-                          </Typography>
-                        )}
+                  <div className="space-y-8 mt-6">
+                    
+                    {/* SECTION 1: BASIC SERVICE DETAILS */}
+                    <div className="space-y-6">
+                      <div className="border-l-4 border-accent-primary pl-4">
+                        <Typography variant="h6" className="text-text-primary font-semibold text-lg mb-1">
+                          Informações Básicas
+                        </Typography>
                       </div>
                       
-                      <div>
-                        <Input
-                          name="service_sku"
-                          label="SKU"
-                          placeholder="Ex: SRV001"
-                          value={formData.service_sku}
-                          onChange={(e) => handleInputChange('service_sku', e.target.value)}
-                          error={!!errors.service_sku}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                        />
-                        {errors.service_sku && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.service_sku}
-                          </Typography>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Price, Duration, Commission */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Input
-                          name="price"
-                          label="Preço (R$)"
-                          type="number"
-                          step="0.01"
-                          placeholder="Ex.: 80.00"
-                          value={formData.price}
-                          onChange={(e) => handleInputChange('price', e.target.value)}
-                          error={!!errors.price}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                          min="0"
-                          required
-                        />
-                        {errors.price && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.price}
-                          </Typography>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <Input
-                          name="duration_minutes"
-                          label="Duração (min)"
-                          type="number"
-                          placeholder="Ex.: 45"
-                          value={formData.duration_minutes}
-                          onChange={(e) => handleInputChange('duration_minutes', e.target.value)}
-                          error={!!errors.duration_minutes}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                          min="5"
-                          max="480"
-                          required
-                        />
-                        {errors.duration_minutes && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.duration_minutes}
-                          </Typography>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <Input
-                          name="commission_percentage"
-                          label="Comissão (%)"
-                          type="number"
-                          step="0.01"
-                          placeholder="Ex.: 15.00"
-                          value={formData.commission_percentage}
-                          onChange={(e) => handleInputChange('commission_percentage', e.target.value)}
-                          error={!!errors.commission_percentage}
-                          className="bg-bg-primary border-bg-tertiary text-text-primary"
-                          labelProps={{ className: "text-text-secondary" }}
-                          containerProps={{ className: "text-text-primary" }}
-                          min="0"
-                          max="100"
-                          required
-                        />
-                        {errors.commission_percentage && (
-                          <Typography className="text-status-error text-sm mt-1">
-                            {errors.commission_percentage}
-                          </Typography>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Price Subject to Evaluation */}
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          checked={formData.price_subject_to_evaluation || false}
-                          onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
-                          color="blue"
-                        />
-                        <div>
-                          <Typography className="text-text-primary text-sm font-medium">
-                            Preço sujeito a avaliação
-                          </Typography>
-                          <Typography className="text-text-secondary text-xs">
-                            Marque se o preço final depende de avaliação prévia
-                          </Typography>
+                      <div className="bg-bg-secondary/30 p-6 rounded-xl border border-bg-tertiary/50 space-y-5">
+                        {/* Service Name and SKU Row */}
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                          <div className="lg:col-span-3">
+                            <Input
+                              name="name"
+                              label="Nome do Serviço"
+                              placeholder="Digite o nome completo do serviço"
+                              value={formData.name}
+                              onChange={(e) => handleInputChange('name', e.target.value)}
+                              error={!!errors.name}
+                              className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                              labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                              containerProps={{ className: "text-text-primary" }}
+                              required
+                            />
+                            {errors.name && (
+                              <Typography className="text-status-error text-sm mt-1">
+                                {errors.name}
+                              </Typography>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Input
+                              name="service_sku"
+                              label="Código (SKU)"
+                              placeholder="Ex: SRV001"
+                              value={formData.service_sku}
+                              onChange={(e) => handleInputChange('service_sku', e.target.value)}
+                              error={!!errors.service_sku}
+                              className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                              labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                              containerProps={{ className: "text-text-primary" }}
+                            />
+                            {errors.service_sku && (
+                              <Typography className="text-status-error text-sm mt-1">
+                                {errors.service_sku}
+                              </Typography>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Configuration Options */}
-                    <div className="bg-bg-primary p-4 rounded-lg space-y-4">
-                      <Typography variant="h6" className="text-text-primary text-sm font-medium">
-                        Configurações do Serviço
-                      </Typography>
+                    {/* SECTION 2: PRICING & FINANCIAL */}
+                    <div className="space-y-6">
+                      <div className="border-l-4 border-green-500 pl-4">
+                        <Typography variant="h6" className="text-text-primary font-semibold text-lg mb-1">
+                          Precificação
+                        </Typography>
+                      </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Service Status */}
-                        <div className="flex items-center gap-3">
+                      <div className="bg-bg-secondary/30 p-6 rounded-xl border border-bg-tertiary/50 space-y-5">
+                        {/* Price and Commission Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Input
+                              name="price"
+                              label="Preço Base (R$)"
+                              type="number"
+                              step="0.01"
+                              placeholder="Ex.: 80.00"
+                              value={formData.price}
+                              onChange={(e) => handleInputChange('price', e.target.value)}
+                              error={!!errors.price}
+                              className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                              labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                              containerProps={{ className: "text-text-primary" }}
+                              min="0"
+                              required
+                            />
+                            {errors.price && (
+                              <Typography className="text-status-error text-sm mt-1">
+                                {errors.price}
+                              </Typography>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Input
+                              name="commission_percentage"
+                              label="Comissão (%)"
+                              type="number"
+                              step="0.01"
+                              placeholder="Ex.: 15.00"
+                              value={formData.commission_percentage}
+                              onChange={(e) => handleInputChange('commission_percentage', e.target.value)}
+                              error={!!errors.commission_percentage}
+                              className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                              labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                              containerProps={{ className: "text-text-primary" }}
+                              min="0"
+                              max="100"
+                              required
+                            />
+                            {errors.commission_percentage && (
+                              <Typography className="text-status-error text-sm mt-1">
+                                {errors.commission_percentage}
+                              </Typography>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price Subject to Evaluation */}
+                        <div className="bg-amber-50/10 border border-amber-500/20 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={formData.price_subject_to_evaluation || false}
+                              onChange={(e) => handleInputChange('price_subject_to_evaluation', e.target.checked)}
+                              color="blue"
+                            />
+                            <div>
+                              <Typography className="text-text-primary text-sm font-medium">
+                                Preço sujeito a avaliação
+                              </Typography>
+                              <Typography className="text-text-secondary text-xs">
+                                O preço final será definido após avaliação prévia do caso
+                              </Typography>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 3: TIMING CONFIGURATION */}
+                    <div className="space-y-6">
+                      <div className="border-l-4 border-blue-500 pl-4">
+                        <Typography variant="h6" className="text-text-primary font-semibold text-lg mb-1">
+                          Configuração de Tempo
+                        </Typography>
+                      </div>
+                      
+                      <div className="bg-bg-secondary/30 p-6 rounded-xl border border-bg-tertiary/50 space-y-5">
+                        {/* All Duration Fields - Single Row */}
+                        <div>
+                          <Typography className="text-text-secondary text-xs mb-4">
+                            Estes tempos serão somados para calcular o tempo total do agendamento
+                          </Typography>
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div>
+                              <Input
+                                name="duration_minutes"
+                                label="Duração Base (min)"
+                                type="number"
+                                placeholder="Ex.: 45"
+                                value={formData.duration_minutes}
+                                onChange={(e) => handleInputChange('duration_minutes', e.target.value)}
+                                error={!!errors.duration_minutes}
+                                className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                                labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                                containerProps={{ className: "text-text-primary" }}
+                                min="5"
+                                max="480"
+                                required
+                              />
+                              {errors.duration_minutes && (
+                                <Typography className="text-status-error text-sm mt-1">
+                                  {errors.duration_minutes}
+                                </Typography>
+                              )}
+                              <Typography className="text-text-tertiary text-xs mt-1">
+                                Tempo principal (obrigatório)
+                              </Typography>
+                            </div>
+                            
+                            <div>
+                              <Input
+                                name="processing_time"
+                                label="+ Processamento (min)"
+                                type="number"
+                                placeholder="Ex.: 15"
+                                value={formData.processing_time}
+                                onChange={(e) => handleInputChange('processing_time', e.target.value)}
+                                error={!!errors.processing_time}
+                                className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                                labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                                containerProps={{ className: "text-text-primary" }}
+                                min="0"
+                                max="480"
+                              />
+                              {errors.processing_time && (
+                                <Typography className="text-status-error text-sm mt-1">
+                                  {errors.processing_time}
+                                </Typography>
+                              )}
+                              <Typography className="text-text-tertiary text-xs mt-1">
+                                Preparação (opcional)
+                              </Typography>
+                            </div>
+                            
+                            <div>
+                              <Input
+                                name="finishing_time"
+                                label="+ Finalização (min)"
+                                type="number"
+                                placeholder="Ex.: 10"
+                                value={formData.finishing_time}
+                                onChange={(e) => handleInputChange('finishing_time', e.target.value)}
+                                error={!!errors.finishing_time}
+                                className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                                labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                                containerProps={{ className: "text-text-primary" }}
+                                min="0"
+                                max="480"
+                              />
+                              {errors.finishing_time && (
+                                <Typography className="text-status-error text-sm mt-1">
+                                  {errors.finishing_time}
+                                </Typography>
+                              )}
+                              <Typography className="text-text-tertiary text-xs mt-1">
+                                Limpeza (opcional)
+                              </Typography>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Duration Summary */}
+                        {(() => {
+                          const baseDuration = parseInt(formData.duration_minutes) || 0;
+                          const processingTime = parseInt(formData.processing_time) || 0;
+                          const finishingTime = parseInt(formData.finishing_time) || 0;
+                          const total = baseDuration + processingTime + finishingTime;
+                          
+                          return (
+                            <div className="bg-blue-50/10 border border-blue-500/20 rounded-lg p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Typography className="text-text-primary text-sm font-medium">
+                                    Duração Total do Agendamento
+                                  </Typography>
+                                  <Typography className="text-text-secondary text-xs">
+                                    {baseDuration} min (base) {processingTime > 0 && `+ ${processingTime} min (proc.)`} {finishingTime > 0 && `+ ${finishingTime} min (final.)`}
+                                  </Typography>
+                                </div>
+                                <div className="text-right">
+                                  <Typography className="text-accent-primary text-xl font-bold">
+                                    {total} min
+                                  </Typography>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* SECTION 4: SERVICE STATUS */}
+                    <div className="space-y-6">
+                      <div className="border-l-4 border-purple-500 pl-4">
+                        <Typography variant="h6" className="text-text-primary font-semibold text-lg mb-1">
+                          Status e Disponibilidade
+                        </Typography>
+                      </div>
+                      
+                      <div className="bg-bg-secondary/30 p-6 rounded-xl border border-bg-tertiary/50">
+                        <div className="flex items-center gap-4">
                           <Switch
                             checked={formData.is_active}
                             onChange={(e) => handleInputChange('is_active', e.target.checked)}
@@ -961,61 +1108,13 @@ export default function ServiceForm() {
                               Serviço Ativo
                             </Typography>
                             <Typography className="text-text-secondary text-xs">
-                              Controla se o serviço está disponível
-                            </Typography>
-                          </div>
-                        </div>
-
-                        {/* Parallelizable Service */}
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={formData.parallelable}
-                            onChange={(e) => handleInputChange('parallelable', e.target.checked)}
-                            color="blue"
-                          />
-                          <div>
-                            <Typography className="text-text-primary text-sm font-medium">
-                              Serviço Paralelizável
-                            </Typography>
-                            <Typography className="text-text-secondary text-xs">
-                              Permite execução simultânea
+                              Quando ativo, o serviço ficará disponível para agendamento pelos clientes
                             </Typography>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Max Parallel Professionals */}
-                      {formData.parallelable && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Input
-                              name="max_parallel_pros"
-                              label="Máx. Profissionais Simultâneos"
-                              type="number"
-                              placeholder="Ex.: 2"
-                              value={formData.max_parallel_pros}
-                              onChange={(e) => handleInputChange('max_parallel_pros', e.target.value)}
-                              error={!!errors.max_parallel_pros}
-                              className="bg-bg-secondary border-bg-tertiary text-text-primary"
-                              labelProps={{ className: "text-text-secondary" }}
-                              containerProps={{ className: "text-text-primary" }}
-                              min="1"
-                              max="10"
-                            />
-                            {errors.max_parallel_pros && (
-                              <Typography className="text-status-error text-sm mt-1">
-                                {errors.max_parallel_pros}
-                              </Typography>
-                            )}
-                          </div>
-                          <div className="flex items-end">
-                            <Typography className="text-text-secondary text-xs">
-                              Número máximo de profissionais que podem executar este serviço simultaneamente
-                            </Typography>
-                          </div>
-                        </div>
-                      )}
                     </div>
+
                   </div>
                 </TabPanel>
 

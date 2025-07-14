@@ -302,8 +302,8 @@ export default function ServicesPage() {
                   value={selectedCategoryId}
                   onChange={handleCategoryChange}
                   label="Categoria"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                  labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
                   containerProps={{ className: "text-text-primary" }}
                   menuProps={{ 
                     className: "bg-bg-secondary border-bg-tertiary max-h-60 overflow-y-auto z-50",
@@ -359,8 +359,8 @@ export default function ServicesPage() {
                 placeholder="Pesquisar serviços por nome..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-bg-primary border-bg-tertiary text-text-primary"
-                labelProps={{ className: "text-text-secondary" }}
+                className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
                 containerProps={{ className: "text-text-primary" }}
                 icon={<MagnifyingGlassIcon className="h-5 w-5 text-text-tertiary" />}
               />

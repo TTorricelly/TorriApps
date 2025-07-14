@@ -21,8 +21,6 @@ import {
   IconButton
 } from '@material-tailwind/react';
 import {
-  ArrowUpIcon,
-  ArrowDownIcon,
   Cog6ToothIcon,
   InformationCircleIcon,
   ClockIcon,
@@ -46,6 +44,8 @@ export default function ServiceAppointmentConfigPage() {
   const [editingService, setEditingService] = useState(null);
   const [draggedService, setDraggedService] = useState(null);
   const [hoveredColumn, setHoveredColumn] = useState(null);
+  const [editingOrderService, setEditingOrderService] = useState(null);
+  const [tempOrderValue, setTempOrderValue] = useState('');
 
   // Load initial data
   useEffect(() => {
@@ -65,13 +65,20 @@ export default function ServiceAppointmentConfigPage() {
 
       console.log('API Responses:', { categoriesResponse, servicesResponse, matrixResponse });
 
-      setCategories(categoriesResponse.data || categoriesResponse || []);
-      setServices(servicesResponse.data || servicesResponse || []);
+      const loadedCategories = categoriesResponse.data || categoriesResponse || [];
+      const loadedServices = servicesResponse.data || servicesResponse || [];
+      
+      setCategories(loadedCategories);
+      
+      // Normalize execution orders to ensure sequential numbering
+      const normalizedServices = normalizeExecutionOrders(loadedServices);
+      setServices(normalizedServices);
+      
       setCompatibilityMatrix(matrixResponse.data?.matrix || matrixResponse?.matrix || {});
       
       console.log('State after loading:', { 
-        categories: categoriesResponse.data || categoriesResponse || [], 
-        services: servicesResponse.data || servicesResponse || [],
+        categories: loadedCategories, 
+        services: normalizedServices,
         matrix: matrixResponse.data?.matrix || matrixResponse?.matrix || {}
       });
       
@@ -81,6 +88,35 @@ export default function ServiceAppointmentConfigPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Normalize execution orders to ensure sequential numbering (1, 2, 3, etc.)
+  const normalizeExecutionOrders = (servicesList) => {
+    const strictServices = servicesList
+      .filter(s => !s.execution_flexible)
+      .sort((a, b) => a.execution_order - b.execution_order);
+    
+    const flexibleServices = servicesList.filter(s => s.execution_flexible);
+    
+    // Check if strict services need normalization
+    const needsNormalization = strictServices.some((service, index) => 
+      service.execution_order !== index + 1
+    );
+    
+    if (needsNormalization) {
+      console.log('Normalizing execution orders...');
+      
+      // Create normalized services with sequential execution orders
+      const normalizedStrict = strictServices.map((service, index) => ({
+        ...service,
+        execution_order: index + 1
+      }));
+      
+      // Combine strict and flexible services
+      return [...normalizedStrict, ...flexibleServices];
+    }
+    
+    return servicesList;
   };
 
   // Group services by category and execution flexibility
@@ -209,59 +245,6 @@ export default function ServiceAppointmentConfigPage() {
     }
   };
 
-  // Handle moving service up/down in execution order  
-  const handleMoveService = async (serviceId, direction) => {
-    try {
-      // Find the current service
-      const currentService = services.find(s => s.id === serviceId);
-      if (!currentService || currentService.execution_flexible) return;
-
-      // Get all strict order services sorted by execution_order
-      const strictServices = services
-        .filter(s => !s.execution_flexible)
-        .sort((a, b) => a.execution_order - b.execution_order);
-
-      const currentIndex = strictServices.findIndex(s => s.id === serviceId);
-      
-      // Check bounds
-      if (direction === 'up' && currentIndex === 0) return;
-      if (direction === 'down' && currentIndex === strictServices.length - 1) return;
-
-      // Create new array with swapped items (following ServicesPage pattern)
-      const newStrictServices = [...strictServices];
-      const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      [newStrictServices[currentIndex], newStrictServices[swapIndex]] = [newStrictServices[swapIndex], newStrictServices[currentIndex]];
-
-      // Create updates array for all strict services with new execution_order
-      const updates = newStrictServices.map((service, index) => ({
-        service_id: service.id,
-        execution_order: index + 1, // execution_order starts from 1
-        execution_flexible: service.execution_flexible
-      }));
-
-      // Optimistic update - update only the strict services in local state
-      setServices(prevServices => {
-        const serviceMap = new Map(newStrictServices.map((service, index) => [
-          service.id, 
-          { ...service, execution_order: index + 1 }
-        ]));
-        
-        return prevServices.map(service => 
-          serviceMap.has(service.id) ? serviceMap.get(service.id) : service
-        );
-      });
-
-      // Send to backend using execution order endpoint
-      await servicesApi.updateExecutionOrder(updates);
-      showAlert('Ordem de execução atualizada com sucesso!', 'success');
-
-    } catch (error) {
-      console.error('Error moving service:', error);
-      showAlert('Erro ao reordenar serviço', 'error');
-      // Reload services to reset state on error
-      loadData();
-    }
-  };
 
   // Handle compatibility matrix update
   const handleCompatibilityUpdate = async (serviceAId, serviceBId, compatibilityData) => {
@@ -330,6 +313,86 @@ export default function ServiceAppointmentConfigPage() {
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 3000);
   };
 
+  // Handle inline editing of execution order
+  const startEditingOrder = (service) => {
+    setEditingOrderService(service.id);
+    setTempOrderValue(service.execution_order.toString());
+  };
+
+  const cancelEditingOrder = () => {
+    setEditingOrderService(null);
+    setTempOrderValue('');
+  };
+
+  const saveExecutionOrder = async (serviceId) => {
+    try {
+      const newOrder = parseInt(tempOrderValue);
+      if (isNaN(newOrder) || newOrder < 1) {
+        showAlert('Ordem deve ser um número maior que 0', 'error');
+        return;
+      }
+
+      setIsSaving(true);
+      
+      // Get all strict services to reorder them properly
+      const strictServices = services
+        .filter(s => !s.execution_flexible)
+        .sort((a, b) => a.execution_order - b.execution_order);
+      
+      const currentService = strictServices.find(s => s.id === serviceId);
+      if (!currentService) return;
+      
+      // Remove current service from array
+      const otherServices = strictServices.filter(s => s.id !== serviceId);
+      
+      // Insert service at new position (newOrder - 1 because array is 0-indexed)
+      const insertIndex = Math.min(Math.max(newOrder - 1, 0), otherServices.length);
+      otherServices.splice(insertIndex, 0, currentService);
+      
+      // Create updates with sequential numbering
+      const updates = otherServices.map((service, index) => ({
+        service_id: service.id,
+        execution_order: index + 1,
+        execution_flexible: service.execution_flexible
+      }));
+
+      // Update backend
+      await servicesApi.updateExecutionOrder(updates);
+      
+      // Update local state
+      setServices(prevServices => {
+        const serviceMap = new Map(otherServices.map((service, index) => [
+          service.id, 
+          { ...service, execution_order: index + 1 }
+        ]));
+        
+        return prevServices.map(service => 
+          serviceMap.has(service.id) ? serviceMap.get(service.id) : service
+        );
+      });
+      
+      setEditingOrderService(null);
+      setTempOrderValue('');
+      showAlert('Ordem de execução atualizada com sucesso!', 'success');
+      
+    } catch (error) {
+      console.error('Error updating execution order:', error);
+      showAlert('Erro ao atualizar ordem de execução', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOrderKeyDown = (e, serviceId) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveExecutionOrder(serviceId);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditingOrder();
+    }
+  };
+
   // Render service row in matrix
   const renderServiceRow = (service, categoryName, isFlexible) => {
     const compatDisplay = (targetService) => {
@@ -360,8 +423,27 @@ export default function ServiceAppointmentConfigPage() {
           <div className="flex items-start gap-2 w-full">
             <div className="flex-shrink-0">
               {!isFlexible && (
-                <div className="px-2 py-1 bg-accent-primary text-white rounded text-xs font-medium">
-                  {service.execution_order}
+                <div className="relative">
+                  {editingOrderService === service.id ? (
+                    <input
+                      type="number"
+                      value={tempOrderValue}
+                      onChange={(e) => setTempOrderValue(e.target.value)}
+                      onKeyDown={(e) => handleOrderKeyDown(e, service.id)}
+                      onBlur={() => saveExecutionOrder(service.id)}
+                      className="w-8 h-6 px-1 text-xs font-medium text-center bg-accent-primary text-white rounded border-2 border-accent-primary focus:border-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      autoFocus
+                      min="1"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => startEditingOrder(service)}
+                      className="px-2 py-1 bg-accent-primary text-white rounded text-xs font-medium hover:bg-accent-primary/90 transition-colors cursor-pointer"
+                      title="Clique para editar ordem (Enter para salvar, Esc para cancelar)"
+                    >
+                      {service.execution_order}
+                    </button>
+                  )}
                 </div>
               )}
               {isFlexible && (
@@ -388,47 +470,6 @@ export default function ServiceAppointmentConfigPage() {
               </div>
             </div>
             <div className="flex-shrink-0 flex items-center gap-1">
-              {/* Reorder arrows - only for strict order services */}
-              {!isFlexible && (() => {
-                // Check if this is first or last service to disable appropriate buttons
-                const strictServices = services
-                  .filter(s => !s.execution_flexible)
-                  .sort((a, b) => a.execution_order - b.execution_order);
-                const currentIndex = strictServices.findIndex(s => s.id === service.id);
-                const isFirst = currentIndex === 0;
-                const isLast = currentIndex === strictServices.length - 1;
-
-                return (
-                  <div className="flex flex-col">
-                    <Tooltip content="Mover para cima">
-                      <button
-                        onClick={() => handleMoveService(service.id, 'up')}
-                        disabled={isSaving || isFirst}
-                        className={`transition-colors duration-fast p-1 ${
-                          isSaving || isFirst 
-                            ? 'text-text-tertiary opacity-50 cursor-not-allowed' 
-                            : 'text-text-tertiary hover:text-accent-primary hover:bg-bg-tertiary rounded'
-                        }`}
-                      >
-                        <ArrowUpIcon className="w-3 h-3" />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Mover para baixo">
-                      <button
-                        onClick={() => handleMoveService(service.id, 'down')}
-                        disabled={isSaving || isLast}
-                        className={`transition-colors duration-fast p-1 ${
-                          isSaving || isLast 
-                            ? 'text-text-tertiary opacity-50 cursor-not-allowed' 
-                            : 'text-text-tertiary hover:text-accent-primary hover:bg-bg-tertiary rounded'
-                        }`}
-                      >
-                        <ArrowDownIcon className="w-3 h-3" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                );
-              })()}
               <Tooltip content="Editar configurações do serviço">
                 <IconButton
                   size="sm"
@@ -563,10 +604,45 @@ export default function ServiceAppointmentConfigPage() {
                 {Object.entries(groupedServices.strict).map(([categoryName, categoryServices]) => (
                   <React.Fragment key={`strict-${categoryName}`}>
                     <tr className="bg-bg-tertiary">
-                      <td className="px-4 py-2 sticky left-0 bg-bg-tertiary z-10 border-r border-bg-tertiary shadow-sm" style={{ width: 'clamp(180px, 25vw, 220px)', minWidth: '180px' }}>
-                        <p className="text-small font-semibold text-text-primary">
-                          Ordem Rígida - {categoryName}
-                        </p>
+                      <td className="px-4 py-3 sticky left-0 bg-bg-tertiary z-10 border-r border-bg-tertiary shadow-sm" style={{ width: 'clamp(180px, 25vw, 220px)', minWidth: '180px' }}>
+                        <div className="flex items-center gap-3">
+                          {/* Category Image Placeholder */}
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-white rounded-lg border-2 border-bg-primary/20 shadow-sm flex items-center justify-center overflow-hidden">
+                              {(() => {
+                                const category = categories.find(cat => cat.name === categoryName);
+                                return category?.icon_url ? (
+                                  <img 
+                                    src={category.icon_url} 
+                                    alt={categoryName}
+                                    className="w-full h-full object-cover rounded-md"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-accent-primary/10 to-accent-primary/20 flex items-center justify-center rounded-md">
+                                    <span className="text-accent-primary text-sm font-semibold">
+                                      {categoryName.charAt(0)}
+                                    </span>
+                                  </div>
+                                );
+                              })()} 
+                            </div>
+                          </div>
+                          {/* Category Text */}
+                          <div className="flex-1 min-w-0 flex items-center gap-2">
+                            <span className="text-small font-semibold text-text-primary truncate">
+                              {categoryName}
+                            </span>
+                            <Chip
+                              value="Ordem Rígida"
+                              size="sm"
+                              className="bg-accent-primary/10 text-accent-primary border-accent-primary/20 px-2 py-1 text-xs font-medium flex-shrink-0"
+                            />
+                          </div>
+                        </div>
                       </td>
                       <td colSpan={servicesGroupedByCategory.reduce((total, group) => total + group.services.length, 0)} className="px-4 py-2 bg-bg-tertiary">
                       </td>
@@ -579,10 +655,45 @@ export default function ServiceAppointmentConfigPage() {
                 {Object.entries(groupedServices.flexible).map(([categoryName, categoryServices]) => (
                   <React.Fragment key={`flexible-${categoryName}`}>
                     <tr className="bg-bg-tertiary">
-                      <td className="px-4 py-2 sticky left-0 bg-bg-tertiary z-10 border-r border-bg-tertiary shadow-sm" style={{ width: 'clamp(180px, 25vw, 220px)', minWidth: '180px' }}>
-                        <p className="text-small font-semibold text-text-primary">
-                          Ordem Flexível - {categoryName}
-                        </p>
+                      <td className="px-4 py-3 sticky left-0 bg-bg-tertiary z-10 border-r border-bg-tertiary shadow-sm" style={{ width: 'clamp(180px, 25vw, 220px)', minWidth: '180px' }}>
+                        <div className="flex items-center gap-3">
+                          {/* Category Image Placeholder */}
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-white rounded-lg border-2 border-bg-primary/20 shadow-sm flex items-center justify-center overflow-hidden">
+                              {(() => {
+                                const category = categories.find(cat => cat.name === categoryName);
+                                return category?.icon_url ? (
+                                  <img 
+                                    src={category.icon_url} 
+                                    alt={categoryName}
+                                    className="w-full h-full object-cover rounded-md"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-status-warning/10 to-status-warning/20 flex items-center justify-center rounded-md">
+                                    <span className="text-status-warning text-sm font-semibold">
+                                      {categoryName.charAt(0)}
+                                    </span>
+                                  </div>
+                                );
+                              })()} 
+                            </div>
+                          </div>
+                          {/* Category Text */}
+                          <div className="flex-1 min-w-0 flex items-center gap-2">
+                            <span className="text-small font-semibold text-text-primary truncate">
+                              {categoryName}
+                            </span>
+                            <Chip
+                              value="Ordem Flexível"
+                              size="sm"
+                              className="bg-status-warning/10 text-status-warning border-status-warning/20 px-2 py-1 text-xs font-medium flex-shrink-0"
+                            />
+                          </div>
+                        </div>
                       </td>
                       <td colSpan={servicesGroupedByCategory.reduce((total, group) => total + group.services.length, 0)} className="px-4 py-2 bg-bg-tertiary">
                       </td>
@@ -613,14 +724,11 @@ export default function ServiceAppointmentConfigPage() {
             <div className="space-y-4">
               {/* Execution Order */}
               <div>
-                <label className="text-small font-medium text-text-primary mb-2 block">
-                  Ordem de Execução
-                </label>
                 <Input
                   type="number"
                   label="Ordem de Execução"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
+                  className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                  labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
                   containerProps={{ className: "text-text-primary" }}
                   value={editingService.execution_order}
                   onChange={(e) => setEditingService(prev => ({
@@ -637,7 +745,7 @@ export default function ServiceAppointmentConfigPage() {
                     Execução Flexível
                   </p>
                   <p className="text-small text-text-secondary">
-                    Permitir que este serviço seja otimizado no agendamento
+                    Permitir encaixe automático sem ordem fixa
                   </p>
                 </div>
                 <Switch
@@ -646,65 +754,87 @@ export default function ServiceAppointmentConfigPage() {
                     ...prev,
                     execution_flexible: e.target.checked
                   }))}
+                  className="h-full w-full checked:bg-accent-primary"
+                  containerProps={{
+                    className: "w-11 h-6",
+                  }}
+                  circleProps={{
+                    className: "before:hidden left-0.5 border-none",
+                  }}
                 />
               </div>
 
               {/* Timing Information */}
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  type="number"
-                  label="Tempo de Processamento (min)"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                  value={editingService.processing_time || ''}
-                  onChange={(e) => setEditingService(prev => ({
-                    ...prev,
-                    processing_time: parseInt(e.target.value) || null
-                  }))}
-                />
-                <Input
-                  type="number"
-                  label="Tempo de Finalização (min)"
-                  className="bg-bg-primary border-bg-tertiary text-text-primary"
-                  labelProps={{ className: "text-text-secondary" }}
-                  containerProps={{ className: "text-text-primary" }}
-                  value={editingService.finishing_time || ''}
-                  onChange={(e) => setEditingService(prev => ({
-                    ...prev,
-                    finishing_time: parseInt(e.target.value) || null
-                  }))}
-                />
+              <div className="space-y-3">
+                <Typography className="text-small font-medium text-text-primary mb-2">
+                  Configuração de Tempo
+                </Typography>
+                
+                {/* All Timing Fields - Individual Layout */}
+                <div className="space-y-3">
+                  <Input
+                    id="duration_minutes"
+                    name="duration_minutes"
+                    type="number"
+                    label="Duração Base (minutos)"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                    labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                    containerProps={{ className: "text-text-primary" }}
+                    value={editingService.duration_minutes}
+                    onChange={(e) => setEditingService(prev => ({
+                      ...prev,
+                      duration_minutes: parseInt(e.target.value) || 0
+                    }))}
+                  />
+                  <Input
+                    id="processing_time"
+                    name="processing_time"
+                    type="number"
+                    label="Tempo de Processamento"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                    labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                    containerProps={{ className: "text-text-primary" }}
+                    value={editingService.processing_time}
+                    onChange={(e) => setEditingService(prev => ({
+                      ...prev,
+                      processing_time: parseInt(e.target.value) || 0
+                    }))}
+                  />
+                  <Input
+                    id="finishing_time"
+                    name="finishing_time"
+                    type="number"
+                    label="Finalização (min)"
+                    className="bg-bg-primary border-bg-tertiary text-text-primary focus:!border-blue-400 focus:!border-t-transparent"
+                    labelProps={{ className: "text-text-secondary peer-focus:text-white" }}
+                    containerProps={{ className: "text-text-primary" }}
+                    value={editingService.finishing_time}
+                    onChange={(e) => setEditingService(prev => ({
+                      ...prev,
+                      finishing_time: parseInt(e.target.value) || 0
+                    }))}
+                  />
+                </div>
+
+
+
+                {/* Show total in a simple format */}
+                {editingService && (() => {
+                  const baseDuration = editingService.duration_minutes || 0;
+                  const processingTime = editingService.processing_time || 0;
+                  const finishingTime = editingService.finishing_time || 0;
+                  const total = baseDuration + processingTime + finishingTime;
+                  
+                  return (
+                    <div className="text-center py-2">
+                      <p className="text-small text-text-secondary">
+                        = <span className="text-accent-primary font-semibold">{total} min</span> (Duração Total do Agendamento)
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Processing Behavior */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-small font-medium text-text-primary">
-                    Permite paralelo durante processamento
-                  </p>
-                  <Switch
-                    checked={editingService.allows_parallel_during_processing}
-                    onChange={(e) => setEditingService(prev => ({
-                      ...prev,
-                      allows_parallel_during_processing: e.target.checked
-                    }))}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <p className="text-small font-medium text-text-primary">
-                    Pode ser feito durante processamento
-                  </p>
-                  <Switch
-                    checked={editingService.can_be_done_during_processing}
-                    onChange={(e) => setEditingService(prev => ({
-                      ...prev,
-                      can_be_done_during_processing: e.target.checked
-                    }))}
-                  />
-                </div>
-              </div>
             </div>
           )}
         </DialogBody>
