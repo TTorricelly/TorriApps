@@ -65,6 +65,73 @@ export const servicesApi = {
     );
   },
 
+  // Service Compatibility and Execution Order API functions
+  
+  // Get compatibility matrix
+  getCompatibilityMatrix: async () => {
+    const endpoint = buildApiEndpoint('services/compatibility/matrix');
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint),
+      {
+        defaultValue: { matrix: {}, services: [] },
+        transformData: (data) => data
+      }
+    );
+  },
+
+  // Update compatibility matrix
+  updateCompatibilityMatrix: async (compatibilities) => {
+    const endpoint = buildApiEndpoint('services/compatibility/matrix');
+    
+    return withApiErrorHandling(
+      () => api.put(endpoint, { compatibilities }),
+      {
+        defaultValue: { message: 'Updated successfully' },
+        transformData: (data) => data
+      }
+    );
+  },
+
+  // Create service compatibility rule
+  createCompatibility: async (compatibilityData) => {
+    const endpoint = buildApiEndpoint('services/compatibility');
+    
+    return withApiErrorHandling(
+      () => api.post(endpoint, compatibilityData),
+      {
+        defaultValue: null,
+        transformData: (data) => data
+      }
+    );
+  },
+
+  // Update specific service compatibility
+  updateCompatibility: async (serviceAId, serviceBId, compatibilityData) => {
+    const endpoint = buildApiEndpoint(`services/compatibility/${serviceAId}/${serviceBId}`);
+    
+    return withApiErrorHandling(
+      () => api.put(endpoint, compatibilityData),
+      {
+        defaultValue: null,
+        transformData: (data) => data
+      }
+    );
+  },
+
+  // Update service execution order
+  updateExecutionOrder: async (updates) => {
+    const endpoint = buildApiEndpoint('services/compatibility/execution-order');
+    
+    return withApiErrorHandling(
+      () => api.put(endpoint, { updates }),
+      {
+        defaultValue: { message: 'Updated successfully' },
+        transformData: (data) => data
+      }
+    );
+  },
+
 };
 
 // Service Variation Groups API

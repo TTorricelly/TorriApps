@@ -1,5 +1,5 @@
 from uuid import uuid4
-from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Table, UniqueConstraint, Boolean, Text, DateTime, Index
+from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Table, UniqueConstraint, Boolean, Text, DateTime, Index, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -58,6 +58,19 @@ class Service(Base):
     
     # Display order for sorting services
     display_order = Column(Integer, nullable=False, default=0, index=True)
+    
+    # Execution order and flexibility fields
+    execution_order = Column(Integer, nullable=False, default=0, index=True)
+    execution_flexible = Column(Boolean, nullable=False, default=False)
+    
+    # Advanced timing fields (all in minutes, nullable)
+    processing_time = Column(Integer, nullable=True)
+    finishing_time = Column(Integer, nullable=True)
+    transition_time = Column(Integer, nullable=True)
+    
+    # Processing behavior fields
+    allows_parallel_during_processing = Column(Boolean, nullable=False, default=False)
+    can_be_done_during_processing = Column(Boolean, nullable=False, default=False)
     
     # Note: Image fields removed - now handled by ServiceImage model with flexible labeling
     # Old fields: image, image_liso, image_ondulado, image_cacheado, image_crespo
@@ -288,3 +301,59 @@ class ServiceVariation(Base):
     
     def __repr__(self):
         return f"<ServiceVariation(id={self.id}, name='{self.name}', price_delta={self.price_delta}, duration_delta={self.duration_delta})>"
+
+
+class ServiceCompatibility(Base):
+    """
+    Service Compatibility entity for managing which services can run in parallel.
+    
+    Defines the compatibility matrix for services, specifying whether services can run
+    simultaneously and under what conditions (full parallel, during processing only, never).
+    
+    Attributes:
+        id: Unique identifier (UUID)
+        service_a_id: Reference to first service
+        service_b_id: Reference to second service  
+        can_run_parallel: Whether services can run at the same time
+        parallel_type: Type of parallel execution allowed
+        reason: Human-readable reason for compatibility rule
+        notes: Additional notes about the compatibility
+        created_at: When the compatibility rule was created
+        updated_at: When the rule was last updated
+    """
+    __tablename__ = "service_compatibility"
+    
+    # Primary key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=lambda: str(uuid4()))
+    
+    # Foreign keys
+    service_a_id = Column(UUID(as_uuid=True), ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
+    service_b_id = Column(UUID(as_uuid=True), ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
+    
+    # Compatibility fields
+    can_run_parallel = Column(Boolean, nullable=False, default=False)
+    parallel_type = Column(String(50), nullable=False, default='never')  # 'full_parallel', 'during_processing_only', 'never'
+    
+    # Metadata
+    reason = Column(String(255), nullable=True)  # 'same_professional', 'workspace_conflict', 'chemical_conflict', etc.
+    notes = Column(Text, nullable=True)
+    
+    # Audit fields
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    service_a = relationship("Service", foreign_keys=[service_a_id])
+    service_b = relationship("Service", foreign_keys=[service_b_id])
+    
+    # Constraints and indexes
+    __table_args__ = (
+        UniqueConstraint('service_a_id', 'service_b_id', name='uq_service_compatibility'),
+        Index('idx_service_compatibility_reverse', 'service_b_id', 'service_a_id'),
+        Index('idx_service_compatibility_type', 'parallel_type'),
+        # Ensure service can't be compatible with itself
+        CheckConstraint('service_a_id != service_b_id', name='check_no_self_compatibility'),
+    )
+    
+    def __repr__(self):
+        return f"<ServiceCompatibility(service_a_id={self.service_a_id}, service_b_id={self.service_b_id}, parallel_type='{self.parallel_type}')>"

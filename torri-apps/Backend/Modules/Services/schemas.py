@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, condecimal
+from pydantic import BaseModel, Field, condecimal, field_validator
 from uuid import UUID
 from typing import List, Optional # Changed from typing import List, UUID
 from decimal import Decimal
@@ -56,7 +56,30 @@ class ServiceBase(BaseModel):
     price_subject_to_evaluation: bool = Field(default=False, example=False, description="True if service price requires evaluation")
     # Display order field
     display_order: int = Field(default=0, ge=0, example=0, description="Display order for sorting services")
+    # Execution order and flexibility fields
+    execution_order: int = Field(default=0, ge=0, le=9999, example=0, description="Execution order for appointment scheduling")
+    execution_flexible: bool = Field(default=False, example=False, description="True if service execution order can be optimized")
+    # Advanced timing fields (all in minutes, nullable)
+    processing_time: Optional[int] = Field(None, ge=0, le=600, example=30, description="Processing time where client waits (minutes)")
+    finishing_time: Optional[int] = Field(None, ge=0, le=180, example=15, description="Final steps after processing (minutes)")
+    transition_time: Optional[int] = Field(None, ge=0, le=60, example=5, description="Setup/cleanup time between services (minutes)")
+    # Processing behavior fields
+    allows_parallel_during_processing: bool = Field(default=False, example=False, description="Other services can run during this service's processing time")
+    can_be_done_during_processing: bool = Field(default=False, example=False, description="This service can run during another's processing time")
     category_id: UUID
+    
+    @field_validator('processing_time', 'finishing_time')
+    @classmethod
+    def validate_timing_consistency(cls, v, info):
+        """Validate that processing + finishing <= duration"""
+        if v is not None and 'duration_minutes' in info.data:
+            duration = info.data.get('duration_minutes', 0)
+            processing = info.data.get('processing_time') or 0
+            finishing = info.data.get('finishing_time') or 0
+            
+            if processing + finishing > duration:
+                raise ValueError('Processing time + finishing time cannot exceed total duration')
+        return v
 
 class ServiceCreate(ServiceBase):
     # List of professional UUIDs that can perform this service
@@ -77,6 +100,16 @@ class ServiceUpdate(BaseModel): # All fields optional for update
     price_subject_to_evaluation: Optional[bool] = Field(None, description="True if service price requires evaluation")
     # Display order field
     display_order: Optional[int] = Field(None, ge=0, description="Display order for sorting services")
+    # Execution order and flexibility fields
+    execution_order: Optional[int] = Field(None, ge=0, le=9999, description="Execution order for appointment scheduling")
+    execution_flexible: Optional[bool] = Field(None, description="True if service execution order can be optimized")
+    # Advanced timing fields (all in minutes, nullable)
+    processing_time: Optional[int] = Field(None, ge=0, le=600, description="Processing time where client waits (minutes)")
+    finishing_time: Optional[int] = Field(None, ge=0, le=180, description="Final steps after processing (minutes)")
+    transition_time: Optional[int] = Field(None, ge=0, le=60, description="Setup/cleanup time between services (minutes)")
+    # Processing behavior fields
+    allows_parallel_during_processing: Optional[bool] = Field(None, description="Other services can run during this service's processing time")
+    can_be_done_during_processing: Optional[bool] = Field(None, description="This service can run during another's processing time")
     category_id: Optional[UUID] = None
     # For updating professionals associated with the service
     professional_ids: Optional[List[UUID]] = None # Pass list to replace, or None to not change
@@ -301,3 +334,63 @@ class ServiceReorderItem(BaseModel):
 class ServiceReorderRequest(BaseModel):
     """Schema for reordering services."""
     services: List[ServiceReorderItem] = Field(..., description="List of services with their new order")
+
+
+# --- Service Compatibility Schemas ---
+
+class ServiceCompatibilityBase(BaseModel):
+    """Base schema for service compatibility."""
+    can_run_parallel: bool = Field(default=False, example=False, description="Whether services can run at the same time")
+    parallel_type: str = Field(default='never', example='during_processing_only', description="Type of parallel execution: full_parallel, during_processing_only, never")
+    reason: Optional[str] = Field(None, min_length=1, max_length=255, example="same_professional", description="Reason for compatibility rule")
+    notes: Optional[str] = Field(None, min_length=1, max_length=1000, example="Both services require the same professional", description="Additional notes")
+    
+    @field_validator('parallel_type')
+    @classmethod
+    def validate_parallel_type(cls, v):
+        allowed_values = ['full_parallel', 'during_processing_only', 'never']
+        if v not in allowed_values:
+            raise ValueError(f'parallel_type must be one of: {allowed_values}')
+        return v
+
+class ServiceCompatibilityCreate(ServiceCompatibilityBase):
+    """Schema for creating service compatibility."""
+    service_a_id: UUID = Field(..., description="ID of the first service")
+    service_b_id: UUID = Field(..., description="ID of the second service")
+
+class ServiceCompatibilityUpdate(BaseModel):
+    """Schema for updating service compatibility."""
+    can_run_parallel: Optional[bool] = Field(None, description="Whether services can run at the same time")
+    parallel_type: Optional[str] = Field(None, description="Type of parallel execution")
+    reason: Optional[str] = Field(None, max_length=255, description="Reason for compatibility rule")
+    notes: Optional[str] = Field(None, max_length=1000, description="Additional notes")
+
+class ServiceCompatibilitySchema(ServiceCompatibilityBase):
+    """Schema for service compatibility response."""
+    id: UUID
+    service_a_id: UUID
+    service_b_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ServiceCompatibilityMatrixRequest(BaseModel):
+    """Schema for updating multiple service compatibility rules."""
+    compatibilities: List[ServiceCompatibilityCreate] = Field(..., description="List of compatibility rules to create/update")
+
+class ServiceCompatibilityMatrixResponse(BaseModel):
+    """Schema for service compatibility matrix response."""
+    matrix: dict = Field(..., description="Compatibility matrix keyed by service IDs")
+    services: List[ServiceSchema] = Field(..., description="List of all services in the matrix")
+
+class ExecutionOrderUpdateRequest(BaseModel):
+    """Schema for updating service execution order."""
+    service_id: UUID = Field(..., description="ID of the service to update")
+    execution_order: int = Field(..., ge=0, le=9999, description="New execution order")
+    execution_flexible: bool = Field(..., description="Whether service can be flexible in execution")
+
+class BulkExecutionOrderRequest(BaseModel):
+    """Schema for bulk updating execution order."""
+    updates: List[ExecutionOrderUpdateRequest] = Field(..., description="List of execution order updates")

@@ -9,7 +9,7 @@ from Config.Settings import settings
 from Core.Auth.Routes import router as auth_router
 from Modules.Tenants.routes import router as tenants_router
 from Modules.Users.routes import router as users_router
-from Modules.Services.routes import categories_router, services_router, variation_groups_router, variations_router
+from Modules.Services.routes import categories_router, services_router, variation_groups_router, variations_router, compatibility_router
 from Modules.Services.image_routes import router as service_images_router
 from Modules.Availability.routes import router as availability_router
 from Modules.Appointments.routes import router as appointments_router
@@ -92,6 +92,7 @@ app.include_router(auth_router, prefix=f"{API_V1_PREFIX}/auth", tags=["Authentic
 app.include_router(categories_router, prefix=f"{API_V1_PREFIX}/categories", tags=["Service Categories (Tenant)"])
 app.include_router(service_images_router, prefix=f"{API_V1_PREFIX}", tags=["Service Images Management (Tenant)"])
 app.include_router(services_router, prefix=f"{API_V1_PREFIX}/services", tags=["Services (Tenant)"])
+app.include_router(compatibility_router, prefix=f"{API_V1_PREFIX}/services/compatibility", tags=["Service Compatibility (Tenant)"])
 app.include_router(variation_groups_router, prefix=f"{API_V1_PREFIX}/variation-groups", tags=["Service Variation Groups (Tenant)"])
 app.include_router(variations_router, prefix=f"{API_V1_PREFIX}/variations", tags=["Service Variations (Tenant)"])
 app.include_router(availability_router, prefix=f"{API_V1_PREFIX}/availability", tags=["Professional Availability (Tenant)"])

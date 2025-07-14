@@ -5,13 +5,16 @@ from sqlalchemy import select, delete, update, func, text # func for count, text
 
 from fastapi import HTTPException, status
 
-from .models import Category, Service, ServiceVariationGroup, ServiceVariation, service_professionals_association
+from .models import Category, Service, ServiceVariationGroup, ServiceVariation, ServiceCompatibility, service_professionals_association
 from .schemas import (
     CategoryCreate, CategoryUpdate, ServiceCreate, ServiceUpdate, CategorySchema, ServiceSchema,
     ServiceVariationGroupCreate, ServiceVariationGroupUpdate, ServiceVariationGroupSchema, ServiceVariationGroupWithVariationsSchema,
     ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationSchema, ServiceVariationWithGroupSchema,
     VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse,
-    ServiceReorderRequest
+    ServiceReorderRequest,
+    ServiceCompatibilityCreate, ServiceCompatibilityUpdate, ServiceCompatibilitySchema,
+    ServiceCompatibilityMatrixRequest, ServiceCompatibilityMatrixResponse,
+    ExecutionOrderUpdateRequest, BulkExecutionOrderRequest
 )
 from Core.Auth.models import User # Updated import
 from Core.Auth.constants import UserRole
@@ -689,4 +692,185 @@ def reorder_services(db: Session, reorder_data: ServiceReorderRequest) -> bool:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reorder services: {str(e)}"
+        )
+
+
+# --- Service Compatibility and Execution Order Functions ---
+
+def get_compatibility_matrix(db: Session) -> ServiceCompatibilityMatrixResponse:
+    """
+    Get the complete service compatibility matrix with all services and their compatibility rules.
+    """
+    # Get all active services with their categories, ordered by execution_order
+    stmt = select(Service).options(
+        joinedload(Service.category)
+    ).where(
+        Service.is_active == True
+    ).order_by(Service.execution_order, Service.display_order)
+    
+    services = db.execute(stmt).unique().scalars().all()
+    
+    # Get all compatibility rules
+    compatibility_stmt = select(ServiceCompatibility)
+    compatibility_rules = db.execute(compatibility_stmt).scalars().all()
+    
+    # Build compatibility matrix
+    matrix = {}
+    for service in services:
+        matrix[str(service.id)] = {}
+    
+    # Populate matrix with compatibility data
+    for rule in compatibility_rules:
+        service_a_key = str(rule.service_a_id)
+        service_b_key = str(rule.service_b_id)
+        
+        if service_a_key in matrix and service_b_key in matrix:
+            matrix[service_a_key][service_b_key] = {
+                "can_run_parallel": rule.can_run_parallel,
+                "parallel_type": rule.parallel_type,
+                "reason": rule.reason,
+                "notes": rule.notes
+            }
+    
+    # Process service images for URLs
+    for service in services:
+        _process_service_images_urls(service)
+    
+    return ServiceCompatibilityMatrixResponse(
+        matrix=matrix,
+        services=[ServiceSchema.model_validate(service) for service in services]
+    )
+
+def update_compatibility_matrix(db: Session, request: ServiceCompatibilityMatrixRequest) -> bool:
+    """
+    Update multiple service compatibility rules in bulk.
+    """
+    try:
+        for compatibility_data in request.compatibilities:
+            # Check if rule already exists
+            existing_rule = db.query(ServiceCompatibility).filter(
+                ServiceCompatibility.service_a_id == compatibility_data.service_a_id,
+                ServiceCompatibility.service_b_id == compatibility_data.service_b_id
+            ).first()
+            
+            if existing_rule:
+                # Update existing rule
+                for field, value in compatibility_data.model_dump(exclude_unset=True).items():
+                    if field not in ['service_a_id', 'service_b_id']:
+                        setattr(existing_rule, field, value)
+                existing_rule.updated_at = func.now()
+            else:
+                # Create new rule
+                new_rule = ServiceCompatibility(**compatibility_data.model_dump())
+                db.add(new_rule)
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update compatibility matrix: {str(e)}"
+        )
+
+def create_service_compatibility(db: Session, compatibility_data: ServiceCompatibilityCreate) -> ServiceCompatibilitySchema:
+    """
+    Create a new service compatibility rule.
+    """
+    # Check if rule already exists
+    existing_rule = db.query(ServiceCompatibility).filter(
+        ServiceCompatibility.service_a_id == compatibility_data.service_a_id,
+        ServiceCompatibility.service_b_id == compatibility_data.service_b_id
+    ).first()
+    
+    if existing_rule:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Compatibility rule already exists for these services"
+        )
+    
+    # Validate that both services exist
+    service_a = db.query(Service).filter(Service.id == compatibility_data.service_a_id).first()
+    service_b = db.query(Service).filter(Service.id == compatibility_data.service_b_id).first()
+    
+    if not service_a or not service_b:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="One or both services not found"
+        )
+    
+    if compatibility_data.service_a_id == compatibility_data.service_b_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Service cannot be compatible with itself"
+        )
+    
+    db_compatibility = ServiceCompatibility(**compatibility_data.model_dump())
+    db.add(db_compatibility)
+    db.commit()
+    db.refresh(db_compatibility)
+    
+    return ServiceCompatibilitySchema.model_validate(db_compatibility)
+
+def update_service_compatibility(
+    db: Session, 
+    service_a_id: UUID, 
+    service_b_id: UUID, 
+    compatibility_data: ServiceCompatibilityUpdate
+) -> Optional[ServiceCompatibilitySchema]:
+    """
+    Update a specific service compatibility rule.
+    """
+    compatibility = db.query(ServiceCompatibility).filter(
+        ServiceCompatibility.service_a_id == service_a_id,
+        ServiceCompatibility.service_b_id == service_b_id
+    ).first()
+    
+    if not compatibility:
+        # Try reverse order
+        compatibility = db.query(ServiceCompatibility).filter(
+            ServiceCompatibility.service_a_id == service_b_id,
+            ServiceCompatibility.service_b_id == service_a_id
+        ).first()
+    
+    if not compatibility:
+        return None
+    
+    # Update fields
+    for field, value in compatibility_data.model_dump(exclude_unset=True).items():
+        setattr(compatibility, field, value)
+    
+    compatibility.updated_at = func.now()
+    db.commit()
+    db.refresh(compatibility)
+    
+    return ServiceCompatibilitySchema.model_validate(compatibility)
+
+def update_execution_order(db: Session, request: BulkExecutionOrderRequest) -> bool:
+    """
+    Update service execution order for multiple services.
+    """
+    try:
+        for update_data in request.updates:
+            # Validate service exists
+            service = db.query(Service).filter(Service.id == update_data.service_id).first()
+            if not service:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Service {update_data.service_id} not found"
+                )
+            
+            # Update execution order and flexibility
+            service.execution_order = update_data.execution_order
+            service.execution_flexible = update_data.execution_flexible
+        
+        db.commit()
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update execution order: {str(e)}"
         )

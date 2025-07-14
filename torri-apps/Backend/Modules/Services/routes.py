@@ -19,7 +19,10 @@ from .schemas import (
     ServiceVariationSchema, ServiceVariationCreate, ServiceVariationUpdate, ServiceVariationWithGroupSchema,
     ServiceWithVariationsResponse,
     VariationReorderRequest, BatchVariationUpdate, BatchVariationDelete, BatchOperationResponse,
-    ServiceReorderRequest
+    ServiceReorderRequest,
+    ServiceCompatibilitySchema, ServiceCompatibilityCreate, ServiceCompatibilityUpdate,
+    ServiceCompatibilityMatrixRequest, ServiceCompatibilityMatrixResponse,
+    ExecutionOrderUpdateRequest, BulkExecutionOrderRequest
 )
 from .models import Category, Service, ServiceVariationGroup, ServiceVariation # For type hinting service responses
 
@@ -34,6 +37,9 @@ variation_groups_router = APIRouter()
 
 # Router for Service Variations
 variations_router = APIRouter()
+
+# Router for Service Compatibility and Execution Order
+compatibility_router = APIRouter()
 
 
 # --- Category Endpoints ---
@@ -588,3 +594,109 @@ def get_service_variation_groups_with_variations_endpoint(
     This solves the N+1 query problem where the frontend would make separate requests for each group's variations.
     """
     return services_logic.get_service_variation_groups_with_variations(db=db, service_id=service_id)
+
+
+# --- Service Compatibility and Execution Order Endpoints ---
+
+@compatibility_router.get(
+    "/matrix",
+    response_model=ServiceCompatibilityMatrixResponse,
+    summary="Get service compatibility matrix for appointment configuration."
+)
+def get_compatibility_matrix_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    """
+    Get the complete service compatibility matrix with all services and their compatibility rules.
+    Used for the appointment configuration page to display and manage service execution order and parallel compatibility.
+    """
+    return services_logic.get_compatibility_matrix(db=db)
+
+@compatibility_router.put(
+    "/matrix",
+    response_model=dict,
+    summary="Update service compatibility matrix."
+)
+def update_compatibility_matrix_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    request: ServiceCompatibilityMatrixRequest
+):
+    """
+    Update multiple service compatibility rules in bulk.
+    Used when staff configures which services can run in parallel on the appointment configuration page.
+    """
+    success = services_logic.update_compatibility_matrix(db=db, request=request)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update compatibility matrix"
+        )
+    return {"message": "Compatibility matrix updated successfully"}
+
+@compatibility_router.post(
+    "",
+    response_model=ServiceCompatibilitySchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create service compatibility rule."
+)
+def create_compatibility_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    compatibility_data: ServiceCompatibilityCreate
+):
+    """
+    Create a new service compatibility rule.
+    """
+    return services_logic.create_service_compatibility(db=db, compatibility_data=compatibility_data)
+
+@compatibility_router.put(
+    "/{service_a_id}/{service_b_id}",
+    response_model=ServiceCompatibilitySchema,
+    summary="Update specific service compatibility rule."
+)
+def update_compatibility_endpoint(
+    service_a_id: Annotated[UUID, Path(..., description="ID of the first service")],
+    service_b_id: Annotated[UUID, Path(..., description="ID of the second service")],
+    compatibility_data: Annotated[ServiceCompatibilityUpdate, Body(...)],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))]
+):
+    """
+    Update a specific service compatibility rule between two services.
+    """
+    compatibility = services_logic.update_service_compatibility(
+        db=db, 
+        service_a_id=service_a_id, 
+        service_b_id=service_b_id, 
+        compatibility_data=compatibility_data
+    )
+    if not compatibility:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Compatibility rule not found"
+        )
+    return compatibility
+
+@compatibility_router.put(
+    "/execution-order",
+    response_model=dict,
+    summary="Update service execution order in bulk."
+)
+def update_execution_order_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR]))],
+    request: BulkExecutionOrderRequest
+):
+    """
+    Update service execution order for multiple services.
+    Used when staff reorders services in the execution order matrix via drag and drop.
+    """
+    success = services_logic.update_execution_order(db=db, request=request)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update execution order"
+        )
+    return {"message": "Execution order updated successfully"}

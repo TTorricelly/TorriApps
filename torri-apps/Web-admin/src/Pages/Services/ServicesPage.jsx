@@ -24,7 +24,8 @@ import {
   PlusIcon, 
   MagnifyingGlassIcon,
   ArrowUpIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 
 import { categoriesApi } from '../../Services/categories';
@@ -329,14 +330,25 @@ export default function ServicesPage() {
               )}
             </div>
 
-            <Button
-              className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
-              disabled={!selectedCategoryId}
-              onClick={handleCreateService}
-            >
-              <PlusIcon className="h-4 w-4" />
-              Adicionar Serviço
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outlined"
+                className="border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white flex items-center gap-2"
+                onClick={() => navigate(ROUTES.SERVICES.APPOINTMENT_CONFIG)}
+              >
+                <Cog6ToothIcon className="h-4 w-4" />
+                Appointment Config
+              </Button>
+              
+              <Button
+                className="bg-accent-primary hover:bg-accent-primary/90 flex items-center gap-2"
+                disabled={!selectedCategoryId}
+                onClick={handleCreateService}
+              >
+                <PlusIcon className="h-4 w-4" />
+                Adicionar Serviço
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}

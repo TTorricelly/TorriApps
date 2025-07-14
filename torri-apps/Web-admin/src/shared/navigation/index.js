@@ -16,6 +16,7 @@ export const ROUTES = {
     CATALOG: '/services/catalog',
     CREATE: '/services/create',
     EDIT: (id) => `/services/edit/${id}`,
+    APPOINTMENT_CONFIG: '/services/appointment-config',
   },
   
   // Professionals Routes
@@ -80,6 +81,7 @@ export const SIDEBAR_CONFIG = [
     items: [
       { title: 'Categorias', path: ROUTES.SERVICES.CATALOG },
       { title: 'Catálogo de Serviços', path: ROUTES.SERVICES.LIST },
+      { title: 'Configuração de Agendamentos', path: ROUTES.SERVICES.APPOINTMENT_CONFIG },
       { title: 'Rótulos', path: ROUTES.LABELS }
     ]
   },

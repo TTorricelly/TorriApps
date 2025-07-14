@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ServicesCatalog from './ServicesCatalog';
 import ServicesPage from './ServicesPage';
 import ServiceForm from './ServiceForm';
+import ServiceAppointmentConfigPage from './ServiceAppointmentConfigPage';
 
 // Services routes with nested routing
 export default function ServicesRoutes() {
@@ -18,6 +19,9 @@ export default function ServicesRoutes() {
       <Route path="list" element={<ServicesPage />} />
       <Route path="create" element={<ServiceForm />} />
       <Route path="edit/:serviceId" element={<ServiceForm />} />
+      
+      {/* Service Appointment Configuration */}
+      <Route path="appointment-config" element={<ServiceAppointmentConfigPage />} />
     </Routes>
   );
 }
