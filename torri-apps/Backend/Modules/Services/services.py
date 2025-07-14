@@ -820,32 +820,124 @@ def update_service_compatibility(
     compatibility_data: ServiceCompatibilityUpdate
 ) -> Optional[ServiceCompatibilitySchema]:
     """
-    Update a specific service compatibility rule.
+    Update or create a service compatibility rule with bidirectional consistency.
+    Always ensures both A→B and B→A records exist and are synchronized.
     """
-    compatibility = db.query(ServiceCompatibility).filter(
+    # Check if either direction exists
+    compatibility_ab = db.query(ServiceCompatibility).filter(
         ServiceCompatibility.service_a_id == service_a_id,
         ServiceCompatibility.service_b_id == service_b_id
     ).first()
     
-    if not compatibility:
-        # Try reverse order
-        compatibility = db.query(ServiceCompatibility).filter(
+    compatibility_ba = db.query(ServiceCompatibility).filter(
+        ServiceCompatibility.service_a_id == service_b_id,
+        ServiceCompatibility.service_b_id == service_a_id
+    ).first()
+    
+    # Prepare the data to update/create
+    update_data = compatibility_data.model_dump(exclude_unset=True)
+    
+    if not compatibility_ab and not compatibility_ba:
+        # CREATE: Neither direction exists, create both
+        compatibility_ab = ServiceCompatibility(
+            service_a_id=service_a_id,
+            service_b_id=service_b_id,
+            **update_data
+        )
+        compatibility_ba = ServiceCompatibility(
+            service_a_id=service_b_id,
+            service_b_id=service_a_id,
+            **update_data
+        )
+        db.add(compatibility_ab)
+        db.add(compatibility_ba)
+        primary_record = compatibility_ab
+        
+    elif compatibility_ab and not compatibility_ba:
+        # UPDATE AB, CREATE BA
+        for field, value in update_data.items():
+            setattr(compatibility_ab, field, value)
+        compatibility_ab.updated_at = func.now()
+        
+        compatibility_ba = ServiceCompatibility(
+            service_a_id=service_b_id,
+            service_b_id=service_a_id,
+            **update_data
+        )
+        db.add(compatibility_ba)
+        primary_record = compatibility_ab
+        
+    elif not compatibility_ab and compatibility_ba:
+        # CREATE AB, UPDATE BA
+        compatibility_ab = ServiceCompatibility(
+            service_a_id=service_a_id,
+            service_b_id=service_b_id,
+            **update_data
+        )
+        db.add(compatibility_ab)
+        
+        for field, value in update_data.items():
+            setattr(compatibility_ba, field, value)
+        compatibility_ba.updated_at = func.now()
+        primary_record = compatibility_ab
+        
+    else:
+        # UPDATE: Both directions exist, update both
+        for field, value in update_data.items():
+            setattr(compatibility_ab, field, value)
+            setattr(compatibility_ba, field, value)
+        
+        compatibility_ab.updated_at = func.now()
+        compatibility_ba.updated_at = func.now()
+        primary_record = compatibility_ab
+    
+    db.commit()
+    db.refresh(primary_record)
+    
+    return ServiceCompatibilitySchema.model_validate(primary_record)
+
+def delete_service_compatibility(
+    db: Session, 
+    service_a_id: UUID, 
+    service_b_id: UUID
+) -> bool:
+    """
+    Delete service compatibility rules in both directions.
+    Removes both A→B and B→A records to maintain consistency.
+    """
+    try:
+        # Delete both directions
+        deleted_count = 0
+        
+        # Delete A→B
+        compatibility_ab = db.query(ServiceCompatibility).filter(
+            ServiceCompatibility.service_a_id == service_a_id,
+            ServiceCompatibility.service_b_id == service_b_id
+        ).first()
+        
+        if compatibility_ab:
+            db.delete(compatibility_ab)
+            deleted_count += 1
+        
+        # Delete B→A  
+        compatibility_ba = db.query(ServiceCompatibility).filter(
             ServiceCompatibility.service_a_id == service_b_id,
             ServiceCompatibility.service_b_id == service_a_id
         ).first()
-    
-    if not compatibility:
-        return None
-    
-    # Update fields
-    for field, value in compatibility_data.model_dump(exclude_unset=True).items():
-        setattr(compatibility, field, value)
-    
-    compatibility.updated_at = func.now()
-    db.commit()
-    db.refresh(compatibility)
-    
-    return ServiceCompatibilitySchema.model_validate(compatibility)
+        
+        if compatibility_ba:
+            db.delete(compatibility_ba)
+            deleted_count += 1
+        
+        db.commit()
+        return deleted_count > 0
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete compatibility: {str(e)}"
+        )
 
 def update_execution_order(db: Session, request: BulkExecutionOrderRequest) -> bool:
     """

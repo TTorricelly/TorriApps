@@ -268,9 +268,10 @@ export default function ServiceAppointmentConfigPage() {
     try {
       setIsSaving(true);
       
-      // For now, just update local state and skip API call
-      // TODO: Fix API call once backend route is confirmed working
       console.log('Updating compatibility:', { serviceAId, serviceBId, compatibilityData });
+      
+      // Call API to save to database
+      await servicesApi.updateCompatibility(serviceAId, serviceBId, compatibilityData);
       
       // Update local matrix
       setCompatibilityMatrix(prev => ({
@@ -285,7 +286,7 @@ export default function ServiceAppointmentConfigPage() {
         }
       }));
       
-      showAlert('Compatibilidade atualizada localmente (API temporariamente desabilitada)', 'success');
+      showAlert('Compatibilidade atualizada com sucesso', 'success');
     } catch (error) {
       console.error('Error updating compatibility:', error);
       showAlert('Erro ao atualizar compatibilidade', 'error');
