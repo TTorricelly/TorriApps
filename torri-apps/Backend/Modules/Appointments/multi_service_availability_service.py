@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Tuple, Set
 from uuid import UUID
 from datetime import date, time, datetime, timedelta
+from decimal import Decimal
 from dataclasses import dataclass
 from itertools import combinations, product
 from enum import Enum
@@ -32,6 +33,9 @@ from .availability_service import get_daily_time_slots_for_professional
 
 # Utils
 from .appointment_utils import calculate_end_time
+
+# Services
+from .services.pricing_service import PricingService
 
 # File handler for URL processing
 from Core.Utils.file_handler import file_handler
@@ -74,6 +78,7 @@ class MultiServiceAvailabilityService:
     def __init__(self, db: Session):
         self.db = db
         self.block_size_minutes = 30  # Standard time block size
+        self.pricing_service = PricingService(db)  # Initialize pricing service for consistent calculations
     
     def get_available_slots(
         self,
@@ -557,7 +562,11 @@ class MultiServiceAvailabilityService:
             
             if services_in_slot:
                 total_duration = max(service.duration_minutes for service in services_in_slot)
-                total_price = sum(service.price for service in services_in_slot)
+                # Calculate total price using pricing service with proper Decimal accumulation
+                total_price = Decimal('0.00')
+                for service in services_in_slot:
+                    price_calculation = self.pricing_service.calculate_service_complete(service, None)
+                    total_price += price_calculation.price.final
                 
                 # Generate unique ID for this slot
                 slot_id = self._generate_slot_id(
@@ -632,7 +641,11 @@ class MultiServiceAvailabilityService:
             )
             
             if services_in_slot:
-                total_price = sum(service.price for service in services_in_slot)
+                # Calculate total price using pricing service with proper Decimal accumulation
+                total_price = Decimal('0.00')
+                for service in services_in_slot:
+                    price_calculation = self.pricing_service.calculate_service_complete(service, None)
+                    total_price += price_calculation.price.final
                 
                 # Generate unique ID for this slot
                 slot_id = self._generate_slot_id(
@@ -756,7 +769,13 @@ class MultiServiceAvailabilityService:
                 current_start_time = calculate_end_time(current_start_time, service.duration_minutes)
             
             if services_in_slot:
-                total_price = sum(service.price for service in services_in_slot)
+                # Calculate total price using pricing service with proper Decimal accumulation
+                total_price = Decimal('0.00')
+                for service_in_slot in services_in_slot:
+                    # Get service object for pricing calculation
+                    service_obj = next(s for s in combination.services if s.service.id == service_in_slot.service_id)
+                    price_calculation = self.pricing_service.calculate_service_complete(service_obj.service, None)
+                    total_price += price_calculation.price.final
                 
                 # Generate unique ID for this slot
                 slot_id = self._generate_slot_id(

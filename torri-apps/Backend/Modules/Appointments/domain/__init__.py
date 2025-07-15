@@ -1,0 +1,1 @@
+# Appointment Domain Models Package

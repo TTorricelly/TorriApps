@@ -34,6 +34,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { searchClients } from '../Services/clientsApi';
 import { professionalsApi } from '../Services/professionals';
+import { serviceVariationGroupsApi } from '../Services/services';
+import { buildAssetUrl } from '../Utils/urlHelpers';
 import { 
   handleCpfInput, 
   handleCepInput, 
@@ -83,6 +85,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState([]);
   const [_showAllServices, _setShowAllServices] = useState(false); // Toggle between category and global view
+  const [serviceVariations, setServiceVariations] = useState({}); // { serviceId: [variationGroups] }
   
   // Service assignment state (for per-service professional assignment)
   const [serviceAssignments, setServiceAssignments] = useState({});
@@ -203,7 +206,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       setServiceAssignments({});
       setProfessionalsByService({});
       // Reset service view state
-      setShowAllServices(false);
+      _setShowAllServices(false);
       setAllServices([]);
     }
   }, [open]);
@@ -214,6 +217,17 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       loadProfessionalsForServices();
     }
   }, [cart]);
+
+  // Load variations for all services when services are available
+  useEffect(() => {
+    if (allServices.length > 0) {
+      allServices.forEach(service => {
+        if (!serviceVariations[service.id]) {
+          loadServiceVariations(service.id);
+        }
+      });
+    }
+  }, [allServices]);
 
   const loadProfessionalsForServices = async () => {
     try {
@@ -248,6 +262,35 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       style: 'currency',
       currency: 'BRL'
     }).format(price);
+  };
+
+  // Get display name for cart item (service + variation)
+  const getCartItemDisplayName = (item) => {
+    const serviceName = item.service.name;
+    const variation = item.service.selectedVariation;
+    
+    if (variation && variation.name && variation.name !== 'Padrão') {
+      return `${serviceName} - ${variation.name}`;
+    }
+    
+    return serviceName;
+  };
+
+  // Load service variations
+  const loadServiceVariations = async (serviceId) => {
+    try {
+      const variations = await serviceVariationGroupsApi.getFullByServiceId(serviceId);
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: variations || []
+      }));
+    } catch (err) {
+      // Silently fail - variations are optional
+      setServiceVariations(prev => ({
+        ...prev,
+        [serviceId]: []
+      }));
+    }
   };
 
   // Toggle between new client and existing client modes
@@ -310,28 +353,51 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   // Calculate total duration and price
   const calculateTotals = () => {
     const totalDuration = cart.reduce((sum, item) => {
-      // Handle different possible duration field names
-      const duration = item.service.duration || item.service.duration_minutes || 0;
+      // Use final duration if available, otherwise fallback to original duration
+      const duration = item.service.finalDuration || item.service.duration || item.service.duration_minutes || 0;
       return sum + (duration * item.quantity);
     }, 0);
     const totalPrice = cart.reduce((sum, item) => {
-      const price = parseFloat(item.service.price) || 0;
+      // Use final price if available, otherwise fallback to original price
+      const price = item.service.finalPrice || parseFloat(item.service.price) || 0;
       return sum + (price * item.quantity);
     }, 0);
     return { totalDuration, totalPrice };
   };
 
   // Add service to cart
-  const addToCart = (service) => {
-    const existingItem = cart.find(item => item.service.id === service.id);
+  const addToCart = (service, variation = null) => {
+    const serviceWithVariation = {
+      ...service,
+      selectedVariation: variation,
+      finalPrice: variation 
+        ? parseFloat(service.price) + parseFloat(variation.price_delta || 0)
+        : parseFloat(service.price),
+      finalDuration: variation
+        ? (service.duration_minutes || 0) + (service.processing_time || 0) + (service.finishing_time || 0) + parseInt(variation.duration_delta || 0)
+        : (service.duration_minutes || 0) + (service.processing_time || 0) + (service.finishing_time || 0)
+    };
+    
+    // For variation services, treat each variation as a separate item
+    const cartKey = variation ? `${service.id}-${variation.id}` : service.id;
+    const existingItem = cart.find(item => {
+      const itemKey = item.service.selectedVariation 
+        ? `${item.service.id}-${item.service.selectedVariation.id}` 
+        : item.service.id;
+      return itemKey === cartKey;
+    });
+    
     if (existingItem) {
-      setCart(cart.map(item => 
-        item.service.id === service.id 
+      setCart(cart.map(item => {
+        const itemKey = item.service.selectedVariation 
+          ? `${item.service.id}-${item.service.selectedVariation.id}` 
+          : item.service.id;
+        return itemKey === cartKey 
           ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
+          : item;
+      }));
     } else {
-      setCart([...cart, { service, quantity: 1 }]);
+      setCart([...cart, { service: serviceWithVariation, quantity: 1 }]);
     }
   };
 
@@ -382,7 +448,8 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
       const servicesWithProfessionals = cart.flatMap(item => 
         Array.from({ length: item.quantity }, () => ({
           id: item.service.id,
-          professional_id: serviceAssignments[item.service.id] // Per-service professional assignment
+          professional_id: serviceAssignments[item.service.id], // Per-service professional assignment
+          service_variation_id: item.service.selectedVariation?.id || null // Include variant selection
         }))
       );
 
@@ -420,20 +487,33 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     }
   };
 
-  // Filter services with unified search + category filtering
-  const filteredServices = allServices.filter(service => {
-    // Text search filter (always applied if searchTerm exists)
-    const matchesSearch = !searchTerm.trim() || 
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.service_sku?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Category filter (applied if category is selected)
-    const matchesCategory = !selectedCategory || service.category_id === selectedCategory.id;
-    
-    // Both filters must pass
-    return matchesSearch && matchesCategory;
-  });
+  // Filter and sort services with unified search + category filtering
+  const filteredServices = allServices
+    .filter(service => {
+      // Text search filter (always applied if searchTerm exists)
+      const matchesSearch = !searchTerm.trim() || 
+        service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.category_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.service_sku?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Category filter (applied if category is selected)
+      const matchesCategory = !selectedCategory || service.category_id === selectedCategory.id;
+      
+      // Both filters must pass
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      // Sort by display_order first (ascending), then by name as fallback
+      const orderA = a.display_order || 0;
+      const orderB = b.display_order || 0;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Fallback to alphabetical by name
+      return a.name.localeCompare(b.name);
+    });
 
   // Get professionals for selected services
   const _getAvailableProfessionals = () => {
@@ -878,235 +958,286 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     </div>
   );
 
-  // Render services selection step with master-detail layout
+  // Render services selection step with horizontal category tabs
   const renderServicesStep = () => (
     <div className="h-full">
-      {/* Header */}
-      <div className="flex items-center mb-4">
-        <Typography variant="h6" className="text-text-primary flex-shrink-0">
-          Selecionar Serviços
-        </Typography>
-        
-        {/* Centered global search bar */}
-        <div className="flex-1 flex justify-center px-8">
-          <div className="w-96">
-            <Input
-              label="Buscar serviços..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<MagnifyingGlassIcon className="h-4 w-4" />}
-              className="text-text-primary"
-              labelProps={{ className: "text-text-secondary" }}
-              placeholder="Digite o nome do serviço"
-            />
-          </div>
+      {/* Search bar */}
+      <div className="mb-4">
+        <div className="w-full max-w-md mx-auto">
+          <Input
+            label="Buscar serviços..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<MagnifyingGlassIcon className="h-4 w-4" />}
+            className="text-text-primary"
+            labelProps={{ className: "text-text-secondary" }}
+            placeholder="Digite o nome do serviço"
+          />
         </div>
-        
-        {/* Right spacer to balance layout */}
-        <div className="flex-shrink-0 w-32"></div>
       </div>
 
-      {/* Master-Detail Layout */}
-      <div className="flex gap-4 h-[400px]">
-        {/* Left Panel - Category Filters (30%) */}
-        <div className="w-[30%] border-r border-bg-tertiary pr-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Typography variant="small" className="text-text-secondary font-medium">
-                Filtrar por Categoria
+      {/* Category Tabs */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          {/* All Categories Tab */}
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`
+              flex-shrink-0 px-6 py-3 rounded-lg border transition-all duration-200 flex items-center gap-3
+              ${!selectedCategory
+                ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                : 'border-bg-tertiary bg-bg-secondary text-text-secondary hover:border-accent-primary/50 hover:bg-accent-primary/5'
+              }
+            `}
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-accent-primary/20 to-accent-primary/30 rounded-lg flex items-center justify-center">
+              <span className="text-accent-primary text-sm font-semibold">All</span>
+            </div>
+            <span className="text-sm font-medium">
+              {allServices.length}
+            </span>
+          </button>
+
+          {/* Category Tabs */}
+          {categories.length > 0 ? (
+            categories.map((category) => {
+              const categoryServiceCount = allServices.filter(s => s.category_id === category.id).length;
+              const filteredCategoryCount = filteredServices.filter(s => s.category_id === category.id).length;
+              
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(selectedCategory?.id === category.id ? null : category)}
+                  className={`
+                    flex-shrink-0 px-5 py-3 rounded-lg border transition-all duration-200 flex items-center gap-3
+                    ${selectedCategory?.id === category.id
+                      ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                      : 'border-bg-tertiary bg-bg-secondary text-text-secondary hover:border-accent-primary/50 hover:bg-accent-primary/5'
+                    }
+                  `}
+                  title={category.name}
+                >
+                  {/* Category Image */}
+                  <div className="w-10 h-10 bg-white rounded-lg border border-bg-primary/20 shadow-sm flex items-center justify-center overflow-hidden">
+                    {category?.icon_url ? (
+                      <img 
+                        src={category.icon_url} 
+                        alt={category.name}
+                        className="w-full h-full object-cover rounded-md"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-accent-primary/10 to-accent-primary/20 flex items-center justify-center rounded-md">
+                        <span className="text-accent-primary text-sm font-semibold">
+                          {category.name?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Service Count */}
+                  <span className="text-sm font-medium">
+                    {searchTerm ? filteredCategoryCount : categoryServiceCount}
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="text-center py-4">
+              <Typography className="text-text-secondary text-sm">
+                Carregando categorias...
               </Typography>
-              {selectedCategory && (
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Services Grid */}
+      <div className="space-y-4">
+        {/* Clear filters */}
+        {searchTerm && (
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="text"
+              size="sm"
+              onClick={() => setSearchTerm('')}
+              className="text-text-secondary hover:text-accent-primary"
+            >
+              Limpar busca
+            </Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-h-[320px] overflow-y-auto auto-rows-max">
+          {filteredServices.map((service) => {
+            const variations = serviceVariations[service.id] || [];
+            const hasVariations = variations.length > 0 && variations.some(group => group.variations?.length > 0);
+            
+            // Flatten all variations from all groups
+            const allVariations = hasVariations 
+              ? variations.flatMap(group => group.variations || [])
+              : [{ id: 'standard', name: 'Padrão', price_delta: 0, duration_delta: 0 }];
+            
+            return (
+              <Card 
+                key={service.id} 
+                className="bg-bg-secondary border border-bg-tertiary hover:border-accent-primary/50 transition-all h-fit w-full"
+              >
+                <CardBody className="p-4">
+                  {/* Header: Service Image + Name + Duration */}
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-bg-tertiary">
+                    {/* Service Image */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-accent-primary/10 to-accent-primary/20 rounded-lg flex items-center justify-center overflow-hidden border border-bg-tertiary shadow-sm">
+                        {(() => {
+                          // Get service image from available fields (based on backend schema)
+                          const getServiceImage = () => {
+                            // Try new images array first
+                            if (service.images && service.images.length > 0) {
+                              return service.images[0].file_path;
+                            }
+                            // Fallback to legacy fields
+                            return service.image || service.image_liso || service.image_ondulado || service.image_cacheado || service.image_crespo;
+                          };
+                          
+                          const imageUrl = getServiceImage();
+                          
+                          return imageUrl ? (
+                            <img 
+                              src={buildAssetUrl(imageUrl)} 
+                              alt={service.name}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null;
+                        })()}
+                        
+                        <div 
+                          className="w-full h-full bg-gradient-to-br from-accent-primary/10 to-accent-primary/20 flex items-center justify-center rounded-lg" 
+                          style={{ 
+                            display: (() => {
+                              const imageUrl = service.images?.[0]?.file_path || service.image || service.image_liso || service.image_ondulado || service.image_cacheado || service.image_crespo;
+                              return imageUrl ? 'none' : 'flex';
+                            })()
+                          }}
+                        >
+                          <span className="text-accent-primary text-xs font-semibold">
+                            {service.name?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Service Info */}
+                    <div className="flex-1 min-w-0">
+                      <Typography variant="small" className="text-text-primary font-semibold text-sm leading-tight mb-1">
+                        {service.name}
+                      </Typography>
+                      <div className="flex items-center gap-1 text-xs text-text-secondary">
+                        <ClockIcon className="h-3 w-3" />
+                        <span>{service.duration || service.duration_minutes || 0}min</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Variations Section */}
+                  <div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {allVariations.map((variation, index) => {
+                          if (index >= 8) return null; // Max 8 variations (2 rows of 4)
+                          
+                          const finalPrice = parseFloat(service.price) + parseFloat(variation.price_delta || 0);
+                          const isStandard = variation.id === 'standard';
+                          
+                          return (
+                            <button
+                              key={variation.id}
+                              onClick={() => addToCart(service, isStandard ? null : variation)}
+                              className="bg-bg-primary border border-bg-tertiary rounded-lg p-3 hover:border-accent-primary/50 hover:bg-accent-primary/5 transition-all cursor-pointer text-center min-h-[80px] min-w-[100px] flex flex-col justify-center"
+                              title={`Adicionar ${service.name} - ${variation.name}`}
+                            >
+                              <div className="space-y-1">
+                                <Typography variant="small" className="text-text-primary font-medium text-xs leading-tight line-clamp-2">
+                                  {variation.name}
+                                </Typography>
+                                <Typography variant="small" className="text-accent-primary font-semibold text-xs">
+                                  {formatPrice(finalPrice)}
+                                </Typography>
+                              </div>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Empty states */}
+        {filteredServices.length === 0 && (
+          <div className="text-center py-8">
+            {searchTerm && selectedCategory ? (
+              <div>
+                <Typography className="text-text-secondary mb-2">
+                  Nenhum serviço encontrado para "{searchTerm}" em {selectedCategory.name}
+                </Typography>
+                <div className="flex justify-center gap-2">
+                  <Button
+                    variant="text"
+                    size="sm"
+                    onClick={() => setSearchTerm('')}
+                    className="text-accent-primary"
+                  >
+                    Limpar busca
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="sm"
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-accent-primary"
+                  >
+                    Ver todas categorias
+                  </Button>
+                </div>
+              </div>
+            ) : searchTerm ? (
+              <div>
+                <Typography className="text-text-secondary mb-2">
+                  Nenhum serviço encontrado para "{searchTerm}"
+                </Typography>
                 <Button
                   variant="text"
                   size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  className="text-text-secondary hover:text-accent-primary p-1"
-                  title="Limpar filtro"
+                  onClick={() => setSearchTerm('')}
+                  className="text-accent-primary"
                 >
-                  Todos
+                  Limpar busca
                 </Button>
-              )}
-            </div>
-            
-            <div className="space-y-2 max-h-[350px] overflow-y-auto">
-              {categories.length > 0 ? (
-                categories.map((category) => {
-                  const categoryServiceCount = allServices.filter(s => s.category_id === category.id).length;
-                  const filteredCategoryCount = filteredServices.filter(s => s.category_id === category.id).length;
-                  
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(selectedCategory?.id === category.id ? null : category)}
-                      className={`
-                        w-full text-left px-3 py-2 rounded-md border transition-all duration-200
-                        ${selectedCategory?.id === category.id
-                          ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                          : 'border-bg-tertiary bg-bg-secondary text-text-secondary hover:border-accent-primary/50 hover:bg-accent-primary/5'
-                        }
-                      `}
-                    >
-                      <div className="flex justify-between items-center">
-                        <Typography variant="small" className="font-medium">
-                          {category.name}
-                        </Typography>
-                        <Typography variant="small" className="text-xs text-text-tertiary">
-                          {searchTerm ? filteredCategoryCount : categoryServiceCount}
-                        </Typography>
-                      </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <Typography className="text-text-secondary text-sm">
-                    Carregando categorias...
-                  </Typography>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Services (70%) */}
-        <div className="flex-1">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Typography variant="small" className="text-text-primary font-medium">
-                  {selectedCategory ? selectedCategory.name : 'Todos os Serviços'}
-                </Typography>
-                <Typography variant="small" className="text-text-secondary">
-                  {filteredServices.length} serviços {selectedCategory ? 'nesta categoria' : 'encontrados'}
-                </Typography>
               </div>
-              
-              {/* Clear filters */}
-              {(searchTerm || selectedCategory) && (
-                <div className="flex gap-2">
-                  {searchTerm && (
-                    <Button
-                      variant="text"
-                      size="sm"
-                      onClick={() => setSearchTerm('')}
-                      className="text-text-secondary hover:text-accent-primary"
-                    >
-                      Limpar busca
-                    </Button>
-                  )}
-                  {selectedCategory && (
-                    <Button
-                      variant="text"
-                      size="sm"
-                      onClick={() => setSelectedCategory(null)}
-                      className="text-text-secondary hover:text-accent-primary"
-                    >
-                      Todas categorias
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 max-h-[350px] overflow-y-auto">
-              {filteredServices.map((service) => (
-                <Card 
-                  key={service.id} 
-                  className="bg-bg-secondary border border-bg-tertiary hover:border-accent-primary/50 transition-all cursor-pointer"
-                  onClick={() => addToCart(service)}
-                  title={`Adicionar ${service.name} ao carrinho`}
-                >
-                  <CardBody className="p-2">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="flex-1 pr-1">
-                        <Typography variant="small" className="text-text-primary font-medium text-xs leading-tight">
-                          {service.name}
-                        </Typography>
-                        {!selectedCategory && (
-                          <Typography variant="small" className="text-text-tertiary text-xs">
-                            {service.category_name}
-                          </Typography>
-                        )}
-                      </div>
-                      <div className="bg-accent-primary text-white p-1 rounded min-w-0 h-5 w-5 flex items-center justify-center">
-                        <PlusIcon className="h-3 w-3" />
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between text-xs text-text-secondary">
-                      <span className="flex items-center gap-1">
-                        <ClockIcon className="h-3 w-3" />
-                        {service.duration || service.duration_minutes || 0}min
-                      </span>
-                      <span className="flex items-center gap-1 font-medium text-accent-secondary">
-                        <CurrencyDollarIcon className="h-3 w-3" />
-                        {formatPrice(service.price)}
-                      </span>
-                    </div>
-                  </CardBody>
-                </Card>
-              ))}
-            </div>
-
-            {/* Empty states */}
-            {filteredServices.length === 0 && (
-              <div className="text-center py-8">
-                {searchTerm && selectedCategory ? (
-                  <div>
-                    <Typography className="text-text-secondary mb-2">
-                      Nenhum serviço encontrado para "{searchTerm}" em {selectedCategory.name}
-                    </Typography>
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        variant="text"
-                        size="sm"
-                        onClick={() => setSearchTerm('')}
-                        className="text-accent-primary"
-                      >
-                        Limpar busca
-                      </Button>
-                      <Button
-                        variant="text"
-                        size="sm"
-                        onClick={() => setSelectedCategory(null)}
-                        className="text-accent-primary"
-                      >
-                        Ver todas categorias
-                      </Button>
-                    </div>
-                  </div>
-                ) : searchTerm ? (
-                  <div>
-                    <Typography className="text-text-secondary mb-2">
-                      Nenhum serviço encontrado para "{searchTerm}"
-                    </Typography>
-                    <Button
-                      variant="text"
-                      size="sm"
-                      onClick={() => setSearchTerm('')}
-                      className="text-accent-primary"
-                    >
-                      Limpar busca
-                    </Button>
-                  </div>
-                ) : selectedCategory ? (
-                  <Typography className="text-text-secondary">
-                    Nenhum serviço disponível em {selectedCategory.name}
-                  </Typography>
-                ) : (
-                  <div>
-                    <Typography className="text-text-secondary mb-2">
-                      Digite algo na busca ou selecione uma categoria
-                    </Typography>
-                    <Typography variant="small" className="text-text-tertiary">
-                      {allServices.length} serviços disponíveis
-                    </Typography>
-                  </div>
-                )}
+            ) : selectedCategory ? (
+              <Typography className="text-text-secondary">
+                Nenhum serviço disponível em {selectedCategory.name}
+              </Typography>
+            ) : (
+              <div>
+                <Typography className="text-text-secondary mb-2">
+                  Digite algo na busca ou selecione uma categoria
+                </Typography>
+                <Typography variant="small" className="text-text-tertiary">
+                  {allServices.length} serviços disponíveis
+                </Typography>
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1182,7 +1313,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                   <div className="flex items-center justify-between mb-2 pb-2 border-b border-bg-tertiary">
                     <div className="flex-1">
                       <Typography variant="small" className="text-accent-primary font-semibold text-sm">
-                        {item.service.name}
+                        {getCartItemDisplayName(item)}
                       </Typography>
                       <Typography variant="small" className="text-text-secondary text-xs">
                         {item.service.duration || item.service.duration_minutes || 0}min • {formatPrice(item.service.price)}
@@ -1326,7 +1457,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <Typography variant="small" className="text-purple-700 font-medium">
-                          {item.service.name}
+                          {getCartItemDisplayName(item)}
                           {item.quantity > 1 && ` (${item.quantity}x)`}
                         </Typography>
                         <Typography variant="small" className="text-purple-600">
@@ -1583,7 +1714,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                       className="bg-accent-primary/10 px-2 py-1 rounded-full border border-accent-primary/30 flex items-center gap-1"
                     >
                       <Typography variant="small" className="text-accent-primary text-xs">
-                        {item.service.name}
+                        {getCartItemDisplayName(item)}
                       </Typography>
                       {item.quantity > 1 && (
                         <Badge size="sm" content={item.quantity} className="bg-accent-primary">
@@ -1593,9 +1724,9 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
                       <button
                         onClick={() => removeFromCart(item.service.id)}
                         className="text-text-secondary hover:text-status-error"
-                        title={`Remover ${item.service.name}`}
+                        title={`Remover ${getCartItemDisplayName(item)}`}
                       >
-                        <MinusIcon className="h-3 w-3" />
+                        <TrashIcon className="h-3 w-3" />
                       </button>
                     </div>
                   ))}

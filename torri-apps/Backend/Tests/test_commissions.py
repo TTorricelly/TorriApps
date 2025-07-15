@@ -18,10 +18,16 @@ from Modules.Commissions.models import Commission, CommissionPayment, Commission
 from Modules.Commissions.services import CommissionService
 from Modules.Commissions.constants import CommissionPaymentStatus, CommissionPaymentMethod
 from Modules.Commissions.schemas import CommissionCreate, CommissionUpdate, CommissionPaymentCreate
+from Config.Relationships import configure_relationships
 
 
 class TestCommissionService:
     """Test suite for CommissionService business logic."""
+    
+    @pytest.fixture(autouse=True)
+    def setup_relationships(self):
+        """Configure SQLAlchemy relationships before running tests."""
+        configure_relationships()
     
     @pytest.fixture
     def db_session(self):

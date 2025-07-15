@@ -294,14 +294,43 @@ def create_walk_in_appointment_endpoint(
                 service_dict['professional_id'] = walk_in_data.professional_id
             services_data.append(service_dict)
         
-        result = appointments_services.create_walk_in_appointment_group_with_assignments(
+        # AppointmentFactory returns nested format, convert for API compatibility
+        factory_result = appointments_services.create_walk_in_appointment_group_with_assignments(
             db=db,
             client_data=walk_in_data.client.dict(),
             services_data=services_data,
             tenant_id="default"  # TODO: Get from auth context
         )
         
-        return result
+        # Convert AppointmentFactory response to flat format for API compatibility
+        appointment_group = factory_result['appointment_group']
+        appointments = factory_result['appointments']
+        client_info = factory_result['client_info']  # Use embedded client data
+        services_info = factory_result['services_info']  # Use embedded services data
+        
+        # Get service names from embedded services info (no database query needed!)
+        service_names = []
+        for apt in appointments:
+            service_id = str(apt['service_id'])
+            service_info = services_info.get(service_id, {})
+            service_name = service_info.get('name', 'Unknown')
+            service_names.append(service_name)
+        
+        return {
+            'id': str(appointment_group['id']),
+            'client_id': str(appointment_group['client_id']),
+            'client_name': client_info['full_name'],  # Use embedded client data
+            'client_nickname': client_info['nickname'] or '',  # Use embedded client data
+            'service_names': ', '.join(service_names),
+            'total_duration_minutes': appointment_group['total_duration_minutes'],
+            'total_price': appointment_group['total_price'],
+            'start_time': appointment_group['start_time'],
+            'end_time': appointment_group['end_time'],
+            'status': appointment_group['status'],
+            'notes_by_client': client_info['notes_by_client'],  # Use embedded client data
+            'created_at': appointment_group['created_at'],
+            'updated_at': appointment_group.get('updated_at', appointment_group['created_at'])
+        }
         
     except ValueError as e:
         raise HTTPException(

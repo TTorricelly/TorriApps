@@ -94,6 +94,7 @@ class AppointmentBase(BaseModel):
     client_id: UUID
     professional_id: UUID
     service_id: UUID
+    service_variation_id: Optional[UUID] = None
     appointment_date: date
     start_time: time
     notes_by_client: Optional[str] = Field(None, max_length=500)
@@ -105,6 +106,7 @@ class AppointmentUpdate(BaseModel):
     client_id: Optional[UUID] = None
     professional_id: Optional[UUID] = None
     service_id: Optional[UUID] = None
+    service_variation_id: Optional[UUID] = None
     appointment_date: Optional[date] = None
     start_time: Optional[time] = None
     notes_by_client: Optional[str] = Field(None, max_length=500)
@@ -346,6 +348,7 @@ class WalkInServiceData(BaseModel):
     id: UUID
     name: Optional[str] = None  # Optional for frontend convenience
     professional_id: Optional[UUID] = None  # For individual professional assignment
+    service_variation_id: Optional[UUID] = None  # Track selected variation
 
 
 class WalkInAppointmentRequest(BaseModel):

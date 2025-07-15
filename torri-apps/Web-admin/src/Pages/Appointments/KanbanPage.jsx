@@ -183,25 +183,45 @@ const KanbanPage = () => {
   }, [selectedDate]);
 
   // Silent service and professionals preloading for better walk-in UX
-  const preloadServices = useCallback(async () => {
+  const preloadServices = useCallback(async (abortSignal) => {
     try {
+      // Check if operation was aborted before starting
+      if (abortSignal?.aborted) {
+        return;
+      }
+      
       // Load categories, services, and professionals in parallel
       const [categories, professionals] = await Promise.all([
         categoriesApi.getAll(),
         professionalsApi.getAll()
       ]);
       
+      // Check if operation was aborted after first batch
+      if (abortSignal?.aborted) {
+        return;
+      }
+      
       const allServices = [];
       
       // Load all services from all categories (same logic as mobile)
       if (categories && Array.isArray(categories)) {
         for (const category of categories) {
+          // Check if operation was aborted before each service call
+          if (abortSignal?.aborted) {
+            return;
+          }
+          
           const categoryServices = await servicesApi.getAll(category.id);
           allServices.push(...categoryServices.map(service => ({ 
             ...service, 
             category_name: category.name 
           })));
         }
+      }
+      
+      // Final check before setting state
+      if (abortSignal?.aborted) {
+        return;
       }
       
       setPreloadedServices({
@@ -211,6 +231,12 @@ const KanbanPage = () => {
       });
       
     } catch (err) {
+      // Check if error is due to abortion
+      if (err.name === 'AbortError' || err.code === 'ECONNABORTED') {
+        console.log('[KanbanBoard] Service preloading aborted');
+        return;
+      }
+      
       // Silent failure - don't show errors to user for background loading
       console.warn('[KanbanBoard] Service preloading failed (silent):', err);
     }
@@ -219,7 +245,15 @@ const KanbanPage = () => {
   // Load appointment groups on mount and date changes
   useEffect(() => {
     loadAppointmentGroups();
-    preloadServices();
+    
+    // Use AbortController to prevent race conditions in service preloading
+    const abortController = new AbortController();
+    preloadServices(abortController.signal);
+    
+    // Cleanup function to abort ongoing requests
+    return () => {
+      abortController.abort();
+    };
   }, [loadAppointmentGroups, preloadServices]);
 
   // Keyboard shortcuts (A, C, ESC)

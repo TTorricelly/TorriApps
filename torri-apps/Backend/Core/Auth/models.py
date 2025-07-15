@@ -54,12 +54,12 @@ class User(Base):
     # Legacy tenant_id field (nullable for backward compatibility)
     tenant_id = Column(UUID(as_uuid=True), nullable=True)
 
-    # Relationship to labels assigned to this user
-    labels = relationship(
-        "Label",
-        secondary="user_labels",
-        back_populates="users"
-    )
+    # Relationship to labels assigned to this user - configured in Config/Relationships.py
+    # labels = relationship(
+    #     "Label",
+    #     secondary="user_labels",
+    #     back_populates="users"
+    # )
 
     # Relationship to services offered by this professional
     # The string "Backend.Modules.Services.models.Service" is a forward reference to the Service model

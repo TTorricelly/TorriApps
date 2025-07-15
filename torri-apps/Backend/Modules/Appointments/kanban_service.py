@@ -13,10 +13,14 @@ from sqlalchemy import func, and_, or_
 
 from .models import AppointmentGroup, Appointment
 from .constants import AppointmentGroupStatus, AppointmentStatus
+from .services.pricing_service import PricingService
+from .services.client_service import ClientService
+from .services.appointment_factory import AppointmentFactory
 from Core.Auth.models import User
-from Modules.Services.models import Service
+from Modules.Services.models import Service, ServiceVariation
 from Core.Auth.constants import UserRole
 from Config.Settings import settings
+
 
 
 def get_appointment_groups_for_kanban(
@@ -196,6 +200,7 @@ def create_walk_in_appointment_group_with_assignments(
 ) -> Dict[str, Any]:
     """
     Create a walk-in appointment group with individual service-professional assignments.
+    Uses AppointmentFactory for unified appointment creation workflow.
     
     Args:
         db: Database session
@@ -204,136 +209,14 @@ def create_walk_in_appointment_group_with_assignments(
         tenant_id: Tenant identifier
         
     Returns:
-        Created appointment group data
+        AppointmentFactory standard response format
     """
-    # Create or get client
-    client = None
-    
-    # If client ID is provided, get existing client
-    if client_data.get('id'):
-        client = db.query(User).filter(User.id == client_data['id']).first()
-        if not client:
-            raise ValueError(f"Client with ID {client_data['id']} not found")
-    else:
-        # For new clients, check if exists by email first
-        if client_data.get('email'):
-            client = db.query(User).filter(User.email == client_data['email']).first()
-        
-        if not client:
-            # Create new client
-            if not client_data.get('name'):
-                raise ValueError("Client name is required for new clients")
-            
-            # Use the provided email or None if not provided
-            email = client_data.get('email') or None
-            
-            client = User(
-                id=str(uuid4()),
-                full_name=client_data.get('name', 'Walk-in Client'),
-                nickname=client_data.get('nickname'),
-                email=email,
-                phone_number=client_data.get('phone', ''),
-                cpf=client_data.get('cpf'),
-                address_street=client_data.get('address_street'),
-                address_number=client_data.get('address_number'),
-                address_complement=client_data.get('address_complement'),
-                address_neighborhood=client_data.get('address_neighborhood'),
-                address_city=client_data.get('address_city'),
-                address_state=client_data.get('address_state'),
-                address_cep=client_data.get('address_cep'),
-                role=UserRole.CLIENTE,
-                is_active=True
-            )
-            db.add(client)
-            db.flush()  # Get the ID without committing
-    
-    # Calculate totals from services
-    total_duration = 0
-    total_price = Decimal('0.00')
-    
-    services = []
-    for service_data in services_data:
-        service = db.query(Service).filter(Service.id == service_data['id']).first()
-        if service:
-            services.append({
-                'service': service,
-                'professional_id': service_data['professional_id']
-            })
-            total_duration += service.duration_minutes
-            total_price += service.price
-    
-    if not services:
-        raise ValueError("No valid services provided")
-    
-    # Create appointment group using Brazil timezone
-    brazil_tz = pytz.timezone('America/Sao_Paulo')
-    now = datetime.now(brazil_tz).replace(tzinfo=None)  # Remove timezone info for database
-    start_time = now.replace(second=0, microsecond=0)
-    end_time = start_time.replace(
-        hour=(start_time.hour + total_duration // 60) % 24,
-        minute=(start_time.minute + total_duration % 60) % 60
+    # Use AppointmentFactory as the core interface
+    appointment_factory = AppointmentFactory(db)
+    return appointment_factory.create_walk_in_appointment_group(
+        client_data=client_data,
+        services_data=services_data
     )
-    
-    appointment_group = AppointmentGroup(
-        client_id=client.id,
-        total_duration_minutes=total_duration,
-        total_price=total_price,
-        start_time=start_time,
-        end_time=end_time,
-        status=AppointmentGroupStatus.WALK_IN,
-        created_at=now,
-        updated_at=now
-    )
-    
-    db.add(appointment_group)
-    db.flush()  # Get the group ID
-    
-    # Create individual appointments with assigned professionals
-    current_time = start_time
-    for service_info in services:
-        service = service_info['service']
-        professional_id = service_info['professional_id']
-        
-        appointment_end = current_time + timedelta(minutes=service.duration_minutes)
-        
-        appointment = Appointment(
-            client_id=client.id,
-            professional_id=professional_id,
-            service_id=service.id,
-            group_id=appointment_group.id,
-            appointment_date=current_time.date(),
-            start_time=current_time.time(),
-            end_time=appointment_end.time(),
-            status=AppointmentStatus.WALK_IN,
-            price_at_booking=service.price,
-            created_at=now,
-            updated_at=now
-        )
-        
-        db.add(appointment)
-        current_time = appointment_end
-    
-    db.commit()
-    db.refresh(appointment_group)
-    
-    # Return formatted group data
-    service_names = ', '.join([service_info['service'].name for service_info in services])
-    
-    return {
-        'id': str(appointment_group.id),
-        'client_id': str(client.id),
-        'client_name': client.full_name,
-        'client_nickname': client.nickname,
-        'service_names': service_names,
-        'total_duration_minutes': appointment_group.total_duration_minutes,
-        'total_price': float(appointment_group.total_price),
-        'start_time': appointment_group.start_time.isoformat(),
-        'end_time': appointment_group.end_time.isoformat(),
-        'status': appointment_group.status.value,
-        'notes_by_client': appointment_group.notes_by_client,
-        'created_at': appointment_group.created_at.isoformat(),
-        'updated_at': appointment_group.updated_at.isoformat()
-    }
 
 
 def create_walk_in_appointment_group(
@@ -345,6 +228,7 @@ def create_walk_in_appointment_group(
 ) -> Dict[str, Any]:
     """
     Create a walk-in appointment group with client and services.
+    Uses AppointmentFactory for unified appointment creation workflow.
     
     Args:
         db: Database session
@@ -354,130 +238,21 @@ def create_walk_in_appointment_group(
         tenant_id: Tenant identifier
         
     Returns:
-        Created appointment group data
+        AppointmentFactory standard response format
     """
-    # Create or get client
-    client = None
-    
-    # If client ID is provided, get existing client
-    if client_data.get('id'):
-        client = db.query(User).filter(User.id == client_data['id']).first()
-        if not client:
-            raise ValueError(f"Client with ID {client_data['id']} not found")
-    else:
-        # For new clients, check if exists by email first
-        if client_data.get('email'):
-            client = db.query(User).filter(User.email == client_data['email']).first()
-        
-        if not client:
-            # Create new client
-            if not client_data.get('name'):
-                raise ValueError("Client name is required for new clients")
-            
-            # Use the provided email or None if not provided
-            email = client_data.get('email') or None
-            
-            client = User(
-                id=str(uuid4()),
-                full_name=client_data.get('name', 'Walk-in Client'),
-                nickname=client_data.get('nickname'),
-                email=email,
-                phone_number=client_data.get('phone', ''),
-                cpf=client_data.get('cpf'),
-                address_street=client_data.get('address_street'),
-                address_number=client_data.get('address_number'),
-                address_complement=client_data.get('address_complement'),
-                address_neighborhood=client_data.get('address_neighborhood'),
-                address_city=client_data.get('address_city'),
-                address_state=client_data.get('address_state'),
-                address_cep=client_data.get('address_cep'),
-                role=UserRole.CLIENTE,
-                is_active=True
-            )
-            db.add(client)
-            db.flush()  # Get the ID without committing
-    
-    # Calculate totals from services
-    total_duration = 0
-    total_price = Decimal('0.00')
-    
-    services = []
+    # Transform services_data to include professional_id for each service
+    services_with_professional = []
     for service_data in services_data:
-        service = db.query(Service).filter(Service.id == service_data['id']).first()
-        if service:
-            services.append(service)
-            total_duration += service.duration_minutes
-            total_price += service.price
+        service_with_prof = service_data.copy()
+        service_with_prof['professional_id'] = professional_id
+        services_with_professional.append(service_with_prof)
     
-    if not services:
-        raise ValueError("No valid services provided")
-    
-    # Create appointment group using Brazil timezone
-    brazil_tz = pytz.timezone('America/Sao_Paulo')
-    now = datetime.now(brazil_tz).replace(tzinfo=None)  # Remove timezone info for database
-    start_time = now.replace(second=0, microsecond=0)
-    end_time = start_time.replace(
-        hour=(start_time.hour + total_duration // 60) % 24,
-        minute=(start_time.minute + total_duration % 60) % 60
+    # Use AppointmentFactory as the core interface
+    appointment_factory = AppointmentFactory(db)
+    return appointment_factory.create_walk_in_appointment_group(
+        client_data=client_data,
+        services_data=services_with_professional
     )
-    
-    appointment_group = AppointmentGroup(
-        client_id=client.id,
-        total_duration_minutes=total_duration,
-        total_price=total_price,
-        start_time=start_time,
-        end_time=end_time,
-        status=AppointmentGroupStatus.WALK_IN,
-        created_at=now,
-        updated_at=now
-    )
-    
-    db.add(appointment_group)
-    db.flush()  # Get the group ID
-    
-    # Create individual appointments
-    current_time = start_time
-    for service in services:
-        appointment_end = current_time + timedelta(minutes=service.duration_minutes)
-        
-        appointment = Appointment(
-            client_id=client.id,
-            professional_id=professional_id,
-            service_id=service.id,
-            group_id=appointment_group.id,
-            appointment_date=current_time.date(),
-            start_time=current_time.time(),
-            end_time=appointment_end.time(),
-            status=AppointmentStatus.WALK_IN,
-            price_at_booking=service.price,
-            created_at=now,
-            updated_at=now
-        )
-        
-        db.add(appointment)
-        current_time = appointment_end
-    
-    db.commit()
-    db.refresh(appointment_group)
-    
-    # Return formatted group data
-    service_names = ', '.join([service.name for service in services])
-    
-    return {
-        'id': str(appointment_group.id),
-        'client_id': str(client.id),
-        'client_name': client.full_name,
-        'client_nickname': client.nickname,
-        'service_names': service_names,
-        'total_duration_minutes': appointment_group.total_duration_minutes,
-        'total_price': float(appointment_group.total_price),
-        'start_time': appointment_group.start_time.isoformat(),
-        'end_time': appointment_group.end_time.isoformat(),
-        'status': appointment_group.status.value,
-        'notes_by_client': appointment_group.notes_by_client,
-        'created_at': appointment_group.created_at.isoformat(),
-        'updated_at': appointment_group.updated_at.isoformat()
-    }
 
 
 def create_merged_checkout_session(
@@ -687,7 +462,8 @@ def add_services_to_appointment_group(
     if not client:
         raise ValueError(f"Client for appointment group not found")
     
-    # Calculate additional totals from new services
+    # Calculate additional totals from new services using PricingService
+    pricing_service = PricingService(db)
     additional_duration = 0
     additional_price = Decimal('0.00')
     
@@ -696,13 +472,26 @@ def add_services_to_appointment_group(
         # Handle both dict and Pydantic object formats
         service_id = service_data.id if hasattr(service_data, 'id') else service_data['id']
         professional_id = service_data.professional_id if hasattr(service_data, 'professional_id') else service_data['professional_id']
+        service_variation_id = service_data.service_variation_id if hasattr(service_data, 'service_variation_id') else service_data.get('service_variation_id')
         
         service = db.query(Service).filter(Service.id == service_id).first()
         if not service:
             continue
             
-        additional_duration += service.duration_minutes
-        additional_price += service.price
+        # Get variation if specified
+        variation = None
+        if service_variation_id:
+            variation = db.query(ServiceVariation).filter(ServiceVariation.id == service_variation_id).first()
+        
+        # Use PricingService for unified calculations
+        price_calculation = pricing_service.calculate_service_price(service, variation)
+        duration_calculation = pricing_service.calculate_service_duration(service, variation)
+        
+        final_price = price_calculation.final
+        final_duration = duration_calculation.total
+            
+        additional_duration += final_duration
+        additional_price += final_price
         
         # Get the appointment with the latest end time to schedule new services consecutively
         last_appointment = db.query(Appointment).filter(
@@ -720,20 +509,21 @@ def add_services_to_appointment_group(
             # Fallback to group start time
             current_start_time = appointment_group.start_time
         
-        # Calculate new appointment end time
-        appointment_end = current_start_time + timedelta(minutes=service.duration_minutes)
+        # Calculate new appointment end time using final duration
+        appointment_end = current_start_time + timedelta(minutes=final_duration)
         
         # Create new appointment
         appointment = Appointment(
             client_id=client.id,
             professional_id=professional_id,
             service_id=service.id,
+            service_variation_id=service_variation_id,  # Support variant selection
             group_id=appointment_group.id,
             appointment_date=current_start_time.date(),
             start_time=current_start_time.time(),
             end_time=appointment_end.time(),
             status=appointment_group.status,  # Match group status
-            price_at_booking=service.price,
+            price_at_booking=final_price,  # Store final calculated price including variation
             created_at=datetime.now(),
             updated_at=datetime.now()
         )

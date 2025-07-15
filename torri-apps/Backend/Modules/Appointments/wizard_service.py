@@ -6,6 +6,7 @@ Implements business logic for the multi-service appointment booking wizard.
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 import calendar
 
 from sqlalchemy.orm import Session, joinedload
@@ -31,6 +32,26 @@ from Core.Auth.constants import UserRole
 # Services
 from .multi_service_availability_service import MultiServiceAvailabilityService
 from .appointment_crud import validate_and_get_appointment_dependencies
+from .services.pricing_service import PricingService
+
+
+def _calculate_total_price_for_services(services: List[Service], pricing_service: PricingService) -> Decimal:
+    """
+    Calculate total price for a list of services using pricing service.
+    Eliminates duplicate calculation logic (DRY principle).
+    
+    Args:
+        services: List of Service objects
+        pricing_service: PricingService instance for calculations
+        
+    Returns:
+        Total price as Decimal for consistent financial calculations
+    """
+    total_price = Decimal('0.00')
+    for service in services:
+        price_calculation = pricing_service.calculate_service_complete(service, None)
+        total_price += price_calculation.price.final
+    return total_price
 
 
 def get_available_professionals_for_wizard(
@@ -149,20 +170,20 @@ def create_multi_service_booking(
             detail="Um ou mais profissionais não foram encontrados"
         )
     
-    # Calculate total duration and price
-    total_duration = 0
-    total_price = 0
+    # Calculate total duration and price using PricingService
+    pricing_service = PricingService(db)
     
     if booking_data.selected_slot.execution_type == "parallel":
         # For parallel execution, total duration is the maximum duration
         total_duration = max(
             service.duration_minutes for service in services
         )
-        total_price = sum(service.price for service in services)
     else:
         # For sequential execution, total duration is the sum
         total_duration = sum(service.duration_minutes for service in services)
-        total_price = sum(service.price for service in services)
+    
+    # Calculate total price using consistent helper function (DRY principle)
+    total_price = _calculate_total_price_for_services(services, pricing_service)
     
     # Create datetime objects for start and end times
     start_datetime = datetime.combine(booking_data.date, booking_data.selected_slot.start_time)
@@ -192,6 +213,9 @@ def create_multi_service_booking(
             if not service:
                 raise ValueError(f"Service {service_booking.service_id} not found in validated services")
             
+            # Calculate price using pricing service with complete calculation method for consistency
+            price_calculation = pricing_service.calculate_service_complete(service, None)
+            
             # Create appointment
             appointment = Appointment(
                 client_id=str(booking_data.client_id),
@@ -202,7 +226,7 @@ def create_multi_service_booking(
                 start_time=service_booking.start_time,
                 end_time=service_booking.end_time,
                 status=AppointmentStatus.SCHEDULED,
-                price_at_booking=service.price,
+                price_at_booking=price_calculation.price.final,
                 paid_manually=False,
                 notes_by_client=booking_data.notes_by_client
             )

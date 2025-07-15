@@ -66,6 +66,7 @@ class Appointment(Base):
     client_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     professional_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     service_id = Column(UUID(as_uuid=True), ForeignKey("services.id"), nullable=True, index=True)
+    service_variation_id = Column(UUID(as_uuid=True), ForeignKey("service_variations.id"), nullable=True, index=True)
     
     # Optional group for multi-service bookings
     group_id = Column(UUID(as_uuid=True), ForeignKey("appointment_groups.id"), nullable=True, index=True)

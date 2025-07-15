@@ -542,7 +542,6 @@ export default function ServiceAppointmentConfigPage() {
             <span className="flex items-center gap-1 whitespace-nowrap">✅ Paralelo Total</span>
             <span className="flex items-center gap-1 whitespace-nowrap">🟡 Durante Processamento</span>
             <span className="flex items-center gap-1 whitespace-nowrap">❌ Nunca</span>
-            <span className="flex items-center gap-1 whitespace-nowrap">🔄 Ordem Flexível</span>
           </div>
         </div>
         <div className="w-full overflow-hidden">
