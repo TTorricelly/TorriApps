@@ -16,6 +16,7 @@ import {
   Badge
 } from "@material-tailwind/react";
 import { getClientDisplayName, clientNameMatchesSearch } from '../Utils/clientUtils';
+import { useModalServiceData } from '../Contexts/ServiceDataContext';
 import {
   ExclamationTriangleIcon,
   UserIcon,
@@ -46,7 +47,9 @@ import {
 } from '../Utils/brazilianFormatters';
 
 
-const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloadedServices }) => {
+const AddServicesModal = ({ open, onClose, onAddServices, modalContext }) => {
+  // Use global service data context instead of props
+  const modalServiceData = useModalServiceData();
   // State management
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -94,14 +97,14 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   // Load categories and professionals on mount, handle context
   useEffect(() => {
     if (open) {
-      if (preloadedServices?.categories && preloadedServices?.services) {
-        setCategories(preloadedServices.categories);
-        setAllServices(preloadedServices.services);
+      if (modalServiceData?.categories && modalServiceData?.services) {
+        setCategories(modalServiceData.categories);
+        setAllServices(modalServiceData.services);
         // Clear loading/error states when services are available
         setLoading(false);
         setError(null);
       } else {
-        // Show loading state if services aren't preloaded
+        // Show loading state if services aren't available from context
         setLoading(true);
         setError('Carregando serviços... Aguarde um momento.');
       }
@@ -130,7 +133,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
         }));
       }
     }
-  }, [open, preloadedServices, modalContext]);
+  }, [open, modalServiceData, modalContext]);
 
   // Optimized client search effect - no debounce, 3 char minimum
   useEffect(() => {
@@ -218,16 +221,40 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     }
   }, [cart]);
 
-  // Load variations for all services when services are available
+  // Extract variations from preloaded services data (optimized format)
   useEffect(() => {
-    if (allServices.length > 0) {
-      allServices.forEach(service => {
-        if (!serviceVariations[service.id]) {
-          loadServiceVariations(service.id);
+    if (allServices.length > 0 && modalServiceData?.services) {
+      const variationsMap = {};
+      
+      // Extract variations from optimized service data
+      modalServiceData.services.forEach(service => {
+        if (service.variations && Array.isArray(service.variations)) {
+          // Group variations by variation group
+          const groupedVariations = [];
+          const variationGroups = {};
+          
+          service.variations.forEach(variation => {
+            const groupId = variation.groupId;
+            if (!variationGroups[groupId]) {
+              variationGroups[groupId] = {
+                id: groupId,
+                name: variation.groupName,
+                variations: []
+              };
+              groupedVariations.push(variationGroups[groupId]);
+            }
+            variationGroups[groupId].variations.push(variation);
+          });
+          
+          variationsMap[service.id] = groupedVariations;
+        } else {
+          variationsMap[service.id] = [];
         }
       });
+      
+      setServiceVariations(variationsMap);
     }
-  }, [allServices]);
+  }, [allServices, modalServiceData]);
 
   const loadProfessionalsForServices = async () => {
     try {
@@ -276,22 +303,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
     return serviceName;
   };
 
-  // Load service variations
-  const loadServiceVariations = async (serviceId) => {
-    try {
-      const variations = await serviceVariationGroupsApi.getFullByServiceId(serviceId);
-      setServiceVariations(prev => ({
-        ...prev,
-        [serviceId]: variations || []
-      }));
-    } catch (err) {
-      // Silently fail - variations are optional
-      setServiceVariations(prev => ({
-        ...prev,
-        [serviceId]: []
-      }));
-    }
-  };
+  // Note: loadServiceVariations function removed - now using preloaded data
 
   // Toggle between new client and existing client modes
   const toggleClientMode = () => {
@@ -518,7 +530,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
   // Get professionals for selected services
   const _getAvailableProfessionals = () => {
     // Use preloaded professionals if available
-    const professionals = preloadedServices?.professionals || [];
+    const professionals = modalServiceData?.professionals || [];
     
     if (cart.length === 0) return professionals;
     
@@ -1450,7 +1462,7 @@ const AddServicesModal = ({ open, onClose, onAddServices, modalContext, preloade
             <div className="space-y-3">
               {cart.map((item) => {
                 const assignedProfessionalId = serviceAssignments[item.service.id];
-                const assignedProfessional = preloadedServices?.professionals?.find(p => p.id.toString() === assignedProfessionalId);
+                const assignedProfessional = modalServiceData?.professionals?.find(p => p.id.toString() === assignedProfessionalId);
                 
                 return (
                   <div key={item.service.id} className="bg-white/70 rounded-lg p-3 border border-purple-200">

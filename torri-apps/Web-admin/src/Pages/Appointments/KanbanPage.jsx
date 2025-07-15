@@ -8,9 +8,6 @@ import {
   createWalkInAppointment,
   addServicesToAppointmentGroup
 } from '../../Services/appointmentsApi';
-import { servicesApi } from '../../Services/services';
-import { categoriesApi } from '../../Services/categories';
-import { professionalsApi } from '../../Services/professionals';
 import { getClientDisplayName } from '../../Utils/clientUtils';
 import {
   CalendarDaysIcon, 
@@ -80,8 +77,10 @@ const KanbanPage = () => {
 
   const [selectedDate, setSelectedDate] = useState(todayDate);
 
-  // Service preloading state
-  const [preloadedServices, setPreloadedServices] = useState(null);
+  // Service data now handled by global context - no local state needed
+  
+  // Service data loader following DDD patterns (using singleton directly to avoid re-renders)
+  // Note: useServiceDataLoader() creates new object each render, causing infinite loops
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -182,79 +181,16 @@ const KanbanPage = () => {
     }
   }, [selectedDate]);
 
-  // Silent service and professionals preloading for better walk-in UX
-  const preloadServices = useCallback(async (abortSignal) => {
-    try {
-      // Check if operation was aborted before starting
-      if (abortSignal?.aborted) {
-        return;
-      }
-      
-      // Load categories, services, and professionals in parallel
-      const [categories, professionals] = await Promise.all([
-        categoriesApi.getAll(),
-        professionalsApi.getAll()
-      ]);
-      
-      // Check if operation was aborted after first batch
-      if (abortSignal?.aborted) {
-        return;
-      }
-      
-      const allServices = [];
-      
-      // Load all services from all categories (same logic as mobile)
-      if (categories && Array.isArray(categories)) {
-        for (const category of categories) {
-          // Check if operation was aborted before each service call
-          if (abortSignal?.aborted) {
-            return;
-          }
-          
-          const categoryServices = await servicesApi.getAll(category.id);
-          allServices.push(...categoryServices.map(service => ({ 
-            ...service, 
-            category_name: category.name 
-          })));
-        }
-      }
-      
-      // Final check before setting state
-      if (abortSignal?.aborted) {
-        return;
-      }
-      
-      setPreloadedServices({
-        categories: categories,
-        services: allServices,
-        professionals: professionals || []
-      });
-      
-    } catch (err) {
-      // Check if error is due to abortion
-      if (err.name === 'AbortError' || err.code === 'ECONNABORTED') {
-        console.log('[KanbanBoard] Service preloading aborted');
-        return;
-      }
-      
-      // Silent failure - don't show errors to user for background loading
-      console.warn('[KanbanBoard] Service preloading failed (silent):', err);
-    }
-  }, []);
+  // Service preloading is now handled by ServiceDataContext automatically
+  // No manual preloading needed - data is available globally
 
   // Load appointment groups on mount and date changes
   useEffect(() => {
     loadAppointmentGroups();
-    
-    // Use AbortController to prevent race conditions in service preloading
-    const abortController = new AbortController();
-    preloadServices(abortController.signal);
-    
-    // Cleanup function to abort ongoing requests
-    return () => {
-      abortController.abort();
-    };
-  }, [loadAppointmentGroups, preloadServices]);
+  }, [loadAppointmentGroups]);
+
+  // Service preloading is now handled by ServiceDataContext automatically
+  // No useEffect needed for service preloading
 
   // Keyboard shortcuts (A, C, ESC)
   useEffect(() => {
@@ -917,7 +853,6 @@ const KanbanPage = () => {
         }}
         onAddServices={handleAddServicesSubmit}
         modalContext={modalContext}
-        preloadedServices={preloadedServices}
       />
 
       {/* Checkout Modal */}

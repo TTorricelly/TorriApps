@@ -1021,12 +1021,11 @@ def get_complete_services_data(db: Session) -> List[dict]:
             }
             
             # Process variation groups and variations
-            for var_group in sorted(service.variation_groups, key=lambda g: (g.display_order or 0, g.name)):
+            for var_group in sorted(service.variation_groups, key=lambda g: g.name):
                 for variation in sorted(var_group.variations, key=lambda v: (v.display_order or 0, v.name)):
                     variation_data = {
                         "id": str(variation.id),
                         "name": variation.name,
-                        "description": variation.description,
                         "price_delta": variation.price_delta,
                         "duration_delta": variation.duration_delta,
                         "display_order": variation.display_order,

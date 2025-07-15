@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@material-tailwind/react';
 import { getTenantInfo } from './Utils/apiHelpers';
 import VersionChecker from './Utils/versionCheck';
+import { ServiceDataProvider } from './Contexts/ServiceDataContext';
 
 import { MainLayout, AuthLayout, RequireAuth } from './Components'; 
 import {
@@ -116,7 +117,8 @@ function App() {
   
   return (
     <ThemeProvider>
-      <Routes>
+      <ServiceDataProvider>
+        <Routes>
         {/* Domain-based tenant routes (no slug in URL) */}
         {isDomainBased && (
           <Route path="/">
@@ -140,7 +142,8 @@ function App() {
             <Navigate to="/login" replace /> : 
             <Navigate to="/test-salon/login" replace />
         } />
-      </Routes>
+        </Routes>
+      </ServiceDataProvider>
     </ThemeProvider>
   );
 }

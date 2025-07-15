@@ -36,6 +36,22 @@ export const servicesApi = {
     return servicesApi.getAll();
   },
 
+  // Get complete services data optimized for modals (categories + services + variations)
+  getCompleteServicesData: async () => {
+    const endpoint = buildApiEndpoint('services/complete');
+    
+    return withApiErrorHandling(
+      () => api.get(endpoint),
+      {
+        defaultValue: [],
+        transformData: (data) => {
+          const categories = Array.isArray(data) ? data : [];
+          return transformEntityWithImages(categories, []);
+        }
+      }
+    );
+  },
+
   // Get service with variations
   getServiceWithVariations: async (serviceId) => {
     const endpoint = buildApiEndpoint(`services/${serviceId}/variations`);
