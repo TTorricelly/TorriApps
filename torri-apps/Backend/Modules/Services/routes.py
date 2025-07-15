@@ -700,3 +700,25 @@ def update_execution_order_endpoint(
             detail="Failed to update execution order"
         )
     return {"message": "Execution order updated successfully"}
+
+
+# --- Optimized Endpoints for Frontend Performance ---
+
+@services_router.get(
+    "/complete",
+    response_model=List[dict],  # Will return categories with services and variations
+    summary="Get all categories with services and variations in a single optimized request."
+)
+def get_complete_services_data_endpoint(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[TokenPayload, Depends(require_role([UserRole.GESTOR, UserRole.PROFISSIONAL, UserRole.ATENDENTE]))],
+):
+    """
+    Optimized endpoint that returns all categories with their services and variations in a single request.
+    This eliminates the N+1 query problem where the frontend would make:
+    - Multiple requests for services by category 
+    - Individual requests for each service's variations
+    
+    Returns: List of categories, each containing services with embedded variations
+    """
+    return services_logic.get_complete_services_data(db=db)

@@ -11,7 +11,7 @@ from Core.Auth.models import User
 from Core.Auth.constants import UserRole
 from Core.Security.jwt import TokenPayload
 
-from . import services as appointments_services # Alias
+from . import services_main as appointments_services # Alias
 from .schemas import (
     AppointmentSchema, AppointmentCreate,
     ProfessionalDailyAvailabilityResponse, AvailabilityRequest,

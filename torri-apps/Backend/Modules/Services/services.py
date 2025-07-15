@@ -966,3 +966,83 @@ def update_execution_order(db: Session, request: BulkExecutionOrderRequest) -> b
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update execution order: {str(e)}"
         )
+
+
+# --- Optimized Functions for Frontend Performance ---
+
+def get_complete_services_data(db: Session) -> List[dict]:
+    """
+    Optimized function that returns all categories with their services and variations in a single query.
+    This eliminates the N+1 query problem where the frontend would make:
+    - Multiple requests for services by category 
+    - Individual requests for each service's variations
+    
+    Returns: List of categories, each containing services with embedded variations
+    """
+    # Single query to get all categories with services and variations using joins
+    stmt = select(Category).options(
+        selectinload(Category.services).options(
+            selectinload(Service.variation_groups).options(
+                selectinload(ServiceVariationGroup.variations)
+            ),
+            selectinload(Service.images)
+        )
+    ).order_by(Category.display_order, Category.name)
+    
+    categories = db.scalars(stmt).all()
+    
+    result = []
+    for category in categories:
+        # Process category icon URL
+        category_data = _add_icon_url_to_category(category)
+        
+        # Process services with variations
+        services_data = []
+        for service in sorted(category.services, key=lambda s: (s.display_order or 0, s.name)):
+            # Process service images
+            _process_service_images_urls(service)
+            
+            # Build service data with variations
+            service_data = {
+                "id": str(service.id),
+                "name": service.name,
+                "description": service.description,
+                "price": service.price,
+                "duration_minutes": service.duration_minutes,
+                "display_order": service.display_order,
+                "images": [
+                    {
+                        "id": str(img.id),
+                        "file_path": img.file_path,
+                        "display_order": img.display_order
+                    } for img in sorted(service.images, key=lambda i: i.display_order or 0)
+                ],
+                "variations": []
+            }
+            
+            # Process variation groups and variations
+            for var_group in sorted(service.variation_groups, key=lambda g: (g.display_order or 0, g.name)):
+                for variation in sorted(var_group.variations, key=lambda v: (v.display_order or 0, v.name)):
+                    variation_data = {
+                        "id": str(variation.id),
+                        "name": variation.name,
+                        "description": variation.description,
+                        "price_delta": variation.price_delta,
+                        "duration_delta": variation.duration_delta,
+                        "display_order": variation.display_order,
+                        "group_id": str(var_group.id),
+                        "group_name": var_group.name
+                    }
+                    service_data["variations"].append(variation_data)
+            
+            services_data.append(service_data)
+        
+        result.append({
+            "id": str(category.id),
+            "name": category.name,
+            "icon_url": category_data.icon_url,
+            "display_order": category.display_order,
+            "services": services_data
+        })
+    
+    return result
